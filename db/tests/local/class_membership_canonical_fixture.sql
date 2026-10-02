@@ -30,6 +30,8 @@ alter table public.class_schedule add column if not exists public_product text;
 alter table public.edu_group_members add column if not exists updated_at timestamptz default now(),
   add column if not exists updated_by uuid;
 
+create or replace function public.has_course_access(p_student uuid, p_course uuid) returns boolean language sql stable security definer set search_path = '' as $$
+  select exists (select 1 from public.edu_course_access a where a.student_id = p_student and a.course_id = p_course and a.active) $$;
 create or replace function public.class_current_course(p_class uuid) returns uuid language sql stable as $$
   select main_course_id from public.class_schedule where id = p_class $$;
 create or replace function public.package_term_valid(p_status text, p_start timestamptz, p_end timestamptz) returns boolean

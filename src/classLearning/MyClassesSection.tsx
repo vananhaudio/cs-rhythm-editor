@@ -1,5 +1,5 @@
 // ── HỌC → "Lớp đang học": danh sách lớp trực tiếp của học viên (tách khỏi Khóa học số) ──
-// Chỉ hiện khi có membership active. Giáo trình từng buổi do RLS quyết khi mở lớp.
+// Chỉ hiện khi có membership canonical (cùng nguồn Social/Admin). Giáo trình từng buổi do RLS quyết khi mở lớp.
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
 import { fetchMyClasses } from './api'
@@ -17,7 +17,7 @@ export default function MyClassesSection({ guest, onOpen }: { guest: boolean; on
     void (async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession()
-        const rows = session?.user ? await fetchMyClasses(supabase, session.user.id) : []
+        const rows = session?.user ? await fetchMyClasses(supabase) : []
         if (!cancelled) { setClasses(rows); setError(false) }
       } catch {
         if (!cancelled) { setError(true); setClasses([]) }

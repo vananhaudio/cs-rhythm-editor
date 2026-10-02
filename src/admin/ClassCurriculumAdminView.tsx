@@ -2,7 +2,9 @@ import React, { useCallback, useEffect, useRef, useState, type CSSProperties } f
 import type { supabase } from '../supabase'
 import ClassCurriculumEditor from './ClassCurriculumEditor'
 
-const CLASS_CODES = ['SOLO01.TH01', 'HT2027.TH01'] as const
+// Mọi lớp chưa huỷ/gộp. Thành viên = nhóm CANONICAL của lớp (RPC class_roster / admin_class_member_summary —
+// cùng nguồn Social/App; docs/CLASS-MEMBERSHIP-CANONICAL.md). Thành viên ≠ quyền Giáo trình.
+const LIVE_FIRST = ['active', 'ending_soon', 'scheduled', 'upcoming', 'ready_to_open', 'recruiting', 'paused', 'completed']
 
 interface ClassRow {
   id: string
@@ -24,6 +26,11 @@ interface MemberRow {
   status: string
   updated_at: string | null
 }
+interface RosterRow {
+  user_id: string; status: string; updated_at: string | null; joined_at: string | null
+  student_id: string | null; name: string; email: string | null; student_active: boolean | null
+}
+interface SummaryRow { class_id: string; group_name: string | null; group_code: string | null; group_type: string | null; member_count: number }
 interface AccessRow {
   user_id: string
   status: string
@@ -46,6 +53,7 @@ export default function ClassCurriculumAdminView({ client }: Props) {
   const [members, setMembers] = useState<MemberRow[]>([])
   const [students, setStudents] = useState<Record<string, StudentRow>>({})
   const [access, setAccess] = useState<Record<string, AccessRow>>({})
+  const [summary, setSummary] = useState<Record<string, SummaryRow>>({})
   const [tab, setTab] = useState<'students' | 'curriculum'>('students')
   const [search, setSearch] = useState('')
   const [matches, setMatches] = useState<StudentRow[]>([])
@@ -60,10 +68,14 @@ export default function ClassCurriculumAdminView({ client }: Props) {
 
   const loadClasses = useCallback(async () => {
     setLoading(true)
-    const { data, error: loadError } = await client.from('class_schedule')
-      .select('id,code,name,cohort_group_id,status').in('code', [...CLASS_CODES]).order('code')
-    if (loadError) setError(loadError.message)
-    const rows = (data ?? []) as ClassRow[]
+    const [{ data, error: loadError }, sum] = await Promise.all([
+      client.from('class_schedule').select('id,code,name,cohort_group_id,status').not('status', 'in', '(cancelled,merged,draft)').order('code'),
+      client.rpc('admin_class_member_summary'),
+    ])
+    if (loadError || sum.error) setError(loadError?.message || sum.error?.message || 'Không tải được lớp')
+    setSummary(Object.fromEntries(((sum.data ?? []) as SummaryRow[]).map(r => [r.class_id, r])))
+    const rank = (st: string) => { const i = LIVE_FIRST.indexOf(st); return i < 0 ? 99 : i }
+    const rows = ((data ?? []) as ClassRow[]).sort((a, b) => rank(a.status) - rank(b.status) || a.code.localeCompare(b.code))
     setClasses(rows)
     setSelectedId(current => rows.some(row => row.id === current) ? current : (rows[0]?.id ?? ''))
     setLoading(false)
@@ -74,7 +86,7 @@ export default function ClassCurriculumAdminView({ client }: Props) {
     setError('')
     if (!cls.cohort_group_id) { setMembers([]); setStudents({}); setAccess({}); return }
     const [memberResult, accessResult] = await Promise.all([
-      client.from('edu_group_members').select('user_id,status,updated_at').eq('group_id', cls.cohort_group_id),
+      client.rpc('class_roster', { p_class: cls.id }),
       client.from('class_curriculum_access').select('user_id,status,granted_at,revoked_at').eq('class_id', cls.id),
     ])
     if (loadId !== classLoadId.current) return
@@ -82,16 +94,11 @@ export default function ClassCurriculumAdminView({ client }: Props) {
       setError(memberResult.error?.message || accessResult.error?.message || 'Không tải được quyền lớp')
       return
     }
-    const memberRows = (memberResult.data ?? []) as MemberRow[]
-    const ids = [...new Set(memberRows.map(row => row.user_id))]
-    const studentResult = ids.length
-      ? await client.from('edu_students').select('id,user_id,display_name,full_name,email,is_active').in('user_id', ids)
-      : { data: [], error: null }
-    if (loadId !== classLoadId.current) return
-    if (studentResult.error) { setError(studentResult.error.message); return }
-    setMembers(memberRows)
-    setStudents(Object.fromEntries(((studentResult.data ?? []) as StudentRow[])
-      .filter(row => row.user_id).map(row => [row.user_id as string, row])))
+    const roster = (memberResult.data ?? []) as RosterRow[]
+    setMembers(roster.map(r => ({ user_id: r.user_id, status: r.status, updated_at: r.joined_at ?? r.updated_at })))
+    setStudents(Object.fromEntries(roster.map(r => [r.user_id, {
+      id: r.student_id ?? '', user_id: r.user_id, display_name: r.name, full_name: r.name, email: r.email, is_active: r.student_active ?? false,
+    } as StudentRow])))
     setAccess(Object.fromEntries(((accessResult.data ?? []) as AccessRow[]).map(row => [row.user_id, row])))
   }, [client])
 
@@ -160,7 +167,7 @@ export default function ClassCurriculumAdminView({ client }: Props) {
   return <div style={{ flex: 1, overflowY: 'auto', padding: 24, background: C.bg, color: C.text, fontFamily: 'Inter, system-ui, sans-serif' }}>
     <h1 style={{ fontSize: 22, margin: '0 0 6px' }}>Lớp học</h1>
     <p style={{ color: C.muted, margin: '0 0 20px', fontSize: 14 }}>Quản lý học sinh và quyền xem Giáo trình của từng lớp.</p>
-    {loading ? <div>Đang tải lớp...</div> : classes.length === 0 ? <div>Chưa có lớp được hỗ trợ.</div> : <>
+    {loading ? <div>Đang tải lớp...</div> : classes.length === 0 ? <div>Chưa có lớp.</div> : <>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 18 }}>
         {classes.map(cls => <button key={cls.id} onClick={() => { setSelectedId(cls.id); setSearch(''); setMatches([]); setNotice('') }}
           style={{ ...button, background: cls.id === selectedId ? C.green : C.card, color: cls.id === selectedId ? '#fff' : C.text }}>
@@ -169,13 +176,17 @@ export default function ClassCurriculumAdminView({ client }: Props) {
       </div>
       {selected && <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: 18 }}>
         <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 4 }}>{selected.name}</div>
-        <div style={{ fontSize: 13, color: C.muted, marginBottom: 12 }}>Trạng thái lớp: {selected.status} · {activeMembers.length} học sinh</div>
+        <div style={{ fontSize: 13, color: C.muted, marginBottom: 12 }}>
+          Trạng thái lớp: {selected.status} · Nhóm thành viên: <b style={{ color: C.text }}>{summary[selected.id]?.group_name ?? 'chưa có'}</b>
+          {' '}· <b style={{ color: C.text }}>{summary[selected.id]?.member_count ?? activeMembers.length} học sinh</b>
+          {' '}· Giáo trình bật: {activeMembers.filter(m => access[m.user_id]?.status === 'active').length}
+        </div>
         <div role="tablist" style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
           {([['students', 'Học sinh'], ['curriculum', 'Chặng & Giáo trình']] as const).map(([id, label]) =>
             <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}
               style={{ ...button, background: tab === id ? C.text : C.card, color: tab === id ? '#fff' : C.text }}>{label}</button>)}
         </div>
-        {tab === 'curriculum' ? <ClassCurriculumEditor key={selected.id} client={client} cls={selected} /> : !selected.cohort_group_id ? <div role="alert" style={{ color: C.red }}>Lớp chưa được liên kết cohort. Chờ migration trước khi thêm học sinh.</div> : <>
+        {tab === 'curriculum' ? <ClassCurriculumEditor key={selected.id} client={client} cls={selected} /> : !selected.cohort_group_id ? <div role="alert" style={{ color: C.red }}>Lớp chưa có nhóm thành viên. Chọn nhóm cho lớp ở Lịch lớp trước khi thêm học sinh.</div> : <>
           <label htmlFor="class-student-search" style={{ display: 'block', fontWeight: 700, fontSize: 13, marginBottom: 6 }}>Thêm học sinh</label>
           <input id="class-student-search" value={search} onChange={event => setSearch(event.target.value)}
             placeholder="Tìm theo tên hoặc email" style={{ width: '100%', boxSizing: 'border-box', border: `1px solid ${C.border}`, borderRadius: 8, padding: '10px 12px', fontSize: 14 }} />

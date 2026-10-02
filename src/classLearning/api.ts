@@ -12,16 +12,17 @@ const SESSION_COLS = 'id,session_number,event_type,status,start_at,end_at,title,
 const fail = (e: { message: string } | null) => { if (e) throw new Error(e.message) }
 
 /**
- * Lớp mà người dùng đang là thành viên cohort (membership active, đọc qua policy egm_self_read).
+ * Lớp mà người dùng đang là thành viên — LUẬT CANONICAL ở server (RPC my_class_memberships:
+ * class_schedule.cohort_group_id → edu_group_members active; bỏ lớp huỷ/gộp/nháp). Client không tự join nhóm.
  * Đây chỉ là danh sách để hiển thị — giáo trình buổi nào đọc được vẫn do RLS của
- * class_lesson_content quyết (cần thêm entitlement + published).
+ * class_lesson_content quyết (cần thêm quyền Giáo trình + published).
  */
-export async function fetchMyClasses(db: Db, userId: string): Promise<ClassRow[]> {
-  const mem = await db.from('edu_group_members').select('group_id').eq('user_id', userId).eq('status', 'active')
+export async function fetchMyClasses(db: Db): Promise<ClassRow[]> {
+  const mem = await db.rpc('my_class_memberships')
   fail(mem.error)
-  const groupIds = [...new Set((mem.data ?? []).map((m: { group_id: string }) => m.group_id))]
-  if (!groupIds.length) return []
-  const cls = await db.from('class_schedule').select(CLASS_COLS).in('cohort_group_id', groupIds).order('start_date')
+  const classIds = [...new Set(((mem.data ?? []) as { class_id: string }[]).map(m => m.class_id))]
+  if (!classIds.length) return []
+  const cls = await db.from('class_schedule').select(CLASS_COLS).in('id', classIds).order('start_date')
   fail(cls.error)
   return (cls.data ?? []) as ClassRow[]
 }

@@ -108,6 +108,18 @@ psqld t_sem -f "$ROOT/db/rls_setup.sql" >/dev/null
 PGOPTIONS="-c client_min_messages=notice" "$PGBIN/psql" -X -q -h "$TMP" -p "$PORT" -U postgres -d t_sem -v ON_ERROR_STOP=1 \
   -f "$ROOT/db/tests/class_membership_canonical_v1_test.sql" 2>&1 | sed -E 's/^psql:[^:]*:[0-9]*: (NOTICE|ERROR):  //'
 [ "${PIPESTATUS[0]}" = "0" ] || fail "test SQL canonical"
+echo "── JOIN CODE V1: setup ×2 · test · rollback (cần gỡ trước canonical)"
+run_tx t_sem "$ROOT/db/class_join_code_v1_setup.sql" >/dev/null && run_tx t_sem "$ROOT/db/class_join_code_v1_setup.sql" >/dev/null && ok "Join Code setup ×2"
+[ "$(q t_sem "select count(*) from information_schema.routine_privileges where routine_name in ('class_join','class_join_preview','admin_class_join_code','class_learning_entry','class_for_join_code','normalize_join_code') and grantee in ('anon','PUBLIC')")" = "0" ] \
+  && ok "Join Code: anon không EXECUTE; hàm nội bộ không cấp" || fail "Join Code quyền"
+PGOPTIONS="-c client_min_messages=notice" "$PGBIN/psql" -X -q -h "$TMP" -p "$PORT" -U postgres -d t_sem -v ON_ERROR_STOP=1 \
+  -f "$ROOT/db/tests/class_join_code_v1_test.sql" 2>&1 | sed -E 's/^psql:[^:]*:[0-9]*: (NOTICE|ERROR):  //' | grep -v "drop cascades\|^DETAIL"
+[ "${PIPESTATUS[0]}" = "0" ] || fail "test SQL Join Code"
+run_tx t_sem "$ROOT/db/class_membership_canonical_v1_rollback.sql" >/dev/null 2>"$TMP/e2" && fail "rollback canonical chạy khi Join Code còn cài"
+grep -q "Join Code V1 đang cài" "$TMP/e2" && ok "rollback canonical tự DỪNG khi Join Code còn cài" || fail "thứ tự rollback: $(cat "$TMP/e2")"
+run_tx t_sem "$ROOT/db/class_join_code_v1_rollback.sql" >/dev/null && run_tx t_sem "$ROOT/db/class_join_code_v1_rollback.sql" >/dev/null
+[ "$(q t_sem "select count(*) from pg_proc where proname in ('class_join','class_join_preview','admin_class_join_code','class_learning_entry')")/$(q t_sem "select count(*) from public.edu_group_claim_tokens where is_active and token ~ '^[A-HJ-KM-NP-Z2-9]{8}\$'")" = "0/0" ] \
+  && ok "Join Code rollback ×2: gỡ RPC, mã đã phát bị TẮT (không xoá), thành viên giữ nguyên" || fail "Join Code rollback"
 echo "── Rollback ×2 (thân hàm nguyên văn) rồi cài lại"
 run_tx t_sem "$ROOT/db/class_membership_canonical_v1_rollback.sql" >/dev/null && run_tx t_sem "$ROOT/db/class_membership_canonical_v1_rollback.sql" >/dev/null
 [ "$(FN_MD5 t_sem)" = "$BASE_MD5" ] && ok "rollback ×2: 12 hàm về ĐÚNG thân cũ (md5 khớp)" || fail "md5 sau rollback: $(FN_MD5 t_sem)"

@@ -50,7 +50,10 @@ interface Cls {
   public_product: PublicProductKey | null; public_enroll: boolean
 }
 interface Course { id: string; name: string; code: string | null }
-interface Grp { id: string; name: string; code: string | null; group_type: string; zalo_url: string | null }
+interface Grp { id: string; name: string; code: string | null; group_type: string; zalo_url: string | null; is_active?: boolean }
+// Nhóm thành viên CANONICAL của lớp (RPC admin_class_member_summary — cùng nguồn Social/App, docs/CLASS-MEMBERSHIP-CANONICAL.md)
+interface MemberSummary { class_id: string; group_id: string | null; member_count: number; curriculum_access_count: number }
+const LIVE = (status: string | null | undefined) => !['cancelled', 'merged', 'completed', 'draft'].includes(status ?? '')
 
 const blank = (): Cls => ({
   id: '', code: '', name: '', section: 'upcoming', schedule: '', start_text: '', duration: '8 buổi · mỗi buổi 90 phút',
@@ -66,6 +69,7 @@ export default function ScheduleManager() {
   const [rows, setRows] = useState<Cls[]>([])
   const [courses, setCourses] = useState<Course[]>([])
   const [groups, setGroups] = useState<Grp[]>([])
+  const [summary, setSummary] = useState<Record<string, MemberSummary>>({})
   const [form, setForm] = useState<Cls | null>(null)   // null = không mở form
   const [soKhoa, setSoKhoa] = useState('')             // số khoá (biến đổi) → ghép mã lớp
   const [zaloUrl, setZaloUrl] = useState('')           // link nhóm Zalo (nhóm ≡ mã lớp)
@@ -79,6 +83,7 @@ export default function ScheduleManager() {
   const load = async () => {
     const { data } = await supabase.from('class_schedule').select('*').order('sort_order').order('created_at')
     setRows((data ?? []) as Cls[])
+    supabase.rpc('admin_class_member_summary').then(({ data: sm }) => setSummary(Object.fromEntries(((sm ?? []) as MemberSummary[]).map(r => [r.class_id, r]))))
     const { data: sess } = await supabase.from('class_sessions').select('class_id,session_number,start_at,status,event_type')
     const map: Record<string, SessionRow[]> = {}
     for (const s of (sess ?? []) as any[]) (map[s.class_id] ??= []).push(s)
@@ -87,7 +92,7 @@ export default function ScheduleManager() {
   useEffect(() => {
     load()
     supabase.from('edu_courses').select('id,name,code').order('sort_order').then(({ data }) => setCourses((data ?? []) as Course[]))
-    supabase.from('edu_groups').select('id,name,code,group_type,zalo_url').order('name').then(({ data }) => setGroups((data ?? []) as Grp[]))
+    supabase.from('edu_groups').select('id,name,code,group_type,zalo_url,is_active').order('name').then(({ data }) => setGroups((data ?? []) as Grp[]))
   }, [])
   // đếm nhu cầu đang chờ (badge tab) — làm mới khi đổi tab để phản ánh thay đổi
   useEffect(() => {
@@ -119,18 +124,20 @@ export default function ScheduleManager() {
     if (nl && dangLop(nl) && !code) {
       setBusy(false); setMsg(`Lớp năng lực ${nl} cần nhập "Số khoá" để sinh mã lớp (nhóm Zalo ≡ mã lớp). Xem docs/QUY-TAC-MA.md.`); return
     }
-    // Cohort Giáo trình có code namespace riêng; giữ nguyên FK khi sửa lịch.
+    // NHÓM THÀNH VIÊN CANONICAL (cohort_group_id; group_id chỉ là bản sao). Lớp ĐÃ có nhóm → giữ đúng nhóm Admin chọn,
+    // KHÔNG dò lại theo mã (mã nhóm có thể khác mã lớp, vd nhóm HT2027 của lớp HT2027.TH01). docs/CLASS-MEMBERSHIP-CANONICAL.md
     const linkedGroup = form.group_id ? groups.find(g => g.id === form.group_id) : null
     if (form.group_id && !linkedGroup) {
       setBusy(false); setMsg('Không xác minh được nhóm đang gắn với lớp. Tải lại trước khi lưu lịch.'); return
     }
-    const isCurriculumCohort = linkedGroup?.group_type === 'class'
-    if (isCurriculumCohort && (code !== form.code || linkedGroup.code !== `CLASS.${code}`)) {
-      setBusy(false); setMsg('Không thể đổi mã lớp/nhóm cohort tại màn lịch. Quản lý quyền trong mục Lớp học.'); return
-    }
-    // Lớp thường vẫn khớp nhóm Zalo cùng mã.
     let group_id = form.group_id || null
-    if (code && !isCurriculumCohort) {
+    if (linkedGroup) {
+      if (linkedGroup.group_type !== 'class' && (zaloUrl.trim() || null) !== (linkedGroup.zalo_url || null)) {
+        const { error: updateGroupError } = await supabase.from('edu_groups').update({ zalo_url: zaloUrl.trim() || null }).eq('id', linkedGroup.id)
+        if (updateGroupError) { setBusy(false); setMsg('Cập nhật link nhóm Zalo lỗi: ' + updateGroupError.message); return }
+      }
+    } else if (code) {
+      // Lớp CHƯA có nhóm: dùng nhóm Zalo mang đúng mã lớp nếu đã có, không thì tạo mới — rồi hiện rõ ở dòng "Nhóm thành viên".
       const { data: exist, error: groupError } = await supabase.from('edu_groups').select('id,group_type').ilike('code', code).limit(1)
       if (groupError) { setBusy(false); setMsg('Không kiểm tra được nhóm của lớp: ' + groupError.message); return }
       if (exist?.[0]?.id) {
@@ -217,7 +224,7 @@ export default function ScheduleManager() {
     }
     setBusy(false)
     setForm(null)
-    supabase.from('edu_groups').select('id,name,code,group_type,zalo_url').order('name').then(({ data }) => setGroups((data ?? []) as Grp[]))
+    supabase.from('edu_groups').select('id,name,code,group_type,zalo_url,is_active').order('name').then(({ data }) => setGroups((data ?? []) as Grp[]))
     load()
   }
   const del = async (r: Cls) => {
@@ -449,10 +456,20 @@ export default function ScheduleManager() {
               </div>
 
               <div style={{ gridColumn: '1 / 3' }}>
+                <label style={lbl}>👥 Nhóm thành viên của lớp (canonical — App, Social, Admin, Giáo trình cùng đọc nhóm này)</label>
+                <select style={inp} value={form.group_id ?? ''} onChange={e => {
+                  const id = e.target.value || null
+                  if (form.id && form.group_id && id !== form.group_id && !window.confirm('Đổi nhóm thành viên: học sinh của lớp sẽ là thành viên của nhóm MỚI (nhóm cũ không bị xoá). Tiếp tục?')) return
+                  set({ group_id: id }); setZaloUrl(groups.find(g => g.id === id)?.zalo_url ?? '')
+                }}>
+                  <option value="">{maLop() ? `(chưa có — lưu sẽ tạo/khớp nhóm Zalo mã ${maLop()})` : '(chưa có nhóm)'}</option>
+                  {groups.filter(g => g.group_type !== 'facebook' && (g.is_active !== false || g.id === form.group_id)).map(g =>
+                    <option key={g.id} value={g.id}>{g.name}{g.code && g.code !== g.name ? ` · ${g.code}` : ''}{g.group_type === 'class' ? ' · nhóm lớp' : ' · Zalo'}{g.is_active === false ? ' · đã ngừng' : ''}</option>)}
+                </select>
                 {groups.find(g => g.id === form.group_id)?.group_type === 'class'
-                  ? <span style={{ fontSize: 13, color: S.text3 }}>Nhóm lớp dùng để quản lý học sinh và quyền Giáo trình trong mục Lớp học.</span>
-                  : <><label style={lbl}>💬 Link nhóm Zalo (nhóm ≡ mã lớp, tự khớp)</label>
-                      <input style={inp} value={zaloUrl} onChange={e => setZaloUrl(e.target.value)} placeholder="https://zalo.me/g/..." /></>}
+                  ? <div style={{ fontSize: 12, color: S.text3, marginTop: 6 }}>Nhóm lớp: thêm/bỏ học sinh và bật Giáo trình trong mục Lớp học.</div>
+                  : <div style={{ marginTop: 8 }}><label style={lbl}>💬 Link nhóm Zalo của nhóm này</label>
+                      <input style={inp} value={zaloUrl} onChange={e => setZaloUrl(e.target.value)} placeholder="https://zalo.me/g/..." /></div>}
               </div>
               <div><label style={lbl}>Thứ tự · Hiển thị</label>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -513,6 +530,12 @@ export default function ScheduleManager() {
                       })()}
                       <span style={{ fontSize: 11, fontWeight: 600, color: statusInfo(r.status).c }}>{statusInfo(r.status).l}</span>
                       {!r.is_active && <span style={{ fontSize: 11, color: S.text3, fontWeight: 500 }}>· ẩn</span>}
+                      {LIVE(r.status) && !r.group_id && (
+                        <span style={{ fontSize: 11, fontWeight: 800, color: '#B45309', background: '#FEF3C7', borderRadius: 5, padding: '1px 7px' }}>⚠ Chưa có nhóm thành viên</span>
+                      )}
+                      {LIVE(r.status) && r.group_id && summary[r.id]?.member_count === 0 && (
+                        <span style={{ fontSize: 11, fontWeight: 800, color: '#B45309', background: '#FEF3C7', borderRadius: 5, padding: '1px 7px' }}>⚠ Nhóm thành viên 0 học sinh</span>
+                      )}
                       {r.public_enroll && !groups.find(g => g.id === r.group_id)?.zalo_url && (
                         <span style={{ fontSize: 11, fontWeight: 800, color: '#B45309', background: '#FEF3C7', borderRadius: 5, padding: '1px 7px' }}>⚠ Nhóm chưa có link Zalo</span>
                       )}
@@ -527,7 +550,7 @@ export default function ScheduleManager() {
                       {SECTIONS.find(s => s.v === r.section)?.l}{r.schedule ? ` · ${r.schedule}` : ''}{r.start_text ? ` · KG ${r.start_text}` : ''}{r.end_date ? ` → KT ${fmtDMY(r.end_date)}` : ''}{r.price ? ` · ${r.price}` : ''}
                     </div>
                     <div style={{ fontSize: 12.5, color: S.text3, marginTop: 5, display: 'flex', flexWrap: 'wrap', gap: '2px 10px' }}>
-                      <span>{groups.find(g => g.id === r.group_id)?.group_type === 'class' ? '🎓 Nhóm lớp: ' : '💬 '}{groupName(r.group_id) ?? <em>chưa gắn nhóm</em>}</span>
+                      <span>👥 Nhóm thành viên: {groupName(r.group_id) ?? <em>chưa có</em>}{summary[r.id] ? <> · <b style={{ color: S.text1 }}>{summary[r.id].member_count} học sinh</b>{summary[r.id].curriculum_access_count > 0 ? ` · Giáo trình bật ${summary[r.id].curriculum_access_count}` : ''}</> : null}</span>
                       <span>🎓 {courseNames(r.course_ids).length ? courseNames(r.course_ids).join(', ') : <em>chưa gắn khoá</em>}</span>
                     </div>
                   </div>
