@@ -1,0 +1,137 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Band — Tuyển thành viên V1. Dùng token tím-trắng của Class Social (.cs-root, classSocial.css);
+   mọi class có tiền tố cs-band-. Mobile-first: một cột, nút chọn lớn dễ chạm.
+   KHÔNG có style riêng cho từng Band.
+   ───────────────────────────────────────────────────────────────────────────── */
+.cs-band-main { padding: 16px 16px calc(48px + env(safe-area-inset-bottom, 0px)); }
+.cs-band-main > .cs-splash { min-height: 60dvh; background: transparent; }
+.cs-band-page, .cs-band-main > .cs-band-card { max-width: 640px; margin: 0 auto; }
+.cs-band-page { display: flex; flex-direction: column; gap: 14px; }
+
+.cs-band-hero {
+  border-radius: var(--cs-radius); padding: 26px 20px 22px; color: #fff;
+  background: linear-gradient(135deg, var(--cs-p) 0%, #8b5cf6 100%);
+  box-shadow: 0 6px 22px rgba(109, 40, 217, 0.22);
+}
+.cs-band-kicker { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.85; }
+.cs-root .cs-band-name { font-size: 30px; font-weight: 800; letter-spacing: -0.02em; margin: 6px 0 8px; color: #fff; }
+.cs-band-tagline { margin: 0 0 16px; font-size: 15.5px; line-height: 1.55; opacity: 0.95; }
+.cs-band-hero-cta { background: #fff; color: var(--cs-p-strong); height: 44px; padding: 0 22px; }
+.cs-band-hero-cta:hover { background: var(--cs-p-softer); }
+
+.cs-band-card { padding: 18px 16px; }
+.cs-band-facts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.cs-band-facts li { display: flex; gap: 12px; align-items: flex-start; }
+.cs-band-facts svg { color: var(--cs-p); flex-shrink: 0; margin-top: 2px; }
+.cs-band-facts span { display: block; font-size: 12.5px; color: var(--cs-muted); }
+.cs-band-facts b { display: block; font-size: 15px; font-weight: 700; }
+.cs-band-sub { font-size: 12.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--cs-muted); margin: 0 0 8px; }
+.cs-band-songs { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--cs-border); }
+.cs-band-songs ul { margin: 0; padding-left: 18px; }
+.cs-band-songs li { font-weight: 700; }
+.cs-band-songs li span { font-weight: 500; color: var(--cs-muted); }
+.cs-root .cs-band-songs a { color: var(--cs-p-strong); text-decoration: underline; }
+.cs-band-desc { margin: 14px 0 0; color: var(--cs-muted); }
+
+.cs-root .cs-band-h2 { font-size: 20px; font-weight: 800; margin: 0 0 6px; }
+.cs-band-intro { margin: 0 0 14px; color: var(--cs-muted); }
+.cs-band-chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.cs-band-chips li { padding: 4px 11px; border-radius: 999px; background: var(--cs-p-soft); color: var(--cs-p-strong); font-size: 13.5px; font-weight: 600; }
+.cs-band-sep { border: none; border-top: 1px solid var(--cs-border); margin: 18px 0; }
+
+/* ── Form ── */
+.cs-band-form { display: flex; flex-direction: column; gap: 20px; }
+.cs-band-field { display: flex; flex-direction: column; gap: 8px; scroll-margin-top: 72px; }
+.cs-band-label { font-size: 15px; font-weight: 700; line-height: 1.4; }
+.cs-band-hint { font-size: 12.5px; color: var(--cs-faint); }
+.cs-band-err { font-size: 13.5px; color: #b42318; font-weight: 600; }
+.cs-band-textarea { resize: vertical; min-height: 110px; line-height: 1.5; }
+.cs-band-other { margin-top: 2px; }
+.cs-band-choices { display: grid; grid-template-columns: 1fr; gap: 8px; }
+.cs-band-choice {
+  position: relative; display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 10px 14px;
+  border: 1.5px solid var(--cs-border); border-radius: 12px; background: var(--cs-surface); cursor: pointer;
+  font-size: 15px; font-weight: 600; line-height: 1.35;
+}
+.cs-band-choice input { position: absolute; opacity: 0; pointer-events: none; }
+.cs-band-choice::before {
+  content: ''; flex-shrink: 0; width: 18px; height: 18px; border-radius: 50%;
+  border: 2px solid var(--cs-faint); background: var(--cs-surface);
+}
+.cs-band-choice.is-on { border-color: var(--cs-p); background: var(--cs-p-softer); color: var(--cs-p-strong); }
+.cs-band-choice.is-on::before { border-color: var(--cs-p); background: radial-gradient(circle, var(--cs-p) 0 4px, var(--cs-surface) 5px); }
+.cs-band-choice:has(input:focus-visible) { outline: 2px solid var(--cs-p); outline-offset: 2px; }
+.cs-band-choices[aria-invalid='true'] .cs-band-choice { border-color: #fecdca; }
+
+.cs-band-rules { padding: 14px; border-radius: 12px; background: var(--cs-p-softer); border: 1px solid var(--cs-border); }
+.cs-band-rule-list { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; font-size: 14.5px; }
+.cs-band-agree {
+  display: flex; align-items: center; gap: 10px; margin-top: 6px; min-height: 48px; padding: 10px 12px;
+  border-radius: 10px; border: 1.5px solid var(--cs-border); background: var(--cs-surface); cursor: pointer; font-weight: 700;
+}
+.cs-band-agree input { width: 20px; height: 20px; accent-color: var(--cs-p); flex-shrink: 0; }
+.cs-band-agree.is-on { border-color: var(--cs-p); color: var(--cs-p-strong); }
+.cs-band-agree.is-invalid { border-color: #d92d20; }
+.cs-band-hp { position: absolute; left: -10000px; width: 1px; height: 1px; opacity: 0; }
+.cs-band-submit { width: 100%; height: 50px; font-size: 16px; }
+.cs-band-submit-note { margin: -10px 0 0; text-align: center; font-size: 13px; color: var(--cs-muted); }
+
+.cs-band-done, .cs-band-closed { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 28px 18px; }
+.cs-band-done svg { color: #067647; }
+.cs-root .cs-band-done h2, .cs-root .cs-band-closed h2 { font-size: 20px; font-weight: 800; margin: 0; }
+.cs-band-done p, .cs-band-closed p { margin: 0 0 8px; color: var(--cs-muted); }
+
+/* ── Admin ── */
+.cs-band-admin .cs-page-title { margin: 4px 0 14px; }
+.cs-band-admin-title { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.cs-band-admin-title .cs-page-title { margin: 4px 0 10px; }
+.cs-band-back { margin-bottom: 8px; }
+.cs-band-admin-list, .cs-band-app-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.cs-band-admin-band { width: 100%; display: flex; align-items: center; gap: 12px; padding: 14px 16px; text-align: left; cursor: pointer; }
+.cs-band-admin-band:hover { background: var(--cs-hover); }
+.cs-band-admin-band-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.cs-band-admin-band-main b { font-size: 16px; }
+.cs-band-admin-band-main span { font-size: 13px; color: var(--cs-muted); }
+.cs-band-admin-counts { display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--cs-muted); white-space: nowrap; }
+
+.cs-band-filter { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 8px; -webkit-overflow-scrolling: touch; }
+.cs-band-filter-btn {
+  display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border-radius: 999px; white-space: nowrap;
+  border: 1px solid var(--cs-border); background: var(--cs-surface); font-size: 13.5px; font-weight: 600; cursor: pointer;
+}
+.cs-band-filter-btn.is-on { background: var(--cs-p); border-color: var(--cs-p); color: #fff; }
+.cs-band-filter-btn.is-on .cs-count { background: rgba(255, 255, 255, 0.25); color: #fff; }
+
+.cs-band-app { padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+.cs-band-app-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.cs-band-app-name { display: block; font-size: 16px; }
+.cs-root .cs-band-app-phone { font-size: 14px; color: var(--cs-p-strong); font-weight: 600; }
+.cs-band-app-grid { margin: 0; display: grid; grid-template-columns: 1fr; gap: 8px; }
+.cs-band-app-grid div { display: flex; flex-direction: column; }
+.cs-band-app-grid dt { font-size: 12px; color: var(--cs-muted); font-weight: 600; }
+.cs-band-app-grid dd { margin: 0; font-size: 14.5px; font-weight: 600; }
+.cs-band-app-reason { padding: 10px 12px; border-radius: 10px; background: var(--cs-p-softer); }
+.cs-band-app-reason-label { font-size: 12px; color: var(--cs-muted); font-weight: 600; margin-bottom: 2px; }
+.cs-band-app-reason p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14.5px; }
+.cs-band-app-actions { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+.cs-band-status-btn {
+  height: 38px; border-radius: 10px; border: 1px solid var(--cs-border); background: var(--cs-surface);
+  font-size: 13.5px; font-weight: 700; cursor: pointer;
+}
+.cs-band-status-btn:disabled { opacity: 0.6; cursor: wait; }
+.cs-band-status-btn.is-on { color: #fff; border-color: transparent; }
+.cs-band-status { display: inline-flex; padding: 2px 10px; border-radius: 999px; font-size: 12.5px; font-weight: 700; white-space: nowrap; }
+.cs-band-status.is-new, .cs-band-status-btn.is-on.is-new { background: var(--cs-p); color: #fff; }
+.cs-band-status.is-reviewing, .cs-band-status-btn.is-on.is-reviewing { background: #b54708; color: #fff; }
+.cs-band-status.is-accepted, .cs-band-status-btn.is-on.is-accepted { background: #067647; color: #fff; }
+.cs-band-status.is-rejected, .cs-band-status-btn.is-on.is-rejected { background: #667085; color: #fff; }
+
+@media (min-width: 640px) {
+  .cs-band-main { padding-top: 28px; }
+  .cs-band-hero { padding: 34px 32px 28px; }
+  .cs-root .cs-band-name { font-size: 36px; }
+  .cs-band-card { padding: 22px 24px; }
+  .cs-band-choices.cs-band-choices { grid-template-columns: repeat(2, 1fr); }
+  .cs-band-app-grid { grid-template-columns: repeat(2, 1fr); }
+  .cs-band-app-actions { grid-template-columns: repeat(4, 1fr); }
+}

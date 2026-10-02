@@ -7,6 +7,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import './classSocial.css'
+import '../band/band.css'
 import ClassSocialLayout from './ClassSocialLayout'
 import { SECTION_PATHS, keepsPathForGuest, sameView, viewFromPath, viewPath, type MeView, type SocialSection } from './resolveMeRoute'
 import { useClassSession, type ClassIdentity } from './useClassSession'
@@ -27,6 +28,7 @@ import ClassesPage from './classes/ClassesPage'
 import ClassPage from './classes/ClassPage'
 import ClassSessionPage from './classes/ClassSessionPage'
 import ProfileEditDialog from './profile/ProfileEditDialog'
+import { BandApplicationsAdminPage, BandsAdminPage } from '../band/BandAdmin'
 
 const TITLES: Record<SocialSection, string> = {
   home: 'Trang chủ · Thầy Văn Anh Guitar',
@@ -77,6 +79,7 @@ export default function ClassSocialPage({ initialSection }: { initialSection: So
     if (!signedIn) document.title = 'Đăng nhập · Thầy Văn Anh Guitar'
     else if (view.kind === 'section') document.title = TITLES[view.section]
     else if (view.kind === 'classes') document.title = 'Lớp học · Thầy Văn Anh Guitar'
+    else if (view.kind === 'bands') document.title = 'Tuyển thành viên Band · Thầy Văn Anh Guitar'
     // trang cá nhân tự đặt tiêu đề theo tên người
   }, [view, signedIn])
 
@@ -119,16 +122,18 @@ export default function ClassSocialPage({ initialSection }: { initialSection: So
   const openSession = (classId: string, sessionNo: number, opts?: { replace?: boolean }) =>
     navigate({ kind: 'session', classId, sessionNo }, opts)
   const openClasses = () => navigate({ kind: 'classes' })
+  const openBands = () => navigate({ kind: 'bands' })
+  const openBandAdmin = (slug: string) => navigate({ kind: 'bandAdmin', slug })
 
   if (session.status === 'signed-out') return <MeGuestGate signIn={signInWithPassword} />
   if (session.status === 'no-profile') return <MeNoProfile email={session.email} onSignOut={() => void signOut()} />
   if (session.status !== 'ready') return <Splash text="Đang mở Class…" />
 
-  return <SignedInShell base={session.me} view={view} onSection={go} onOpenProfile={openProfile} onOpenThread={openThread} onOpenQueue={openQueue} onOpenClass={openClass} onOpenSession={openSession} onOpenClasses={openClasses} onBack={back} visit={visit} />
+  return <SignedInShell base={session.me} view={view} onSection={go} onOpenProfile={openProfile} onOpenThread={openThread} onOpenQueue={openQueue} onOpenClass={openClass} onOpenSession={openSession} onOpenClasses={openClasses} onOpenBands={openBands} onOpenBandAdmin={openBandAdmin} onBack={back} visit={visit} />
 }
 
 // Danh tính giữ ở MỘT chỗ: đổi ảnh xong → header, top bar, ô Trả bài, bình luận cập nhật ngay.
-function SignedInShell({ base, view, onSection, onOpenProfile, onOpenThread, onOpenQueue, onOpenClass, onOpenSession, onOpenClasses, onBack, visit }: {
+function SignedInShell({ base, view, onSection, onOpenProfile, onOpenThread, onOpenQueue, onOpenClass, onOpenSession, onOpenClasses, onOpenBands, onOpenBandAdmin, onBack, visit }: {
   base: ClassIdentity
   view: MeView
   onSection: (s: SocialSection) => void
@@ -139,6 +144,9 @@ function SignedInShell({ base, view, onSection, onOpenProfile, onOpenThread, onO
   /** Trang Buổi (phòng học) của một lớp; replace = chuyển buổi ngang hàng */
   onOpenSession: (classId: string, sessionNo: number, opts?: { replace?: boolean }) => void
   onOpenClasses: () => void
+  /** Tuyển thành viên Band (Admin V1) */
+  onOpenBands: () => void
+  onOpenBandAdmin: (slug: string) => void
   /** Quay lại màn trước trong /me (fallback khi mở thẳng bằng link) */
   onBack: (fallback: MeView) => void
   /** Lượt điều hướng — key của Home: bấm Trang chủ = Home mặc định mới (Dành cho bạn, đầu trang) */
@@ -193,9 +201,11 @@ function SignedInShell({ base, view, onSection, onOpenProfile, onOpenThread, onO
           onBackToClass={() => onBack({ kind: 'class', classId: view.classId })} onOpenSession={no => onOpenSession(view.classId, no, { replace: true })}
           onOpenThread={onOpenThread} />
       )}
+      {view.kind === 'bands' && <BandsAdminPage onOpenBand={onOpenBandAdmin} />}
+      {view.kind === 'bandAdmin' && <BandApplicationsAdminPage key={view.slug} slug={view.slug} onBack={() => onBack({ kind: 'bands' })} />}
       {section === 'home' && <MeHome key={visit} me={me} identityRev={identityRev} canEditAvatar={editor.canEditAvatar} onEditMedia={editor.pick}
         onOpenProfile={onOpenProfile} requests={requests} onSeeAllRequests={() => onSection('friends')}
-        onOpenThread={onOpenThread} onOpenQueue={onOpenQueue} onOpenClasses={onOpenClasses} />}
+        onOpenThread={onOpenThread} onOpenQueue={onOpenQueue} onOpenClasses={onOpenClasses} onOpenBands={onOpenBands} />}
       {section === 'friends' && <Friends requests={requests} onOpenProfile={onOpenProfile} />}
       {section === 'chat' && <Chat />}
       {section === 'tools' && <ToolsPage />}

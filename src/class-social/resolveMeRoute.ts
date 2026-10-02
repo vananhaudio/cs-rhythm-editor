@@ -105,6 +105,21 @@ export function sessionFromPath(pathname: string): { classId: string; sessionNo:
   return m && UUID_RE.test(m[1]) ? { classId: m[1].toLowerCase(), sessionNo: Number(m[2]) } : null
 }
 
+// ── Tuyển thành viên Band (Admin V1): /me/bands · /me/bands/<slug> — quyền do server (band_can_manage) quyết ──
+export const BANDS_PATH = '/me/bands'
+const BAND_SLUG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/
+
+export function bandAdminPath(slug: string): string {
+  return BANDS_PATH + '/' + slug
+}
+
+export function bandAdminSlugFromPath(pathname: string): string | null {
+  const p = pathname.replace(/\/+$/, '')
+  if (!p.startsWith(BANDS_PATH + '/')) return null
+  const slug = p.slice(BANDS_PATH.length + 1)
+  return BAND_SLUG_RE.test(slug) && slug.length <= 60 ? slug : null
+}
+
 /** Màn đang mở trong /me: mục, trang cá nhân, learning thread, hàng đợi Thầy, danh sách lớp, hoặc một lớp. */
 export type MeView =
   | { kind: 'section'; section: SocialSection }
@@ -114,6 +129,8 @@ export type MeView =
   | { kind: 'classes' }
   | { kind: 'class'; classId: string }
   | { kind: 'session'; classId: string; sessionNo: number }
+  | { kind: 'bands' }
+  | { kind: 'bandAdmin'; slug: string }
 
 export function viewFromPath(pathname: string): MeView {
   const userId = profileUserIdFromPath(pathname)
@@ -124,7 +141,10 @@ export function viewFromPath(pathname: string): MeView {
   if (ses) return { kind: 'session', ...ses }
   const classId = classIdFromPath(pathname)
   if (classId) return { kind: 'class', classId }
+  const bandSlug = bandAdminSlugFromPath(pathname)
+  if (bandSlug) return { kind: 'bandAdmin', slug: bandSlug }
   const p = pathname.replace(/\/+$/, '')
+  if (p === BANDS_PATH) return { kind: 'bands' }
   if (p === QUEUE_PATH) return { kind: 'queue' }
   if (p === CLASSES_PATH) return { kind: 'classes' }
   return { kind: 'section', section: sectionFromPath(pathname) }
@@ -138,6 +158,8 @@ export function sameView(a: MeView, b: MeView): boolean {
     case 'session': return b.kind === 'session' && a.classId === b.classId && a.sessionNo === b.sessionNo
     case 'queue': return b.kind === 'queue'
     case 'classes': return b.kind === 'classes'
+    case 'bands': return b.kind === 'bands'
+    case 'bandAdmin': return b.kind === 'bandAdmin' && a.slug === b.slug
     default: return b.kind === 'section' && a.section === b.section
   }
 }
@@ -150,6 +172,8 @@ export function viewPath(view: MeView): string {
     case 'session': return sessionPath(view.classId, view.sessionNo)
     case 'queue': return QUEUE_PATH
     case 'classes': return CLASSES_PATH
+    case 'bands': return BANDS_PATH
+    case 'bandAdmin': return bandAdminPath(view.slug)
     default: return SECTION_PATHS[view.section]
   }
 }
@@ -157,6 +181,7 @@ export function viewPath(view: MeView): string {
 /** Link sâu nên GIỮ qua bước đăng nhập (khách → đăng nhập tại chỗ → đúng trang). */
 export function keepsPathForGuest(view: MeView): boolean {
   return view.kind === 'thread' || view.kind === 'class' || view.kind === 'classes' || view.kind === 'session'
+    || view.kind === 'bands' || view.kind === 'bandAdmin'
 }
 
 export function resolveMeRoute(input: {

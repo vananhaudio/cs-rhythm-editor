@@ -2,6 +2,7 @@
 // [chia sẻ] → (lời mời kết bạn / hàng đợi Thầy — chỉ khi có) → Feed (bài + câu chuyện học tập).
 // Ảnh bìa + hồ sơ đầy đủ + Hành trình thuộc về TRANG CÁ NHÂN (/me/u/<id>), không lặp lại ở đây.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Drum } from 'lucide-react'
 import type { ClassIdentity } from '../useClassSession'
 import { useCommunityFeed } from '../posts/useCommunityFeed'
 import { isPostEntry, type FeedPost } from '../posts/postModel'
@@ -31,7 +32,7 @@ function useFeedScope(): [FeedScope, (s: FeedScope) => void] {
 /** Home chỉ hiện vài lời mời mới nhất; đủ danh sách ở trang Bạn bè. */
 const HOME_REQUESTS_MAX = 3
 
-export default function MeHome({ me, identityRev = 0, onOpenProfile, requests, onSeeAllRequests, onOpenThread, onOpenQueue, onOpenClasses }: {
+export default function MeHome({ me, identityRev = 0, onOpenProfile, requests, onSeeAllRequests, onOpenThread, onOpenQueue, onOpenClasses, onOpenBands }: {
   me: ClassIdentity
   identityRev?: number
   /** (không dùng trên Home nữa — đổi ảnh ở Trang cá nhân / menu tài khoản) */
@@ -47,6 +48,8 @@ export default function MeHome({ me, identityRev = 0, onOpenProfile, requests, o
   onOpenQueue?: () => void
   /** Feed "Lớp của tôi" trống → lối sang /me/classes */
   onOpenClasses?: () => void
+  /** Thầy: lối vào Tuyển thành viên Band (/me/bands) */
+  onOpenBands?: () => void
 }) {
   const [scope, setScope] = useFeedScope()
   const { state, reload, loadMore } = useCommunityFeed(scope)
@@ -89,6 +92,11 @@ export default function MeHome({ me, identityRev = 0, onOpenProfile, requests, o
     <div className="cs-col cs-home cs-home-feedfirst">
       <HomeComposer me={me} onPosted={onPosted} onOpenProfile={onOpenProfile} />
       {me.isTeacher && onOpenThread && onOpenQueue && <MeThreadsBlock isTeacher onOpenThread={onOpenThread} onOpenQueue={onOpenQueue} />}
+      {me.isTeacher && onOpenBands && (
+        <button type="button" className="cs-queue-entry" onClick={onOpenBands}>
+          <Drum size={18} aria-hidden="true" /><span>Đơn ứng tuyển Band</span><span aria-hidden="true">›</span>
+        </button>
+      )}
       {requests && requests.count > 0 && onOpenProfile && (
         <section className="cs-card cs-friends-card cs-home-requests" aria-labelledby="cs-home-req-title">
           <h2 id="cs-home-req-title" className="cs-friends-title">

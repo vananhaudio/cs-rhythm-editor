@@ -3,6 +3,7 @@ import { lazy, Suspense, useEffect, useState } from 'react'
 import { supabase, IS_NATIVE_CAPACITOR } from './supabase'
 import type { User } from '@supabase/supabase-js'
 import { resolveMeRoute, isLearnPath } from './class-social/resolveMeRoute'
+import { bandSlugFromPublicPath } from './band/bandModel'
 import { PlayerView } from './PlayerView'
 import { TapWithSong } from './TapWithSong'
 import { GpEditor } from './GpEditor'
@@ -64,6 +65,8 @@ export const NHIPPHACH_PATHS: readonly string[] = ['/nhipphach', '/musicxml-beat
 const NhipPhachGate = lazy(() => import('./nhipphach/NhipPhachGate'))
 // Class Social (cửa chính /me trên class.*) — chunk riêng, không nặng thêm bundle App học
 const ClassSocialPage = lazy(() => import('./class-social/ClassSocialPage'))
+// Band — trang tuyển thành viên công khai /band/<slug> (một component cho mọi Band, dữ liệu từ server)
+const BandRecruitRoute = lazy(() => import('./band/BandRecruitRoute'))
 const ThuVienPage = lazy(() => import('./thuvien/ThuVienPage'))
 // Điệu đệm hát (/dieudemhat) — chunk riêng, dữ liệu từ src/content/dieudemhat
 const DieuDemHatPage = lazy(() => import('./dieudemhat/DieuDemHatPage'))
@@ -235,6 +238,12 @@ function AppRouterContent() {
   //  /me      → Class Social (cửa chính mới) ; /me?tab=… → /learn?tab=… (deep link cũ)
   //  App học  → /learn (và /start như cũ). Native/timming: /me vẫn là App học như trước.
   //  các route app khác (bài/công cụ) → rơi xuống routing thường (chạy bình thường)
+  // ── Route /band/<slug> — tuyển thành viên Band, CÔNG KHAI (khách xem + gửi đơn không cần đăng nhập) ──
+  {
+    const bandSlug = bandSlugFromPublicPath(path)
+    if (bandSlug) return <Suspense fallback={null}><BandRecruitRoute slug={bandSlug} /></Suspense>
+  }
+
   const onClass = typeof window !== 'undefined' && window.location.hostname.startsWith('class.')
   if (onClass && (path === '/' || path === '/class' || path.startsWith('/class'))) {
     return <ClassLandingPage />   // class./ LUÔN là trang tuyển sinh; vào cổng học qua nút "Hành trình của tôi" → /me

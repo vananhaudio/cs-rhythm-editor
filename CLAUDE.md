@@ -65,6 +65,9 @@ Sau khi đổi schema phải chạy `NOTIFY pgrst, 'reload schema';`.
 - Bài trả = khối `{kind:'checkpoint', id:'<buổi>.<n>', title, prompt, required, accepts}` đặt TRONG mạch buổi. id bất biến. Không bảng định nghĩa riêng: server đọc `class_lesson_content.blocks`.
 - Tiến độ buổi = `learning_session_progress` (opened_at bất biến, completed_at một lần) qua RPC `class_learning_state` / `lt_submit_checkpoint`; hoàn thành buổi bằng trigger khi Thầy chấm Đạt. Thiết kế + triển khai: `docs/CLASS-CHECKPOINTS-V1.md`.
 
+## Band — Tuyển thành viên V1 — từ 02/10/2026
+- Band/đợt tuyển/Rule là DỮ LIỆU (`bands`, `band_recruitments`, `band_rule_versions`, `band_applications`); Band mới = seed SQL kiểu `db/band_la_mua_thu_seed.sql`, KHÔNG sửa `src/band/`. Rule bất biến theo version. Mọi đọc/ghi qua RPC `band_*`. Chi tiết: `docs/BAND-RECRUIT-V1.md`.
+
 ## Design tokens
 - Desktop portal: accent `#4F46E5`, bg `#F4F4F5`, surface `#FFFFFF`.
 - Mobile (light): primary `#4338CA`, accent `#EA580C`, bg `#F0F2F5`.
