@@ -1337,3 +1337,13 @@ button.cs-subs-title:hover { color: var(--cs-accent); }
 /* nút "Thử ở …" của thẻ chia sẻ công cụ: luôn trắng trên khối xám (đứng sau .cs-btn-soft V1.1) */
 .cs-tool-share .cs-tool-share-cta { background: var(--cs-surface); border-color: var(--cs-border); color: var(--cs-text); }
 .cs-tool-share .cs-tool-share-cta:hover:not(:disabled) { background: var(--cs-surface); border-color: var(--cs-neutral-line); }
+
+/* ── CLASS PAGE MICRO-POLISH (final) — chỉ Trang lớp ─────────────────────────────────────────────────────────── */
+/* 1. vạch dưới tên Chặng: xám trung tính nhẹ — chữ tên chặng là yếu tố phân cấp chính */
+.cs-map-stage-title { border-bottom: 1px solid var(--cs-neutral-line); }
+/* 2. buổi khoá vẫn đọc rõ "con đường phía trước"; ổ khoá vẫn phụ */
+.cs-map-row.is-locked .cs-map-title { color: var(--cs-muted); font-weight: 600; }
+.cs-map-row.is-locked .cs-map-no { color: #8a8a93; font-weight: 700; }
+.cs-map-row.is-locked .cs-map-lock { color: #a1a1aa; }
+/* 3. gutter master-detail gọn: panel gắn trực tiếp với buổi đang chọn (giữ mũi nối) */
+.cs-learnmap.is-split { grid-template-columns: minmax(0, 60fr) minmax(0, 40fr); column-gap: 20px; }
