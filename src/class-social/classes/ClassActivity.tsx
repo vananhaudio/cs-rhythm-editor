@@ -28,7 +28,7 @@ export function ActivityLine({ card, now, onOpenThread }: { card: ThreadCard; no
   return (
     <li>
       <button type="button" className="cs-act-line" onClick={() => onOpenThread(card.id)}>
-        <Avatar name={actor.name} url={actor.avatarUrl} size={32} />
+        <Avatar name={actor.name} url={actor.avatarUrl} size={40} />
         <span className="cs-act-text">
           <span className="cs-act-main"><b>{actor.name}</b> {what}</span>
           <span className="cs-act-lesson">{lessonLabel(card.identity.lesson.title)}</span>

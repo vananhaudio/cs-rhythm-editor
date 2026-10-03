@@ -1200,3 +1200,135 @@ button.cs-subs-title:hover { color: var(--cs-accent); }
   .cs-subs-panel { padding: var(--cs-s3) var(--cs-s4); }
   .cs-act-line { padding: 10px var(--cs-s1); }
 }
+
+/* ── /ME VISUAL SYSTEM V1.1 — STRONG VISUAL PASS (docs/ME-VISUAL-SYSTEM-V1.md §V1.1) ───────────────────────────
+   Ba lớp nhìn thấy được: canvas xám trung tính → bề mặt trắng (feed, composer, object, panel) → bề mặt tập trung.
+   Tím = điều hướng / tương tác (menu, tab, focus, hành động chính). Không đổi kiến trúc, flow, logic. */
+.cs-root {
+  --cs-bg: #ebedf0;                 /* canvas đậm hơn để bề mặt trắng tách rõ */
+  --cs-hover: #f0f1f3;
+  --cs-nav-hover: #e1e3e7;
+  --cs-nav-active: #e9e1fb;         /* nền tím nhạt có chủ ý cho mục menu đang chọn */
+  --cs-shadow: 0 1px 2px rgba(15, 23, 42, 0.10);
+  --cs-shadow-focus: 0 1px 2px rgba(15, 23, 42, 0.08), 0 6px 20px rgba(15, 23, 42, 0.08);
+  --cs-marker: #3f3f46;             /* dấu chọn trung tính (không tím ngữ nghĩa) */
+}
+.cs-card { border: none; box-shadow: var(--cs-shadow); }
+
+/* Sidebar: nhóm có tiêu đề thật · icon trong ô tròn trung tính · mục đang chọn = nền tím nhạt + icon tím đặc */
+.cs-nav-title { font-size: 15px; font-weight: 700; color: var(--cs-text); padding: 0 12px 6px; }
+.cs-nav-group + .cs-nav-group { margin-top: 12px; padding-top: 12px; border-top-color: #d9dbe0; }
+.cs-nav-item { min-height: 48px; font-weight: 600; border-radius: 10px; }
+.cs-nav-item:hover { background: var(--cs-nav-hover); }
+.cs-nav-item > svg { box-sizing: content-box; width: 20px; height: 20px; padding: 7px; border-radius: 50%; background: #dfe1e6; color: var(--cs-text); }
+.cs-nav-item.is-active { background: var(--cs-nav-active); color: var(--cs-p-strong); font-weight: 700; }
+.cs-nav-item.is-active > svg { background: var(--cs-p); color: #fff; }
+.cs-nav-item.is-active::before { left: -12px; top: 6px; bottom: 6px; width: 4px; }
+.cs-nav-item.is-restricted > svg { background: #e7e8ec; color: var(--cs-faint); }
+.cs-sidebar.is-collapsed .cs-nav-item > svg { padding: 8px; }
+
+/* Typography: 6 cấp khác nhau rõ (size + weight + màu) */
+.cs-page-title { font-size: 28px; font-weight: 800; letter-spacing: -0.02em; }
+.cs-classv2-head .cs-class-name { font-size: 30px; font-weight: 800; letter-spacing: -0.025em; }
+@media (min-width: 1024px) { .cs-classv2-head .cs-class-name { font-size: 34px; } }
+.cs-classv2-meta { font-size: 14.5px; color: var(--cs-muted); }
+.cs-classv2-h2 { font-size: 20px; font-weight: 800; letter-spacing: -0.01em; color: var(--cs-text); margin: 0 0 var(--cs-s3); }
+
+/* HOME — composer · tab · feed là một hệ */
+.cs-share { padding: var(--cs-s3) var(--cs-s4); }
+.cs-share-input { background: #f0f2f5; }
+@media (min-width: 560px) {
+  .cs-share-prompts { padding: var(--cs-s2) 0 0; margin-top: var(--cs-s3); border-top: 1px solid var(--cs-border); justify-content: space-between; }
+  .cs-share-chip { flex: 1; justify-content: center; min-height: 40px; border-radius: 8px; font-size: 14px; color: var(--cs-muted); }
+  .cs-share-chip .cs-uiicon { width: 20px; height: 20px; }
+}
+.cs-share-chip:hover { background: var(--cs-hover); }
+.cs-root .cs-feed-tabs { background: var(--cs-surface); border-radius: var(--cs-r-lg); box-shadow: var(--cs-shadow); border-bottom: none;
+  padding: 4px 8px 0; margin: var(--cs-s3) 0; }
+.cs-root .cs-feed-tabs button { border-radius: 8px 8px 0 0; margin-bottom: 4px; }
+.cs-root .cs-feed-tabs button[aria-pressed="true"]::after { bottom: -4px; left: 6px; right: 6px; height: 3px; }
+.cs-post { padding: var(--cs-s4); }
+.cs-post-author { font-size: 15.5px; }
+.cs-post-list { gap: var(--cs-s4); }
+.cs-tool-share { background: #f0f2f5; padding: var(--cs-s4) var(--cs-s5); }
+
+/* Lớp của tôi (tab Lớp + /me/classes): danh sách tên lớp nằm trên một bề mặt trắng */
+.cs-home-classes, .cs-myclasses-page .cs-classrows { background: var(--cs-surface); border-radius: var(--cs-r-lg); box-shadow: var(--cs-shadow); padding: var(--cs-s2) var(--cs-s3); }
+.cs-home-classes { margin: var(--cs-s3) 0; }
+.cs-home-classes .cs-subtle-title { margin: var(--cs-s2) var(--cs-s2) 0; }
+.cs-classrow-name { font-size: 17px; }
+.cs-home-classes .cs-classrow-name { font-size: 17px; }
+
+/* CLASS PAGE — Mục lục phẳng trên canvas · "Bài trả của tôi" là bề mặt gần mắt */
+.cs-map-stage + .cs-map-stage { margin-top: var(--cs-s5); }
+.cs-map-stage-title { margin: var(--cs-s4) 0 var(--cs-s2); padding-bottom: var(--cs-s2); border-bottom: 2px solid var(--cs-text); }
+.cs-map-stage-no { font-size: 12.5px; font-weight: 700; color: var(--cs-muted); letter-spacing: 0.02em; }
+.cs-map-stage-name { font-size: 18px; font-weight: 800; line-height: 1.3; color: var(--cs-text); }
+.cs-map-stage-toggle { padding: var(--cs-s1) 0; }
+.cs-map-row { padding-top: 14px; padding-bottom: 14px; border-bottom-color: #d9dbe0; }
+.cs-map-title { font-size: 17px; font-weight: 700; }
+.cs-map-no { font-size: 16px; font-weight: 800; color: #a1a1aa; }
+.cs-map-row.is-current .cs-map-no { color: var(--cs-text); }
+.cs-map-row.is-locked .cs-map-title, .cs-map-row.is-locked .cs-map-no { color: #a1a1aa; font-weight: 600; }
+.cs-map-meta { font-size: 13.5px; }
+.cs-map-row.is-current { border-left-color: var(--cs-marker); }
+/* dòng đang chọn: cùng bề mặt trắng với panel + mũi nối sang phải */
+.cs-learnmap.is-split .cs-map-row { position: relative; border-radius: 10px; border-left-width: 3px; }
+.cs-learnmap.is-split .cs-map-row.is-selected { background: var(--cs-surface); box-shadow: var(--cs-shadow); border-bottom-color: transparent; }
+.cs-learnmap.is-split .cs-map-row.is-selected::after { content: ''; position: absolute; right: -7px; top: 50%; width: 14px; height: 14px; margin-top: -7px;
+  background: var(--cs-surface); transform: rotate(45deg); box-shadow: 2px -2px 3px rgba(15, 23, 42, 0.06); }
+.cs-learnmap.is-split { column-gap: 32px; }
+.cs-subs-panel { background: var(--cs-surface); border: none; border-radius: 16px; box-shadow: var(--cs-shadow-focus); padding: var(--cs-s5); }
+.cs-subs-panel > .cs-classv2-h2 { font-size: 13px; font-weight: 700; color: var(--cs-muted); letter-spacing: 0.01em; margin-bottom: var(--cs-s2); }
+.cs-subs-title { font-size: 21px; font-weight: 800; line-height: 1.3; letter-spacing: -0.01em; }
+.cs-subs-sum { font-size: 15px; font-weight: 700; margin: var(--cs-s1) 0 var(--cs-s3); padding-bottom: var(--cs-s3); border-bottom: 1px solid var(--cs-border); }
+.cs-subs-panel .cs-map-cp { padding: 12px 0; font-size: 14.5px; }
+.cs-subs-panel .cs-map-cp-status { font-size: 13px; }
+/* cánh cửa Không gian lớp = một bề mặt trắng bấm được */
+.cs-space-door { border-top: none; padding-top: 0; }
+.cs-space-door-go { background: var(--cs-surface); box-shadow: var(--cs-shadow); border-radius: var(--cs-r-lg); padding: var(--cs-s4) var(--cs-s5); }
+.cs-space-door-go:hover { background: var(--cs-surface); box-shadow: var(--cs-shadow-focus); }
+.cs-space-door-title { font-size: 18px; font-weight: 800; }
+
+/* KHÔNG GIAN LỚP — không gian xã hội: hai bề mặt (Hoạt động · Thành viên), người đi trước */
+.cs-classspace .cs-classv2-sec { background: var(--cs-surface); border-radius: var(--cs-r-lg); box-shadow: var(--cs-shadow); padding: var(--cs-s4) var(--cs-s4) var(--cs-s2); margin-top: var(--cs-s3); }
+.cs-classspace .cs-act-line { padding: var(--cs-s3) var(--cs-s2); border-radius: 10px; border-bottom: none; }
+.cs-classspace .cs-act-list li + li .cs-act-line { border-top: 1px solid var(--cs-border); border-radius: 0; }
+.cs-classspace .cs-act-line:hover { background: var(--cs-hover); border-radius: 10px; }
+.cs-act-main { font-size: 15px; }
+.cs-act-main b { font-weight: 700; }
+.cs-act-lesson { font-size: 14px; color: var(--cs-text); }
+.cs-classspace .cs-member-list { box-shadow: none; border: none; background: none; padding: 0; }
+.cs-classspace .cs-member { padding: var(--cs-s3) var(--cs-s2); }
+.cs-member-name { font-size: 15px; }
+
+/* Trao đổi / Bạn bè / Trang cá nhân: tiêu đề trang mạnh, bề mặt nhất quán */
+.cs-friends-page .cs-page-title, .lt-page .cs-page-title { margin-bottom: var(--cs-s4); }
+
+@media (max-width: 480px) {
+  .cs-classv2-head .cs-class-name { font-size: 26px; }
+  .cs-subs-panel { padding: var(--cs-s4); }
+  .cs-classspace .cs-classv2-sec { padding: var(--cs-s3) var(--cs-s3) var(--cs-s1); border-radius: 12px; }
+  .cs-root .cs-feed-tabs { padding: 2px 4px 0; }
+}
+
+/* Cuộc trao đổi: đầu thread = object title rõ; dòng thời gian trên một bề mặt */
+.cs-root .lt-page .lt-card { border: none; box-shadow: var(--cs-shadow); border-radius: var(--cs-r-lg); padding: var(--cs-s4) var(--cs-s5); }
+.cs-root .lt-page .lt-head-lesson { font-size: 24px; font-weight: 800; line-height: 1.25; letter-spacing: -0.015em; color: var(--cs-text); }
+.cs-root .lt-page .lt-head-name { font-size: 15px; font-weight: 700; color: var(--cs-text); }
+.cs-root .lt-page .lt-ev-bubble { background: #f0f2f5; border-color: transparent; border-radius: 16px; }
+.cs-root .lt-page .lt-ev.is-teacher .lt-ev-bubble { background: #f0f2f5; border-color: transparent; }
+.cs-root .lt-page .lt-ev-author { font-weight: 700; }
+@media (max-width: 480px) {
+  .cs-root .lt-page .lt-card { padding: var(--cs-s3) var(--cs-s4); }
+  .cs-root .lt-page .lt-head-lesson { font-size: 20px; }
+}
+
+/* Nút phụ: xám trung tính kiểu nút phụ mạng xã hội; nút nằm trên canvas thì là bề mặt trắng */
+.cs-btn-soft { background: #e4e6eb; }
+.cs-btn-soft:hover, .cs-btn-soft:hover:not(:disabled) { background: #d8dadf; }
+.cs-root .lt-page .lt-btn.is-ghost { background: var(--cs-surface); border-color: transparent; box-shadow: var(--cs-shadow); color: var(--cs-text); }
+.cs-root .lt-page .lt-btn.is-ghost:hover:not(:disabled) { box-shadow: var(--cs-shadow-focus); }
+/* Lớp trong sidebar (không icon): chữ thẳng cột với các mục có icon */
+.cs-class-item { padding-left: 60px; }
+.cs-sheet .cs-class-dot { display: none; }

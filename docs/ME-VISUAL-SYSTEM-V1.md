@@ -56,3 +56,25 @@ emoji trong NỘI DUNG (vd. bài "🎸 Đang tập: …") giữ nguyên. Nav 20p
 `npm run test:class-social`, `test:route-guard`, tsc, build; E2E `scripts/e2e-class-canonical.sh` có vòng quét
 320/390/768/1280/1440/1600 (Home · Lớp của tôi · Trang lớp · Không gian lớp · Bạn bè): không tràn ngang, ≤ 1 nút tím chính
 trong viewport, trang lớp/Không gian lớp ≥ 860px trên desktop, dòng hoạt động có avatar.
+
+## V1.1 — Strong visual pass (03/10/2026)
+V1 đúng hướng nhưng khác biệt quá nhẹ (Owner nghiệm thu bằng mắt). V1.1 tạo khác biệt nhìn thấy ngay, KHÔNG đổi IA/flow/logic/DB.
+Khối CSS "/ME VISUAL SYSTEM V1.1" cuối `classSocial.css` (ghi đè V1).
+
+- **Chiều sâu 3 lớp**: canvas `--cs-bg #ebedf0` (đậm hơn) → bề mặt trắng không viền, bóng 1px (`--cs-shadow`) → bề mặt tập trung
+  `--cs-shadow-focus` (panel "Bài trả của tôi", hover cánh cửa).
+- **Sidebar**: tiêu đề nhóm 15/700 chữ thường; icon trong ô tròn xám 34px; mục đang chọn = nền tím nhạt `#e9e1fb` + ô icon tím đặc,
+  icon trắng + vạch trái; hàng 48px; tên lớp (không icon) thẳng cột chữ.
+- **Typography**: tên trang 28 · tên lớp 30/34 · tiêu đề mục 20/800 · tên chặng 18/800 dưới nhãn "Chặng N · K buổi" + vạch 2px
+  (mục lục giáo trình) · tên buổi 17/700 · số buổi 16/800 · đầu thread 24/800.
+- **Home**: composer trắng; gợi ý chia sẻ là hàng nút chia đều dưới vạch (≥560px); hàng tab là bề mặt trắng, tab đang chọn tím
+  (điều hướng); bài feed bề mặt trắng cách 16px; nút "Thử ở … BPM" trắng trên khối xám.
+- **Class Page**: mục lục phẳng trên canvas; dòng buổi đang chọn = bề mặt trắng + vạch trái trung tính + mũi nối sang panel;
+  panel trắng nổi (bóng tập trung, bo 16); "Bài trả của tôi" thành nhãn nhỏ, "Buổi NN · Tên" 21/800; cánh cửa Không gian lớp
+  là bề mặt trắng bấm được.
+- **Không gian lớp**: hai bề mặt (Hoạt động · Thành viên); avatar 40 → **tên** việc → bài → trạng thái/thời gian.
+- **Thread**: thẻ không viền, bong bóng xám trung tính (Thầy cũng vậy), hành động dưới thread là nút trắng trên canvas.
+- Nút phụ `.cs-btn-soft` xám trung tính `#e4e6eb` (hover xám đậm hơn, không tím).
+
+Bằng chứng: E2E quét thị giác chụp cùng dữ liệu/viewport ở d80a0cb1 (BEFORE) và V1.1 (AFTER) — Home, tab Lớp, Lớp của tôi,
+Trang lớp, Không gian lớp, Bạn bè, Thread, Trang cá nhân × 320/390/768/1280/1440/1600.

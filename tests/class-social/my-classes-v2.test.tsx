@@ -52,8 +52,8 @@ test("Mục lục sống (24 buổi / 3 chặng): chặng hiện tại mở; ch�
   assert.deepEqual(stageGroups(st.sessions).map(x => [x.no, x.sessions.length]), [[1, 8], [2, 8], [3, 8]])
   const h = renderToStaticMarkup(<ClassMap state={st} current={1} onOpenSession={noop} onOpenThread={noop} />)
   assert.equal((h.match(/cs-map-stage-toggle/g) || []).length, 3)
-  assert.match(h, /cs-map-stage-no">Chặng 1<\/span><span class="cs-map-stage-name">TỪ GIAI ĐIỆU ĐẾN SOLO GUITAR · 8 buổi/, "tiêu đề chặng hai cấp")
-  assert.match(h, /cs-map-stage-no">Chặng 2<\/span><span class="cs-map-stage-name">PHÁT TRIỂN SOLO GUITAR &amp; BOLERO · 8 buổi/)
+  assert.match(h, /cs-map-stage-no">Chặng 1 · 8 buổi<\/span><span class="cs-map-stage-name">TỪ GIAI ĐIỆU ĐẾN SOLO GUITAR<\/span>/, "tiêu đề chặng hai cấp kiểu mục lục")
+  assert.match(h, /cs-map-stage-no">Chặng 2 · 8 buổi<\/span><span class="cs-map-stage-name">PHÁT TRIỂN SOLO GUITAR &amp; BOLERO<\/span>/)
   assert.equal((h.match(/class="cs-map-row/g) || []).length, 8, "chỉ chặng đang học bung sẵn")
   // V3: cột số 01/02/… riêng; TÊN BUỔI là nút mở Trang Buổi; dòng phụ = bài trả của CHÍNH tôi
   assert.match(h, /aria-current="step"><span class="cs-map-no" aria-hidden="true">01<\/span><div class="cs-map-body"><button type="button" class="cs-map-title"><span class="cs-sr-only">Buổi 01: <\/span>Bản đồ nốt giản lược C–Am<\/button><div class="cs-map-meta"><button[^>]*>0\/3 bài trả Đạt/)

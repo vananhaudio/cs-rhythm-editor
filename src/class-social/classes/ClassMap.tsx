@@ -41,6 +41,17 @@ export function SubmissionList({ s, teacher, onOpenSession, onOpenThread, label,
   )
 }
 
+// Tiêu đề chặng kiểu mục lục giáo trình: dòng nhãn nhỏ "Chặng 1 · 8 buổi" → tên chặng đậm
+function StageText({ no, title, count }: { no: number | null; title: string | null; count: number }) {
+  const label = no != null ? `Chặng ${no}` : 'Giáo trình'
+  return (
+    <span className="cs-map-stage-text">
+      <span className="cs-map-stage-no">{`${label} · ${count} buổi`}</span>
+      {title && <span className="cs-map-stage-name">{title}</span>}
+    </span>
+  )
+}
+
 function SessionItem({ s, state, current, layout, open, onToggle, onOpenSession, onOpenThread }: {
   s: SessionState; state: Ready; current: boolean; layout: MapLayout
   /** inline: đang bung · side: đang được chọn cho panel phải */
@@ -130,16 +141,12 @@ export default function ClassMap({ state, current, onOpenSession, onOpenThread, 
             {single && g.no == null
               ? null
               : single
-                ? <h3 className="cs-map-stage-title"><span className="cs-map-stage-text"><span className="cs-map-stage-no">{g.no != null ? `Chặng ${g.no}` : 'Giáo trình'}</span>
-                    <span className="cs-map-stage-name">{g.title ? `${g.title} · ` : ''}{g.sessions.length} buổi</span></span></h3>
+                ? <h3 className="cs-map-stage-title"><StageText no={g.no} title={g.title} count={g.sessions.length} /></h3>
                 : (
                   <h3 className="cs-map-stage-title">
                     <button type="button" className="cs-map-stage-toggle" aria-expanded={isOpen} onClick={() => flip(setOpen, g.key)}>
                       {isOpen ? <ChevronDown size={16} aria-hidden="true" /> : <ChevronRight size={16} aria-hidden="true" />}
-                      <span className="cs-map-stage-text">
-                        <span className="cs-map-stage-no">{g.no != null ? `Chặng ${g.no}` : 'Giáo trình'}</span>
-                        <span className="cs-map-stage-name">{g.title ? `${g.title} · ` : ''}{g.sessions.length} buổi</span>
-                      </span>
+                      <StageText no={g.no} title={g.title} count={g.sessions.length} />
                     </button>
                   </h3>
                 )}
