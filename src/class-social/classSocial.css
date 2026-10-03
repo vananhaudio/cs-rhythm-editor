@@ -1332,3 +1332,5 @@ button.cs-subs-title:hover { color: var(--cs-accent); }
 /* Lớp trong sidebar (không icon): chữ thẳng cột với các mục có icon */
 .cs-class-item { padding-left: 60px; }
 .cs-sheet .cs-class-dot { display: none; }
+/* tiêu đề nhóm trong Home (Lớp của tôi / Hoạt động từ các lớp): section title chữ thường, không ALL CAPS */
+.cs-subtle-title { font-size: 17px; font-weight: 800; letter-spacing: -0.005em; text-transform: none; color: var(--cs-text); }
