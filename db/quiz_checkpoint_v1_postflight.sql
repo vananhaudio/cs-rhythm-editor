@@ -47,7 +47,7 @@ with quiz as (
                or has_function_privilege('authenticated', to_regprocedure('public.lsp_try_complete(uuid,text,integer,uuid)'), 'execute') then 'STOP' else 'OK' end
   union all
   select 'quiz_key', q.cp || ' @ ' || q.session_id,
-         coalesce(k.mode || ' ' || array_to_string(k.correct, ','), 'THIẾU đáp án') ,
+         coalesce(k.mode || ' · ' || cardinality(k.correct)::text || ' đáp án đúng', 'THIẾU đáp án'),   -- không in đáp án
          case when k.session_id is not null and k.mode = q.mode and k.correct <@ q.opts and cardinality(q.opts) >= 2 then 'OK' else 'STOP' end
   from quiz q left join public.class_checkpoint_keys k on k.session_id = q.session_id and k.checkpoint_id = q.cp
   union all
