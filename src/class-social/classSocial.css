@@ -1334,3 +1334,6 @@ button.cs-subs-title:hover { color: var(--cs-accent); }
 .cs-sheet .cs-class-dot { display: none; }
 /* tiêu đề nhóm trong Home (Lớp của tôi / Hoạt động từ các lớp): section title chữ thường, không ALL CAPS */
 .cs-subtle-title { font-size: 17px; font-weight: 800; letter-spacing: -0.005em; text-transform: none; color: var(--cs-text); }
+/* nút "Thử ở …" của thẻ chia sẻ công cụ: luôn trắng trên khối xám (đứng sau .cs-btn-soft V1.1) */
+.cs-tool-share .cs-tool-share-cta { background: var(--cs-surface); border-color: var(--cs-border); color: var(--cs-text); }
+.cs-tool-share .cs-tool-share-cta:hover:not(:disabled) { background: var(--cs-surface); border-color: var(--cs-neutral-line); }
