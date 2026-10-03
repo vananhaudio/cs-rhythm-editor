@@ -1145,6 +1145,8 @@ button.cs-subs-title:hover { color: var(--cs-accent); }
 .cs-card { border-radius: var(--cs-r-lg); }
 .cs-post { padding: var(--cs-s3) var(--cs-s4) var(--cs-s4); }
 .cs-tool-share { border-radius: var(--cs-r-md); background: var(--cs-bg); border-color: transparent; }
+.cs-tool-share-cta { background: var(--cs-surface); border-color: var(--cs-border); color: var(--cs-text); }
+.cs-tool-share-cta:hover { background: var(--cs-surface); border-color: var(--cs-neutral-line); }
 
 /* Tiêu đề mục: chữ thường, rõ cấp (không ALL CAPS) */
 .cs-classv2-h2 { font-size: 15px; letter-spacing: 0; text-transform: none; color: var(--cs-text); font-weight: 700; margin-bottom: var(--cs-s2); }
