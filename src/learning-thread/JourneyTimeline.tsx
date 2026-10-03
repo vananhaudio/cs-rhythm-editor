@@ -3,6 +3,7 @@
 // Component lá (không CSS import, không mạng) — test render được.
 import { lessonLine, moduleLabel, SOCIAL_STATUS_LABEL, STATUS_UI, VISIBILITY_LABEL } from './ltModel'
 import { eventSteps, groupJourney, type JourneyItem } from './feedModel'
+import UiIcon from '../class-social/UiIcon'
 
 export default function JourneyTimeline({ items, ownerName, onOpenThread }: {
   items: JourneyItem[]
@@ -43,7 +44,7 @@ export default function JourneyTimeline({ items, ownerName, onOpenThread }: {
                     <>
                       <span className="lt-ms-lesson">{it.identity.lesson.title}</span>
                       {module && <span className="lt-ms-module">{module}</span>}
-                      <span className="lt-ms-steps">{steps.map((s, i) => <span key={i} className="lt-ms-step">{s.icon} {s.label}{s.times ? <span className="lt-ms-times" aria-label={`${s.times} lần`}> ×{s.times}</span> : null}</span>)}</span>
+                      <span className="lt-ms-steps">{steps.map((s, i) => <span key={i} className="lt-ms-step"><UiIcon emoji={s.icon} size={14} /> {s.label}{s.times ? <span className="lt-ms-times" aria-label={`${s.times} lần`}> ×{s.times}</span> : null}</span>)}</span>
                       <span className="lt-ms-meta">
                         <span className={'lt-chip is-' + st.tone}>{SOCIAL_STATUS_LABEL[it.status]}</span>
                         {it.visibility === 'private' && <span className="lt-badge">{VISIBILITY_LABEL.private}</span>}

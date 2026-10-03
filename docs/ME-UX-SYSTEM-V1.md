@@ -50,3 +50,6 @@ Bấm tab **Lớp** theo phản xạ = "lớp của tôi ở đây". Một tab t
 - Sidebar mở rộng: bỏ chấm trước tên lớp (không mang nghĩa); chỉ còn khi thu gọn (hình thay chữ).
 - Dòng lớp ở mọi nơi là `<a href>` (mở tab mới được); bấm thường thì điều hướng trong app.
 
+
+## Visual System V1 (03/10/2026)
+Token khoảng cách / bo góc / bề rộng theo loại trang, icon Lucide, avatar 32/40/48: xem `docs/ME-VISUAL-SYSTEM-V1.md`.

@@ -23,10 +23,9 @@ export default function SubmissionsPanel({ state, sessionNo, onOpenSession, onOp
       {!s || !v
         ? <p className="cs-map-note">Chọn số bài trả ở một buổi trong mục lục để xem chi tiết.</p>
         : <>
-            <p className="cs-subs-kicker">Buổi {pad2(s.no)}</p>
             {v.locked
-              ? <p className="cs-subs-title is-locked">{s.title}</p>
-              : <button type="button" className="cs-subs-title" onClick={() => onOpenSession(s.no)}>{s.title}</button>}
+              ? <p className="cs-subs-title is-locked">Buổi {pad2(s.no)} · {s.title}</p>
+              : <button type="button" className="cs-subs-title" onClick={() => onOpenSession(s.no)}>Buổi {pad2(s.no)} · {s.title}</button>}
             {v.locked
               ? <p className="cs-map-note">Chưa mở · {lockedHint(state.sessions, s)}.</p>
               : !v.submissions
@@ -34,9 +33,9 @@ export default function SubmissionsPanel({ state, sessionNo, onOpenSession, onOp
                 : <>
                     <p className="cs-subs-sum">
                       {!teacher && v.submissions.passed > 0 && <span className="cs-map-mark is-ok" aria-hidden="true">✓</span>}
-                      {submissionsText(v.submissions, teacher)}
+                      {teacher ? submissionsText(v.submissions, true) : `${v.submissions.passed}/${v.submissions.total} Đạt`}
                     </p>
-                    <SubmissionList s={s} teacher={teacher} label={`Bài trả buổi ${pad2(s.no)}`} onOpenSession={onOpenSession} onOpenThread={onOpenThread} />
+                    <SubmissionList s={s} teacher={teacher} compact label={`Bài trả buổi ${pad2(s.no)}`} onOpenSession={onOpenSession} onOpenThread={onOpenThread} />
                   </>}
           </>}
     </aside>

@@ -22,7 +22,7 @@ export default function CommentItem({ c, canModerate, now, onDelete, onModerate,
   return (
     <li className={'cs-cmt' + (teacher ? ' is-teacher' : '') + (c.isHidden ? ' is-hidden' : '')}>
       <PersonLink userId={c.author.userId} onOpen={onOpenProfile} label={`Trang cá nhân của ${c.author.name}`}>
-        <Avatar name={c.author.name} url={c.author.avatarUrl} size={34} />
+        <Avatar name={c.author.name} url={c.author.avatarUrl} size={32} />
       </PersonLink>
       <div className="cs-cmt-main">
         <div className="cs-cmt-bubble">

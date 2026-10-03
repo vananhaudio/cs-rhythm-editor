@@ -7,6 +7,7 @@ import { VISIBILITY_LABEL, identityLine, moduleLabel } from './ltModel'
 import { originBadge, storyLine, type ThreadCard } from './feedModel'
 import { StatusChip } from './ThreadView'
 import { IdentityBadges } from '../class-social/identity/IdentityBadges'
+import UiIcon from '../class-social/UiIcon'
 
 export default function LearningThreadCard({ card, now, onOpenThread, onOpenProfile, inClass = false }: {
   card: ThreadCard
@@ -22,7 +23,7 @@ export default function LearningThreadCard({ card, now, onOpenThread, onOpenProf
   const showStory = !!story && (card.lastEvent?.authorRole === 'teacher' || card.lastEvent?.isResubmission === true)
   const learner = card.learner
   const module = moduleLabel(card.identity.module.name)
-  const avatar = <Avatar name={learner.name} url={learner.avatarUrl} size={42} />
+  const avatar = <Avatar name={learner.name} url={learner.avatarUrl} size={40} />
   return (
     <article className="cs-card cs-post lt-feed-card" aria-label={`${badge.label} của ${learner.name}: ${card.identity.lesson.title}`}>
       <header className="cs-post-head">
@@ -42,7 +43,7 @@ export default function LearningThreadCard({ card, now, onOpenThread, onOpenProf
         </div>
       </header>
       <div className="lt-feed-body">
-        <div className={'lt-feed-kind is-' + (card.firstKind ?? 'submission')}><span aria-hidden="true">{badge.icon}</span> {badge.label}</div>
+        <div className={'lt-feed-kind is-' + (card.firstKind ?? 'submission')}><UiIcon emoji={badge.icon} /> {badge.label}</div>
         <div className="lt-feed-lesson">{card.identity.lesson.title}</div>
         {module && <div className="lt-feed-module">{module}</div>}
         {showStory && story && (
@@ -50,7 +51,7 @@ export default function LearningThreadCard({ card, now, onOpenThread, onOpenProf
             <span className="lt-feed-actor">{story.actor.name}</span> {story.text}
           </p>
         )}
-        {story?.resourceNote && <p className="lt-feed-note">📘 {story.resourceNote}</p>}
+        {story?.resourceNote && <p className="lt-feed-note"><UiIcon emoji="📘" /> {story.resourceNote}</p>}
         <div className="lt-feed-foot">
           <StatusChip status={card.status} social />
           {onOpenThread && (

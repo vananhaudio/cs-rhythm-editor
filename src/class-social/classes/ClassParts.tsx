@@ -65,13 +65,14 @@ export function MemberList({ members, busyId, onAct, onOpenProfile, excludeIdent
   )
 }
 
-/** Cánh cửa sang Không gian lớp — một lối nhẹ, KHÔNG preview Feed. */
+/** Cánh cửa sang Không gian lớp — MỘT tiêu đề bấm được + một dòng phạm vi ngắn; không preview Feed. */
 export function ClassSpaceDoor({ onOpen }: { onOpen: () => void }) {
   return (
-    <section className="cs-classv2-sec cs-space-door" aria-labelledby="cs-space-door-title">
-      <h2 id="cs-space-door-title" className="cs-space-door-title">Không gian lớp</h2>
-      <p className="cs-space-door-hint">Xem bài trả, câu hỏi và trao đổi của mọi người trong lớp.</p>
-      <button type="button" className="cs-linkbtn cs-space-door-go" onClick={onOpen}>Vào không gian lớp <ArrowRight size={16} aria-hidden="true" /></button>
+    <section className="cs-classv2-sec cs-space-door" aria-label="Không gian lớp">
+      <button type="button" className="cs-space-door-go" onClick={onOpen}>
+        <span className="cs-space-door-title">Không gian lớp <ArrowRight size={18} aria-hidden="true" /></span>
+        <span className="cs-space-door-hint">Bài trả · Hỏi bài · Trao đổi · Thành viên</span>
+      </button>
     </section>
   )
 }

@@ -95,11 +95,11 @@ export default function ProfilePage({ me, userId, identityRev = 0, canEditAvatar
   )
 
   if (load.status === 'loading') {
-    return <div className="cs-col cs-home">{back}<div className="cs-card cs-profile-skeleton" aria-label="Đang tải"><div className="cs-cover" /></div></div>
+    return <div className="cs-col cs-home cs-profile-page">{back}<div className="cs-card cs-profile-skeleton" aria-label="Đang tải"><div className="cs-cover" /></div></div>
   }
   if (load.status === 'error') {
     return (
-      <div className="cs-col cs-home">{back}
+      <div className="cs-col cs-home cs-profile-page">{back}
         <div className="cs-card cs-feed-error" role="alert">
           <p>{load.message}</p>
           <button type="button" className="cs-btn cs-btn-soft" onClick={() => { setLoad({ status: 'loading' }); void refresh() }}>Thử lại</button>
@@ -109,7 +109,7 @@ export default function ProfilePage({ me, userId, identityRev = 0, canEditAvatar
   }
   if (load.status === 'missing') {
     return (
-      <div className="cs-col cs-home">{back}
+      <div className="cs-col cs-home cs-profile-page">{back}
         <div className="cs-card"><EmptyState icon={UserX} title="Không tìm thấy thành viên">Trang này không tồn tại hoặc không thuộc Class.</EmptyState></div>
       </div>
     )
@@ -119,7 +119,7 @@ export default function ProfilePage({ me, userId, identityRev = 0, canEditAvatar
   const ui = relationshipUi(p.relationship)
   const moderatorView = !isSelf && p.canViewWall && p.relationship !== 'friends'
   return (
-    <div className="cs-col cs-home">
+    <div className="cs-col cs-home cs-profile-page">
       {back}
       {isSelf
         ? <IdentityHeader me={me} canEditAvatar={canEditAvatar} onEdit={onEditMedia} onEditProfile={onEditProfile} />

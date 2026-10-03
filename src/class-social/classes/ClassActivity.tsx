@@ -7,6 +7,7 @@ import { usePostsFeed } from '../posts/usePostsFeed'
 import { storyLine, type ThreadCard } from '../../learning-thread/feedModel'
 import { SOCIAL_STATUS_LABEL, STATUS_UI } from '../../learning-thread/ltModel'
 import { fetchClassActivityPage } from './classesApi'
+import { Avatar } from '../ui'
 
 export function useClassRecent(classId: string) {
   const fetchPage = useCallback((c?: { createdAt: string; id: string; key: string }) => fetchClassActivityPage(classId, c), [classId])
@@ -21,16 +22,20 @@ export function lessonLabel(title: string): string {
 
 export function ActivityLine({ card, now, onOpenThread }: { card: ThreadCard; now: Date; onOpenThread: (id: string) => void }) {
   const story = storyLine(card)
-  const who = story?.actor.name ?? card.learner.name
+  const actor = story?.actor ?? card.learner
   const what = story?.text ?? 'vừa cập nhật'
+  // /ME VISUAL V1: CON NGƯỜI trước — avatar 32 + tên, rồi hành động · bài · trạng thái/thời gian lùi xuống metadata
   return (
     <li>
       <button type="button" className="cs-act-line" onClick={() => onOpenThread(card.id)}>
-        <span className="cs-act-main"><b>{who}</b> {what}</span>
-        <span className="cs-act-lesson">{lessonLabel(card.identity.lesson.title)}</span>
-        <span className="cs-act-meta">
-          <span className={'lt-chip is-' + STATUS_UI[card.status].tone}>{SOCIAL_STATUS_LABEL[card.status]}</span>
-          <span>{relativeTime(card.lastEventAt, now)}</span>
+        <Avatar name={actor.name} url={actor.avatarUrl} size={32} />
+        <span className="cs-act-text">
+          <span className="cs-act-main"><b>{actor.name}</b> {what}</span>
+          <span className="cs-act-lesson">{lessonLabel(card.identity.lesson.title)}</span>
+          <span className="cs-act-meta">
+            <span className={'lt-chip is-' + STATUS_UI[card.status].tone}>{SOCIAL_STATUS_LABEL[card.status]}</span>
+            <span>{relativeTime(card.lastEventAt, now)}</span>
+          </span>
         </span>
       </button>
     </li>

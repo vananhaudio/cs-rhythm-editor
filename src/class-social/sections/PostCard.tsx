@@ -32,7 +32,7 @@ export default function PostCard({ post, now, social }: { post: FeedPost; now?: 
     <article className={'cs-card cs-post' + (post.isHidden ? ' is-hidden' : '')} aria-label={`${POST_TYPE_LABEL[post.type]} của ${author.name}`}>
       <header className="cs-post-head">
         <PersonLink userId={author.userId} onOpen={social?.onOpenProfile} label={`Trang cá nhân của ${author.name}`}>
-          <Avatar name={author.name} url={author.avatarUrl} size={42} />
+          <Avatar name={author.name} url={author.avatarUrl} size={40} />
         </PersonLink>
         <div className="cs-post-meta">
           <div className="cs-post-line">

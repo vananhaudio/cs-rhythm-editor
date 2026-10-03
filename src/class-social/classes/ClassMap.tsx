@@ -4,21 +4,23 @@
 //   • layout 'side' (desktop rộng): bấm "1/3 bài trả Đạt" → CHỌN buổi đó cho panel "Bài trả của tôi" bên phải
 //     (diễn giải rộng hơn của chính mục lục — không phải navigation bắt buộc).
 // Cột số 01/02/… tách khỏi tên buổi để scan. Buổi khoá: chữ nhạt + ổ khoá (chữ "Chưa mở" cho trình đọc màn hình);
-// CHỈ buổi khoá đầu tiên ghi một câu ngắn — không lặp "Chưa mở" từng dòng. Dấu chân hiện tại: vạch xám rất nhẹ.
+// lý do mở khoá KHÔNG lặp trong danh sách (panel / Trang Buổi nói). Dấu chân hiện tại: vạch xám rất nhẹ.
 // Không tự cuộn. Thuần hiển thị (không mạng) → test render được.
 import { useMemo, useState } from 'react'
 import { ChevronDown, ChevronRight, Lock } from 'lucide-react'
-import { lockedHint, pad2, type ClassLearningState, type SessionState } from '../../classLearning/progress'
+import { pad2, type ClassLearningState, type SessionState } from '../../classLearning/progress'
 import { BreakDivider } from './LearnParts'
 import type { LearningEntry } from './classesApi'
-import { checkpointStatus, cpLabel, sessionView, stageGroups, stageLabel, submissionsText, type StageGroup } from './classMapModel'
+import { checkpointStatus, cpLabel, cpShort, sessionView, stageGroups, stageLabel, submissionsText, type StageGroup } from './classMapModel'
 
 type Ready = Extract<ClassLearningState, { enabled: true }>
 export type MapLayout = 'inline' | 'side'
 
 /** Danh sách bài trả của MỘT buổi (dùng chung: bung tại chỗ trên mobile · panel phải trên desktop). */
-export function SubmissionList({ s, teacher, onOpenSession, onOpenThread, label }: {
+export function SubmissionList({ s, teacher, onOpenSession, onOpenThread, label, compact = false }: {
   s: SessionState; teacher: boolean; label: string
+  /** panel phải: nhãn gọn "1.2 · Tên bài" (đầu panel đã nói buổi) */
+  compact?: boolean
   onOpenSession: (no: number, checkpointId?: string) => void; onOpenThread: (id: string) => void
 }) {
   return (
@@ -29,7 +31,7 @@ export function SubmissionList({ s, teacher, onOpenSession, onOpenThread, label 
         return (
           <li key={cp.id}>
             <button type="button" className="cs-map-cp" onClick={() => (thread ? onOpenThread(thread.id) : onOpenSession(s.no, cp.id))}>
-              <span className="cs-map-cp-name">{!teacher && <span className={'cs-map-mark is-' + st.tone} aria-hidden="true">{st.mark}</span>}{cpLabel(cp)}</span>
+              <span className="cs-map-cp-name">{!teacher && <span className={'cs-map-mark is-' + st.tone} aria-hidden="true">{st.mark}</span>}{compact ? cpShort(cp) : cpLabel(cp)}</span>
               {!teacher && <span className={'cs-map-cp-status is-' + st.tone}>{st.label}</span>}
             </button>
           </li>
@@ -39,18 +41,17 @@ export function SubmissionList({ s, teacher, onOpenSession, onOpenThread, label 
   )
 }
 
-function SessionItem({ s, state, current, layout, open, firstLocked, onToggle, onOpenSession, onOpenThread }: {
+function SessionItem({ s, state, current, layout, open, onToggle, onOpenSession, onOpenThread }: {
   s: SessionState; state: Ready; current: boolean; layout: MapLayout
   /** inline: đang bung · side: đang được chọn cho panel phải */
   open: boolean
-  /** buổi khoá ĐẦU TIÊN của bản đồ → một câu gợi ý ngắn (các buổi khoá sau chỉ có ổ khoá) */
-  firstLocked: boolean
   onToggle: () => void
   onOpenSession: (no: number, checkpointId?: string) => void; onOpenThread: (id: string) => void
 }) {
   const v = sessionView(s, state)
   const teacher = state.role === 'teacher'
-  const meta = v.locked ? (firstLocked ? lockedHint(state.sessions, s) : '') : v.state
+  // Buổi khoá: chỉ ổ khoá + "Chưa mở" cho trình đọc màn hình — lý do mở khoá nói ở panel/Trang Buổi, không lặp trong danh sách
+  const meta = v.locked ? '' : v.state
   return (
     <li className={'cs-map-row' + (current ? ' is-current' : '') + (v.locked ? ' is-locked' : '') + (layout === 'side' && open ? ' is-selected' : '')}
       id={`buoi-${pad2(s.no)}`} aria-current={current ? 'step' : undefined}>
@@ -105,14 +106,13 @@ export default function ClassMap({ state, current, onOpenSession, onOpenThread, 
   const flip = <T,>(set: (f: (x: Set<T>) => Set<T>) => void, k: T) => set(cur => {
     const next = new Set(cur); if (next.has(k)) next.delete(k); else next.add(k); return next
   })
-  const firstLockedNo = state.sessions.find(x => sessionView(x, state).locked)?.no ?? null
   const single = groups.length === 1
   const list = (g: StageGroup) => (
     <ol className="cs-map-list" aria-label={stageLabel(g)}>
       {g.sessions.map(s => {
         const brk = state.breaks.find(b => b.beforeNo === s.no && s.no !== g.sessions[0].no)
         return [brk ? <BreakDivider key={'break-' + s.no} title={brk.title} /> : null,
-          <SessionItem key={s.sessionId} s={s} state={state} current={s.no === current} layout={layout} firstLocked={s.no === firstLockedNo}
+          <SessionItem key={s.sessionId} s={s} state={state} current={s.no === current} layout={layout}
             open={layout === 'side' ? selected === s.no : expanded.has(s.no)}
             onToggle={() => (layout === 'side' ? onSelect?.(s.no) : flip(setExpanded, s.no))}
             onOpenSession={onOpenSession} onOpenThread={onOpenThread} />]
@@ -130,13 +130,16 @@ export default function ClassMap({ state, current, onOpenSession, onOpenThread, 
             {single && g.no == null
               ? null
               : single
-                ? <h3 className="cs-map-stage-title">{stageLabel(g)}</h3>
+                ? <h3 className="cs-map-stage-title"><span className="cs-map-stage-text"><span className="cs-map-stage-no">{g.no != null ? `Chặng ${g.no}` : 'Giáo trình'}</span>
+                    <span className="cs-map-stage-name">{g.title ? `${g.title} · ` : ''}{g.sessions.length} buổi</span></span></h3>
                 : (
                   <h3 className="cs-map-stage-title">
                     <button type="button" className="cs-map-stage-toggle" aria-expanded={isOpen} onClick={() => flip(setOpen, g.key)}>
                       {isOpen ? <ChevronDown size={16} aria-hidden="true" /> : <ChevronRight size={16} aria-hidden="true" />}
-                      <span>{stageLabel(g)}</span>
-                      <span className="cs-map-stage-count">{g.sessions.length} buổi</span>
+                      <span className="cs-map-stage-text">
+                        <span className="cs-map-stage-no">{g.no != null ? `Chặng ${g.no}` : 'Giáo trình'}</span>
+                        <span className="cs-map-stage-name">{g.title ? `${g.title} · ` : ''}{g.sessions.length} buổi</span>
+                      </span>
                     </button>
                   </h3>
                 )}

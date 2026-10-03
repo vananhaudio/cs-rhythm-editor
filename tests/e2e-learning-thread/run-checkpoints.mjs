@@ -105,10 +105,10 @@ try {
   assert.match(r[0].meta, /^0\/2 bài trả Đạt/)
   assert.equal(await page.$eval('#buoi-01 .cs-map-no', e => e.textContent), '01', 'cột số buổi riêng')   // không nhãn vị trí "Đang học" — vị trí do bản đồ tự nói
   assert.equal(/Đang học|Chưa học/.test(r.map(x => x.meta).join('|')), false)
-  assert.ok(r[1].disabled && r[2].disabled && /Hoàn thành Buổi 01 để mở/.test(r[1].meta) && r[2].meta === '', 'Buổi 02/03 khoá: thấy TÊN + ổ khoá; gợi ý mở khoá CHỈ ở buổi khoá đầu')
+  assert.ok(r[1].disabled && r[2].disabled && r[1].meta === '' && r[2].meta === '', 'Buổi 02/03 khoá: thấy TÊN + ổ khoá; danh sách không lặp gợi ý mở khoá')
   assert.equal(await page.$$eval('.cs-map-row.is-locked .cs-map-lock', e => e.length), 3, 'ổ khoá trên mỗi buổi khoá (chữ "Chưa mở" cho trình đọc màn hình)')
   assert.equal(await page.$$eval('#buoi-02 button.cs-map-title', e => e.length), 0)
-  ok('B (390): Trang học V3 = Tên lớp → Mục lục (cột số · 01 0/2 bài trả Đạt · 02–04 khoá, gợi ý một lần) → cánh cửa Không gian lớp; không feed/thành viên')
+  ok('B (390): Trang học V3 = Tên lớp → Mục lục (cột số · 01 0/2 bài trả Đạt · 02–04 khoá, ổ khoá + muted) → cánh cửa Không gian lớp; không feed/thành viên')
   await page.screenshot({ path: `${SHOTS}/cp-0-class-v2-390.png`, fullPage: false })
   await noHorizontalOverflow(page, 'Trang Lớp 390px')
   await page.screenshot({ path: `${SHOTS}/cp-1-class-390.png`, fullPage: true })
@@ -252,17 +252,17 @@ try {
     })
     assert.ok(g.sameRow && g.left && g.mw > g.pw * 1.3 && g.root > 900, `${w}: hai cột, mục lục rộng hơn panel ${JSON.stringify(g)}`)
     // mặc định panel diễn giải buổi hiện tại (Buổi 02) — chỉ chọn, không cuộn, không nhảy trang
-    assert.match(await page.$eval('.cs-subs-panel', e => e.textContent), /Bài trả của tôi[\s\S]*Buổi 02[\s\S]*Ép ngón & Bass[\s\S]*0\/\d bài trả Đạt/)
+    assert.match(await page.$eval('.cs-subs-panel', e => e.textContent), /Bài trả của tôi[\s\S]*Buổi 02 · Ép ngón & Bass[\s\S]*0\/\d Đạt/)
     assert.equal(await page.$eval('#buoi-02 .cs-map-subs', b => b.getAttribute('aria-pressed')), 'true', 'buổi đang diễn giải')
     await page.click('#buoi-01 .cs-map-subs')
-    await page.waitForFunction(() => /Buổi 01[\s\S]*Bản đồ nốt C–Am[\s\S]*1\/2 bài trả Đạt/.test(document.querySelector('.cs-subs-panel').textContent))
+    await page.waitForFunction(() => /Buổi 01 · Bản đồ nốt C–Am[\s\S]*1\/2 Đạt/.test(document.querySelector('.cs-subs-panel').textContent))
     assert.equal(await page.$$eval('.cs-map .cs-map-cps', e => e.length), 0, 'desktop: không bung trong mục lục')
     assert.equal(await page.evaluate(() => location.pathname.endsWith('/sessions/1')), false, 'chọn buổi KHÔNG điều hướng')
     assert.ok(await page.evaluate(() => scrollY) <= 10, 'không tự cuộn')
     assert.equal(await page.evaluate(() => /Tiếp tục học|Lớp mình đang học/.test(document.body.textContent)), false)
     await noHorizontalOverflow(page, `Trang học V3 ${w}px`)
     await page.screenshot({ path: `${SHOTS}/v3-desktop-${w}.png`, fullPage: true })
-    ok(`${w}px: master-detail — Mục lục trái (${Math.round(g.mw)}px) ↔ Bài trả của tôi phải (${Math.round(g.pw)}px): mặc định Buổi 02 hiện tại · chọn Buổi 01 → 1/2 bài trả Đạt`)
+    ok(`${w}px: master-detail — Mục lục trái (${Math.round(g.mw)}px) ↔ Bài trả của tôi phải (${Math.round(g.pw)}px): mặc định Buổi 02 hiện tại · chọn Buổi 01 → ✓ 1/2 Đạt`)
     if (w === 1280) {
       // Buổi 02 → panel đổi; bài chưa trả → Trang Buổi đúng bài trả; tên buổi vẫn là đường vào Trang Buổi
       await page.click('#buoi-02 .cs-map-subs')
@@ -295,6 +295,29 @@ try {
     await page.click('#buoi-01 .cs-map-subs'); await page.waitForSelector('#buoi-01 .cs-map-cps')
     await noHorizontalOverflow(page, 'Trang học V3 768px')
     ok('768px: một cột — bấm số bài trả bung tại chỗ (không ép master-detail)')
+    await ctx.close()
+  }
+  // /ME VISUAL SYSTEM V1 — quét bề rộng: không tràn ngang · ≤ 1 nút tím chính trong viewport · trang rộng không là "cột mobile giữa biển trắng"
+  for (const w of [320, 390, 768, 1280, 1440, 1600]) {
+    ;({ ctx, page } = await meAs('b@test.local', '', w))
+    for (const [name, path, sel] of [['home', '', '.cs-home-feedfirst'], ['classes', '/classes', '.cs-myclasses-page'], ['class', `/classes/${TH01}`, '.cs-map-row'],
+      ['space', `/classes/${TH01}/space`, '.cs-classspace .cs-act-line'], ['friends', '/friends', '.cs-friends-page']]) {
+      await page.goto('about:blank'); await page.goto(`${ME}${path}`, { waitUntil: 'networkidle0' })
+      await page.waitForSelector(sel, { timeout: 15000 })
+      await noHorizontalOverflow(page, `${name} ${w}px`)
+      const prim = await page.$$eval('.cs-btn-primary', bs => bs.filter(b => { const r = b.getBoundingClientRect(); return r.width > 0 && r.bottom > 0 && r.top < innerHeight }).length)
+      assert.ok(prim <= 1, `${name} ${w}px: ${prim} nút tím chính trong viewport`)
+      if (w >= 1280 && (name === 'class' || name === 'space')) {
+        const cw = await page.$eval('.cs-main > *:not(.cs-topbar)', e => e.getBoundingClientRect().width).catch(() => 0)
+        const root = await page.$eval(name === 'class' ? '.cs-classv3' : '.cs-classspace', e => e.getBoundingClientRect().width)
+        assert.ok(root >= 860, `${name} ${w}px: nội dung chỉ ${Math.round(root)}px (main ${Math.round(cw)})`)
+      }
+      if (name === 'space') {
+        assert.ok(await page.$$eval('.cs-classspace .cs-act-line > .cs-avatar', e => e.length) > 0, 'Không gian lớp: dòng hoạt động có avatar (người trước)')
+      }
+      await page.screenshot({ path: `${SHOTS}/vs-${name}-${w}.png`, fullPage: false })
+    }
+    ok(`Visual ${w}px: Home · Lớp của tôi · Trang lớp · Không gian lớp · Bạn bè — không tràn ngang, ≤ 1 nút tím chính/viewport`)
     await ctx.close()
   }
   {

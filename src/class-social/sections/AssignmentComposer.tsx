@@ -72,7 +72,7 @@ export default function AssignmentComposer({ me, onClose, onPosted }: {
 
         <form className="cs-composer-modal-body" onSubmit={e => { e.preventDefault(); void submit() }} noValidate>
           <div className="cs-composer-author">
-            <Avatar name={me.name} url={me.avatarUrl} size={38} />
+            <Avatar name={me.name} url={me.avatarUrl} size={40} />
             <span>{me.name}</span>
           </div>
 

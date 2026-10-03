@@ -73,7 +73,7 @@ test("thẻ Feed: AI · danh tính lịch sử · bài · chuyện vừa xảy r
   const h = renderToStaticMarkup(<LearningThreadCard card={toThreadCard(card())!} now={NOW} onOpenThread={() => {}} />);
   assert.match(h, /HS03/);
   assert.match(h, /Tự học · DH2/);
-  assert.match(h, /❓<\/span> Hỏi bài/);
+  assert.match(h, /lucide-circle-question-mark[\s\S]*?<\/svg> Hỏi bài/, "icon UI = Lucide, không emoji");
   assert.match(h, /lt-feed-lesson">Bài 4\.3 — Bolero móc kiểu 1</);
   assert.match(h, /lt-feed-module">Chương 4 · Điệu Bolero &amp; kỹ thuật móc</, "chương là metadata nhỏ dưới tên bài (trình bày, không đổi dữ liệu)");
   assert.equal(/Chương 4: Điệu/.test(h), false, "không lặp nguyên văn chương + bài trên Feed");
@@ -86,7 +86,7 @@ test("thẻ Feed: AI · danh tính lịch sử · bài · chuyện vừa xảy r
   assert.equal(/vừa hỏi bài/.test(own), false);
   assert.match(own, /Chờ Thầy phản hồi/);
   assert.equal(/Đã gửi/.test(own), false, "người xem Feed không phải người gửi → không 'Đã gửi'");
-  assert.match(h, /📘 Thầy đã gửi bài giảng nên xem/);
+  assert.match(h, /lucide-book-open[\s\S]*?<\/svg> Thầy đã gửi bài giảng nên xem/);
   assert.match(h, /Cần làm lại/);
   assert.match(h, /Xem cuộc trao đổi/);
   assert.equal(/Thầy Văn Anh/.test(h), false, "không hard-code tên Thầy");
@@ -170,8 +170,9 @@ test("JourneyTimeline render: năm · chặng có màu · mốc bấm được �
   assert.match(h, /lt-year">2026/);
   assert.match(h, /Tự học · DH2/);
   assert.match(h, /--lt-phase-from:#4338CA/);
-  assert.match(h, /❓ Hỏi bài/);
-  assert.match(h, /✅ Đạt/);
+  assert.match(h, /lucide-circle-question-mark[\s\S]*?<\/svg>[\s\S]*?Hỏi bài/);
+  assert.match(h, /lucide-circle-check[\s\S]*?<\/svg>[\s\S]*?Đạt/);
+  assert.doesNotMatch(h, /❓|✅/, "không emoji làm icon UI");
   assert.match(h, /Chỉ Thầy/);
   assert.equal((h.match(/class="lt-ms-btn"/g) || []).length, 2);
   const empty = renderToStaticMarkup(<JourneyTimeline items={[]} ownerName="An" />);

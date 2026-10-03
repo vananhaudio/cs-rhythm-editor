@@ -41,7 +41,7 @@ export default function CommentComposer({ postId, me, onSent }: {
   const id = `cs-cmt-input-${postId}`
   return (
     <div className="cs-cmt-composer">
-      <Avatar name={me.name} url={me.avatarUrl} size={34} />
+      <Avatar name={me.name} url={me.avatarUrl} size={32} />
       <form className="cs-cmt-form" onSubmit={e => { e.preventDefault(); void submit() }}>
         <label htmlFor={id} className="cs-sr-only">{teacher ? 'Nhận xét hoặc bình luận' : 'Viết bình luận'}</label>
         <div className="cs-cmt-inputwrap">

@@ -1104,3 +1104,97 @@ button.cs-subs-title:hover { color: var(--cs-accent); }
 .cs-space-door-hint { margin: 4px 0 2px; font-size: 13.5px; color: var(--cs-muted); }
 .cs-space-door-go { padding-left: 0; }
 .cs-classspace .cs-member-list { box-shadow: none; }
+
+/* ── /ME VISUAL SYSTEM V1 — final polish (docs/ME-VISUAL-SYSTEM-V1.md) ──────────────────────────────────────────
+   Ngữ pháp sản phẩm kiểu mạng xã hội: canvas xám → bề mặt trắng → bề mặt đang tập trung. ~90% trung tính; tím = thương hiệu /
+   tương tác (menu đang chọn, tab đang chọn, focus, hành động chính); xanh = Đạt. Thứ bậc đọc được cả khi ở thang xám. */
+.cs-root {
+  --cs-s1: 4px; --cs-s2: 8px; --cs-s3: 12px; --cs-s4: 16px; --cs-s5: 24px; --cs-s6: 32px; --cs-s7: 48px;
+  --cs-r-sm: 8px; --cs-r-md: 12px; --cs-r-lg: 14px;
+  --cs-shadow: 0 1px 2px rgba(24, 24, 27, 0.06);
+  --cs-nav-active: #f5f1fe;
+  --cs-w-feed: 680px; --cs-w-thread: 720px; --cs-w-space: 880px; --cs-w-dir: 880px; --cs-w-profile: 760px; --cs-w-class: 1160px;
+}
+
+/* Bề rộng theo loại trang — không "cột mobile giữa biển trắng" trên desktop */
+.cs-col { max-width: var(--cs-w-feed); }
+.cs-col.lt-page { max-width: var(--cs-w-thread); }
+.cs-col.cs-classspace { max-width: var(--cs-w-space); }
+.cs-col.cs-friends-page { max-width: var(--cs-w-dir); }
+.cs-col.cs-profile-page { max-width: var(--cs-w-profile); }
+.cs-classv3.is-wide { max-width: var(--cs-w-class); }
+
+/* Sidebar: hàng đều 44px, icon thẳng cột, nhóm cách 16px; tiêu đề nhóm chữ thường (không ALL CAPS) */
+.cs-nav-title { text-transform: none; letter-spacing: 0; font-size: 13px; font-weight: 600; color: var(--cs-faint); padding: 0 12px 4px; }
+.cs-nav-item { gap: var(--cs-s3); border-radius: var(--cs-r-sm); }
+.cs-nav-item svg { width: 20px; height: 20px; }
+.cs-nav-item.is-active { background: var(--cs-nav-active); }
+.cs-nav-item.is-restricted .cs-nav-label { color: var(--cs-muted); }
+.cs-nav-item.is-restricted .cs-nav-lock { width: 14px; height: 14px; color: var(--cs-faint); }
+
+/* Icon UI (Lucide thay emoji) căn giữa dòng chữ */
+.cs-uiicon { flex: none; vertical-align: -3px; color: currentColor; }
+.cs-share-chip .cs-uiicon { color: var(--cs-muted); }
+.cs-share-chip:hover .cs-uiicon { color: var(--cs-text); }
+.lt-feed-kind .cs-uiicon, .lt-feed-kind svg { margin-right: 2px; }
+
+/* Ô chia sẻ gọn hơn */
+.cs-share { padding: var(--cs-s3) var(--cs-s4) var(--cs-s2); }
+
+/* Thẻ feed: một bán kính, một padding, một bóng tối thiểu */
+.cs-card { border-radius: var(--cs-r-lg); }
+.cs-post { padding: var(--cs-s3) var(--cs-s4) var(--cs-s4); }
+.cs-tool-share { border-radius: var(--cs-r-md); background: var(--cs-bg); border-color: transparent; }
+
+/* Tiêu đề mục: chữ thường, rõ cấp (không ALL CAPS) */
+.cs-classv2-h2 { font-size: 15px; letter-spacing: 0; text-transform: none; color: var(--cs-text); font-weight: 700; margin-bottom: var(--cs-s2); }
+.cs-myclass-sub { text-transform: none; letter-spacing: 0; font-size: 13.5px; font-weight: 700; color: var(--cs-muted); }
+
+/* Danh sách lớp (Home → Lớp, /me/classes): dòng + kẻ mảnh + hover nhẹ */
+.cs-classrow { padding: var(--cs-s3) var(--cs-s2); border-radius: var(--cs-r-sm); }
+.cs-classrow:hover { background: var(--cs-hover); }
+.cs-home-classes .cs-classrow { padding: 10px var(--cs-s2); }
+
+/* Hoạt động của lớp: NGƯỜI trước — avatar · ai làm gì · bài nào · lúc nào */
+.cs-act-line { flex-direction: row; align-items: flex-start; gap: var(--cs-s3); padding: var(--cs-s3) var(--cs-s2); border-radius: 0; }
+.cs-act-line > .cs-avatar { flex: none; margin-top: 2px; }
+.cs-act-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.cs-act-main b { font-weight: 700; }
+
+/* Mục lục: tiêu đề Chặng hai cấp */
+.cs-map-stage-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
+.cs-map-stage-no { font-size: 13px; font-weight: 600; color: var(--cs-muted); letter-spacing: 0; }
+.cs-map-stage-name { font-size: 15.5px; font-weight: 700; color: var(--cs-text); overflow-wrap: anywhere; }
+.cs-map-stage-title { margin: var(--cs-s3) 0 var(--cs-s1); letter-spacing: 0; }
+.cs-map-stage-toggle { align-items: flex-start; padding: var(--cs-s2) 0; }
+.cs-map-stage-toggle > svg { margin-top: 2px; color: var(--cs-muted); }
+.cs-map-row.is-current { border-left-color: var(--cs-neutral-line); }
+
+/* Master-detail: dòng đang chọn và panel cùng là một bề mặt trắng (quan hệ bằng bề mặt, không bằng tím) */
+.cs-learnmap.is-split .cs-map-row { border-radius: var(--cs-r-sm) 0 0 var(--cs-r-sm); }
+.cs-learnmap.is-split .cs-map-row.is-selected { background: var(--cs-surface); box-shadow: inset -3px 0 0 var(--cs-neutral-line); }
+.cs-subs-panel { border-left: none; padding: var(--cs-s4) var(--cs-s5) var(--cs-s5); background: var(--cs-surface);
+  border: 1px solid var(--cs-border); border-radius: var(--cs-r-lg); box-shadow: var(--cs-shadow); }
+.cs-subs-title { font-size: 17px; font-weight: 700; line-height: 1.35; overflow-wrap: anywhere; }
+.cs-subs-sum { font-weight: 600; margin-bottom: var(--cs-s2); }
+.cs-subs-panel .cs-map-cp { padding: 10px 0; }
+
+/* Cánh cửa Không gian lớp: một đích bấm duy nhất (tiêu đề + phạm vi) */
+.cs-space-door { margin-top: var(--cs-s5); padding-top: var(--cs-s2); }
+.cs-space-door-go { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; padding: var(--cs-s3) var(--cs-s2);
+  border: none; background: none; border-radius: var(--cs-r-sm); text-align: left; font: inherit; color: var(--cs-text); cursor: pointer; }
+.cs-space-door-go:hover { background: var(--cs-hover); }
+.cs-space-door-go:hover .cs-space-door-title { color: var(--cs-accent); }
+.cs-space-door-title { display: inline-flex; align-items: center; gap: 6px; font-size: 16px; font-weight: 700; }
+.cs-space-door-hint { margin: 0; font-size: 13.5px; color: var(--cs-muted); }
+
+/* Danh bạ (Bạn bè, Thành viên): dòng, không card lồng card */
+.cs-classspace .cs-member-list { border: none; background: none; }
+
+/* Trạng thái trống / đang tải: nhẹ */
+.cs-act-note, .cs-loading { color: var(--cs-muted); font-size: 14px; }
+
+@media (max-width: 480px) {
+  .cs-subs-panel { padding: var(--cs-s3) var(--cs-s4); }
+  .cs-act-line { padding: 10px var(--cs-s1); }
+}

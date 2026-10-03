@@ -67,3 +67,9 @@ export function cpLabel(cp: { id: string; title: string }): string {
   const t = cp.title.trim()
   return /^Bài trả\s/u.test(t) ? t : `Bài trả ${cp.id}${t ? ' · ' + t : ''}`
 }
+
+/** Nhãn GỌN cho danh sách bài trả: "1.2 · Liên thông 3 vùng" (bỏ tiền tố "Bài trả 1.2 —" lặp lại). */
+export function cpShort(cp: { id: string; title: string }): string {
+  const t = cp.title.trim().replace(/^Bài trả\s+\S+\s*[—–·:-]\s*/u, '').trim()
+  return t ? `${cp.id} · ${t}` : `Bài trả ${cp.id}`
+}

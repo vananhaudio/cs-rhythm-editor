@@ -11,6 +11,7 @@ import type { ClassIdentity } from '../useClassSession'
 import { Avatar, PersonLink } from '../ui'
 import AssignmentComposer from './AssignmentComposer'
 import { SHARE_PROMPTS } from '../posts/sharePrompts'
+import UiIcon from '../UiIcon'
 
 
 export default function HomeComposer({ me, onPosted, onOpenProfile }: {
@@ -75,7 +76,7 @@ export default function HomeComposer({ me, onPosted, onOpenProfile }: {
         <div className="cs-share-prompts">
           {SHARE_PROMPTS.map(p => (
             <button key={p.label} type="button" className="cs-share-chip" onClick={() => prompt(p.prefix)} disabled={submitting}>
-              <span aria-hidden="true">{p.icon}</span> {p.label}
+              <UiIcon emoji={p.icon} /> {p.label}
             </button>
           ))}
           {open && !showLink && (

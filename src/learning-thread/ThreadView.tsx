@@ -36,9 +36,9 @@ export function ThreadHeader({ thread, onOpenProfile, showIdentity = false }: { 
     <div className="lt-head">
       {learner.userId ? (
         <PersonLink userId={learner.userId} onOpen={onOpenProfile} label={`Trang cá nhân của ${learner.name}`}>
-          <Avatar name={learner.name} url={learner.avatarUrl} size={46} />
+          <Avatar name={learner.name} url={learner.avatarUrl} size={48} />
         </PersonLink>
-      ) : <Avatar name={learner.name} url={learner.avatarUrl} size={46} />}
+      ) : <Avatar name={learner.name} url={learner.avatarUrl} size={48} />}
       <div className="lt-head-main">
         {learner.userId && onOpenProfile
           ? <PersonLink userId={learner.userId} onOpen={onOpenProfile} label={`Trang cá nhân của ${learner.name}`} className="lt-head-name">{learner.name}</PersonLink>
@@ -69,7 +69,7 @@ function EventItem({ e, label, now, canModerate, onModerate, onOpenProfile }: {
   const teacher = e.authorRole === 'teacher'
   const parsed = e.mediaUrl ? parseExternalMedia(e.mediaUrl) : null
   const cls = 'lt-ev' + (teacher ? ' is-teacher' : '') + (e.verdict ? ' is-' + e.verdict : '') + (e.isHidden ? ' is-hidden' : '')
-  const avatar = <Avatar name={e.author.name} url={e.author.avatarUrl} size={36} />
+  const avatar = <Avatar name={e.author.name} url={e.author.avatarUrl} size={32} />
   return (
     <li className={cls}>
       {e.author.userId

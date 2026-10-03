@@ -167,7 +167,7 @@ export default function ClassSocialLayout({ me, section, onSection, children, ca
         <div className="cs-topbar-spacer" />
         <ClassHomeLink />
         <MoreMenu className="cs-account" label={`Tài khoản: ${me.name}`}
-          trigger={<Avatar name={me.name} url={safeImageUrl(me.avatarUrl)} size={34} />}
+          trigger={<Avatar name={me.name} url={safeImageUrl(me.avatarUrl)} size={32} />}
           items={[
             ...(onOpenMyProfile ? [{ label: 'Trang cá nhân của tôi', onSelect: onOpenMyProfile }] : []),
             ...(onEditMedia && canEditAvatar ? [{ label: 'Đổi ảnh đại diện', onSelect: () => onEditMedia('avatar') }] : []),

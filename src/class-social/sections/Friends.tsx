@@ -38,7 +38,7 @@ export default function Friends({ requests, onOpenProfile }: {
   }
 
   return (
-    <div className="cs-col cs-home">
+    <div className="cs-col cs-home cs-friends-page">
       <h1 className="cs-page-title">Bạn bè</h1>
       {requests.actionError && <p className="cs-form-error" role="alert">{requests.actionError}</p>}
 
