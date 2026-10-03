@@ -113,9 +113,21 @@ export interface CheckpointSection {
   prompt?: string             // yêu cầu cụ thể: cần chứng minh điều gì
   required?: boolean          // mặc định true — đủ mọi checkpoint bắt buộc ĐẠT = xong buổi
   accepts?: CheckpointAccept[]
+  /** Bài trả TRẮC NGHIỆM tự chấm (accepts: ['quiz']) — Quiz Checkpoint V1 (docs/QUIZ-CHECKPOINT-V1.md).
+   *  CHỈ câu hỏi + lựa chọn + gợi ý. ĐÁP ÁN KHÔNG BAO GIỜ nằm ở đây (blocks công khai với học viên): đáp án ở server. */
+  quiz?: CheckpointQuiz
   /** CHỈ RUNTIME — khung XEM TRƯỚC giao diện Trả bài cho giáo viên khi buổi chưa có bài trả thật.
    *  KHÔNG bao giờ lưu trong class_lesson_content; không nộp được; không in. */
   preview?: boolean
+}
+
+/** Một câu trắc nghiệm / checkpoint. single = chọn đúng 1 · multiple = chọn đúng CẢ TẬP (thiếu/thừa đều sai). */
+export interface CheckpointQuiz {
+  mode: 'single' | 'multiple'
+  question: string
+  options: { id: string; text: string }[]
+  /** hiện khi trả lời chưa đúng (không phải đáp án) */
+  hint?: string
 }
 
 /** Khối nội dung trong section 'study'. Ô '___' trong bảng = chỗ học viên tự điền. */

@@ -417,6 +417,9 @@ const LT_ERROR_TEXT: Record<string, string> = {
   LT_CHECKPOINT_NOT_FOUND: 'Không tìm thấy bài trả này trong giáo trình. Hãy tải lại trang.',
   LT_CHECKPOINT_UNSUPPORTED: 'Bài trả này cần công cụ nộp bài chưa có. Hãy chờ cập nhật.',
   LT_MEDIA_REQUIRED: 'Bài trả này cần liên kết video.',
+  LT_BAD_ANSWER: 'Hãy chọn đáp án hợp lệ rồi bấm Kiểm tra.',
+  LT_NOT_QUIZ: 'Bài trả này không phải trắc nghiệm. Hãy tải lại trang.',
+  LT_QUIZ_NOT_READY: 'Câu trắc nghiệm này chưa sẵn sàng chấm. Thầy sẽ cập nhật sớm.',
   LT_EMPTY: 'Hãy viết nội dung hoặc dán liên kết video.',
 }
 

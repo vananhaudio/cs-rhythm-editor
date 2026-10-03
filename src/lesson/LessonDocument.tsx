@@ -3,8 +3,8 @@
 // Nhận diện Class: cream #F7F5FC, indigo #4338CA, Be Vietnam Pro (index.html đã nạp font).
 // Section nào không có trong doc.sections thì đơn giản là không hiện.
 import { useContext, useRef, useState } from 'react'
-import type { CheckpointSection, LessonDoc, LessonSection, StudyBlock } from './lessonTypes'
-import { checkpointAcceptsLabel } from './checkpoint'
+import type { CheckpointQuiz, CheckpointSection, LessonDoc, LessonSection, StudyBlock } from './lessonTypes'
+import { checkpointAcceptsLabel, quizOf } from './checkpoint'
 import { CheckpointSlot } from './checkpointSlot'
 import { exportLessonPdf } from './lessonPdf'
 import FretboardMap from './FretboardMap'
@@ -223,6 +223,7 @@ function renderSection(s: LessonSection, i: number) {
 function CheckpointBlock({ s }: { s: CheckpointSection }) {
   const slot = useContext(CheckpointSlot)
   const required = s.required !== false
+  const quiz = quizOf(s)
   return (
     <section className={'lsn-block lsn-cp' + (s.preview ? ' is-preview no-print' : '')} id={`bai-tra-${s.id}`}>
       <header className="lsn-block-h">
@@ -230,6 +231,9 @@ function CheckpointBlock({ s }: { s: CheckpointSection }) {
         {s.title && <h2>{s.title}</h2>}
       </header>
       {s.prompt && <p className="lsn-cp-prompt">{s.prompt}</p>}
+      {quiz && <p className="lsn-cp-q">{quiz.question}</p>}
+      {/* Không có phần tương tác (trang công khai / in / Admin) → lựa chọn hiện TĨNH; trong /me phần cắm lo lựa chọn */}
+      {quiz && !slot && <QuizOptionsStatic quiz={quiz} />}
       {!s.preview && (
         <p className="lsn-cp-meta">
           {required ? 'Bắt buộc để hoàn thành buổi' : 'Không bắt buộc'} · Trả bằng: {checkpointAcceptsLabel(s.accepts)}
@@ -237,6 +241,18 @@ function CheckpointBlock({ s }: { s: CheckpointSection }) {
       )}
       {slot && <div className="lsn-cp-slot no-print">{slot(s)}</div>}
     </section>
+  )
+}
+
+/** Lựa chọn trắc nghiệm dạng TĨNH (không chấm, không đánh dấu đúng/sai — đáp án không có ở client). */
+export function QuizOptionsStatic({ quiz }: { quiz: CheckpointQuiz }) {
+  return (
+    <>
+      <ul className={'lsn-quiz-opts is-' + quiz.mode}>
+        {quiz.options.map(o => <li key={o.id}><span className="lsn-quiz-box" aria-hidden="true" />{o.text}</li>)}
+      </ul>
+      {quiz.mode === 'multiple' && <p className="lsn-cp-meta">Chọn tất cả đáp án đúng.</p>}
+    </>
   )
 }
 
@@ -516,6 +532,11 @@ const CSS = `
 .lsn-cp-prompt{margin:0 0 8px;font-size:15px;color:${P.inkSoft};white-space:pre-line;}
 .lsn-cp-meta{margin:0;font-size:13px;color:${P.inkFaint};}
 .lsn-cp-slot{margin-top:12px;padding-top:12px;border-top:1px dashed ${P.line};}
+.lsn-cp-q{margin:2px 0 10px;font-size:16px;font-weight:700;color:${P.ink};}
+.lsn-quiz-opts{list-style:none;margin:0 0 8px;padding:0;font-size:15px;}
+.lsn-quiz-opts li{display:flex;align-items:flex-start;gap:10px;padding:6px 0;}
+.lsn-quiz-box{width:16px;height:16px;margin-top:3px;border:1.6px solid ${P.inkFaint};border-radius:50%;flex:none;}
+.lsn-quiz-opts.is-multiple .lsn-quiz-box{border-radius:4px;}
 
 /* ── Bài tập / checklist / ghi chú ── */
 .lsn-hw{margin:0;padding-left:20px;font-size:15px;}

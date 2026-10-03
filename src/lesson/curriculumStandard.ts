@@ -3,7 +3,7 @@
 // Mục đích: buổi 06, 07… chỉ BỔ SUNG NỘI DUNG; không loại khối lạ, không đảo mạch, không trùng id bài trả.
 // Dùng ở: test (tests/class-social/curriculum-standard.test.ts) + Admin trước khi Xuất bản. Xem docs/GIAO-TRINH-CHUAN.md.
 import type { LessonDoc, LessonSection } from './lessonTypes'
-import { checkpointProblems, isCheckpoint } from './checkpoint'
+import { checkpointAccepts, checkpointProblems, isCheckpoint } from './checkpoint'
 
 /** Loại khối LessonDocument hiểu. Thêm loại mới = thêm CAPABILITY (renderer + app mới), không phải nội dung. */
 export const KNOWN_SECTION_KINDS: LessonSection['kind'][] = [
@@ -12,6 +12,10 @@ export const KNOWN_SECTION_KINDS: LessonSection['kind'][] = [
 
 /** Đuôi buổi của SOLO01 — luôn kết thúc: Bài tập về nhà → Checklist cuối bài → Ghi chú cho thầy. */
 export const SOLO01_TAIL: LessonSection['kind'][] = ['assignment', 'checklist', 'studentNotes']
+
+/** Chuẩn Bài trả (03/10/2026): mỗi Nhịp kết thúc bằng một bài trả; kiểm kiến thức → trắc nghiệm tự chấm;
+ *  thực hành tổng hợp → TỐI ĐA MỘT bài trả có video trong một buổi (Thầy chấm qua Learning Thread). */
+export const SOLO01_MAX_VIDEO_CHECKPOINTS = 1
 
 /** Kiểm một buổi theo chuẩn SOLO01. sessionNo = số buổi thật (để kiểm id bài trả "N.x"). Trả danh sách vấn đề (rỗng = đạt). */
 export function solo01Problems(sections: LessonSection[], sessionNo: number): string[] {
@@ -31,6 +35,10 @@ export function solo01Problems(sections: LessonSection[], sessionNo: number): st
     if (typeof s.id === 'string' && !s.id.startsWith(`${sessionNo}.`)) out.push(`Bài trả ${s.id}: id nên bắt đầu bằng "${sessionNo}." (Buổi ${sessionNo})`)
     if (lastBodyIdx >= 0 && i > lastBodyIdx) out.push(`Bài trả ${s.id}: đặt TRONG mạch học (trước Checklist cuối bài), không đặt cuối trang`)
   })
+  const videos = sections.filter(isCheckpoint).filter(cp => checkpointAccepts(cp).includes('video_link')).map(cp => cp.id)
+  if (videos.length > SOLO01_MAX_VIDEO_CHECKPOINTS) {
+    out.push(`Tối đa ${SOLO01_MAX_VIDEO_CHECKPOINTS} bài trả có video mỗi buổi (đang có ${videos.length}: ${videos.join(', ')}) — bài trả kiến thức dùng trắc nghiệm`)
+  }
   return out
 }
 

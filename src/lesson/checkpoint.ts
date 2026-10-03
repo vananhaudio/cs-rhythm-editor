@@ -1,11 +1,14 @@
 // Bài trả (checkpoint) trong giáo trình — logic THUẦN dùng chung cho renderer, màn học /me và script kiểm giáo trình.
 // Định nghĩa canonical nằm trong blocks của class_lesson_content; server (cl_session_checkpoints) đọc cùng luật này.
-import type { CheckpointAccept, CheckpointSection, LessonSection } from './lessonTypes'
+import type { CheckpointAccept, CheckpointQuiz, CheckpointSection, LessonSection } from './lessonTypes'
 
 export const CHECKPOINT_ID_RE = /^[0-9A-Za-z][0-9A-Za-z._-]{0,15}$/
 export const DEFAULT_ACCEPTS: CheckpointAccept[] = ['text', 'video_link']
-/** Loại nộp V1 chạy được thật (hạ tầng hiện có). Loại khác: hiển thị nhưng chưa nhận bài — không giả chức năng. */
+/** Loại nộp chạy được thật qua Learning Thread (Thầy chấm). Trắc nghiệm ('quiz') đi đường riêng: quizOf(). */
 export const SUPPORTED_ACCEPTS: CheckpointAccept[] = ['text', 'video_link']
+export const QUIZ_OPTION_ID_RE = /^[0-9A-Za-z][0-9A-Za-z_-]{0,15}$/
+/** Khoá KHÔNG được có trong khối trắc nghiệm công khai (chặn lỡ tay dán đáp án vào giáo án). */
+const QUIZ_FORBIDDEN_KEYS = ['correct', 'answer', 'answers', 'key', 'isCorrect', 'is_correct', 'right']
 
 const ACCEPT_LABEL: Record<CheckpointAccept, string> = {
   text: 'văn bản', video_link: 'link video', image: 'hình ảnh', audio: 'âm thanh', quiz: 'trắc nghiệm', interaction: 'thao tác trong giáo trình',
@@ -41,8 +44,41 @@ export function checkpointProblems(sections: LessonSection[]): string[] {
     if (typeof cp.title !== 'string' || !cp.title.trim()) out.push(`${where}: thiếu tiêu đề`)
     if (cp.required !== undefined && typeof cp.required !== 'boolean') out.push(`${where}: required phải là true/false`)
     if (cp.accepts !== undefined && (!Array.isArray(cp.accepts) || cp.accepts.some(a => !known.has(a)))) out.push(`${where}: accepts có loại lạ`)
+    const isQuiz = Array.isArray(cp.accepts) && cp.accepts.includes('quiz')
+    if (isQuiz && cp.accepts!.length !== 1) out.push(`${where}: trắc nghiệm không trộn với loại nộp khác (accepts phải đúng ['quiz'])`)
+    if (cp.quiz !== undefined && !isQuiz) out.push(`${where}: có câu trắc nghiệm nhưng accepts thiếu 'quiz'`)
+    if (isQuiz || cp.quiz !== undefined) out.push(...quizProblems(cp.quiz).map(p => `${where}: ${p}`))
   })
   return out
+}
+
+/** Kiểm MỘT câu trắc nghiệm công khai: câu hỏi · ≥ 2 lựa chọn · id lựa chọn hợp lệ, không trùng · mode · KHÔNG chứa đáp án. */
+export function quizProblems(q: unknown): string[] {
+  const out: string[] = []
+  if (!q || typeof q !== 'object' || Array.isArray(q)) return ['trắc nghiệm thiếu câu hỏi (quiz)']
+  const z = q as Record<string, unknown>
+  if (z.mode !== 'single' && z.mode !== 'multiple') out.push("trắc nghiệm: mode phải là 'single' hoặc 'multiple'")
+  if (typeof z.question !== 'string' || !z.question.trim()) out.push('trắc nghiệm: thiếu câu hỏi')
+  if (z.hint !== undefined && typeof z.hint !== 'string') out.push('trắc nghiệm: hint phải là chữ')
+  const opts = Array.isArray(z.options) ? z.options : null
+  if (!opts || opts.length < 2) out.push('trắc nghiệm: cần ít nhất 2 lựa chọn')
+  const ids = new Set<string>()
+  for (const [i, o] of (opts ?? []).entries()) {
+    const r = (o && typeof o === 'object' ? o : {}) as Record<string, unknown>
+    if (typeof r.id !== 'string' || !QUIZ_OPTION_ID_RE.test(r.id)) out.push(`trắc nghiệm: lựa chọn #${i + 1} id không hợp lệ`)
+    else if (ids.has(r.id)) out.push(`trắc nghiệm: id lựa chọn "${r.id}" bị trùng`)
+    else ids.add(r.id)
+    if (typeof r.text !== 'string' || !r.text.trim()) out.push(`trắc nghiệm: lựa chọn #${i + 1} thiếu nội dung`)
+    if (QUIZ_FORBIDDEN_KEYS.some(k => k in r)) out.push(`trắc nghiệm: lựa chọn #${i + 1} chứa ĐÁP ÁN — đáp án chỉ ở server`)
+  }
+  if (QUIZ_FORBIDDEN_KEYS.some(k => k in z)) out.push('trắc nghiệm: chứa ĐÁP ÁN — đáp án chỉ ở server')
+  return out
+}
+
+/** Câu trắc nghiệm DÙNG ĐƯỢC của checkpoint (accepts đúng ['quiz'] + câu hợp lệ), ngược lại null → hiện như chưa hỗ trợ. */
+export function quizOf(cp: Pick<CheckpointSection, 'accepts' | 'quiz'>): CheckpointQuiz | null {
+  if (!Array.isArray(cp.accepts) || cp.accepts.length !== 1 || cp.accepts[0] !== 'quiz') return null
+  return quizProblems(cp.quiz).length ? null : cp.quiz!
 }
 
 // ── KHUNG XEM TRƯỚC "TRẢ BÀI" (CHỈ giáo viên/admin, CHỈ khi buổi chưa có bài trả thật) ──

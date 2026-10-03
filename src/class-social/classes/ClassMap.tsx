@@ -11,7 +11,7 @@ import { ChevronDown, ChevronRight, Lock } from 'lucide-react'
 import { pad2, type ClassLearningState, type SessionState } from '../../classLearning/progress'
 import { BreakDivider } from './LearnParts'
 import type { LearningEntry } from './classesApi'
-import { checkpointStatus, cpLabel, cpShort, sessionView, stageGroups, stageLabel, submissionsText, type StageGroup } from './classMapModel'
+import { cpLabel, cpStatus, cpShort, sessionView, stageGroups, stageLabel, submissionsText, type StageGroup } from './classMapModel'
 
 type Ready = Extract<ClassLearningState, { enabled: true }>
 export type MapLayout = 'inline' | 'side'
@@ -26,7 +26,7 @@ export function SubmissionList({ s, teacher, onOpenSession, onOpenThread, label,
   return (
     <ul className="cs-map-cps" aria-label={label}>
       {s.checkpoints.map(cp => {
-        const st = checkpointStatus(cp.thread)
+        const st = cpStatus(cp)
         const thread = cp.thread && cp.thread.status !== 'archived' ? cp.thread : null
         return (
           <li key={cp.id}>

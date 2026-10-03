@@ -1347,3 +1347,21 @@ button.cs-subs-title:hover { color: var(--cs-accent); }
 .cs-map-row.is-locked .cs-map-lock { color: #a1a1aa; }
 /* 3. gutter master-detail gọn: panel gắn trực tiếp với buổi đang chọn (giữ mũi nối) */
 .cs-learnmap.is-split { grid-template-columns: minmax(0, 60fr) minmax(0, 40fr); column-gap: 20px; }
+
+/* ── QUIZ CHECKPOINT V1 — bài trả trắc nghiệm tại chỗ (Trang Buổi) ── */
+.cs-quiz { display: flex; flex-direction: column; gap: var(--cs-s2, 8px); }
+.cs-quiz-set { border: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.cs-quiz-help { margin: 0 0 2px; font-size: 13.5px; color: var(--cs-muted); }
+.cs-quiz-opt { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border: 1px solid var(--cs-border); border-radius: 10px;
+  background: var(--cs-surface); font-size: 15px; line-height: 1.45; cursor: pointer; }
+.cs-quiz-opt:hover { border-color: var(--cs-neutral-line); background: var(--cs-hover); }
+.cs-quiz-opt.is-picked { border-color: var(--cs-accent); background: var(--cs-surface); box-shadow: 0 0 0 1px var(--cs-accent) inset; }
+.cs-quiz-opt input { margin: 3px 0 0; flex: none; width: 17px; height: 17px; accent-color: var(--cs-accent); }
+.cs-quiz-opt span { min-width: 0; overflow-wrap: anywhere; }
+.cs-quiz-set:disabled .cs-quiz-opt { cursor: default; opacity: .7; }
+.cs-quiz-wrong { border-radius: 10px; background: var(--cs-warn-soft); padding: 10px 12px; }
+.cs-quiz-wrong-h { margin: 0; font-weight: 700; color: var(--cs-warn); }
+.cs-quiz-hint { margin: 4px 0 0; font-size: 14px; color: var(--cs-text); }
+.cs-quiz.is-passed { flex-direction: row; align-items: center; flex-wrap: wrap; gap: 10px; }
+.cs-quiz .lt-chip svg { vertical-align: -3px; }
+.cs-quiz-note { font-size: 14px; color: var(--cs-muted); }

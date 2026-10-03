@@ -7,15 +7,16 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { ArrowLeft, ArrowRight } from 'lucide-react'
 import '../../learning-thread/styles'
-import LessonDocument from '../../lesson/LessonDocument'
+import LessonDocument, { QuizOptionsStatic } from '../../lesson/LessonDocument'
 import { CheckpointSlot } from '../../lesson/checkpointSlot'
 import type { CheckpointSection, LessonDoc } from '../../lesson/lessonTypes'
-import { submitModes, withTeacherPreview } from '../../lesson/checkpoint'
+import { quizOf, submitModes, withTeacherPreview } from '../../lesson/checkpoint'
 import { fetchSessionContent } from '../../classLearning/api'
 import { pad2, sessionPhase, type SessionState } from '../../classLearning/progress'
 import StudentComposer from '../../learning-thread/StudentComposer'
-import { submitCheckpoint } from '../../classLearning/progressApi'
+import { answerCheckpoint, submitCheckpoint } from '../../classLearning/progressApi'
 import { CheckpointStatusView, LockedNote, SessionStatusLine } from './LearnParts'
+import QuizCheckpoint from './QuizCheckpoint'
 import { takeCheckpointFocus, useClassLearning, type LearnReady } from './useClassLearning'
 
 type Ready = LearnReady
@@ -113,8 +114,19 @@ function SessionContent({ state, s, onReload, onOpenThread }: {
 
   const slot = useCallback((cp: CheckpointSection) => {
     if (cp.preview) return <PreviewSubmit />
-    if (state.role === 'teacher') return <p className="lt-note">Học viên trả bài tại đây. Bài gửi về Hàng đợi Trả/Hỏi bài để chấm.</p>
+    const quiz = quizOf(cp)
+    if (state.role === 'teacher') {
+      return quiz
+        ? <><QuizOptionsStatic quiz={quiz} /><p className="lt-note">Trắc nghiệm tự chấm: học viên chọn và bấm Kiểm tra, máy chấm ngay — không vào Hàng đợi.</p></>
+        : <p className="lt-note">Học viên trả bài tại đây. Bài gửi về Hàng đợi Trả/Hỏi bài để chấm.</p>
+    }
     const st = s.checkpoints.find(c => c.id === cp.id) ?? null
+    if (quiz) {
+      return (
+        <QuizCheckpoint cpId={`${s.no}-${cp.id}`} quiz={quiz} passedAt={st?.quizPassedAt ?? null} onPassed={onReload}
+          onAnswer={choices => answerCheckpoint({ classId: state.classId, sessionNo: s.no, checkpointId: cp.id, choices })} />
+      )
+    }
     const modes = submitModes(cp)
     const key = `${s.no}:${cp.id}`
     const composer = composing === key ? (

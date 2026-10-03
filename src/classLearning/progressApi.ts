@@ -45,3 +45,23 @@ export async function submitCheckpoint(input: {
     return { ok: false, message: ltErrorText(e as Error) }
   }
 }
+
+/** Trả lời MỘT bài trả TRẮC NGHIỆM. Client chỉ gửi toạ độ + id lựa chọn đã chọn; SERVER chấm theo đáp án riêng
+ *  (học viên không đọc được), tự kiểm quyền / buổi mở / lựa chọn hợp lệ. Kết quả: đúng/sai — không bao giờ có đáp án. */
+export async function answerCheckpoint(input: {
+  classId: string; sessionNo: number; checkpointId: string; choices: string[]
+}): Promise<Result<{ correct: boolean; passedAt: string | null }>> {
+  try {
+    const { data, error, status } = await (await db()).rpc('lt_answer_checkpoint', {
+      p_class: input.classId, p_session_no: input.sessionNo, p_checkpoint_id: input.checkpointId, p_choices: input.choices,
+    })
+    if (error || !data || typeof data !== 'object') {
+      if (import.meta.env?.DEV && error) console.warn('[class-learning] answer:', error.code, error.message)
+      return { ok: false, message: ltErrorText(error ? { ...error, status } : null) }
+    }
+    const r = data as { correct?: unknown; passed_at?: unknown }
+    return { ok: true, value: { correct: r.correct === true, passedAt: typeof r.passed_at === 'string' ? r.passed_at : null } }
+  } catch (e) {
+    return { ok: false, message: ltErrorText(e as Error) }
+  }
+}

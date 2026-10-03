@@ -74,7 +74,8 @@ SQL
 if [ -n "${E2E_CHECKPOINTS:-}" ]; then
   psqld -f "$ROOT/db/tests/local/class_checkpoints_fixture.sql" >/dev/null
   psqld -c "begin;" -f "$ROOT/db/class_checkpoints_v1_setup.sql" -c "commit;" >/dev/null
-  echo "── + Lớp của tôi V1 (checkpoint + tiến độ buổi)"
+  psqld -c "begin;" -f "$ROOT/db/quiz_checkpoint_v1_setup.sql" -c "commit;" >/dev/null
+  echo "── + Lớp của tôi V1 (checkpoint + tiến độ buổi) + Quiz Checkpoint V1"
 fi
 echo "── DB local sẵn sàng (migration P1 + P2 + Lớp học V1 + Feed V1 + Danh tính học tập V1 + 2 bài đã cấu hình)"
 
@@ -133,7 +134,8 @@ DBSTATE="$(PGOPTIONS="-c client_min_messages=warning" "$PGBIN/psql" -X -q -h "$T
              || (select count(*) from edu_group_members where user_id = 'aaaaaaaa-0000-4000-8000-00000000000a' and status = 'active') || ' nhóm lớp'")"
 echo "$DBSTATE"
 # Chỉnh sửa trang cá nhân: tên + ảnh lưu vào hồ sơ dùng chung (edu_students) của đúng user; quyền sở hữu không đổi
-if [ "$RC" = "0" ]; then
+# (chỉ khi run.mjs đã chạy — E2E_SKIP_BASE bỏ qua kịch bản cũ nên không có dữ liệu chỉnh sửa hồ sơ để kiểm)
+if [ "$RC" = "0" ] && [ -z "${E2E_SKIP_BASE:-}" ]; then
   echo "$DBSTATE" | grep -qx 'A_profile=Ánh Dương Lê | avatar storage | user_id aaaaaaaa-0000-4000-8000-00000000000a' \
     && echo "$DBSTATE" | grep -qE "^A_ownership=$([ -n "${E2E_CHECKPOINTS:-}" ] && echo '1 thread · 6' || echo '1 thread · 3') nhóm lớp$" \
     && echo "PASS: DB sau Chỉnh sửa trang cá nhân: edu_students.display_name + avatar_url (storage 'avatars') của A; user_id / thread / nhóm lớp giữ nguyên" \

@@ -2,8 +2,8 @@
 // Một bản đồ trả lời cùng lúc: "Tôi đang được học gì?" (buổi, chặng, mở/khoá) và "Tôi thực sự đã nắm được gì?"
 // (bài trả của CHÍNH tôi). Nguồn: class_learning_state / giáo trình (useClassLearning) — KHÔNG tạo tiến độ mới,
 // không suy từ "đã xem bài". Trạng thái bài trả = trạng thái Learning Thread thật, chỉ đổi cách GỌI tên.
-import type { CheckpointThread, ClassLearningState, SessionState } from '../../classLearning/progress'
-import { sessionPhase } from '../../classLearning/progress'
+import type { CheckpointState, CheckpointThread, ClassLearningState, SessionState } from '../../classLearning/progress'
+import { checkpointPassed, isQuizCheckpoint, sessionPhase } from '../../classLearning/progress'
 
 type Ready = Extract<ClassLearningState, { enabled: true }>
 export type CpTone = 'none' | 'wait' | 'info' | 'warn' | 'ok'
@@ -18,6 +18,12 @@ export function checkpointStatus(t: CheckpointThread | null): CpStatus {
     case 'teacher_responded': return { label: 'Thầy đã phản hồi', tone: 'info', mark: '…' }
     default: return { label: 'Chưa trả', tone: 'none', mark: '○' }
   }
+}
+
+/** Trạng thái của MỘT bài trả: trắc nghiệm → Đạt / Chưa trả (không Chờ Thầy) · bài Thầy chấm → theo Learning Thread. */
+export function cpStatus(cp: Pick<CheckpointState, 'accepts' | 'thread' | 'quizPassedAt'>): CpStatus {
+  if (isQuizCheckpoint(cp)) return cp.quizPassedAt ? { label: 'Đạt', tone: 'ok', mark: '✓' } : { label: 'Chưa trả', tone: 'none', mark: '○' }
+  return checkpointStatus(cp.thread)
 }
 
 export type SessionView = {
@@ -37,7 +43,7 @@ export function sessionView(s: SessionState, st: Pick<Ready, 'role' | 'mode'>): 
   if (st.mode === 'curriculum') return { locked: false, state: s.published ? '' : 'Đang soạn', submissions: null }
   if (phase === 'locked') return { locked: true, state: 'Chưa mở', submissions: null }
   const total = s.checkpoints.length
-  const passed = s.checkpoints.filter(c => c.thread?.status === 'passed').length
+  const passed = s.checkpoints.filter(c => c.thread?.status === 'passed' || (isQuizCheckpoint(c) && checkpointPassed(c))).length
   // Không nói điều người học tự nhận ra (vị trí "đang học"): chỉ trạng thái thật sự phân biệt — Hoàn thành / Đang soạn.
   const state = phase === 'done' ? 'Hoàn thành' : !s.published ? 'Đang soạn' : ''
   return { locked: false, state, submissions: total ? { passed, total } : null }

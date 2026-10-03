@@ -7,7 +7,15 @@ import { toVisibility } from '../learning-thread/ltModel'
 import { lessonTitle, stageOf, type ContentState, type SessionRow, type StageRow } from './outline'
 
 export type CheckpointThread = { id: string; status: ThreadStatus; visibility: Visibility; passedAt: string | null; lastEventAt: string | null }
-export type CheckpointState = { id: string; title: string; required: boolean; accepts: string[]; thread: CheckpointThread | null }
+export type CheckpointState = {
+  id: string; title: string; required: boolean; accepts: string[]; thread: CheckpointThread | null
+  /** Trắc nghiệm tự chấm ĐẠT (server — learning_checkpoint_passes). Không có Learning Thread. */
+  quizPassedAt: string | null
+}
+/** Bài trả trắc nghiệm (accepts có 'quiz'): chỉ Đạt / Chưa trả — không Chờ Thầy. */
+export const isQuizCheckpoint = (c: Pick<CheckpointState, 'accepts'>) => c.accepts.includes('quiz')
+/** ĐẠT = Thầy chấm Đạt (thread) HOẶC trắc nghiệm ĐẠT — cùng luật server lsp_try_complete. */
+export const checkpointPassed = (c: Pick<CheckpointState, 'thread' | 'quizPassedAt'>) => !!c.thread?.passedAt || !!c.quizPassedAt
 export type SessionState = {
   sessionId: string
   no: number
@@ -78,6 +86,7 @@ export function toClassLearningState(v: unknown, classId: string): ClassLearning
         required: c.required !== false,
         accepts: Array.isArray(c.accepts) ? c.accepts.filter((a): a is string => typeof a === 'string') : [],
         thread: toThread(c.thread),
+        quizPassedAt: str(c.quiz_passed_at),
       })),
     }))
     .sort((a, b) => a.no - b.no)
@@ -200,7 +209,7 @@ export const PACE_DOT: Record<PaceTone, string> = { early: '🟢', on_time: '�
 /** Tiến độ bài trả BẮT BUỘC của một buổi: "1/2 bài trả bắt buộc đã Đạt". */
 export function requiredProgress(s: SessionState): { passed: number; total: number } {
   const req = s.checkpoints.filter(c => c.required)
-  return { passed: req.filter(c => !!c.thread?.passedAt).length, total: req.length }
+  return { passed: req.filter(checkpointPassed).length, total: req.length }
 }
 
 // ── Nút + trạng thái NGAY tại checkpoint ──

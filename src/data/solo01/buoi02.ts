@@ -118,12 +118,12 @@ export const SOLO01_BUOI02: LessonDoc = {
       ],
     },
     // ── NHỊP HỌC: điểm ngắt do Owner chốt (03/10/2026) — 3 nhịp, 3 bài trả bắt buộc:
-    //    KỸ THUẬT (2.1) → KỸ NĂNG HAI BÈ (2.2) → TÁC PHẨM (2.3). Mỗi nhịp mở bằng một khối note;
-    //    bài trả đặt ngay sau phần học nó kiểm. id 2.1/2.2/2.3 KHÔNG đổi.
+    //    KỸ THUẬT (2.1 trắc nghiệm) → KỸ NĂNG HAI BÈ (2.2 trắc nghiệm) → TÁC PHẨM (2.3 video + chữ, Thầy chấm — video DUY NHẤT).
+    //    Mỗi nhịp mở bằng một khối note; bài trả đặt ngay sau phần học nó kiểm. id 2.1/2.2/2.3 KHÔNG đổi.
     {
       kind: 'note',
       title: 'Nhịp 1 · Ép ngón i – m',
-      text: 'Hiểu ép ngón, biết chỗ làm việc của ngón cái p, rồi luyện Bài tập kỹ thuật 01. Kết thúc nhịp: Bài trả 2.1 (video).',
+      text: 'Hiểu ép ngón, biết chỗ làm việc của ngón cái p, rồi luyện Bài tập kỹ thuật 01. Kết thúc nhịp: Bài trả 2.1 (trắc nghiệm).',
     },
     {
       kind: 'note',
@@ -158,14 +158,25 @@ export const SOLO01_BUOI02: LessonDoc = {
       kind: 'checkpoint',
       id: '2.1',
       title: 'Bài trả 2.1 — Ép ngón i – m',
-      prompt: 'Quay video chơi Bài tập kỹ thuật 01 ở ♩ = 60. Thầy xem: i – m luân phiên, không lặp ngón · tiếng chắc và tương đối đều. Dán link video (ví dụ YouTube để chế độ Không công khai).',
       required: true,
-      accepts: ['video_link'],
+      accepts: ['quiz'],
+      // Trắc nghiệm tự chấm: ĐÁP ÁN KHÔNG nằm ở đây (server — class_checkpoint_keys).
+      quiz: {
+        mode: 'single',
+        question: 'Khi luyện ép ngón i–m, cách nào đúng?',
+        options: [
+          { id: 'a', text: 'Dùng ngón nào thuận thì đánh liên tục' },
+          { id: 'b', text: 'Luân phiên i–m, ngón vào dây rồi mới đẩy' },
+          { id: 'c', text: 'Chỉ dùng ngón i để tiếng đều' },
+          { id: 'd', text: 'i–m phải luôn đánh cùng lúc' },
+        ],
+        hint: 'Hãy nhớ nguyên tắc nền của Buổi 02: i–m thay phiên và ngón vào dây rồi mới đẩy để tiếng chắc.',
+      },
     },
     {
       kind: 'note',
       title: 'Nhịp 2 · Giai điệu + Bass',
-      text: 'Giai điệu như Buổi 01, thêm Bass ở dưới: Âm giai C–Am có Bass, rồi Etude 02. Kết thúc nhịp: Bài trả 2.2 (video).',
+      text: 'Giai điệu như Buổi 01, thêm Bass ở dưới: Âm giai C–Am có Bass, rồi Etude 02. Kết thúc nhịp: Bài trả 2.2 (trắc nghiệm).',
     },
     {
       kind: 'score',
@@ -202,9 +213,20 @@ export const SOLO01_BUOI02: LessonDoc = {
       kind: 'checkpoint',
       id: '2.2',
       title: 'Bài trả 2.2 — Giai điệu + Bass',
-      prompt: 'Quay video chơi hoàn chỉnh Etude 02. Thầy xem: Bass và nốt giai điệu đầu ô vào cùng lúc · Bass ngân · giai điệu nổi hơn Bass · i – m giữ luân phiên. Dán link video (ví dụ YouTube để chế độ Không công khai).',
       required: true,
-      accepts: ['video_link'],
+      accepts: ['quiz'],
+      quiz: {
+        mode: 'multiple',
+        question: 'Khi chơi Melody + Bass trong Buổi 02, những điều nào đúng?',
+        options: [
+          { id: 'a', text: 'Bass và nốt Melody đầu ô vang cùng lúc.' },
+          { id: 'b', text: 'Bass nên ngân trọn ô nhịp.' },
+          { id: 'c', text: 'Melody phải nghe rõ hơn Bass.' },
+          { id: 'd', text: 'Bass càng to hơn Melody càng tốt.' },
+          { id: 'e', text: 'Từ ô 3 có thể bỏ nguyên tắc i–m luân phiên.' },
+        ],
+        hint: 'Bass là bè nền: vào đúng lúc, ngân được, nhưng không lấn câu Melody.',
+      },
     },
     {
       kind: 'note',
