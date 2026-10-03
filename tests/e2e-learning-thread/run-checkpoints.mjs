@@ -301,7 +301,9 @@ try {
   for (const w of [320, 390, 768, 1280, 1440, 1600]) {
     ;({ ctx, page } = await meAs('b@test.local', '', w))
     for (const [name, path, sel] of [['home', '', '.cs-home-feedfirst'], ['classes', '/classes', '.cs-myclasses-page'], ['class', `/classes/${TH01}`, '.cs-map-row'],
-      ['space', `/classes/${TH01}/space`, '.cs-classspace .cs-act-line'], ['friends', '/friends', '.cs-friends-page']]) {
+      ['space', `/classes/${TH01}/space`, '.cs-classspace .cs-act-line'], ['friends', '/friends', '.cs-friends-page'],
+      ['tabclass', '?feed=classes', '.cs-home-classes .cs-classrow'], ['thread', `/t/${threadId}`, '.lt-page'],
+      ['profile', '/u/bbbbbbbb-0000-4000-8000-00000000000b', '.cs-profile-page']]) {
       await page.goto('about:blank'); await page.goto(`${ME}${path}`, { waitUntil: 'networkidle0' })
       await page.waitForSelector(sel, { timeout: 15000 })
       await noHorizontalOverflow(page, `${name} ${w}px`)
@@ -317,7 +319,7 @@ try {
       }
       await page.screenshot({ path: `${SHOTS}/vs-${name}-${w}.png`, fullPage: false })
     }
-    ok(`Visual ${w}px: Home · Lớp của tôi · Trang lớp · Không gian lớp · Bạn bè — không tràn ngang, ≤ 1 nút tím chính/viewport`)
+    ok(`Visual ${w}px: Home · tab Lớp · Lớp của tôi · Trang lớp · Không gian lớp · Bạn bè · Thread · Trang cá nhân — không tràn ngang, ≤ 1 nút tím chính/viewport`)
     await ctx.close()
   }
   {
