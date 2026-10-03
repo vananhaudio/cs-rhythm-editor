@@ -71,8 +71,12 @@ Luật máy kiểm (`src/lesson/curriculumStandard.ts`, test `tests/class-social
   - Đổi id = học viên mất liên kết với bài đã trả.
   - Sửa tiêu đề / yêu cầu thì được, đổi id thì không.
 - **`required`:** mặc định `true`. Đủ mọi bài trả bắt buộc ĐẠT → buổi hoàn thành → buổi kế mở. `false` = bài làm thêm.
-- **`accepts`:** mặc định `["text","video_link"]`. V1 chỉ chạy `text` và `video_link`. Các loại `image` / `audio` / `quiz` / `interaction` đã có trong schema để dành, nhưng chưa nhận bài (hiện "sẽ mở khi có công cụ"). Không giả chức năng.
-- **Video** chủ yếu cho bài chốt cần nghe / nhìn chơi thật. Kiểm nhận thức thì ưu tiên `text`.
+- **`accepts`:** mặc định `["text","video_link"]`. Chạy được: `text`, `video_link` (Thầy chấm qua Learning Thread) và `quiz` (trắc nghiệm tự chấm — mục 4c). `image` / `audio` / `interaction` để dành, chưa nhận bài (hiện "sẽ mở khi có công cụ"). Không giả chức năng.
+- **CHUẨN BÀI TRẢ (03/10/2026):**
+  - Mỗi Nhịp kết thúc bằng một bài trả.
+  - Kiểm kiến thức / nhận thức → **trắc nghiệm tự chấm** (`quiz`), phản hồi Đúng/Sai ngay, làm lại không giới hạn.
+  - Thực hành tổng hợp → **tối đa MỘT bài trả có `video_link` mỗi buổi** (Thầy chấm). Bộ kiểm `curriculumStandard` chặn buổi có > 1 video.
+  - Mọi bài trả bắt buộc Đạt → hoàn thành buổi → mở buổi kế.
 - **Hiển thị:**
   - `/me`: nút TRẢ BÀI + trạng thái tại chỗ.
   - Trang công khai, in / PDF, Admin xem trước: hiện tĩnh (không nút).
@@ -102,6 +106,20 @@ Biểu diễn: **nhịp hình thành bởi VỊ TRÍ khối `checkpoint` trong `
 - Renderer (`LessonDocument`) và Trang Buổi hiển thị đúng thứ tự này: bài trả nằm NGAY sau phần học của nhịp, không gom xuống cuối buổi.
 - Chỉ tạo model riêng khi có nhu cầu kỹ thuật thật (ví dụ khoá từng nhịp). Hiện mở khoá vẫn theo **buổi**.
 - Khung "Trả bài · Xem trước" cuối giáo án (chỉ giáo viên thấy, khi buổi chưa có bài trả) chỉ là **trạng thái review giao diện**, KHÔNG phải cấu trúc giáo trình.
+
+## 4c. BÀI TRẢ TRẮC NGHIỆM (Quiz Checkpoint V1) — docs/QUIZ-CHECKPOINT-V1.md
+
+```ts
+{ kind: 'checkpoint', id: '2.1', title: 'Bài trả 2.1 — …', required: true, accepts: ['quiz'],
+  quiz: { mode: 'single' | 'multiple', question: '…', options: [{ id: 'a', text: '…' }, …], hint: '…' } }
+```
+
+- 1 câu / bài trả. `single` = chọn đúng 1 · `multiple` = chọn đúng CẢ TẬP (thiếu hay thừa đều sai). ≥ 2 lựa chọn, id lựa chọn không trùng.
+- **ĐÁP ÁN KHÔNG BAO GIỜ nằm trong file TS / blocks / repo công khai** (học viên đọc blocks trực tiếp). Đáp án ở server (`class_checkpoint_keys`),
+  nguồn soạn ở repo PRIVATE `cs-rhythm-editor-wip` (`prod-migrations/<buổi>/keys.json` + bộ sinh SQL). Bộ kiểm chặn khối có `correct`/`answer`….
+- Không trộn `quiz` với loại nộp khác. `hint` hiện khi trả lời chưa đúng (không phải đáp án).
+- Xuất bản buổi có trắc nghiệm = blocks + đáp án trong MỘT giao dịch (SQL private, có chặn), không qua nút Xuất bản của Admin
+  (Admin chỉ ghi blocks → câu trắc nghiệm thiếu đáp án sẽ báo "chưa sẵn sàng chấm"; postflight Quiz báo STOP).
 
 ## 5. Thêm Buổi 06, 07 … (quy trình)
 
