@@ -132,6 +132,9 @@ DECLARE
     -- Lớp của tôi V1 (db/class_checkpoints_v1_setup.sql): tiến độ buổi — KHÔNG policy, chỉ qua RPC.
     -- Áp policy rộng = học sinh tự ghi opened_at/completed_at (tự mở buổi, sửa lịch sử).
     'learning_session_progress',
+    -- Quiz Checkpoint V1 (db/quiz_checkpoint_v1_setup.sql): ĐÁP ÁN trắc nghiệm + kết quả ĐẠT — KHÔNG policy, chỉ server/RPC.
+    -- Áp policy rộng = học sinh đọc được đáp án và tự ghi ĐẠT.
+    'class_checkpoint_keys', 'learning_checkpoint_passes',
     -- Billing Foundation (BƯỚC 8A — db/billing_setup.sql): anon KHÔNG policy nào;
     -- authenticated chỉ teacher SELECT (xem Admin); mọi write qua SECURITY DEFINER
     -- functions. ĐỪNG để vòng lặp áp policy rộng (sẽ lộ dữ liệu tài chính).

@@ -343,6 +343,49 @@ psqld t_cp3 -c "begin;" -f "$ROOT/db/class_checkpoints_v1_setup.sql" -c "commit;
 grep -q "DỪNG — production khác repo.*lt_set_visibility" "$TMP/cp3.err" && [ "$(q t_cp3 "select to_regclass('public.learning_session_progress') is null")" = "t" ] \
   && ok "V1 migration tự DỪNG khi hàm bị thay lệch — không tạo gì" || fail "V1 drift gate: $(cat "$TMP/cp3.err")"
 
+echo "── QUIZ CHECKPOINT V1 (trắc nghiệm tự chấm): md5 cổng · preflight · setup ×2 · rls_setup · postflight · test · rollback (có/không dữ liệu) · drift"
+QZ_EXPECTED="class_learning_state=fd0ebe70a9674b8c1cc12c6df97d6c47 lsp_try_complete=8feb5d0c9f16151857bf2ea625d2e83a"
+QZ_MD5() { q "$1" "select string_agg(proname || '=' || md5(prosrc), ' ' order by proname) from pg_proc where proname in ('lsp_try_complete', 'class_learning_state')"; }
+qz_setup() { psqld "$1" -c "begin;" -f "$ROOT/db/quiz_checkpoint_v1_setup.sql" -c "commit;" >/dev/null; }
+qz_rollback() { psqld "$1" -c "begin;" -f "$ROOT/db/quiz_checkpoint_v1_rollback.sql" -c "commit;" >/dev/null; }
+QZGATE() { q "$1" "select item from ($(sed 's/;[[:space:]]*$//' "$ROOT/db/quiz_checkpoint_v1_preflight.sql")) z where section = 'GATE'"; }
+QZPOST() { q "$1" "select item from ($(sed 's/;[[:space:]]*$//' "$ROOT/db/quiz_checkpoint_v1_postflight.sql")) z where section = 'GATE'"; }
+grep -qiE '^\s*(begin|commit|rollback)\s*;' "$ROOT/db/quiz_checkpoint_v1_setup.sql" "$ROOT/db/quiz_checkpoint_v1_rollback.sql" \
+  && fail "file migration QUIZ có begin/commit" || ok "QUIZ setup/rollback không tự begin/commit (đúng luật prod-db.py)"
+QZ_CONST() { grep -o '"lsp_try_complete": "[0-9a-f]*", "class_learning_state": "[0-9a-f]*"' "$1"; }
+[ -n "$(QZ_CONST "$ROOT/db/quiz_checkpoint_v1_setup.sql")" ] && [ "$(grep -c "8feb5d0c9f16151857bf2ea625d2e83a" "$ROOT/db/quiz_checkpoint_v1_preflight.sql")/$(grep -c "fd0ebe70a9674b8c1cc12c6df97d6c47" "$ROOT/db/quiz_checkpoint_v1_preflight.sql")" = "1/1" ] \
+  && ok "QUIZ: hằng md5 cổng có ở cả migration và preflight" || fail "QUIZ: hằng md5 cổng lệch"
+cp_base t_qz && cp_setup t_qz
+[ "$(QZ_MD5 t_qz)" = "$QZ_EXPECTED" ] && ok "QUIZ: md5 2 hàm bị thay (bản repo V1) = md5 production 03/10" || fail "QUIZ: md5 repo khác production: $(QZ_MD5 t_qz)"
+[ "$(QZGATE t_qz)" = "PASS" ] && ok "QUIZ preflight: GATE = PASS" || fail "QUIZ preflight: $(QZGATE t_qz)"
+qz_setup t_qz && qz_setup t_qz && ok "QUIZ migration ×2 (idempotent; cổng nhận bản QUIZ đã chạy)"
+[ "$(QZGATE t_qz)" = "PASS" ] && ok "QUIZ preflight sau migration: GATE = PASS (chạy lại an toàn)" || fail "QUIZ preflight sau: $(QZGATE t_qz)"
+psqld t_qz -f "$ROOT/db/rls_setup.sql" >/dev/null
+[ "$(q t_qz "select count(*) from pg_policies where tablename in ('class_checkpoint_keys', 'learning_checkpoint_passes')")" = "0" ] \
+  && [ "$(q t_qz "select count(*) from information_schema.role_table_grants where table_name in ('class_checkpoint_keys', 'learning_checkpoint_passes') and grantee in ('anon','authenticated','PUBLIC')")" = "0" ] \
+  && ok "QUIZ: rls_setup.sql KHÔNG áp policy/grant lên bảng đáp án + kết quả" || fail "QUIZ: bảng đáp án bị mở"
+[ "$(QZPOST t_qz)" = "PASS" ] && ok "QUIZ postflight: GATE = PASS" || fail "QUIZ postflight: $(QZPOST t_qz)"
+PGOPTIONS="-c client_min_messages=notice" "$PGBIN/psql" -X -q -h "$TMP" -p "$PORT" -U postgres -d t_qz -v ON_ERROR_STOP=1 \
+  -f "$ROOT/db/tests/quiz_checkpoint_v1_test.sql" 2>&1 | sed -E 's/^psql:[^:]*:[0-9]*: (NOTICE|ERROR):  //'
+[ "${PIPESTATUS[0]}" = "0" ] || fail "test SQL QUIZ V1"
+[ "$(QZPOST t_qz)" = "STOP - DO NOT USE" ] && q t_qz "select detail from ($(sed 's/;[[:space:]]*$//' "$ROOT/db/quiz_checkpoint_v1_postflight.sql")) z where section = 'quiz_key' and status = 'STOP'" | grep -q "THIẾU đáp án" \
+  && ok "QUIZ postflight bắt được trắc nghiệm xuất bản THIẾU đáp án (3.3 trong test) → STOP" || fail "QUIZ postflight không bắt thiếu đáp án"
+QZ_DATA="$(q t_qz "select count(*) from learning_checkpoint_passes")/$(q t_qz "select count(*) from learning_session_progress where completed_at is not null")"
+qz_rollback t_qz && qz_rollback t_qz
+[ "$(QZ_MD5 t_qz)" = "$QZ_EXPECTED" ] && [ "$(q t_qz "select count(*) from pg_proc where proname = 'lt_answer_checkpoint'")" = "0" ] \
+  && [ "$(q t_qz "select count(*) from learning_checkpoint_passes")/$(q t_qz "select count(*) from learning_session_progress where completed_at is not null")" = "$QZ_DATA" ] \
+  && ok "QUIZ rollback ×2 khi ĐÃ có dữ liệu ($QZ_DATA): 2 hàm về đúng md5 production, gỡ RPC, GIỮ kết quả + tiến độ" || fail "QUIZ rollback có dữ liệu"
+qz_setup t_qz && [ "$(q t_qz "select count(*) from pg_proc where proname = 'lt_answer_checkpoint'")" = "1" ] && ok "QUIZ cài lại sau rollback (dữ liệu còn nguyên)" || fail "QUIZ cài lại"
+cp_base t_qz2 && cp_setup t_qz2 && qz_setup t_qz2 && qz_rollback t_qz2 && qz_rollback t_qz2
+[ "$(q t_qz2 "select (to_regclass('public.class_checkpoint_keys') is null and to_regclass('public.learning_checkpoint_passes') is null)::text")" = "true" ] \
+  && [ "$(QZ_MD5 t_qz2)" = "$QZ_EXPECTED" ] && ok "QUIZ rollback ×2 khi CHƯA có dữ liệu: gỡ 2 bảng, 2 hàm về bản V1" || fail "QUIZ rollback sạch"
+cp_base t_qz3 && cp_setup t_qz3
+psqld t_qz3 -c "create or replace function public.lsp_try_complete(p_user uuid, p_program text, p_session_no int, p_class uuid) returns boolean language sql as \$\$ select true \$\$;" >/dev/null
+[ "$(QZGATE t_qz3)" = "STOP - DO NOT MIGRATE" ] && ok "QUIZ preflight: lsp_try_complete sửa tay → GATE = STOP" || fail "QUIZ preflight drift: $(QZGATE t_qz3)"
+psqld t_qz3 -c "begin;" -f "$ROOT/db/quiz_checkpoint_v1_setup.sql" -c "commit;" >/dev/null 2>"$TMP/qz3.err" && fail "QUIZ migration chạy dù hàm lệch"
+grep -q "DỪNG — production khác repo.*lsp_try_complete" "$TMP/qz3.err" && [ "$(q t_qz3 "select to_regclass('public.class_checkpoint_keys') is null")" = "t" ] \
+  && ok "QUIZ migration tự DỪNG khi hàm bị thay lệch — không tạo gì" || fail "QUIZ drift gate: $(cat "$TMP/qz3.err")"
+
 echo "── Rollback ×2 (idempotent) → cài lại"
 psqld tva_lt -f "$ROOT/db/learning_threads_p1_rollback.sql" >/dev/null && ok "rollback lần 1"
 psqld tva_lt -f "$ROOT/db/learning_threads_p1_rollback.sql" >/dev/null && ok "rollback lần 2 (idempotent)"
