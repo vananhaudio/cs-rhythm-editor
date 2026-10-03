@@ -1072,3 +1072,35 @@ a.cs-classrow-name { text-decoration: none; align-self: flex-start; }
 .cs-linkbtn:hover { color: var(--cs-accent); }
 .cs-classes-search { margin: 6px 0; }
 .cs-myclasses-page .cs-join-class { border: none; box-shadow: none; background: none; padding: 8px 4px; }
+
+/* ── CLASS UX V3 — Learning Map ↔ Bài trả của tôi · Không gian lớp ─────────────────────────────────────────────
+   Trang học = không gian học (không Social). Thứ bậc bằng chữ + khoảng trắng + căn cột; không card, ít viền. */
+.cs-classv3.is-wide { max-width: 1160px; margin: 0 auto; }
+/* Mục lục: cột số 01/02/… scan được · tên buổi là trục riêng */
+.cs-classv3 .cs-map-row { display: grid; grid-template-columns: 2.4em minmax(0, 1fr); column-gap: 10px; align-items: baseline; padding-left: 10px; }
+.cs-map-no { font-variant-numeric: tabular-nums; font-size: 14px; font-weight: 700; color: var(--cs-faint); text-align: right; }
+.cs-map-row.is-current .cs-map-no { color: var(--cs-text); }
+.cs-map-body { min-width: 0; }
+.cs-map-row.is-locked .cs-map-title { color: var(--cs-faint); font-weight: 600; }
+.cs-map-lock { margin-left: 6px; color: var(--cs-faint); vertical-align: -1px; }
+.cs-map-row.is-selected { background: var(--cs-surface); }
+.cs-map-subs[aria-pressed="true"] { color: var(--cs-text); text-decoration-color: var(--cs-text); }
+/* Master-detail (vùng rộng): mục lục ~62% · Bài trả của tôi ~38%, panel dính khi cuộn mục lục dài */
+.cs-learnmap.is-split { display: grid; grid-template-columns: minmax(0, 62fr) minmax(0, 38fr); column-gap: 40px; align-items: start; }
+.cs-learnmap-side { position: sticky; top: calc(var(--cs-topbar-h) + 16px); }
+.cs-subs-panel { border-left: 1px solid var(--cs-border); padding-left: 24px; }
+.cs-subs-kicker { margin: 4px 0 2px; font-size: 13px; font-weight: 700; color: var(--cs-muted); font-variant-numeric: tabular-nums; }
+.cs-subs-title { display: block; margin: 0 0 6px; border: none; background: none; padding: 0; text-align: left; font: inherit;
+  font-size: 18px; font-weight: 800; line-height: 1.3; color: var(--cs-text); cursor: pointer; overflow-wrap: anywhere; }
+button.cs-subs-title:hover { color: var(--cs-accent); }
+.cs-subs-title.is-locked { color: var(--cs-faint); cursor: default; }
+.cs-subs-sum { margin: 0 0 4px; font-size: 14px; font-weight: 700; color: var(--cs-text); display: flex; gap: 6px; align-items: baseline; }
+.cs-subs-panel .cs-map-cps { margin-top: 4px; }
+.cs-subs-panel .cs-map-cp { padding: 9px 0; border-bottom: 1px solid var(--cs-border); }
+.cs-subs-panel li:last-child .cs-map-cp { border-bottom: none; }
+/* Cánh cửa Không gian lớp — một lối nhẹ cuối trang, không preview Feed */
+.cs-space-door { border-top: 1px solid var(--cs-border); margin-top: 18px; padding-top: 18px; }
+.cs-space-door-title { margin: 0; font-size: 16px; font-weight: 800; }
+.cs-space-door-hint { margin: 4px 0 2px; font-size: 13.5px; color: var(--cs-muted); }
+.cs-space-door-go { padding-left: 0; }
+.cs-classspace .cs-member-list { box-shadow: none; }

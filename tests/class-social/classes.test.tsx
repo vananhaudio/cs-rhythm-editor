@@ -8,7 +8,7 @@ import { readFileSync } from "node:fs";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
-  CLASSES_PATH, classIdFromPath, classPath, keepsPathForGuest, resolveMeRoute, sameView, viewFromPath, viewPath,
+  CLASSES_PATH, classIdFromPath, classPath, classSpacePath, keepsPathForGuest, resolveMeRoute, sameView, viewFromPath, viewPath,
 } from "../../src/class-social/resolveMeRoute";
 import { NAV_GROUPS } from "../../src/class-social/nav";
 import ClassNav from "../../src/class-social/classes/ClassNav";
@@ -30,6 +30,15 @@ const card = (o: Record<string, unknown> = {}) => ({
 });
 
 // ── Route ────────────────────────────────────────────────────────────────────
+test("route Không gian lớp /me/classes/<uuid>/space (V3) — một cấp dưới Trang Lớp, giữ link qua đăng nhập", () => {
+  assert.equal(classSpacePath(CID), `/me/classes/${CID}/space`);
+  assert.deepEqual(viewFromPath(`/me/classes/${CID.toUpperCase()}/space/`), { kind: "classSpace", classId: CID });
+  assert.equal(viewPath({ kind: "classSpace", classId: CID }), `/me/classes/${CID}/space`);
+  assert.equal(classIdFromPath(`/me/classes/${CID}/space`), null, "không nhầm thành trang lớp");
+  assert.equal(viewFromPath(`/me/classes/${CID}/spacex`).kind, "section");
+  assert.equal(keepsPathForGuest({ kind: "classSpace", classId: CID }), true);
+});
+
 test("route /me/classes + /me/classes/<uuid>; id lạ không phải lớp; giữ link qua đăng nhập", () => {
   assert.equal(classPath(CID), `/me/classes/${CID}`);
   assert.equal(classIdFromPath(`/me/classes/${CID.toUpperCase()}/`), CID);
@@ -167,10 +176,10 @@ test("lớp học CHỈ qua RPC đọc; không query thẳng membership/class_sc
   for (const fn of ["social_my_classes", "social_discover_classes", "social_class_detail", "social_class_activity", "social_class_members"]) {
     assert.ok(api.includes(`'${fn}'`), fn);
   }
-  for (const f of ["class-social/classes/classesApi.ts", "class-social/classes/ClassPage.tsx", "class-social/classes/ClassesPage.tsx", "class-social/classes/useSocialClasses.ts"]) {
+  for (const f of ["class-social/classes/classesApi.ts", "class-social/classes/ClassPage.tsx", "class-social/classes/ClassSpacePage.tsx", "class-social/classes/ClassesPage.tsx", "class-social/classes/useSocialClasses.ts"]) {
     assert.equal(/\.from\(/.test(src(f)), false, f);
   }
-  assert.match(src("class-social/classes/ClassPage.tsx"), /canViewMembers = !!c && c\.canViewMembers[\s\S]*if \(!showMembers \|\| !canViewMembers \|\| members\) return/, "danh sách thành viên chỉ tải khi server cho phép");
+  assert.match(src("class-social/classes/ClassSpacePage.tsx"), /canViewMembers = !!c && c\.canViewMembers[\s\S]*if \(!canViewMembers \|\| members\) return/, "danh sách thành viên chỉ tải khi server cho phép (Không gian lớp)");
   const db = readFileSync(new URL("../../db/social_classes_v1_setup.sql", import.meta.url), "utf8");
   assert.equal(/create table/i.test(db), false, "không bảng social_classes / membership mới");
   assert.equal(/zoom_url|price|metadata/.test(db.replace(/--.*$/gm, "")), false, "không trả zoom_url/giá/metadata");

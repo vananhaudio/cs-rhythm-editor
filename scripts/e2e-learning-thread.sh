@@ -105,7 +105,7 @@ echo "── Stack: PostgREST :$API_PORT · proxy :$PROXY_PORT · vite :$VITE_PO
 
 set +e
 # E2E_SKIP_BASE=1 (chỉ khi gỡ lỗi kịch bản thêm): bỏ qua run.mjs / run-checkpoints.mjs
-if [ -n "${E2E_SKIP_BASE:-}" ]; then RC=0; else
+if [ -n "${E2E_SKIP_BASE:-}" ] || [ -n "${E2E_ONLY_CHECKPOINTS:-}" ]; then RC=0; else
 VITE_PORT=$VITE_PORT PUPPETEER_DIR="$PUPPETEER_DIR" SHOTS="${SHOTS:-$TMP/shots}" node "$ROOT/tests/e2e-learning-thread/run.mjs"
 RC=$?
 fi

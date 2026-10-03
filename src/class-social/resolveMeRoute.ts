@@ -105,6 +105,17 @@ export function sessionFromPath(pathname: string): { classId: string; sessionNo:
   return m && UUID_RE.test(m[1]) ? { classId: m[1].toLowerCase(), sessionNo: Number(m[2]) } : null
 }
 
+// ── KHÔNG GIAN LỚP (Class UX V3): /me/classes/<class id>/space — Feed của đúng một lớp + Thành viên (tách khỏi trang học) ──
+export function classSpacePath(classId: string): string {
+  return `${classPath(classId)}/space`
+}
+
+const SPACE_RE = /^\/me\/classes\/([0-9a-f-]{36})\/space$/i
+export function classSpaceFromPath(pathname: string): string | null {
+  const m = SPACE_RE.exec(pathname.replace(/\/+$/, ''))
+  return m && UUID_RE.test(m[1]) ? m[1].toLowerCase() : null
+}
+
 // ── Quản lý Band (Recruit V1 + Quản lý V1): /me/bands · /me/bands/<slug> — quyền do server (band_can_manage) quyết ──
 export const BANDS_PATH = '/me/bands'
 const BAND_SLUG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/
@@ -129,6 +140,7 @@ export type MeView =
   | { kind: 'classes' }
   | { kind: 'class'; classId: string }
   | { kind: 'session'; classId: string; sessionNo: number }
+  | { kind: 'classSpace'; classId: string }
   | { kind: 'bands' }
   | { kind: 'bandAdmin'; slug: string }
 
@@ -139,6 +151,8 @@ export function viewFromPath(pathname: string): MeView {
   if (threadId) return { kind: 'thread', threadId }
   const ses = sessionFromPath(pathname)
   if (ses) return { kind: 'session', ...ses }
+  const spaceId = classSpaceFromPath(pathname)
+  if (spaceId) return { kind: 'classSpace', classId: spaceId }
   const classId = classIdFromPath(pathname)
   if (classId) return { kind: 'class', classId }
   const bandSlug = bandAdminSlugFromPath(pathname)
@@ -156,6 +170,7 @@ export function sameView(a: MeView, b: MeView): boolean {
     case 'thread': return b.kind === 'thread' && a.threadId === b.threadId
     case 'class': return b.kind === 'class' && a.classId === b.classId
     case 'session': return b.kind === 'session' && a.classId === b.classId && a.sessionNo === b.sessionNo
+    case 'classSpace': return b.kind === 'classSpace' && a.classId === b.classId
     case 'queue': return b.kind === 'queue'
     case 'classes': return b.kind === 'classes'
     case 'bands': return b.kind === 'bands'
@@ -170,6 +185,7 @@ export function viewPath(view: MeView): string {
     case 'thread': return threadPath(view.threadId)
     case 'class': return classPath(view.classId)
     case 'session': return sessionPath(view.classId, view.sessionNo)
+    case 'classSpace': return classSpacePath(view.classId)
     case 'queue': return QUEUE_PATH
     case 'classes': return CLASSES_PATH
     case 'bands': return BANDS_PATH
@@ -181,6 +197,7 @@ export function viewPath(view: MeView): string {
 /** Link sâu nên GIỮ qua bước đăng nhập (khách → đăng nhập tại chỗ → đúng trang). */
 export function keepsPathForGuest(view: MeView): boolean {
   return view.kind === 'thread' || view.kind === 'class' || view.kind === 'classes' || view.kind === 'session'
+    || view.kind === 'classSpace'
     || view.kind === 'bands' || view.kind === 'bandAdmin'
 }
 

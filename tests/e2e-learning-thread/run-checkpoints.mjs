@@ -15,14 +15,21 @@ mkdirSync(SHOTS, { recursive: true })
 
 const browser = await puppeteer.launch({
   executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-  headless: true, args: ['--no-first-run', '--no-default-browser-check'],
+  headless: true, args: ['--no-first-run', '--no-default-browser-check'], dumpio: !!process.env.E2E_DUMPIO,
 })
 let pass = 0
 const ok = msg => { pass++; console.log('PASS: ' + msg) }
 const errors = []
 
 async function ctxPage(width = 390) {
-  const ctx = await browser.createBrowserContext()
+  // Chrome đôi khi trả "Session with given id not found" ngay sau khi đóng context cũ → thử lại ngắn (hạ tầng test)
+  let ctx = null
+  for (let i = 0; !ctx; i++) {
+    try { ctx = await browser.createBrowserContext() } catch (e) {
+      if (i >= 4 || !/Session with given id not found/.test(e.message)) throw e
+      await new Promise(r => setTimeout(r, 500))
+    }
+  }
   const page = await ctx.newPage()
   await page.setViewport({ width, height: 844, deviceScaleFactor: 1, isMobile: width < 600, hasTouch: width < 600 })
   page.on('pageerror', e => errors.push('pageerror: ' + e.message))
@@ -53,14 +60,17 @@ async function meAs(email, path = '', width = 390) {
 }
 // Class Page V2: MỤC LỤC SỐNG — dòng buổi = TÊN (nút → Trang Buổi) + dòng phụ (trạng thái · bài trả của tôi)
 const rows = page => page.$$eval('.cs-map-row', els => els.map(e => ({
-  title: e.querySelector('.cs-map-title')?.textContent ?? '', current: e.getAttribute('aria-current') === 'step',
+  // V3: cột số riêng + tên buổi (bỏ chữ ẩn cho trình đọc màn hình) → "01 · Tên"
+  title: (e.querySelector('.cs-map-no')?.textContent ?? '') + ' · ' + [...(e.querySelector('.cs-map-title')?.childNodes ?? [])]
+    .filter(n => !(n.nodeType === 1 && (n.classList.contains('cs-sr-only') || n.tagName.toLowerCase() === 'svg'))).map(n => n.textContent).join('').trim(),
+  current: e.getAttribute('aria-current') === 'step',
   disabled: e.classList.contains('is-locked'), meta: e.querySelector('.cs-map-meta')?.textContent ?? '', cls: e.className })))
 // Trang Lớp (bản đồ) vs Trang Buổi (phòng học)
 const onClassPage = async page => { await page.waitForSelector('.cs-map', { timeout: 15000 }); assert.equal(await page.$$eval('.lsn-paper', e => e.length), 0, 'Trang Lớp KHÔNG render giáo án') }
 async function openSessionFromMap(page, no) {
   await page.click(`#buoi-${String(no).padStart(2, '0')} .cs-map-title`)
   await page.waitForFunction(n => new RegExp(`/sessions/${n}$`).test(location.pathname), { timeout: 15000 }, no)
-  assert.equal(await page.$$eval('.cs-map, .cs-classv2-feed', e => e.length), 0, 'Trang Buổi: không bản đồ, không feed lớp')
+  assert.equal(await page.$$eval('.cs-map, .cs-classv2-feed, .cs-subs-panel', e => e.length), 0, 'Trang Buổi: không bản đồ, không feed lớp')
 }
 // Mục lục: chặng thu gọn → bung hết khi cần xem đủ buổi
 async function expandAll(page) {
@@ -82,21 +92,23 @@ try {
   // ── 1. B vào lớp: TRANG LỚP = BẢN ĐỒ (không giáo án) · buổi sau khoá ──────────────────────────
   ;({ ctx, page } = await meAs('b@test.local', `/classes/${TH01}`))
   await onClassPage(page)
-  // Class Page V2: MỘT trang dọc — Tên lớp → Mục lục → Lớp mình đang học → Thành viên; không Tiếp tục học / Hoạt động gần đây / tab
-  const top = await page.evaluate(() => { const t = document.querySelector('.cs-classv2').textContent
-    return [t.indexOf('Solo Guitar'), t.indexOf('Mục lục'), t.indexOf('Lớp mình đang học'), t.indexOf('Lớp mình ·')] })
-  assert.ok(top.every((x, i) => x >= 0 && (i === 0 || x > top[i - 1])), 'thứ tự: Tên lớp → Mục lục → Lớp mình đang học → Thành viên ' + top)
-  assert.equal(await page.evaluate(() => /Tiếp tục học|Hoạt động gần đây|Xem toàn bộ giáo trình|Vào học/.test(document.querySelector('.cs-classv2').textContent)), false)
-  assert.equal(await page.$$eval('.cs-classv2 .lt-profile-tabs, .cs-now-go', e => e.length), 0, 'không tab, không CTA Tiếp tục học')
+  // Class UX V3: trang HỌC — Tên lớp → Mục lục → cánh cửa Không gian lớp; KHÔNG feed / thành viên / Tiếp tục học / tab
+  const top = await page.evaluate(() => { const t = document.querySelector('.cs-classv3').textContent
+    return [t.indexOf('Solo Guitar'), t.indexOf('Mục lục'), t.indexOf('Không gian lớp')] })
+  assert.ok(top.every((x, i) => x >= 0 && (i === 0 || x > top[i - 1])), 'thứ tự: Tên lớp → Mục lục → Không gian lớp ' + top)
+  assert.equal(await page.evaluate(() => /Tiếp tục học|Hoạt động gần đây|Xem toàn bộ giáo trình|Vào học|Lớp mình đang học/.test(document.querySelector('.cs-classv3').textContent)), false)
+  assert.equal(await page.$$eval('.cs-classv3 .lt-profile-tabs, .cs-now-go, .cs-classv3 .cs-classv2-feed, .cs-classv3 .cs-member-list, .cs-subs-panel', e => e.length), 0, '390: một cột, không feed/thành viên/panel')
   assert.ok(await page.evaluate(() => scrollY) <= 10, 'vào lớp không tự cuộn')
   let r = await rows(page)
   assert.deepEqual(r.map(x => x.title), ['01 · Bản đồ nốt C–Am', '02 · Ép ngón & Bass', '03 · Slide', '04 · Xếp ngón'])
   assert.ok(r[0].current && /is-current/.test(r[0].cls), 'Buổi 01 là buổi hiện tại (tô nhẹ)')
-  assert.match(r[0].meta, /^0\/2 bài trả Đạt/)   // không nhãn vị trí "Đang học" — vị trí do bản đồ tự nói
+  assert.match(r[0].meta, /^0\/2 bài trả Đạt/)
+  assert.equal(await page.$eval('#buoi-01 .cs-map-no', e => e.textContent), '01', 'cột số buổi riêng')   // không nhãn vị trí "Đang học" — vị trí do bản đồ tự nói
   assert.equal(/Đang học|Chưa học/.test(r.map(x => x.meta).join('|')), false)
-  assert.ok(r[1].disabled && r[2].disabled && /Chưa mở/.test(r[1].meta), 'Buổi 02/03 khoá: thấy TÊN + "Chưa mở", không bấm vào được')
+  assert.ok(r[1].disabled && r[2].disabled && /Hoàn thành Buổi 01 để mở/.test(r[1].meta) && r[2].meta === '', 'Buổi 02/03 khoá: thấy TÊN + ổ khoá; gợi ý mở khoá CHỈ ở buổi khoá đầu')
+  assert.equal(await page.$$eval('.cs-map-row.is-locked .cs-map-lock', e => e.length), 3, 'ổ khoá trên mỗi buổi khoá (chữ "Chưa mở" cho trình đọc màn hình)')
   assert.equal(await page.$$eval('#buoi-02 button.cs-map-title', e => e.length), 0)
-  ok('B: Trang Lớp V2 = Tên lớp → Mục lục (01 · 0/2 bài trả Đạt, không nhãn "Đang học" · 02–03 🔒 Chưa mở) → Lớp mình đang học → Thành viên')
+  ok('B (390): Trang học V3 = Tên lớp → Mục lục (cột số · 01 0/2 bài trả Đạt · 02–04 khoá, gợi ý một lần) → cánh cửa Không gian lớp; không feed/thành viên')
   await page.screenshot({ path: `${SHOTS}/cp-0-class-v2-390.png`, fullPage: false })
   await noHorizontalOverflow(page, 'Trang Lớp 390px')
   await page.screenshot({ path: `${SHOTS}/cp-1-class-390.png`, fullPage: true })
@@ -131,13 +143,12 @@ try {
   await page.waitForFunction(id => location.pathname === `/me/classes/${id}`, {}, TH01)
   await onClassPage(page)
   assert.ok(await page.evaluate(() => scrollY) <= 10, 'về lớp: không tự cuộn — vẫn thấy mục lục từ đầu')
-  await page.waitForFunction(() => /Bài trả 1\.1 · Âm giai C–Am/.test(document.querySelector('.cs-classv2-feed')?.textContent ?? ''), { timeout: 15000 })
   // bung "0/2 bài trả Đạt" ngay tại Buổi 01 → 1.1 Chờ Thầy (thread thật) · 1.2 Chưa trả
   await page.click('#buoi-01 .cs-map-subs')
   await page.waitForSelector('#buoi-01 .cs-map-cps')
   const cps = await page.$$eval('#buoi-01 .cs-map-cp', bs => bs.map(b => b.textContent))
   assert.ok(/Bài trả 1\.1[\s\S]*Chờ Thầy/.test(cps[0]) && /Bài trả 1\.2[\s\S]*Chưa trả/.test(cps[1]), JSON.stringify(cps))
-  ok('← Về lớp: mục lục từ đầu · "Lớp mình đang học" có bài vừa trả · bung Buổi 01: 1.1 Chờ Thầy · 1.2 Chưa trả')
+  ok('← Về lớp: mục lục từ đầu · bung Buổi 01 tại chỗ (390): 1.1 Chờ Thầy · 1.2 Chưa trả')
   // bài chưa trả → Trang Buổi tại ĐÚNG bài trả 1.2
   await page.$$eval('#buoi-01 .cs-map-cp', bs => bs[1].click())
   await page.waitForFunction(id => location.pathname === `/me/classes/${id}/sessions/1`, {}, TH01)
@@ -171,17 +182,18 @@ try {
   // ── 3. Quyền xem: A (cùng lớp) thấy bài; C (lớp TH02) không — kể cả vào thẳng URL buổi ─────────
   ;({ ctx, page } = await meAs('a@test.local', `/classes/${TH01}`))
   await onClassPage(page)
-  await page.waitForFunction(() => /Bài trả 1\.1/.test(document.querySelector('.cs-classv2-feed')?.textContent ?? ''), { timeout: 15000 })
-  assert.equal(await page.evaluate(() => /Solo Guitar Căn Bản/.test(document.querySelector('.cs-classv2-feed').textContent)), false, 'feed không lặp tên lớp')
-  ok('A (cùng lớp) thấy bài trả của B trong "Lớp mình đang học" (không lặp tên lớp trên từng dòng)')
   await openSessionFromMap(page, 1)
   await page.waitForSelector('.lsn-paper', { timeout: 15000 })
   ok('Bấm TÊN Buổi 01 → đúng Trang Buổi (/sessions/1)')
   await page.click('.cs-session-back'); await onClassPage(page)
-  await page.click('.cs-classv2-members-toggle')
+  await page.click('.cs-space-door-go')
+  await page.waitForFunction(id => location.pathname === `/me/classes/${id}/space`, {}, TH01)
+  await page.waitForFunction(() => /Bài trả 1\.1/.test(document.querySelector('.cs-classv2-feed')?.textContent ?? ''), { timeout: 15000 })
+  assert.equal(await page.evaluate(() => /Solo Guitar Căn Bản/.test(document.querySelector('.cs-classv2-feed').textContent)), false, 'feed không lặp tên lớp')
   await page.waitForSelector('.cs-member-list', { timeout: 15000 })
-  assert.equal(await page.$eval('.cs-classv2-members-toggle', b => b.getAttribute('aria-expanded')), 'true')
-  ok('Cuối trang "Lớp mình · N thành viên" → bung danh sách thành viên sẵn có')
+  ok('A (cùng lớp) → Không gian lớp: thấy bài trả của B (không lặp tên lớp) + danh sách thành viên sẵn có')
+  await page.click('.cs-classspace-back'); await page.waitForFunction(id => location.pathname === `/me/classes/${id}`, {}, TH01); await onClassPage(page)
+  ok('Không gian lớp "←" → đúng trang học của lớp')
   await ctx.close()
   ;({ ctx, page } = await meAs('c@test.local', `/t/${threadId}`))
   await waitText(page, /không có quyền xem|Không tìm thấy/)
@@ -228,6 +240,73 @@ try {
   ok('B vào lại: Buổi 01 Hoàn thành · ✓ 1/2 bài trả Đạt · Buổi 02 hiện tại (mở) · Buổi 03 khoá · Trang Buổi 02 có 2.1 + "0/2 bài trả bắt buộc" · "← Buổi 01" → 1.1 "Đạt"')
   await ctx.close()
 
+  // ── 4b. Class UX V3 — DESKTOP master-detail: Mục lục trái ↔ Bài trả của tôi phải; 768 = một cột ──────────────
+  for (const w of [1280, 1440]) {
+    ;({ ctx, page } = await meAs('b@test.local', `/classes/${TH01}`, w))
+    await onClassPage(page)
+    await page.waitForSelector('.cs-learnmap.is-split .cs-subs-panel', { timeout: 15000 })
+    const g = await page.evaluate(() => {
+      const m = document.querySelector('.cs-learnmap-main').getBoundingClientRect(), p = document.querySelector('.cs-learnmap-side').getBoundingClientRect()
+      const root = document.querySelector('.cs-classv3').getBoundingClientRect()
+      return { mw: m.width, pw: p.width, sameRow: Math.abs(m.top - p.top) < 4, left: p.left > m.right, root: root.width }
+    })
+    assert.ok(g.sameRow && g.left && g.mw > g.pw * 1.3 && g.root > 900, `${w}: hai cột, mục lục rộng hơn panel ${JSON.stringify(g)}`)
+    // mặc định panel diễn giải buổi hiện tại (Buổi 02) — chỉ chọn, không cuộn, không nhảy trang
+    assert.match(await page.$eval('.cs-subs-panel', e => e.textContent), /Bài trả của tôi[\s\S]*Buổi 02[\s\S]*Ép ngón & Bass[\s\S]*0\/\d bài trả Đạt/)
+    assert.equal(await page.$eval('#buoi-02 .cs-map-subs', b => b.getAttribute('aria-pressed')), 'true', 'buổi đang diễn giải')
+    await page.click('#buoi-01 .cs-map-subs')
+    await page.waitForFunction(() => /Buổi 01[\s\S]*Bản đồ nốt C–Am[\s\S]*1\/2 bài trả Đạt/.test(document.querySelector('.cs-subs-panel').textContent))
+    assert.equal(await page.$$eval('.cs-map .cs-map-cps', e => e.length), 0, 'desktop: không bung trong mục lục')
+    assert.equal(await page.evaluate(() => location.pathname.endsWith('/sessions/1')), false, 'chọn buổi KHÔNG điều hướng')
+    assert.ok(await page.evaluate(() => scrollY) <= 10, 'không tự cuộn')
+    assert.equal(await page.evaluate(() => /Tiếp tục học|Lớp mình đang học/.test(document.body.textContent)), false)
+    await noHorizontalOverflow(page, `Trang học V3 ${w}px`)
+    await page.screenshot({ path: `${SHOTS}/v3-desktop-${w}.png`, fullPage: true })
+    ok(`${w}px: master-detail — Mục lục trái (${Math.round(g.mw)}px) ↔ Bài trả của tôi phải (${Math.round(g.pw)}px): mặc định Buổi 02 hiện tại · chọn Buổi 01 → 1/2 bài trả Đạt`)
+    if (w === 1280) {
+      // Buổi 02 → panel đổi; bài chưa trả → Trang Buổi đúng bài trả; tên buổi vẫn là đường vào Trang Buổi
+      await page.click('#buoi-02 .cs-map-subs')
+      await page.waitForFunction(() => /Buổi 02/.test(document.querySelector('.cs-subs-panel').textContent))
+      assert.equal(await page.$eval('#buoi-02', e => e.classList.contains('is-selected')), true)
+      const cps = await page.$$eval('.cs-subs-panel .cs-map-cp', bs => bs.map(b => b.textContent))
+      assert.ok(cps.length >= 1 && cps.every(t => /Chưa trả/.test(t)), JSON.stringify(cps))
+      await page.$$eval('.cs-subs-panel .cs-map-cp', bs => bs[0].click())
+      await page.waitForFunction(id => location.pathname === `/me/classes/${id}/sessions/2`, {}, TH01)
+      await page.waitForSelector('#bai-tra-2\\.1', { timeout: 15000 })
+      ok('1280: chọn Buổi 02 → panel đổi; bài chưa trả trong panel → Trang Buổi 02 đúng bài trả')
+      await page.click('.cs-session-back'); await onClassPage(page)
+      await page.click('#buoi-01 .cs-map-subs')
+      await page.waitForFunction(() => /Buổi 01/.test(document.querySelector('.cs-subs-panel').textContent))
+      await page.$$eval('.cs-subs-panel .cs-map-cp', bs => bs[0].click())
+      await page.waitForFunction(() => location.pathname.startsWith('/me/t/'))
+      ok('1280: bài đã trả (1.1 Đạt) trong panel → đúng cuộc trao đổi')
+      await page.goto(`${ME}/classes/${TH01}`, { waitUntil: 'networkidle0' }); await onClassPage(page)
+      await page.click('#buoi-01 .cs-map-title')
+      await page.waitForFunction(id => location.pathname === `/me/classes/${id}/sessions/1`, {}, TH01)
+      ok('1280: TÊN buổi vẫn là đường vào Trang Buổi (con đường mòn không đổi)')
+    }
+    await ctx.close()
+  }
+  {
+    ;({ ctx, page } = await meAs('b@test.local', `/classes/${TH01}`, 768))
+    await onClassPage(page)
+    await new Promise(r => setTimeout(r, 800))
+    assert.equal(await page.$$eval('.cs-learnmap.is-split, .cs-subs-panel', e => e.length), 0, '768: một cột')
+    await page.click('#buoi-01 .cs-map-subs'); await page.waitForSelector('#buoi-01 .cs-map-cps')
+    await noHorizontalOverflow(page, 'Trang học V3 768px')
+    ok('768px: một cột — bấm số bài trả bung tại chỗ (không ép master-detail)')
+    await ctx.close()
+  }
+  {
+    ;({ ctx, page } = await meAs('b@test.local', `/classes/${TH01}`, 320))
+    await onClassPage(page)
+    await page.click('#buoi-01 .cs-map-subs'); await page.waitForSelector('#buoi-01 .cs-map-cps')
+    await noHorizontalOverflow(page, 'Trang học V3 320px')
+    await page.screenshot({ path: `${SHOTS}/v3-mobile-320.png`, fullPage: true })
+    ok('320px: mục lục một cột + bung bài trả tại chỗ, không tràn ngang')
+    await ctx.close()
+  }
+
   // ── 5. Desktop + trang công khai SOLO01 không đổi ──────────────────────────────────────────────
   ;({ ctx, page } = await meAs('b@test.local', `/classes/${TH01}/sessions/1`, 1280))
   await page.waitForSelector('.lsn-paper', { timeout: 15000 })
@@ -252,8 +331,9 @@ try {
   assert.ok(r[1].current && r.every(x => !x.disabled), 'buổi hiện tại theo lịch (02); không khoá buổi nào')
   assert.ok(r.every(x => !/bài trả|Đang học|Chưa học/.test(x.meta)), 'chế độ giáo trình: không giả tiến độ / bài trả')
   assert.equal(await page.$$eval('.cs-learn-break', e => e.map(x => x.textContent).join('|')), 'Nghỉ giữa chặng – thời gian tự luyện')
-  await waitText(page, /Lớp mình đang học/); await waitText(page, /Chưa có bài trả hay câu hỏi nào trong lớp/)
-  ok('Chế độ giáo trình: Trang Lớp gọn — 4 buổi, Buổi 02 hiện tại, vạch nghỉ, không khoá, không giáo án, feed trống gọn')
+  await waitText(page, /Không gian lớp/)
+  assert.equal(await page.$$eval('.cs-subs-panel, .cs-learnmap.is-split', e => e.length), 0, 'chế độ giáo trình: không master-detail giả')
+  ok('Chế độ giáo trình: Trang Lớp gọn — 4 buổi, Buổi 02 hiện tại, vạch nghỉ, không khoá, không giáo án, cánh cửa Không gian lớp')
   await openSessionFromMap(page, 2)
   await waitText(page, /Nội dung thật buổi 2/)
   assert.equal(await page.$$eval('button', bs => bs.filter(b => /TRẢ BÀI|TRẢ LẠI/.test(b.textContent)).length), 0, 'học viên: không nút trả bài')

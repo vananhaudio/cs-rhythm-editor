@@ -1,5 +1,5 @@
 // Phần hiển thị THUẦN của trang lớp (không mạng, không CSS import) — test render được.
-import { Eye, UserCheck, Users } from 'lucide-react'
+import { ArrowRight, Eye, UserCheck, Users } from 'lucide-react'
 import { Avatar, PersonLink } from '../ui'
 import { IdentityBadges } from '../identity/IdentityBadges'
 import { classCodeNote, classMetaLine, classStatusLabel, memberRelationUi, type ClassCard, type ClassMember } from './classModel'
@@ -65,3 +65,13 @@ export function MemberList({ members, busyId, onAct, onOpenProfile, excludeIdent
   )
 }
 
+/** Cánh cửa sang Không gian lớp — một lối nhẹ, KHÔNG preview Feed. */
+export function ClassSpaceDoor({ onOpen }: { onOpen: () => void }) {
+  return (
+    <section className="cs-classv2-sec cs-space-door" aria-labelledby="cs-space-door-title">
+      <h2 id="cs-space-door-title" className="cs-space-door-title">Không gian lớp</h2>
+      <p className="cs-space-door-hint">Xem bài trả, câu hỏi và trao đổi của mọi người trong lớp.</p>
+      <button type="button" className="cs-linkbtn cs-space-door-go" onClick={onOpen}>Vào không gian lớp <ArrowRight size={16} aria-hidden="true" /></button>
+    </section>
+  )
+}

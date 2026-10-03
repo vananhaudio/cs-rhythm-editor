@@ -55,14 +55,13 @@ test("Mục lục sống (24 buổi / 3 chặng): chặng hiện tại mở; ch�
   assert.match(h, /Chặng 1 · TỪ GIAI ĐIỆU ĐẾN SOLO GUITAR[\s\S]*8 buổi/)
   assert.match(h, /Chặng 2 · PHÁT TRIỂN SOLO GUITAR &amp; BOLERO[\s\S]*8 buổi/)
   assert.equal((h.match(/class="cs-map-row/g) || []).length, 8, "chỉ chặng đang học bung sẵn")
-  // Buổi 01: TÊN là nút mở Trang Buổi; dòng phụ = trạng thái + bài trả của CHÍNH tôi
-  assert.match(h, /<button type="button" class="cs-map-title">01 · Bản đồ nốt giản lược C–Am<\/button>/)
-  // không nhãn vị trí "Đang học"; vị trí do bản đồ tự nói (vạch nhẹ + aria-current)
-  assert.match(h, /aria-current="step"><button type="button" class="cs-map-title">01 · [^<]*<\/button><div class="cs-map-meta"><button[^>]*>0\/3 bài trả Đạt/)
-  assert.doesNotMatch(h, /Đang học|Chưa học|Bạn đang ở đây/)
-  assert.match(h, /aria-current="step"/)
-  // Buổi khoá: vẫn thấy tên + chữ "Chưa mở" (không chỉ icon), không phải nút
-  assert.match(h, /<span class="cs-map-title">02 · Bài 2<\/span>[\s\S]*?Chưa mở/)
+  // V3: cột số 01/02/… riêng; TÊN BUỔI là nút mở Trang Buổi; dòng phụ = bài trả của CHÍNH tôi
+  assert.match(h, /aria-current="step"><span class="cs-map-no" aria-hidden="true">01<\/span><div class="cs-map-body"><button type="button" class="cs-map-title"><span class="cs-sr-only">Buổi 01: <\/span>Bản đồ nốt giản lược C–Am<\/button><div class="cs-map-meta"><button[^>]*>0\/3 bài trả Đạt/)
+  assert.doesNotMatch(h, /Đang học|Chưa học|Bạn đang ở đây/, "không nhãn vị trí")
+  // Buổi khoá: thấy tên, nhạt + ổ khoá; "Chưa mở" cho trình đọc màn hình; chỉ buổi khoá ĐẦU có một câu gợi ý
+  assert.match(h, /<span class="cs-map-title"><span class="cs-sr-only">Buổi 02: <\/span>Bài 2<svg[^>]*cs-map-lock[\s\S]*?<span class="cs-sr-only"> — Chưa mở<\/span>/)
+  assert.equal((h.match(/Hoàn thành Buổi 01 để mở/g) || []).length, 1, "gợi ý mở khoá chỉ MỘT lần")
+  assert.equal((h.match(/class="cs-map-state">Chưa mở/g) || []).length, 0, "không lặp chữ Chưa mở từng dòng")
   assert.doesNotMatch(h, /Tiếp tục học|Xem toàn bộ giáo trình|Hoạt động gần đây|Vào học/)
   assert.doesNotMatch(src("class-social/classes/ClassMap.tsx") + src("class-social/classes/ClassPage.tsx"), /scrollIntoView|scrollTo\(/, "vào lớp không tự cuộn")
 })
@@ -84,18 +83,48 @@ test("bài trả: Đạt · Cần làm lại · Chờ Thầy · Chưa trả — 
   // bấm bài có thread → đúng thread; bài chưa trả → Trang Buổi tại đúng bài trả
   const m = src("class-social/classes/ClassMap.tsx")
   assert.match(m, /thread \? onOpenThread\(thread\.id\) : onOpenSession\(s\.no, cp\.id\)/)
-  assert.match(m, /aria-expanded=\{expanded\}/)
+  assert.match(m, /aria-expanded=\{open\}/, "mobile: bung tại chỗ")
+  assert.match(m, /aria-pressed=\{open\} aria-controls="cs-subs-panel"/, "desktop: chọn buổi cho panel phải")
 })
 
-test("Class Page V2: Tên lớp → Mục lục → Lớp mình đang học → Thành viên; không tab, không Tiếp tục học, không card Đang học", () => {
+test("V3 desktop master-detail: layout 'side' — bấm số bài trả CHỌN buổi (không bung), panel phải 'Bài trả của tôi' có buổi + tóm tắt + từng bài trả thật", async () => {
+  const { default: SubmissionsPanel } = await import("../../src/class-social/classes/SubmissionsPanel")
+  const raw = { ...RAW, sessions: RAW.sessions.map((x, i) => i === 0 ? { ...x, checkpoints: [
+    { id: "1.1", title: "Bài trả 1.1 — Tìm nốt", required: true, accepts: ["text"], thread: { id: "t11", status: "passed", visibility: "class", passed_at: "x", last_event_at: null } },
+    { id: "1.2", title: "Liên thông", required: true, accepts: ["text"], thread: { id: "t12", status: "teacher_responded", visibility: "class", passed_at: null, last_event_at: null } },
+    { id: "1.3", title: "Chỗ vướng", required: true, accepts: ["text"], thread: null }] } : x) }
+  const st = ready(raw)
+  const map = renderToStaticMarkup(<ClassMap state={st} current={1} layout="side" selected={1} onSelect={noop} onOpenSession={noop} onOpenThread={noop} />)
+  assert.match(map, /class="cs-map-row is-current is-selected"/)
+  assert.match(map, /aria-pressed="true" aria-controls="cs-subs-panel"/)
+  assert.doesNotMatch(map, /cs-map-cps/, "desktop: không bung trong mục lục")
+  const panel = renderToStaticMarkup(<SubmissionsPanel state={st} sessionNo={1} onOpenSession={noop} onOpenThread={noop} />)
+  const order = [/Bài trả của tôi/, /Buổi 01/, /Bản đồ nốt giản lược C–Am<\/button>/, /1\/3 bài trả Đạt/, /Đạt/, /Thầy đã phản hồi/, /Chưa trả/].map(re => pos(panel, re))
+  assert.deepEqual([...order].sort((a, b) => a - b), order, "panel: buổi → tóm tắt → từng bài trả")
+  assert.doesNotMatch(panel, /%|XP|progress|Tiếp tục/i)
+  const locked = renderToStaticMarkup(<SubmissionsPanel state={st} sessionNo={2} onOpenSession={noop} onOpenThread={noop} />)
+  assert.match(locked, /Chưa mở · Hoàn thành Buổi 01 để mở/)
   const p = src("class-social/classes/ClassPage.tsx")
-  const order = [/<h1 className="cs-class-name">/, />Mục lục<\/h2>/, />Lớp mình đang học<\/h2>/, /Lớp mình · \{c\.memberCount\} thành viên/].map(re => pos(p, re))
+  assert.match(p, /const side = wide && hasSubmissions/, "master-detail chỉ khi đủ rộng VÀ thật có bài trả (không master-detail giả)")
+  assert.match(p, /learn\.mode === 'checkpoint'/)
+})
+
+test("Class Page V3: Tên lớp (+ lịch) → Mục lục ↔ Bài trả của tôi → cánh cửa Không gian lớp; KHÔNG feed/thành viên trên trang học", async () => {
+  const p = src("class-social/classes/ClassPage.tsx")
+  const order = [/<h1 className="cs-class-name">/, />Mục lục<\/h2>/, /<SubmissionsPanel /, /<ClassSpaceDoor /].map(re => pos(p, re))
   assert.deepEqual([...order].sort((a, b) => a - b), order, "thứ tự")
-  assert.doesNotMatch(p, /Tiếp tục học|Hoạt động gần đây|lt-profile-tabs|CurrentSession|Xem toàn bộ giáo trình|Vào học/)
-  assert.match(p, /fetchClassActivityPage/); assert.match(p, /<ActivityLine /)
+  assert.doesNotMatch(p, /Lớp mình đang học|ActivityLine|MemberList|fetchClassActivityPage|fetchClassMembers|Tiếp tục học|Hoạt động gần đây|lt-profile-tabs|Vào học/)
+  assert.doesNotMatch(p, /classMetaLine|teacherNames/, "header không lặp tên khoá / Thầy")
+  assert.match(p, /\{c\?\.schedule && <p className="cs-classv2-meta">\{c\.schedule\}<\/p>\}/)
   assert.match(p, /<NoMapNote entry=\{entry\} isMember=\{member\} \/>/)
-  assert.match(src("class-social/classes/ClassMap.tsx"), /Chưa có giáo trình được gắn với lớp này\./)
-  assert.match(p, /aria-expanded=\{showMembers\}/)
+  const { ClassSpaceDoor } = await import("../../src/class-social/classes/ClassParts")
+  const door = renderToStaticMarkup(<ClassSpaceDoor onOpen={noop} />)
+  assert.match(door, /Không gian lớp/); assert.match(door, /Xem bài trả, câu hỏi và trao đổi của mọi người trong lớp\./); assert.match(door, /Vào không gian lớp/)
+  // Không gian lớp: REUSE social_class_activity + ActivityLine + MemberList (không hệ Social mới), ← về đúng lớp
+  const sp = src("class-social/classes/ClassSpacePage.tsx")
+  assert.match(sp, /fetchClassActivityPage/); assert.match(sp, /<ActivityLine /); assert.match(sp, /<MemberList /); assert.match(sp, /fetchClassMembers/)
+  assert.doesNotMatch(sp, /rpc\(|\.from\(/)
+  assert.match(src("class-social/ClassSocialPage.tsx"), /onBackToClass=\{\(\) => onBack\(\{ kind: 'class', classId: view\.classId \}\)\} \/>/)
 })
 
 test("Lớp của tôi (/me/classes): bản đồ các lớp — tên lớp là lối vào; lớp đã kết thúc ở \"Lớp trước đây\"; lớp khác ở cuối; không Vào lớp / Hoạt động / Đang học", () => {

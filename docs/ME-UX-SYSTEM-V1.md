@@ -29,7 +29,8 @@ Nền/viền/chữ phụ là xám trung tính (không ngả tím).
 |---|---|
 | `/me` | Trang chủ: ô chia sẻ → Feed. Tab **Dành cho bạn · Lớp · Bạn bè**. Tab "Lớp" (`?feed=classes`) = **Lớp của tôi** (tên lớp → Class Page, lịch nếu có, "+ Nhập mã lớp") → **Hoạt động từ các lớp** (feed) — xem Class Entry V2 bên dưới |
 | `/me/classes` | **Lớp của tôi**: tên lớp (lối vào) → "+ Nhập mã lớp" → Lớp trước đây → Các lớp khác |
-| `/me/classes/:id` | Lớp: Tên → Mục lục sống (học + bài trả) → Lớp mình đang học → Thành viên (docs/CLASS-PAGE-V2.md) |
+| `/me/classes/:id` | Trang học của lớp: Tên + lịch → Mục lục ↔ Bài trả của tôi (desktop master-detail) → cánh cửa Không gian lớp (docs/CLASS-UX-V3.md) |
+| `/me/classes/:id/space` | Không gian lớp: hoạt động của một lớp + Thành viên |
 | `/me/classes/:id/sessions/:n` | Trang Buổi (LessonDocument — chuẩn giáo trình, docs/GIAO-TRINH-CHUAN.md) |
 | `/me/t/:id` | Cuộc trao đổi (Learning Thread) |
 | `/me/u/:id` | Trang cá nhân (Tường · Hành trình) |

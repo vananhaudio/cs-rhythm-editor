@@ -28,6 +28,7 @@ import ClassesPage from './classes/ClassesPage'
 import { refreshLearningIdentity } from './identity/identityStore'
 import ClassPage from './classes/ClassPage'
 import ClassSessionPage from './classes/ClassSessionPage'
+import ClassSpacePage from './classes/ClassSpacePage'
 import ProfileEditDialog from './profile/ProfileEditDialog'
 import { BandsAdminPage } from '../band/BandAdmin'
 import BandManagePage from '../band/BandManage'
@@ -121,6 +122,7 @@ export default function ClassSocialPage({ initialSection }: { initialSection: So
   const openQueue = () => navigate({ kind: 'queue' })
   const openClass = (classId: string) => navigate({ kind: 'class', classId })
   // Trang Buổi luôn sâu MỘT cấp dưới Trang Lớp: chuyển Buổi trước/sau THAY mục lịch sử → "← Về lớp" luôn về lớp
+  const openClassSpace = (classId: string) => navigate({ kind: 'classSpace', classId })
   const openSession = (classId: string, sessionNo: number, opts?: { replace?: boolean }) =>
     navigate({ kind: 'session', classId, sessionNo }, opts)
   // LỚP CỦA TÔI = /me/classes (bản đồ các lớp của tôi + mã tham gia + lớp khác) · ?feed=classes = tab hoạt động "Lớp"
@@ -132,11 +134,11 @@ export default function ClassSocialPage({ initialSection }: { initialSection: So
   if (session.status === 'no-profile') return <MeNoProfile email={session.email} onSignOut={() => void signOut()} />
   if (session.status !== 'ready') return <Splash text="Đang mở Class…" />
 
-  return <SignedInShell base={session.me} view={view} onSection={go} onOpenProfile={openProfile} onOpenThread={openThread} onOpenQueue={openQueue} onOpenClass={openClass} onOpenSession={openSession} onOpenClasses={openClasses} onOpenBands={openBands} onOpenBandAdmin={openBandAdmin} onBack={back} visit={visit} />
+  return <SignedInShell base={session.me} view={view} onSection={go} onOpenProfile={openProfile} onOpenThread={openThread} onOpenQueue={openQueue} onOpenClass={openClass} onOpenSession={openSession} onOpenClassSpace={openClassSpace} onOpenClasses={openClasses} onOpenBands={openBands} onOpenBandAdmin={openBandAdmin} onBack={back} visit={visit} />
 }
 
 // Danh tính giữ ở MỘT chỗ: đổi ảnh xong → header, top bar, ô Trả bài, bình luận cập nhật ngay.
-function SignedInShell({ base, view, onSection, onOpenProfile, onOpenThread, onOpenQueue, onOpenClass, onOpenSession, onOpenClasses, onOpenBands, onOpenBandAdmin, onBack, visit }: {
+function SignedInShell({ base, view, onSection, onOpenProfile, onOpenThread, onOpenQueue, onOpenClass, onOpenSession, onOpenClassSpace, onOpenClasses, onOpenBands, onOpenBandAdmin, onBack, visit }: {
   base: ClassIdentity
   view: MeView
   onSection: (s: SocialSection) => void
@@ -146,6 +148,8 @@ function SignedInShell({ base, view, onSection, onOpenProfile, onOpenThread, onO
   onOpenClass: (classId: string) => void
   /** Trang Buổi (phòng học) của một lớp; replace = chuyển buổi ngang hàng */
   onOpenSession: (classId: string, sessionNo: number, opts?: { replace?: boolean }) => void
+  /** Không gian lớp (/me/classes/<id>/space) — một cấp dưới Trang Lớp, "←" về lớp */
+  onOpenClassSpace: (classId: string) => void
   /** /me/classes — Lớp của tôi */
   onOpenClasses: () => void
   /** Quản lý Band (tuyển thành viên · thành viên · Bộ máy) */
@@ -172,7 +176,7 @@ function SignedInShell({ base, view, onSection, onOpenProfile, onOpenThread, onO
   const requests = useFriendRequests()
   // Lớp của tôi: MỘT nguồn cho sidebar, trang Lớp của tôi (/me/classes) và tab hoạt động "Lớp" trên Home
   const classes = useSocialClasses()
-  const activeClassId = view.kind === 'class' || view.kind === 'session' ? view.classId : null
+  const activeClassId = view.kind === 'class' || view.kind === 'session' || view.kind === 'classSpace' ? view.classId : null
 
   return (
     <ClassSocialLayout me={me} section={section} onSection={onSection} onOpenMyProfile={() => onOpenProfile(me.userId)}
@@ -198,8 +202,13 @@ function SignedInShell({ base, view, onSection, onOpenProfile, onOpenThread, onO
       {view.kind === 'classes' && <ClassesPage classes={classes} onOpenClass={onOpenClass}
         onJoined={id => { classes.reload(); refreshLearningIdentity(me.userId); onOpenClass(id) }} />}
       {view.kind === 'class' && (
-        <ClassPage key={view.classId} classId={view.classId} isTeacher={me.isTeacher} onOpenThread={onOpenThread} onOpenProfile={onOpenProfile}
+        <ClassPage key={view.classId} classId={view.classId} isTeacher={me.isTeacher} onOpenThread={onOpenThread}
+          onOpenSpace={() => onOpenClassSpace(view.classId)}
           onOpenClasses={onOpenClasses} onOpenSession={no => onOpenSession(view.classId, no)} />
+      )}
+      {view.kind === 'classSpace' && (
+        <ClassSpacePage key={'space:' + view.classId} classId={view.classId} onOpenThread={onOpenThread} onOpenProfile={onOpenProfile}
+          onBackToClass={() => onBack({ kind: 'class', classId: view.classId })} />
       )}
       {view.kind === 'session' && (
         <ClassSessionPage key={view.classId + ':' + view.sessionNo} classId={view.classId} sessionNo={view.sessionNo} isTeacher={me.isTeacher}
