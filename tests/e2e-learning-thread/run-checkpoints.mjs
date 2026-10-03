@@ -92,10 +92,11 @@ try {
   let r = await rows(page)
   assert.deepEqual(r.map(x => x.title), ['01 · Bản đồ nốt C–Am', '02 · Ép ngón & Bass', '03 · Slide', '04 · Xếp ngón'])
   assert.ok(r[0].current && /is-current/.test(r[0].cls), 'Buổi 01 là buổi hiện tại (tô nhẹ)')
-  assert.match(r[0].meta, /Đang học\s*·\s*0\/2 bài trả Đạt/)
+  assert.match(r[0].meta, /^0\/2 bài trả Đạt/)   // không nhãn vị trí "Đang học" — vị trí do bản đồ tự nói
+  assert.equal(/Đang học|Chưa học/.test(r.map(x => x.meta).join('|')), false)
   assert.ok(r[1].disabled && r[2].disabled && /Chưa mở/.test(r[1].meta), 'Buổi 02/03 khoá: thấy TÊN + "Chưa mở", không bấm vào được')
   assert.equal(await page.$$eval('#buoi-02 button.cs-map-title', e => e.length), 0)
-  ok('B: Trang Lớp V2 = Tên lớp → Mục lục (01 Đang học · 0/2 bài trả Đạt · 02–03 🔒 Chưa mở) → Lớp mình đang học → Thành viên')
+  ok('B: Trang Lớp V2 = Tên lớp → Mục lục (01 · 0/2 bài trả Đạt, không nhãn "Đang học" · 02–03 🔒 Chưa mở) → Lớp mình đang học → Thành viên')
   await page.screenshot({ path: `${SHOTS}/cp-0-class-v2-390.png`, fullPage: false })
   await noHorizontalOverflow(page, 'Trang Lớp 390px')
   await page.screenshot({ path: `${SHOTS}/cp-1-class-390.png`, fullPage: true })

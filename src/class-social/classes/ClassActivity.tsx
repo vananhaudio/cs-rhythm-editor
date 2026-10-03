@@ -1,5 +1,5 @@
 // HOẠT ĐỘNG CỦA LỚP — một nguồn duy nhất: RPC social_class_activity (server lọc quyền; gồm bài trả checkpoint
-// visibility 'class' của chính lớp). Dùng chung cho "Lớp của tôi" (/me?feed=classes) và Trang Lớp (/me/classes/<id>).
+// visibility 'class' của chính lớp). Dùng cho Trang Lớp (/me/classes/<id>) và tab "Lớp" trên Home (ghép nhiều lớp).
 // Dòng GỌN: ai · vừa làm gì · bài nào · trạng thái — bấm mở cuộc trao đổi (/me/t/<id>).
 import { useCallback, useMemo } from 'react'
 import { isThreadEntry, relativeTime, type FeedEntry } from '../posts/postModel'

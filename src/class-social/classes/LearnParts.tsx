@@ -79,20 +79,3 @@ export function CheckpointStatusView({ cp, supported, onSubmit, onView, composer
     </div>
   )
 }
-
-/** Một dòng trạng thái buổi hiện tại cho bảng "Lớp của tôi" — KHÔNG có nút (không nhảy qua mục lục):
- *  muốn học thì vào lớp → Mục lục → Buổi. Buổi hiện tại do currentSessionNo() quyết. */
-export function CurrentSessionLine({ state, now }: { state: Extract<ClassLearningState, { enabled: true }>; now: Date }) {
-  const no = currentSessionNo(state, now)
-  const s = state.sessions.find(x => x.no === no) ?? null
-  if (!s) return <p className="cs-now-empty">Lớp chưa có buổi học nào được xuất bản.</p>
-  const teacher = state.role === 'teacher'
-  const total = state.mode === 'checkpoint' && !teacher ? s.checkpoints.length : 0
-  const passed = s.checkpoints.filter(c => c.thread?.status === 'passed').length
-  return (
-    <p className="cs-now-line">
-      <span className="cs-now-title">{sessionLabel(s)}</span>
-      {total > 0 && <span className="cs-now-status"> · {passed}/{total} bài trả Đạt</span>}
-    </p>
-  )
-}

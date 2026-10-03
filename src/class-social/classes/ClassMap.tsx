@@ -18,7 +18,7 @@ function SessionItem({ s, state, current, expanded, onToggle, onOpenSession, onO
   s: SessionState; state: Ready; current: boolean; expanded: boolean; onToggle: () => void
   onOpenSession: (no: number, checkpointId?: string) => void; onOpenThread: (id: string) => void
 }) {
-  const v = sessionView(s, state, current)
+  const v = sessionView(s, state)
   const teacher = state.role === 'teacher'
   const title = `${pad2(s.no)} · ${s.title}`
   return (

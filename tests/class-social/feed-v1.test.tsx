@@ -1,4 +1,4 @@
-// Feed V1 — ba góc nhìn "Dành cho bạn · Lớp của tôi · Bạn bè": model URL, tab, trạng thái trống, API gọi đúng RPC.
+// Feed V1 — ba góc nhìn "Dành cho bạn · Lớp · Bạn bè" (/ME UX V1: "Lớp" — không nhầm với trang Lớp của tôi): model URL, tab, trạng thái trống, API gọi đúng RPC.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -11,7 +11,7 @@ import CommunityFeed from "../../src/class-social/sections/CommunityFeed";
 void React;
 
 test("ba góc nhìn đúng thứ tự + nhãn; mặc định Dành cho bạn", () => {
-  assert.deepEqual(FEED_SCOPES.map(s => s.label), ["Dành cho bạn", "Lớp của tôi", "Bạn bè"]);
+  assert.deepEqual(FEED_SCOPES.map(s => s.label), ["Dành cho bạn", "Lớp", "Bạn bè"]);
   assert.equal(scopeFromSearch(""), "for_you");
   assert.equal(scopeFromSearch("?feed=classes"), "my_classes");
   assert.equal(scopeFromSearch("?feed=friends"), "friends");
@@ -30,7 +30,7 @@ test("tab: nút thật, đúng MỘT tab aria-pressed, không đếm số", () =
   const h = renderToStaticMarkup(<FeedTabs scope="my_classes" onChange={() => {}} />);
   assert.equal((h.match(/<button type="button"/g) || []).length, 3);
   assert.equal((h.match(/aria-pressed="true"/g) || []).length, 1);
-  assert.match(h, /aria-pressed="true">Lớp của tôi</);
+  assert.match(h, /aria-pressed="true">Lớp</);
   assert.equal(/\(\d+\)/.test(h), false, "V1 không hiện số đếm");
 });
 
@@ -53,5 +53,6 @@ test("API: Dành cho bạn gọi ĐÚNG social_feed (không đổi); hai góc nh
   assert.match(scoped, /rpc\('social_feed_scoped', \{\s*p_scope: scope,\s*p_before:[^,]+,\s*p_before_key:[^,]+,\s*p_limit: FEED_PAGE,\s*\}\)/);
   assert.equal(/user_id|p_friend|p_class|is_teacher|auth\./.test(scoped.replace(/\/\/.*$/gm, "")), false, "không gửi danh tính / quyền từ client");
   const hook = readFileSync("src/class-social/posts/useCommunityFeed.ts", "utf8");
-  assert.match(hook, /usePostsFeed\(SCOPED_FETCHERS\[scope\]\)/, "mỗi góc nhìn một hàm tải cố định → đổi tab = đổi nguồn, bỏ kết quả về muộn");
+  assert.match(hook, /usePostsFeed\(scope === 'my_classes' \? classesFetch : SCOPED_FETCHERS\[scope\]\)/, "mỗi góc nhìn một hàm tải ổn định → đổi tab = đổi nguồn, bỏ kết quả về muộn");
+  assert.match(hook, /useCallback<PageFetcher>\([\s\S]*?\[ids\]\)/, "tab Lớp: hàm tải ổn định theo danh sách lớp");
 });

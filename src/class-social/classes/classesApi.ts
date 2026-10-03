@@ -1,7 +1,7 @@
 // Lớp học trong /me — CHỈ qua RPC đọc (social_*). Không query thẳng edu_group_members/class_schedule
 // (membership + dữ liệu nhạy cảm do server lọc). Client không gửi learner/membership.
 import type { Result } from '../posts/postsApi'
-import { toFeedEntries, type FeedEntry, type MixedRow } from '../posts/postModel'
+import { entryKey, toFeedEntries, type FeedEntry, type MixedRow } from '../posts/postModel'
 import { scErrorText, toClassCard, toClassCards, toClassMembers, type ClassCard, type ClassMember, type ClassMemberRow } from './classModel'
 
 // Nạp client khi GỌI → component render được trong test Node.
@@ -98,4 +98,21 @@ export async function fetchLearningEntry(classId: string): Promise<Result<Learni
       curriculum: { published: d.curriculum?.published === true, hasAccess: d.curriculum?.has_access === true },
     } }
   } catch (e) { return { ok: false, message: scErrorText((e as Error).message) } }
+}
+
+/**
+ * Tab "Lớp" trên Home: hoạt động học tập của MỌI lớp mình thuộc — ghép các trang social_class_activity (server lọc
+ * quyền từng lớp) theo CÙNG con trỏ, sắp như server (sort_at ↓, sort_key ↓), lấy đúng một trang. Không backend mới.
+ */
+export async function fetchMyClassesActivityPage(classIds: string[], cursor?: { createdAt: string; key: string }): Promise<Result<{ posts: FeedEntry[]; hasMore: boolean }>> {
+  if (classIds.length === 0) return { ok: true, value: { posts: [], hasMore: false } }
+  const pages = await Promise.all(classIds.map(id => fetchClassActivityPage(id, cursor)))
+  const bad = pages.find(p => !p.ok)
+  if (bad && !bad.ok && pages.every(p => !p.ok)) return bad
+  const key = entryKey
+  const seen = new Set<string>()
+  const all = pages.flatMap(p => (p.ok ? p.value.posts : []))
+    .filter(e => { const k = key(e); if (seen.has(k)) return false; seen.add(k); return true })
+    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : key(a) < key(b) ? 1 : key(a) > key(b) ? -1 : 0))
+  return { ok: true, value: { posts: all.slice(0, FEED_PAGE), hasMore: all.length > FEED_PAGE || pages.some(p => p.ok && p.value.hasMore) } }
 }

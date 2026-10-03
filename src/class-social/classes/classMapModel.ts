@@ -23,13 +23,13 @@ export function checkpointStatus(t: CheckpointThread | null): CpStatus {
 export type SessionView = {
   /** buổi người học chưa được mở: vẫn thấy TÊN, không vào được */
   locked: boolean
-  /** "Đang học" · "Chưa học" · "Hoàn thành" · "Chưa mở" · "Đang soạn" · "" (chế độ giáo trình: không giả tiến độ) */
+  /** "Hoàn thành" · "Chưa mở" · "Đang soạn" · "" — không nhãn vị trí ("Đang học"): vị trí do bản đồ tự nói */
   state: string
   /** "1/3 bài trả Đạt" — null khi buổi không có bài trả hoặc không xem được bài trả */
   submissions: { passed: number; total: number } | null
 }
 
-export function sessionView(s: SessionState, st: Pick<Ready, 'role' | 'mode'>, current: boolean): SessionView {
+export function sessionView(s: SessionState, st: Pick<Ready, 'role' | 'mode'>): SessionView {
   const phase = sessionPhase(s, st.role, st.mode)
   if (st.role === 'teacher') {
     return { locked: false, state: s.published ? '' : 'Đang soạn', submissions: s.checkpoints.length ? { passed: 0, total: s.checkpoints.length } : null }
@@ -38,8 +38,8 @@ export function sessionView(s: SessionState, st: Pick<Ready, 'role' | 'mode'>, c
   if (phase === 'locked') return { locked: true, state: 'Chưa mở', submissions: null }
   const total = s.checkpoints.length
   const passed = s.checkpoints.filter(c => c.thread?.status === 'passed').length
-  const started = s.checkpoints.some(c => c.thread && c.thread.status !== 'archived')
-  const state = phase === 'done' ? 'Hoàn thành' : !s.published ? 'Đang soạn' : current || started ? 'Đang học' : 'Chưa học'
+  // Không nói điều người học tự nhận ra (vị trí "đang học"): chỉ trạng thái thật sự phân biệt — Hoàn thành / Đang soạn.
+  const state = phase === 'done' ? 'Hoàn thành' : !s.published ? 'Đang soạn' : ''
   return { locked: false, state, submissions: total ? { passed, total } : null }
 }
 

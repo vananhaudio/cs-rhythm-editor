@@ -1,6 +1,9 @@
 /* ─────────────────────────────────────────────────────────────────────────────
    Class Social — style RIÊNG, mọi class có tiền tố cs-, token đặt trên .cs-root.
    Không dùng token của MobileStudentPortal. Nhận diện: TÍM + TRẮNG.
+   /ME UX SYSTEM V1: TÍM = THƯƠNG HIỆU / TƯƠNG TÁC (logo, focus, hover, mục menu đang chọn, nút hành động chính) —
+   KHÔNG mang nghĩa nội dung (đang học, hiện tại, tiến độ, vai trò, nhãn). Nghĩa nội dung dùng token ngữ nghĩa
+   (--cs-ok / --cs-warn / trung tính) + CHỮ; thứ bậc bằng cỡ chữ, độ đậm, khoảng trắng, đường kẻ — không card/màu.
    ───────────────────────────────────────────────────────────────────────────── */
 
 .cs-root {
@@ -8,13 +11,18 @@
   --cs-p-strong: #5b21b6;
   --cs-p-soft: #f1ebff;
   --cs-p-softer: #f8f5ff;
-  --cs-bg: #f5f4fa;
+  --cs-accent: var(--cs-p);          /* thương hiệu / tương tác — không dùng làm nghĩa nội dung */
+  --cs-bg: #f4f4f5;
   --cs-surface: #ffffff;
-  --cs-text: #1c1830;
-  --cs-muted: #625d78;
-  --cs-faint: #9893ab;
-  --cs-border: #e9e5f2;
-  --cs-hover: #f2f0f8;
+  --cs-text: #18181b;
+  --cs-muted: #52525b;
+  --cs-faint: #8a8a93;
+  --cs-border: #e4e4e7;
+  --cs-hover: #f4f4f5;
+  --cs-neutral-soft: #f4f4f5;        /* nền nhãn/vai trò trung tính */
+  --cs-neutral-line: #d4d4d8;
+  --cs-ok: #15803d; --cs-ok-soft: #ecfdf3;      /* Đạt */
+  --cs-warn: #b45309; --cs-warn-soft: #fff7ed;  /* Cần làm lại */
   --cs-radius: 14px;
   --cs-shadow: 0 1px 2px rgba(28, 24, 48, 0.05), 0 2px 8px rgba(28, 24, 48, 0.04);
   --cs-topbar-h: 52px;
@@ -171,7 +179,7 @@
 .cs-badge {
   display: inline-flex; align-items: center;
   padding: 1px 10px; border-radius: 999px;
-  background: var(--cs-p-soft); color: var(--cs-p-strong); font-size: 12.5px; font-weight: 700;
+  background: var(--cs-neutral-soft); color: var(--cs-muted); font-size: 12.5px; font-weight: 700;
 }
 
 /* ── /me: identity (header của Home) ─────────────────────────────────────── */
@@ -211,7 +219,7 @@
 .cs-identity-name { font-size: 26px; font-weight: 800; letter-spacing: -0.02em; margin: 0; overflow-wrap: anywhere; }
 .cs-identity-community {
   display: flex; align-items: center; gap: 6px; margin-top: 2px;
-  color: var(--cs-p-strong); font-weight: 600; font-size: 14.5px;
+  color: var(--cs-muted); font-weight: 600; font-size: 14.5px;
 }
 .cs-identity-facts {
   display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin-top: 6px;
@@ -232,8 +240,8 @@
 .cs-tools-title { font-size: 13px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--cs-faint); margin: 0 4px 10px; }
 .cs-tools-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .cs-tool { display: flex; align-items: center; gap: 12px; padding: 14px; min-height: 72px; }
-.cs-tool:hover { border-color: #d6c8fb; background: var(--cs-p-softer); }
-.cs-tool-icon { width: 42px; height: 42px; border-radius: 12px; flex-shrink: 0; display: grid; place-items: center; background: var(--cs-p-soft); color: var(--cs-p); }
+.cs-tool:hover { border-color: var(--cs-neutral-line); background: #fafafa; }
+.cs-tool-icon { width: 42px; height: 42px; border-radius: 12px; flex-shrink: 0; display: grid; place-items: center; background: var(--cs-neutral-soft); color: var(--cs-text); }
 .cs-tool-text { display: flex; flex-direction: column; min-width: 0; }
 .cs-tool-name { font-weight: 700; }
 .cs-tool-hint { font-size: 13px; color: var(--cs-muted); }
@@ -249,7 +257,8 @@
 .cs-feed-more { align-self: center; margin-top: 4px; }
 .cs-feed-more-error { margin: 0; text-align: center; color: #b42318; font-size: 14px; }
 .cs-btn:disabled { opacity: 0.55; cursor: not-allowed; }
-.cs-btn-soft { background: var(--cs-p-soft); color: var(--cs-p-strong); }
+.cs-btn-soft { background: var(--cs-neutral-soft); color: var(--cs-text); }
+.cs-btn-soft:hover { background: #e9e9ec; }
 .cs-btn-soft:hover:not(:disabled) { background: #e7dcff; }
 .cs-btn-ghost { background: var(--cs-surface); border-color: var(--cs-border); color: var(--cs-text); }
 .cs-btn-ghost:hover:not(:disabled) { background: var(--cs-hover); }
@@ -263,7 +272,7 @@
 .cs-post-role { font-size: 12px; font-weight: 600; color: var(--cs-muted); }
 .cs-post-type {
   font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase;
-  padding: 2px 8px; border-radius: 999px; background: var(--cs-p-soft); color: var(--cs-p-strong);
+  padding: 2px 8px; border-radius: 999px; background: var(--cs-neutral-soft); color: var(--cs-muted);
 }
 .cs-post-time { display: block; font-size: 13px; color: var(--cs-faint); }
 .cs-post-note { margin-top: 12px; }
@@ -302,13 +311,13 @@
 .cs-cmt { display: flex; gap: 8px; align-items: flex-start; min-width: 0; }
 .cs-cmt-main { min-width: 0; flex: 1; }
 .cs-cmt-bubble { display: inline-block; max-width: 100%; padding: 8px 12px 10px; border-radius: 14px; background: #f2f1f6; }
-.cs-cmt.is-teacher .cs-cmt-bubble { display: block; background: var(--cs-p-softer); border: 1px solid #e3d8fb; }
+.cs-cmt.is-teacher .cs-cmt-bubble { display: block; background: #f6f6f7; border: 1px solid var(--cs-border); }
 .cs-cmt.is-hidden .cs-cmt-bubble { opacity: 0.6; border: 1px dashed var(--cs-border); }
 .cs-cmt-head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
 .cs-cmt-author { font-weight: 700; font-size: 14px; }
 .cs-cmt-badge {
   font-size: 10.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
-  padding: 1px 7px; border-radius: 999px; background: var(--cs-p); color: #fff;
+  padding: 1px 7px; border-radius: 999px; background: var(--cs-neutral-soft); color: var(--cs-text); border: 1px solid var(--cs-neutral-line);
 }
 .cs-cmt-hidden { font-size: 12px; color: var(--cs-muted); }
 .cs-cmt-body { margin: 2px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14.5px; }
@@ -319,28 +328,28 @@
 .cs-tags { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
 .cs-tag {
   display: inline-flex; align-items: center; padding: 2px 9px; border-radius: 999px;
-  background: var(--cs-surface); border: 1px solid #d9ccfa; color: var(--cs-p-strong); font-size: 12.5px; font-weight: 700;
+  background: var(--cs-surface); border: 1px solid var(--cs-neutral-line); color: var(--cs-text); font-size: 12.5px; font-weight: 700;
 }
 .cs-tag-btn { cursor: pointer; }
-.cs-tag-btn:hover { background: var(--cs-p-soft); }
-.cs-tag-new { cursor: pointer; background: var(--cs-p); border-color: var(--cs-p); color: #fff; }
+.cs-tag-btn:hover { background: var(--cs-neutral-soft); border-color: var(--cs-accent); }
+.cs-tag-new { cursor: pointer; border-style: dashed; color: var(--cs-muted); }
 
 .cs-res-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
 .cs-res {
   display: flex; align-items: flex-start; gap: 10px; min-width: 0;
   padding: 10px 12px; border-radius: 12px; background: var(--cs-surface); border: 1px solid var(--cs-border);
 }
-.cs-res-icon { width: 34px; height: 34px; border-radius: 10px; flex-shrink: 0; display: grid; place-items: center; background: var(--cs-p-soft); color: var(--cs-p); }
+.cs-res-icon { width: 34px; height: 34px; border-radius: 10px; flex-shrink: 0; display: grid; place-items: center; background: var(--cs-neutral-soft); color: var(--cs-muted); }
 .cs-res-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
 .cs-res-kicker { font-size: 11.5px; font-weight: 700; color: var(--cs-faint); }
 .cs-res-title { font-weight: 700; font-size: 14px; overflow-wrap: anywhere; }
-.cs-res-time { font-size: 12.5px; color: var(--cs-p-strong); font-weight: 600; }
-.cs-res-excerpt { margin: 6px 0 0; padding-left: 10px; border-left: 3px solid #d9ccfa; font-size: 13.5px; color: var(--cs-muted); white-space: pre-wrap; overflow-wrap: anywhere; }
+.cs-res-time { font-size: 12.5px; color: var(--cs-muted); font-weight: 600; }
+.cs-res-excerpt { margin: 6px 0 0; padding-left: 10px; border-left: 3px solid var(--cs-neutral-line); font-size: 13.5px; color: var(--cs-muted); white-space: pre-wrap; overflow-wrap: anywhere; }
 .cs-res-open {
   flex-shrink: 0; align-self: center; display: inline-flex; align-items: center; gap: 4px;
-  padding: 7px 10px; border-radius: 9px; background: var(--cs-p-soft); color: var(--cs-p-strong); font-size: 13px; font-weight: 700; white-space: nowrap;
+  padding: 7px 10px; border-radius: 9px; background: var(--cs-neutral-soft); color: var(--cs-text); font-size: 13px; font-weight: 700; white-space: nowrap;
 }
-.cs-res-open:hover { background: #e7dcff; }
+.cs-res-open:hover { background: #e9e9ec; }
 .cs-res-remove { flex-shrink: 0; align-self: center; border: none; background: none; cursor: pointer; color: #b42318; font-weight: 700; font-size: 13px; }
 
 .cs-cmt-composer { display: flex; gap: 8px; align-items: flex-start; }
@@ -358,11 +367,11 @@
 .cs-cmt-tools { display: flex; flex-wrap: wrap; gap: 6px; }
 .cs-tool-btn {
   display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 999px; cursor: pointer;
-  border: 1px solid var(--cs-border); background: var(--cs-surface); color: var(--cs-p-strong); font-size: 13px; font-weight: 700;
+  border: 1px solid var(--cs-border); background: var(--cs-surface); color: var(--cs-text); font-size: 13px; font-weight: 700;
 }
 .cs-tool-btn:hover:not(:disabled) { background: var(--cs-p-soft); }
 .cs-tool-btn:disabled { opacity: 0.5; cursor: default; }
-.cs-tool-btn[aria-expanded='true'] { background: var(--cs-p-soft); border-color: #d9ccfa; }
+.cs-tool-btn[aria-expanded='true'] { background: var(--cs-neutral-soft); border-color: var(--cs-accent); }
 
 .cs-picker { padding: 10px; border-radius: 12px; border: 1px solid var(--cs-border); background: var(--cs-surface); display: flex; flex-direction: column; gap: 8px; }
 .cs-picker-head { display: flex; gap: 6px; }
@@ -396,12 +405,12 @@
 .cs-media-frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
 .cs-media-card {
   display: flex; align-items: center; gap: 12px; min-width: 0;
-  padding: 14px; border-radius: 12px; border: 1px solid var(--cs-border); background: var(--cs-p-softer);
+  padding: 14px; border-radius: 12px; border: 1px solid var(--cs-border); background: #fafafa;
 }
-.cs-media-card:hover { border-color: #d6c8fb; }
+.cs-media-card:hover { border-color: var(--cs-neutral-line); }
 .cs-media-card-icon {
   width: 46px; height: 46px; border-radius: 12px; flex-shrink: 0;
-  display: grid; place-items: center; background: var(--cs-surface); color: var(--cs-p);
+  display: grid; place-items: center; background: var(--cs-surface); color: var(--cs-muted);
 }
 .cs-media-card.is-facebook .cs-media-card-icon { color: #1c4fbf; }
 .cs-media-card.is-tiktok .cs-media-card-icon { color: #111; }
@@ -410,7 +419,7 @@
 .cs-media-card-url { font-size: 13px; color: var(--cs-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cs-media-card-open {
   display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;
-  font-size: 13.5px; font-weight: 700; color: var(--cs-p-strong); white-space: nowrap;
+  font-size: 13.5px; font-weight: 700; color: var(--cs-text); white-space: nowrap;
 }
 
 /* ── Soạn Trả bài ────────────────────────────────────────────────────────── */
@@ -527,7 +536,7 @@
 .cs-profile-skeleton { overflow: hidden; }
 .cs-profile-note {
   display: flex; align-items: center; gap: 8px; margin: 0; padding: 10px 12px; border-radius: 10px;
-  background: var(--cs-p-softer); color: var(--cs-p-strong); font-size: 14px; font-weight: 600;
+  background: var(--cs-neutral-soft); color: var(--cs-text); font-size: 14px; font-weight: 600;
 }
 .cs-identity-profile { margin-top: 10px; }
 .cs-rel-status { margin-top: 6px; font-size: 14px; font-weight: 600; color: var(--cs-muted); }
@@ -652,8 +661,8 @@
 .cs-nav-subtitle { font-size: 11.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--cs-faint); padding: 8px 12px 2px; }
 .cs-nav-empty { margin: 2px 12px 6px; font-size: 13px; color: var(--cs-faint); }
 .cs-class-item .cs-nav-text { overflow: hidden; text-overflow: ellipsis; }
-.cs-class-dot { flex-shrink: 0; width: 10px; height: 10px; margin: 0 5px; border-radius: 50%; border: 2px solid var(--cs-p); background: transparent; }
-.cs-class-dot.is-mine { background: var(--cs-p); }
+.cs-class-dot { flex-shrink: 0; width: 8px; height: 8px; margin: 0 6px; border-radius: 50%; border: 2px solid var(--cs-faint); background: transparent; }
+.cs-class-dot.is-mine { background: var(--cs-faint); }
 
 /* Home: ô chia sẻ nhẹ, Feed đi liền ngay sau */
 .cs-home-feedfirst { gap: 12px; }
@@ -680,8 +689,8 @@
 }
 .cs-share-legacy:hover { color: var(--cs-p); text-decoration: underline; }
 .cs-queue-entry {
-  display: flex; align-items: center; gap: 8px; width: 100%; font: inherit; font-size: 14px; font-weight: 700; color: var(--cs-p-strong);
-  background: var(--cs-p-softer); border: 1px solid var(--cs-p-soft); border-radius: 12px; padding: 10px 14px; cursor: pointer; text-align: left;
+  display: flex; align-items: center; gap: 8px; width: 100%; font: inherit; font-size: 14px; font-weight: 700; color: var(--cs-text);
+  background: var(--cs-surface); border: 1px solid var(--cs-border); border-radius: 12px; padding: 10px 14px; cursor: pointer; text-align: left;
 }
 .cs-queue-entry span:nth-child(2) { flex: 1; }
 
@@ -706,11 +715,11 @@
 .cs-class-tile {
   display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; text-align: left; font: inherit; color: inherit; cursor: pointer;
 }
-.cs-class-tile:hover { border-color: var(--cs-p-soft); }
+.cs-class-tile:hover { border-color: var(--cs-neutral-line); }
 .cs-class-tile-name { font-size: 16px; font-weight: 800; overflow-wrap: anywhere; }
 .cs-class-tile-meta { font-size: 13px; color: var(--cs-muted); overflow-wrap: anywhere; }
 .cs-class-tile-facts { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 4px; font-size: 12.5px; color: var(--cs-faint); }
-.cs-class-status { font-size: 12px; font-weight: 700; color: var(--cs-p-strong); background: var(--cs-p-softer); border-radius: 999px; padding: 2px 9px; }
+.cs-class-status { font-size: 12px; font-weight: 700; color: var(--cs-muted); background: var(--cs-neutral-soft); border-radius: 999px; padding: 2px 9px; }
 .cs-class-head { padding: 16px 18px; display: flex; flex-direction: column; gap: 6px; }
 .cs-class-head-top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
 .cs-class-name { font-size: 22px; font-weight: 800; margin: 0; overflow-wrap: anywhere; }
@@ -719,7 +728,7 @@
 .cs-class-facts > span { display: inline-flex; align-items: center; gap: 6px; }
 .cs-class-teachers .cs-avatar + .cs-avatar { margin-left: -8px; }
 .cs-class-viewer { margin: 4px 0 0; display: inline-flex; align-items: center; gap: 6px; font-size: 13.5px; color: var(--cs-muted); }
-.cs-class-viewer.is-member { color: var(--cs-p-strong); font-weight: 700; }
+.cs-class-viewer.is-member { color: var(--cs-text); font-weight: 700; }
 .cs-member-list { list-style: none; margin: 0; padding: 6px 0; }
 .cs-member { display: flex; align-items: center; gap: 10px; padding: 8px 14px; }
 .cs-member + .cs-member { border-top: 1px solid var(--cs-border); }
@@ -734,7 +743,7 @@
 /* ── Lớp học V1.1: tên thân thiện, header "căn phòng của lớp", phân biệt Của tôi / Khám phá ── */
 .cs-class-head { gap: 10px; }
 .cs-class-codes { margin: 0; font-size: 12px; color: var(--cs-faint); letter-spacing: .02em; }
-.cs-class-tile.is-mine { border-color: var(--cs-p-soft); background: var(--cs-p-softer); }
+.cs-class-tile.is-mine { border-color: var(--cs-border); }
 .cs-classes-discover .cs-class-tile { box-shadow: none; }
 .cs-classes-mine + .cs-classes-discover { margin-top: 10px; }
 
@@ -744,7 +753,7 @@
 .cs-post-sub .cs-post-time { display: inline; }
 .cs-post-sub .cs-post-audience { font-size: 12.5px; font-weight: 500; color: var(--cs-faint); }
 /* Nhãn loại bài (Trả bài / Hỏi bài): nhẹ, chữ thường — không cạnh tranh với tên người */
-.cs-post-type { font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; padding: 1px 8px; background: var(--cs-p-softer); }
+.cs-post-type { font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; padding: 1px 8px; background: var(--cs-neutral-soft); }
 .cs-post-role { font-weight: 500; }
 /* Tiêu đề Feed: nhãn khu vực nhỏ, không phải một tiêu đề trang thứ hai */
 .cs-feed-title { font-size: 15px; font-weight: 700; color: var(--cs-muted); margin: 4px 4px 10px; }
@@ -803,7 +812,7 @@
 /* Ghi chú quyền Thầy trên tường: một dòng chữ nhỏ, không hộp */
 .cs-profile-note { background: none; padding: 0 4px; font-size: 13px; font-weight: 600; color: var(--cs-muted); gap: 6px; }
 /* Nhãn Thầy trong bình luận: nhẹ, chữ thường (không khối tím đặc) */
-.cs-cmt-badge { background: var(--cs-p-soft); color: var(--cs-p-strong); text-transform: none; letter-spacing: 0; font-size: 11.5px; font-weight: 700; }
+.cs-cmt-badge { background: var(--cs-neutral-soft); color: var(--cs-text); text-transform: none; letter-spacing: 0; font-size: 11.5px; font-weight: 700; }
 .cs-cmt.is-teacher .cs-cmt-bubble { border-color: #ece4fb; }
 /* Menu: mục khoá — ghi chú một dòng ngắn */
 .cs-nav-item.is-restricted .cs-nav-note { font-size: 11px; }
@@ -833,16 +842,16 @@
 .cs-lid {
   display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px; border-radius: 999px;
   border: 1px solid transparent; font-size: 11.5px; font-weight: 700; line-height: 1; white-space: nowrap; letter-spacing: 0;
-  background: #f3f0fa; color: #5b4a86;
+  background: var(--cs-neutral-soft); color: #3f3f46;
 }
-.cs-lid.is-intermediate { background: var(--cs-p-soft); color: var(--cs-p-strong); }
-.cs-lid.is-advanced { background: #e9defd; color: #4c1d95; border-color: #dccbfc; }
+.cs-lid.is-intermediate { background: #ececef; color: #27272a; }
+.cs-lid.is-advanced { background: #e4e4e7; color: #18181b; border-color: #d4d4d8; }
 .cs-lid.is-special { background: linear-gradient(135deg, #f5efff 0%, #e6d9ff 100%); color: #4c1d95; border-color: #bda2f6; }
 .cs-lid-mark { font-size: 10px; color: #7c3aed; }
-.cs-lid.is-graduated { background: transparent; border-color: #cfc2ee; color: #4f3f7d; }
+.cs-lid.is-graduated { background: transparent; border-color: var(--cs-neutral-line); color: #3f3f46; }
 .cs-lid.is-graduated.is-special { background: linear-gradient(135deg, #fbf8ff 0%, #f3ecff 100%); border-color: #cbb5f5; }
-.cs-lid.is-upcoming { background: transparent; border: 1px dashed #cdbff0; color: #5b4a86; }
-.cs-lid-more { background: #f2f1f6; color: var(--cs-muted); cursor: default; }
+.cs-lid.is-upcoming { background: transparent; border: 1px dashed var(--cs-neutral-line); color: var(--cs-muted); }
+.cs-lid-more { background: var(--cs-neutral-soft); color: var(--cs-muted); cursor: default; }
 .cs-post-line .cs-lid-list, .cs-cmt-head .cs-lid-list, .cs-person-name .cs-lid-list { margin-left: 2px; }
 .cs-person-name .cs-lid-list { margin-left: 6px; }
 .cs-member .cs-lid-list { flex-shrink: 1; }
@@ -860,9 +869,9 @@
 }
 
 /* ── Tool Share V1: kết quả từ công cụ (Metronome…) trên Feed — kết quả là tâm điểm, card gọn ─────────── */
-.cs-tool-share { margin-top: 12px; padding: 14px 16px; border-radius: 12px; background: var(--cs-p-softer); display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.cs-tool-share { margin-top: 12px; padding: 14px 16px; border-radius: 12px; background: #fafafa; border: 1px solid var(--cs-border); display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
 .cs-tool-share-kind { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: var(--cs-muted); }
-.cs-tool-share-kind svg { color: var(--cs-p); }
+.cs-tool-share-kind svg { color: var(--cs-muted); }
 .cs-tool-share-headline { font-size: 22px; font-weight: 800; letter-spacing: -0.01em; color: var(--cs-text); overflow-wrap: anywhere; }
 .cs-tool-share-note { font-size: 14px; color: var(--cs-muted); }
 .cs-tool-share-detail { font-size: 14.5px; font-weight: 700; color: var(--cs-muted); font-variant-numeric: tabular-nums; }
@@ -877,7 +886,7 @@
 /* ── Lớp của tôi V1 — màn HỌC (/me/classes/<id>): sơ đồ buổi DỌC, một buổi mở một lúc ──
    Chỉ khung điều hướng; NỘI DUNG buổi do LessonDocument (khuôn SOLO01, CSS .lsn-*) quyết — không tạo visual riêng. */
 .cs-learn-head { padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; }
-.cs-learn-kicker { font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--cs-p); }
+.cs-learn-kicker { font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--cs-muted); }
 .cs-learn-map { list-style: none; margin: 0; padding: 0; position: relative; display: flex; flex-direction: column; }
 .cs-learn-map::before { content: ''; position: absolute; left: 21px; top: 18px; bottom: 18px; width: 2px; background: var(--cs-border); }
 .cs-learn-stage { position: relative; margin: 14px 0 6px 46px; font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--cs-faint); }
@@ -887,14 +896,14 @@
 .cs-learn-row:hover { background: var(--cs-hover); }
 .cs-learn-dot { position: relative; z-index: 1; flex: none; width: 44px; height: 44px; border-radius: 999px; display: grid; place-items: center;
   font-size: 13px; font-weight: 800; background: var(--cs-surface); border: 2px solid var(--cs-border); color: var(--cs-muted); }
-.cs-learn-row.is-open .cs-learn-dot { border-color: var(--cs-p); color: var(--cs-p); }
-.cs-learn-row.is-current .cs-learn-dot { background: var(--cs-p); border-color: var(--cs-p); color: #fff; }
+.cs-learn-row.is-open .cs-learn-dot { border-color: var(--cs-text); color: var(--cs-text); }
+.cs-learn-row.is-current .cs-learn-dot { background: var(--cs-text); border-color: var(--cs-text); color: #fff; }
 .cs-learn-row.is-done .cs-learn-dot { background: #ecfdf3; border-color: #15803d; color: #15803d; font-size: 16px; }
 .cs-learn-row.is-locked { color: var(--cs-faint); }
 .cs-learn-row.is-locked .cs-learn-dot { background: var(--cs-bg); border-style: dashed; }
 .cs-learn-row-main { display: flex; flex-direction: column; min-width: 0; gap: 1px; }
 .cs-learn-row-title { font-size: 15.5px; font-weight: 700; line-height: 1.35; }
-.cs-learn-row.is-current .cs-learn-row-title { color: var(--cs-p-strong); }
+.cs-learn-row.is-current .cs-learn-row-title { color: var(--cs-text); font-weight: 800; }
 .cs-learn-row-badge { font-size: 12.5px; color: var(--cs-muted); }
 .cs-learn-body { margin: 2px 0 14px 0; padding: 4px 0 0 0; }
 .cs-learn-status { margin: 0 0 10px; font-size: 13.5px; color: var(--cs-muted); }
@@ -928,7 +937,7 @@
 
 /* ── UX V2: LỚP CỦA TÔI = trung tâm sinh hoạt (bảng lớp) · TRANG LỚP: Đang học → Hoạt động → Giáo trình tóm tắt ── */
 .cs-now { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
-.cs-now-kicker { font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--cs-p); }
+.cs-now-kicker { font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--cs-muted); }
 .cs-now-title { font-size: 17px; font-weight: 800; line-height: 1.35; }
 .cs-now-status { font-size: 13.5px; color: var(--cs-muted); }
 .cs-now-go { margin-top: 8px; min-height: 44px; padding-left: 20px; padding-right: 20px; }
@@ -988,7 +997,7 @@
 /* Mục lục sống */
 .cs-map { display: flex; flex-direction: column; }
 .cs-map-stage + .cs-map-stage { margin-top: 10px; }
-.cs-map-stage-title { margin: 10px 0 2px; font-size: 13px; font-weight: 800; color: var(--cs-p-strong); letter-spacing: .02em; }
+.cs-map-stage-title { margin: 10px 0 2px; font-size: 13px; font-weight: 800; color: var(--cs-text); letter-spacing: .02em; }
 .cs-map-stage-toggle { display: flex; align-items: center; gap: 6px; width: 100%; border: none; background: none; padding: 6px 0; text-align: left;
   font: inherit; font-weight: 800; color: inherit; cursor: pointer; }
 .cs-map-stage-toggle > span:first-of-type { flex: 1; min-width: 0; overflow-wrap: anywhere; }
@@ -996,7 +1005,7 @@
 .cs-map-list { list-style: none; margin: 0; padding: 0; }
 .cs-map-row { padding: 11px 0 11px 12px; border-bottom: 1px solid var(--cs-border); border-left: 3px solid transparent; }
 .cs-map-list > .cs-map-row:last-child { border-bottom: none; }
-.cs-map-row.is-current { border-left-color: var(--cs-p); background: linear-gradient(90deg, var(--cs-p-softer), transparent 70%); }
+.cs-map-row.is-current { border-left-color: var(--cs-neutral-line); }
 .cs-map-title { display: block; width: 100%; border: none; background: none; padding: 0; text-align: left; font: inherit;
   font-size: 16px; font-weight: 700; line-height: 1.35; color: var(--cs-text); cursor: pointer; overflow-wrap: anywhere; text-decoration: none; }
 button.cs-map-title:hover, a.cs-map-title:hover { color: var(--cs-p-strong); }
@@ -1011,15 +1020,44 @@ button.cs-map-title:hover, a.cs-map-title:hover { color: var(--cs-p-strong); }
 .cs-map-cp:hover .cs-map-cp-name { text-decoration: underline; }
 .cs-map-cp-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .cs-map-mark { display: inline-block; width: 1.3em; color: var(--cs-faint); }
-.cs-map-mark.is-ok { color: #15803D; }
-.cs-map-mark.is-warn { color: #B45309; }
+.cs-map-mark.is-ok { color: var(--cs-ok); }
+.cs-map-mark.is-warn { color: var(--cs-warn); }
 .cs-map-cp-status { flex: none; font-size: 12.5px; font-weight: 700; color: var(--cs-muted); }
-.cs-map-cp-status.is-ok { color: #15803D; }
-.cs-map-cp-status.is-warn { color: #B45309; }
-.cs-map-cp-status.is-wait, .cs-map-cp-status.is-info { color: var(--cs-p-strong); }
+.cs-map-cp-status.is-ok { color: var(--cs-ok); }
+.cs-map-cp-status.is-warn { color: var(--cs-warn); }
+.cs-map-cp-status.is-wait, .cs-map-cp-status.is-info { color: var(--cs-muted); }
 .cs-map-note { margin: 6px 0; font-size: 14px; color: var(--cs-muted); }
 .cs-map-nomap { padding: 6px 0; }
 .cs-map-title.is-plain { cursor: default; }
 .cs-now-line { margin: 4px 0 0; font-size: 14px; }
 .cs-now-line .cs-now-status { color: var(--cs-muted); }
 @media (min-width: 1024px) { .cs-classv2-head .cs-class-name { font-size: 28px; } }
+
+/* ── /ME UX SYSTEM V1 — Learning Thread trong /me: vai trò / ngữ cảnh / trạng thái KHÔNG tím (App học giữ nguyên) ── */
+.cs-root .lt-chip { font-weight: 700; }
+.cs-root .lt-chip.is-info, .cs-root .lt-chip.is-wait { color: var(--cs-muted); background: var(--cs-neutral-soft); }
+.cs-root .lt-chip.is-ok { color: var(--cs-ok); background: var(--cs-ok-soft); }
+.cs-root .lt-chip.is-warn { color: var(--cs-warn); background: var(--cs-warn-soft); }
+.cs-root .lt-ev-role { color: var(--cs-text); background: var(--cs-neutral-soft); }
+.cs-root .lt-ev.is-teacher .lt-ev-bubble { background: #f6f6f7; border-color: var(--cs-border); }
+.cs-root .lt-head-identity { color: var(--cs-muted); }
+.cs-root .lt-feed-identity { color: var(--cs-muted); background: var(--cs-neutral-soft); }
+.cs-root .lt-feed-open { background: var(--cs-neutral-soft); color: var(--cs-text); }
+.cs-root .lt-feed-open:hover { background: #e9e9ec; }
+
+/* ── /me/classes — Lớp của tôi: danh sách tên lớp (không card) ── */
+.cs-myclasses-page .cs-page-title { margin-bottom: 8px; }
+.cs-classrows { list-style: none; margin: 0; padding: 0; }
+.cs-classrow { padding: 12px 4px; border-bottom: 1px solid var(--cs-border); display: flex; flex-direction: column; gap: 3px; }
+.cs-classrows > .cs-classrow:last-child { border-bottom: none; }
+.cs-classrow-name { border: none; background: none; padding: 0; text-align: left; font: inherit; font-size: 17px; font-weight: 700;
+  color: var(--cs-text); cursor: pointer; overflow-wrap: anywhere; }
+.cs-classrow-name:hover { color: var(--cs-accent); }
+.cs-classrow-meta { font-size: 13px; color: var(--cs-muted); overflow-wrap: anywhere; }
+.cs-classrow.is-quiet .cs-classrow-name { font-size: 15px; font-weight: 600; }
+.cs-subtle-title { margin: 22px 4px 2px; font-size: 12.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--cs-muted); }
+.cs-linkbtn { display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; border: none; background: none; padding: 10px 4px;
+  font: inherit; font-size: 14.5px; font-weight: 700; color: var(--cs-text); cursor: pointer; }
+.cs-linkbtn:hover { color: var(--cs-accent); }
+.cs-classes-search { margin: 6px 0; }
+.cs-myclasses-page .cs-join-class { border: none; box-shadow: none; background: none; padding: 8px 4px; }

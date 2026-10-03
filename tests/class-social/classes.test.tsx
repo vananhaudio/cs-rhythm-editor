@@ -13,7 +13,7 @@ import {
 import { NAV_GROUPS } from "../../src/class-social/nav";
 import ClassNav from "../../src/class-social/classes/ClassNav";
 import { ClassHeader, MemberList } from "../../src/class-social/classes/ClassParts";
-import { ClassTile } from "../../src/class-social/classes/ClassesPage";
+import { ClassRow } from "../../src/class-social/classes/ClassesPage";
 import {
   classCodeNote, classFullTitle, classMetaLine, classShortName, classStatusLabel, filterClasses, memberRelationUi, scErrorText, toClassCard, toClassCards, toClassMembers,
 } from "../../src/class-social/classes/classModel";
@@ -56,25 +56,19 @@ test("menu: Trang chủ là mục ĐẦU TIÊN; CỘNG ĐỒNG (Trang chủ · B
   assert.match(src("class-social/ClassSocialLayout.tsx"), /g\.id === 'community' && classNav\?\./);
 });
 
-test("ClassNav (UX V2): CHỈ lớp CỦA TÔI (bấm được) · không trộn lớp chưa tham gia · một lối Khám phá lớp khác · lớp đang mở sáng", () => {
+test("ClassNav: lớp CỦA TÔI (bấm được, thứ tự server) + MỘT mục cố định \"Lớp của tôi\" · không trộn lớp chưa tham gia · lớp đang mở sáng", () => {
   const mine = toClassCards([card(), card({ id: "b0000000-0000-4000-8000-0000000000c9", code: "HT2027.TH01", name: "Hành trình 2027" })]);
   const h = renderToStaticMarkup(<ClassNav mine={mine} loaded activeClassId={CID} classesActive={false} collapsed={false}
-    onOpenClass={() => {}} onOpenClasses={() => {}} onOpenMyClasses={() => {}} />);
+    onOpenClass={() => {}} onOpenClasses={() => {}} />);
   assert.match(h, /Lớp học/);
   assert.match(h, /Đệm hát căn bản — KD18/);
   assert.match(h, /Hành trình 2027/);
   assert.match(h, /aria-current="page"[^>]*title="Đệm hát căn bản — KD18 · DH2\.KD18"/);
-  assert.match(h, /Khám phá lớp khác/);
-  assert.equal(/Solo Guitar 0/.test(h), false, "không liệt kê lớp chưa tham gia");
-  assert.equal(/Tất cả lớp của tôi/.test(h), false, "≤ 5 lớp: không cần lối Tất cả lớp của tôi");
-  assert.match(h, /cs-class-dot is-mine/);
-  const many = toClassCards([1, 2, 3, 4, 5, 6].map(i => card({ id: `b0000000-0000-4000-8000-00000000001${i}`, code: `L${i}`, name: `Lớp ${i}` })));
-  const hm = renderToStaticMarkup(<ClassNav mine={many} loaded activeClassId={null} classesActive={false} collapsed={false}
-    onOpenClass={() => {}} onOpenClasses={() => {}} onOpenMyClasses={() => {}} />);
-  assert.equal((hm.match(/cs-class-item/g) || []).length, 5);
-  assert.match(hm, /Tất cả lớp của tôi/);
-  const none = renderToStaticMarkup(<ClassNav mine={[]} loaded activeClassId={null} classesActive collapsed={false} onOpenClass={() => {}} onOpenClasses={() => {}} onOpenMyClasses={() => {}} />);
-  assert.match(none, /Bạn chưa ở trong lớp nào\./);
+  assert.match(h, /cs-nav-text">Lớp của tôi</);
+  assert.equal(/Solo Guitar 0|Khám phá|Tất cả lớp của tôi/.test(h), false, "không liệt kê lớp chưa tham gia, không mục thừa");
+  assert.ok(h.indexOf("Đệm hát căn bản") < h.indexOf("Hành trình 2027"), "giữ thứ tự server");
+  const none = renderToStaticMarkup(<ClassNav mine={[]} loaded activeClassId={null} classesActive collapsed={false} onOpenClass={() => {}} onOpenClasses={() => {}} />);
+  assert.match(none, /Lớp của tôi/);
 });
 
 test("tên lớp THÂN THIỆN cho menu (lấy từ tên thật production, không mã nội bộ, không hard-code)", () => {
@@ -91,21 +85,21 @@ test("tên lớp THÂN THIỆN cho menu (lấy từ tên thật production, khô
   for (const [name, code, want] of cases) assert.equal(classShortName({ name, code }), want, name);
   assert.equal(classFullTitle({ name: "Hành trình 2027 — 40 buổi thực hành", code: "HT2027.TH01" }), "Hành trình 2027 — 40 buổi thực hành · HT2027.TH01");
   const h = renderToStaticMarkup(<ClassNav mine={toClassCards([card({ name: "Hành trình 2027 — 40 buổi thực hành", code: "HT2027.TH01" })])}
-    loaded activeClassId={null} classesActive={false} collapsed={false} onOpenClass={() => {}} onOpenClasses={() => {}} onOpenMyClasses={() => {}} />);
+    loaded activeClassId={null} classesActive={false} collapsed={false} onOpenClass={() => {}} onOpenClasses={() => {}} />);
   assert.match(h, /cs-nav-text">Hành trình 2027</);
   assert.equal(/cs-nav-text">HT2027/.test(h), false, "menu không hiện mã nội bộ");
 });
 
-test("menu: đúng MỘT mục sáng (lớp đang mở; hoặc Khám phá lớp khác)", () => {
+test("menu: đúng MỘT mục sáng (lớp đang mở; hoặc Lớp của tôi)", () => {
   const mine = toClassCards([card()]);
   const count = (h: string) => (h.match(/aria-current="page"/g) || []).length;
   const r = (active: string | null, all: boolean) => renderToStaticMarkup(<ClassNav mine={mine} loaded activeClassId={active}
-    classesActive={all} collapsed={false} onOpenClass={() => {}} onOpenClasses={() => {}} onOpenMyClasses={() => {}} />);
+    classesActive={all} collapsed={false} onOpenClass={() => {}} onOpenClasses={() => {}} />);
   assert.equal(count(r(CID, false)), 1);
   assert.equal(count(r("b0000000-0000-4000-8000-000000000001", false)), 0, "lớp chưa tham gia không nằm trong menu");
   const all = r(null, true);
   assert.equal(count(all), 1);
-  assert.match(all, /aria-current="page"[^>]*><svg[\s\S]*?Khám phá lớp khác/);
+  assert.match(all, /aria-current="page"[^>]*><svg[\s\S]*?Lớp của tôi/);
 });
 
 // ── Thẻ lớp / trang lớp ───────────────────────────────────────────────────────
@@ -131,14 +125,12 @@ test("trang lớp: thành viên thấy 'Bạn là thành viên'; người ngoài
   assert.ok(outsider.indexOf("cs-class-name") < outsider.indexOf("cs-class-codes"), "tên lớp lên đầu; mã lớp nhỏ ở cuối");
   assert.equal(/0 học viên/.test(renderToStaticMarkup(<ClassHeader c={toClassCard(card({ member_count: 0 }))!} />)), false, "không nhấn '0 học viên'");
   assert.equal(/Mua|Đăng ký ngay|giá/i.test(outsider), false, "không biến trang lớp thành trang bán hàng");
-  const disc = renderToStaticMarkup(<ClassTile c={toClassCard(card({ is_member: false }))!} onOpen={() => {}} />);
-  assert.match(disc, /3 hoạt động/);
-  assert.match(disc, /12 học viên/);
-  assert.equal(/Bạn đang tham gia/.test(disc), false);
-  const mineTile = renderToStaticMarkup(<ClassTile c={toClassCard(card())!} onOpen={() => {}} />);
-  assert.match(mineTile, /cs-class-tile is-mine/);
-  assert.match(mineTile, /Bạn đang tham gia/);
-  assert.equal(/0 học viên/.test(renderToStaticMarkup(<ClassTile c={toClassCard(card({ is_member: false, member_count: 0 }))!} onOpen={() => {}} />)), false);
+  // Lớp của tôi: TÊN LỚP là lối vào (một nút), một dòng phụ gọn — không nhãn "Đang học"/"Bạn đang tham gia", không số đếm
+  const row = renderToStaticMarkup(<ul><ClassRow c={toClassCard(card())!} onOpen={() => {}} /></ul>);
+  assert.match(row, /<button type="button" class="cs-classrow-name">Đệm hát căn bản — KD18<\/button>/);
+  assert.match(row, /Thứ 3 · 20:00 · Đệm hát 2/);
+  assert.equal((row.match(/<button/g) || []).length, 1, "không nút phụ (Vào lớp / Tiếp tục học)");
+  assert.equal(/Đang học|Bạn đang tham gia|học viên|hoạt động/.test(row), false);
 });
 
 test("thành viên: bấm tên → trang cá nhân; nút theo quan hệ (Kết bạn / Chấp nhận / Đã gửi / Bạn bè / Bạn)", () => {

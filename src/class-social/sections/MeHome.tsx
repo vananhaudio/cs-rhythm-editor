@@ -18,7 +18,6 @@ import FriendRequestList from './FriendRequestList'
 import MeThreadsBlock from '../../learning-thread/MeThreadsBlock'
 import FeedTabs from './FeedTabs'
 import { FEED_EMPTY, scopeFromSearch, searchForScope, type FeedScope } from '../posts/feedScope'
-import MyClassesBoard from '../classes/MyClassesBoard'
 import type { SocialClasses } from '../classes/useSocialClasses'
 
 /** Góc nhìn Feed đọc từ ?feed= (chia sẻ link / Quay lại về đúng góc nhìn); đổi góc nhìn = thay URL tại chỗ. */
@@ -34,7 +33,7 @@ function useFeedScope(): [FeedScope, (s: FeedScope) => void] {
 /** Home chỉ hiện vài lời mời mới nhất; đủ danh sách ở trang Bạn bè. */
 const HOME_REQUESTS_MAX = 3
 
-export default function MeHome({ me, identityRev = 0, onOpenProfile, requests, onSeeAllRequests, onOpenThread, onOpenQueue, classes, onOpenClass, onOpenSession, onOpenDiscover, onOpenBands }: {
+export default function MeHome({ me, identityRev = 0, onOpenProfile, requests, onSeeAllRequests, onOpenThread, onOpenQueue, classes, onOpenBands }: {
   me: ClassIdentity
   identityRev?: number
   /** (không dùng trên Home nữa — đổi ảnh ở Trang cá nhân / menu tài khoản) */
@@ -48,16 +47,14 @@ export default function MeHome({ me, identityRev = 0, onOpenProfile, requests, o
   /** Learning Thread: mở /me/t/<id> · hàng đợi Thầy /me/queue */
   onOpenThread?: (threadId: string) => void
   onOpenQueue?: () => void
-  /** Tab "Lớp của tôi" = bảng các lớp ĐANG THAM GIA (không phải dòng feed lọc) + lối "Khám phá các lớp khác" */
+  /** Tab "Lớp" = hoạt động học tập từ các lớp mình thuộc (ghép social_class_activity) — cần danh sách lớp của tôi */
   classes?: SocialClasses
-  onOpenClass?: (classId: string) => void
-  onOpenSession?: (classId: string, sessionNo: number) => void
-  onOpenDiscover?: () => void
   /** Thầy: lối vào Tuyển thành viên Band (/me/bands) */
   onOpenBands?: () => void
 }) {
   const [scope, setScope] = useFeedScope()
-  const { state, reload, loadMore } = useCommunityFeed(scope)
+  const myClassIds = useMemo(() => (classes?.mine ?? []).map(c => c.id), [classes?.mine])
+  const { state, reload, loadMore } = useCommunityFeed(scope, myClassIds)
   const feedRef = useRef<HTMLDivElement>(null)
   const [modError, setModError] = useState<string | null>(null)
 
@@ -120,9 +117,8 @@ export default function MeHome({ me, identityRev = 0, onOpenProfile, requests, o
       <div ref={feedRef} className="cs-feed-anchor">
         {modError && <p className="cs-form-error" role="alert">{modError}</p>}
         <FeedTabs scope={scope} onChange={setScope} />
-        {scope === 'my_classes' && classes && onOpenClass && onOpenSession && onOpenThread && onOpenDiscover
-          ? <MyClassesBoard classes={classes} isTeacher={me.isTeacher} onOpenClass={onOpenClass} onOpenSession={onOpenSession}
-              onOpenThread={onOpenThread} onOpenDiscover={onOpenDiscover} />
+        {scope === 'my_classes' && classes && !classes.loaded
+          ? <p className="cs-loading" role="status">Đang tải…</p>
           : <CommunityFeed state={state} onRetry={() => void reload()} onLoadMore={() => void loadMore()} social={social}
           empty={FEED_EMPTY[scope]}
           emptyAction={scope === 'friends' && onSeeAllRequests

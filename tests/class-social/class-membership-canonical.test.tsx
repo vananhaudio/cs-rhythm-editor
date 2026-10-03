@@ -9,21 +9,22 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import JoinClassByCode from "../../src/class-social/classes/JoinClassByCode";
 import ClassesPage from "../../src/class-social/classes/ClassesPage";
-import MyClassesBoard from "../../src/class-social/classes/MyClassesBoard";
-import { scErrorText } from "../../src/class-social/classes/classModel";
+import { scErrorText, toClassCards } from "../../src/class-social/classes/classModel";
 void React;
 
 const src = (f: string) => readFileSync(new URL(`../../src/${f}`, import.meta.url), "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
 const sql = (f: string) => readFileSync(new URL(`../../db/${f}`, import.meta.url), "utf8");
 
-test("Nhập mã lớp: ô 'Nhập mã lớp của bạn' ở Khám phá các lớp khác (/me/classes); Lớp của tôi trống chỉ lối tới đó — chỉ gửi MÃ, không user/lớp/nhóm", () => {
+test("Nhập mã lớp: ở Lớp của tôi (/me/classes) — chưa có lớp thì mở sẵn ô nhập; có lớp thì một lối nhẹ \"+ Nhập mã lớp\" — chỉ gửi MÃ", () => {
   const empty = { loaded: true as const, mine: [], discover: [], error: null, reload: () => {} };
-  const html = renderToStaticMarkup(<ClassesPage classes={empty} onOpenClass={() => {}} onOpenMyClasses={() => {}} />);
+  const html = renderToStaticMarkup(<ClassesPage classes={empty} onOpenClass={() => {}} />);
   assert.match(html, /Nhập mã lớp của bạn/);
   assert.match(html, /Xem lớp/);
-  const board = renderToStaticMarkup(<MyClassesBoard classes={empty} isTeacher={false} onOpenClass={() => {}} onOpenSession={() => {}} onOpenThread={() => {}} onOpenDiscover={() => {}} />);
-  assert.match(board, /Nhập mã lớp Thầy gửi/);
-  assert.match(board, /Khám phá các lớp khác/);
+  assert.match(html, /Bạn chưa ở trong lớp nào/);
+  const card = { id: "b0000000-0000-4000-8000-0000000000c1", code: "DH2.KD18", name: "Đệm hát căn bản — KD18", status: "active", is_member: true, member_count: 3, activity_count: 0 };
+  const has = renderToStaticMarkup(<ClassesPage classes={{ ...empty, mine: toClassCards([card]) }} onOpenClass={() => {}} />);
+  assert.doesNotMatch(has, /Nhập mã lớp của bạn/, "đã có lớp: không hero CTA");
+  assert.match(has, /Nhập mã lớp<\/button>/);
   assert.match(renderToStaticMarkup(<JoinClassByCode onJoined={() => {}} />), /aria-label="Mã lớp"/);
   const api = src("class-social/classes/classesApi.ts");
   assert.match(api, /rpc\('class_join_preview', \{ p_code: code \}\)/);
