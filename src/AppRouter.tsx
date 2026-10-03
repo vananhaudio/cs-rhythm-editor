@@ -70,6 +70,14 @@ const BandRecruitRoute = lazy(() => import('./band/BandRecruitRoute'))
 const ThuVienPage = lazy(() => import('./thuvien/ThuVienPage'))
 // Điệu đệm hát (/dieudemhat) — chunk riêng, dữ liệu từ src/content/dieudemhat
 const DieuDemHatPage = lazy(() => import('./dieudemhat/DieuDemHatPage'))
+// Rhythm Scroll — trang THỬ, chỉ có ở `npm run dev`. Bản build production: nhánh này bị loại hẳn,
+// không sinh chunk, không có route.
+const RhythmScrollProofPage = import.meta.env.DEV
+  ? lazy(() => import('./rhythm-scroll-viewer/proof/AnchoredProofPage'))
+  : null
+const RhythmScrollV1ProofPage = import.meta.env.DEV
+  ? lazy(() => import('./rhythm-scroll-viewer/proof/RhythmScrollProofPage'))
+  : null
 type AppUser = {
   id: string
   role: string
@@ -214,6 +222,16 @@ function AppRouterContent() {
   }
   if (path === '/hanhtrinh2027' || path.startsWith('/hanhtrinh2027')) {
     return <Hanhtrinh2027Page />
+  }
+
+  // ── Route /dev/rhythm-scroll — trang thử Rhythm Scroll (chỉ DEV, không đăng nhập, không dữ liệu thật) ──
+  //    /dev/rhythm-scroll      → neo vạch nhịp thật (prototype V2)
+  //    /dev/rhythm-scroll-v1   → bản V1 "đoạn = N ô" với số ô giả định
+  if (RhythmScrollProofPage && path === '/dev/rhythm-scroll') {
+    return <Suspense fallback={null}><RhythmScrollProofPage /></Suspense>
+  }
+  if (RhythmScrollV1ProofPage && path === '/dev/rhythm-scroll-v1') {
+    return <Suspense fallback={null}><RhythmScrollV1ProofPage /></Suspense>
   }
 
   // ── Route /dieudemhat[/<điệu>] — Điệu đệm hát (công khai, đang biên soạn) ──
