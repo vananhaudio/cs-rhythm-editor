@@ -96,6 +96,14 @@ export const SOLO01_BUOI03: LessonDoc = {
         'Nâng đoạn Diễm Xưa từ melody đơn thành một đoạn Solo Guitar sơ khai.',
       ],
     },
+    // ── NHỊP HỌC: điểm ngắt do Owner chốt (03/10/2026) — 3 nhịp, 3 bài trả bắt buộc:
+    //    GIỮ MELODY KHI THÊM BASS (3.1 trắc nghiệm) → SLIDE LIỀN TIẾNG (3.2 trắc nghiệm) → ĐƯA SLIDE VÀO ÂM NHẠC
+    //    (3.3 video + chữ, Thầy chấm — video DUY NHẤT). Đáp án trắc nghiệm KHÔNG nằm ở đây (server). id 3.1/3.2/3.3 KHÔNG đổi.
+    {
+      kind: 'note',
+      title: 'Nhịp 1 · Giữ Melody khi thêm Bass',
+      text: 'Nghe đoạn Diễm Xưa lớn lên qua ba cấp độ, rồi luyện Bài tập kỹ thuật 01: p chơi Bass, i – m trả lời bằng Melody. Kết thúc nhịp: Bài trả 3.1 (trắc nghiệm).',
+    },
     {
       kind: 'layers',
       title: 'Cùng một đoạn nhạc — ba cấp độ',
@@ -126,6 +134,29 @@ export const SOLO01_BUOI03: LessonDoc = {
       ],
     },
     {
+      kind: 'checkpoint',
+      id: '3.1',
+      title: 'Bài trả 3.1 — Melody và Bass',
+      required: true,
+      accepts: ['quiz'],
+      quiz: {
+        mode: 'single',
+        question: 'Khi chơi Melody + Bass, phần nào cần được nghe rõ hơn?',
+        options: [
+          { id: 'a', text: 'Bass' },
+          { id: 'b', text: 'Melody' },
+          { id: 'c', text: 'Melody và Bass luôn phải to bằng nhau' },
+          { id: 'd', text: 'Phần nào to hơn cũng được' },
+        ],
+        hint: 'Bass là phần nền. Người nghe cần nhận ra câu Melody trước.',
+      },
+    },
+    {
+      kind: 'note',
+      title: 'Nhịp 2 · Slide liền tiếng',
+      text: 'Luyện câu Slide trong Bài tập kỹ thuật 02: trượt cùng dây, cùng ngón, nhịp không dừng. Kết thúc nhịp: Bài trả 3.2 (trắc nghiệm).',
+    },
+    {
       kind: 'score',
       subtitle: 'Bài tập kỹ thuật 02',
       title: 'Slide trong câu melody',
@@ -145,6 +176,29 @@ export const SOLO01_BUOI03: LessonDoc = {
         'Slide ở đây để câu melody liền và có chất guitar hơn, không phải để khoe kỹ thuật.',
         'Số ngón trên bản là một cách thuận Thầy gợi ý. Bạn có cách khác cũng được, miễn là trượt vẫn cùng dây, cùng ngón và câu vẫn liền.',
       ],
+    },
+    {
+      kind: 'checkpoint',
+      id: '3.2',
+      title: 'Bài trả 3.2 — Kỹ thuật Slide',
+      required: true,
+      accepts: ['quiz'],
+      quiz: {
+        mode: 'single',
+        question: 'Khi thực hiện Slide, thao tác nào dưới đây là đúng?',
+        options: [
+          { id: 'a', text: 'Gảy nốt đầu, nhấc ngón tay trái lên rồi đặt lại ở nốt sau.' },
+          { id: 'b', text: 'Giữ ngón tay trái tiếp xúc với dây và trượt tới nốt sau.' },
+          { id: 'c', text: 'Đổi sang dây khác rồi tiếp tục trượt.' },
+          { id: 'd', text: 'Dừng nhịp một chút để có thời gian thực hiện Slide.' },
+        ],
+        hint: 'Khi Slide, giữ ngón tay trái tiếp xúc với cùng dây và trượt tới vị trí mới, không để động tác làm ngắt nhịp.',
+      },
+    },
+    {
+      kind: 'note',
+      title: 'Nhịp 3 · Đưa Slide vào âm nhạc',
+      text: 'Etude 03 gom Melody + Bass + Slide, rồi nâng cấp đoạn Diễm Xưa của bạn. Kết thúc nhịp: Bài trả 3.3 (video + ghi chú Slide tự chọn).',
     },
     {
       kind: 'score',
@@ -208,6 +262,14 @@ export const SOLO01_BUOI03: LessonDoc = {
         { label: 'Gợi ý cho Bài 7.', text: 'Trượt được khi hai nốt liền nhau cùng nằm trên MỘT dây, cả hai đều là nốt bấm, và dùng CÙNG một ngón. Chỗ nào chưa đủ điều kiện (nốt là dây buông, hoặc hai nốt nằm ở hai dây) thì thử ĐỔI DÂY: bấm nốt đó ở dây khác để hai nốt về chung một dây. Ví dụ Mi dây 1 buông cũng chính là Mi ở dây 2 ngăn 5.' },
       ],
       message: 'Mang đúng những vị trí đã khoanh đến buổi học — đó là phần thầy trò sẽ gỡ cùng nhau.',
+    },
+    {
+      kind: 'checkpoint',
+      id: '3.3',
+      title: 'Bài trả 3.3 — Diễm Xưa của tôi',
+      prompt: 'Chơi một đoạn Diễm Xưa đã nâng cấp với Melody + Bass + Slide. Không cần cả bài, không cần hoàn hảo. Sau đó tự chọn thêm 1 vị trí Slide của riêng bạn và ghi ngắn: Bạn đặt Slide ở đâu? Vì sao?',
+      required: true,
+      accepts: ['video_link', 'text'],
     },
     {
       kind: 'checklist',

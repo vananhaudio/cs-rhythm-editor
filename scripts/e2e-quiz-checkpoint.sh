@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # E2E QUIZ CHECKPOINT V1 trên stack LOCAL (không production): Buổi 02 thật của SOLO01 (2.1 trắc nghiệm 1 đáp án ·
-# 2.2 nhiều đáp án · 2.3 video + chữ) — sai → làm lại → đúng → ✓ Đạt · tải lại giữ · không Hàng đợi/Không gian lớp ·
-# 3/3 Đạt → xong Buổi 02 → mở Buổi 03. ĐÁP ÁN là dữ liệu PRIVATE: truyền thư mục sinh bởi prod-migrations/solo01-buoi02-quiz/gen.mts
+# 2.2 nhiều đáp án · 2.3 video + chữ; Buổi 03 …) — sai → làm lại → đúng → ✓ Đạt · tải lại giữ · không Hàng đợi/Không gian lớp ·
+# đủ Đạt → xong buổi → mở buổi kế. ĐÁP ÁN là dữ liệu PRIVATE: truyền thư mục buổi trong prod-migrations (vd solo01-buoi03-quiz)
 #   PUPPETEER_DIR=… E2E_QUIZ_PRIVATE=~/Projects/cs-prod-db-infra/prod-migrations/solo01-buoi02-quiz bash scripts/e2e-quiz-checkpoint.sh
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
