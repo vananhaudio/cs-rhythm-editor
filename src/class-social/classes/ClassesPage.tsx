@@ -4,19 +4,24 @@
 // Không nhãn "Đang học" trên từng lớp; trạng thái chỉ còn nơi nó thật sự phân biệt (lớp đã kết thúc ở vùng riêng).
 import { useState } from 'react'
 import { Plus } from 'lucide-react'
-import { classMetaLine, filterClasses, type ClassCard } from './classModel'
+import { classMetaLine, currentClasses, filterClasses, PAST_CLASS_STATUSES, type ClassCard } from './classModel'
+import { classPath } from '../resolveMeRoute'
 import type { SocialClasses } from './useSocialClasses'
 import JoinClassByCode from './JoinClassByCode'
 
-const PAST = new Set(['completed', 'merged', 'cancelled'])
 const SEARCH_MIN = 7   // ít lớp khác thì không cần ô tìm
 
-/** Một dòng lớp: tên (link vào lớp) + một dòng phụ gọn. Không card, không nút phụ. */
-export function ClassRow({ c, onOpen, quiet = false }: { c: ClassCard; onOpen: (id: string) => void; quiet?: boolean }) {
-  const meta = classMetaLine(c)
+/** Một dòng lớp: tên (LINK vào lớp — mở tab mới/sao chép được) + một dòng phụ gọn. Không card, không nút phụ.
+ *  meta: mặc định lịch · khoá; Home truyền riêng (chỉ lịch). */
+export function ClassRow({ c, onOpen, quiet = false, meta = classMetaLine(c) }: {
+  c: ClassCard; onOpen: (id: string) => void; quiet?: boolean; meta?: string | null
+}) {
   return (
     <li className={'cs-classrow' + (quiet ? ' is-quiet' : '')}>
-      <button type="button" className="cs-classrow-name" onClick={() => onOpen(c.id)}>{c.name}</button>
+      <a className="cs-classrow-name" href={classPath(c.id)} onClick={e => {
+        if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
+        e.preventDefault(); onOpen(c.id)
+      }}>{c.name}</a>
       {meta && <span className="cs-classrow-meta">{meta}</span>}
     </li>
   )
@@ -29,8 +34,8 @@ export default function ClassesPage({ classes, onOpenClass, onJoined }: {
 }) {
   const [q, setQ] = useState('')
   const [joining, setJoining] = useState(false)
-  const current = classes.mine.filter(c => !PAST.has(c.status ?? ''))
-  const past = classes.mine.filter(c => PAST.has(c.status ?? ''))
+  const current = currentClasses(classes.mine)
+  const past = classes.mine.filter(c => PAST_CLASS_STATUSES.has(c.status ?? ''))
   const others = filterClasses(classes.discover, q)
   const noClass = classes.loaded && classes.mine.length === 0
   return (

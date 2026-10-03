@@ -5,7 +5,11 @@ import { KeyRound } from 'lucide-react'
 import { joinClassByCode, previewJoinClass, type JoinPreview } from './classesApi'
 import { classStatusLabel } from './classModel'
 
-export default function JoinClassByCode({ onJoined }: { onJoined: (classId: string) => void }) {
+export default function JoinClassByCode({ onJoined, onOpen = onJoined }: {
+  onJoined: (classId: string) => void
+  /** "Bạn đã ở trong lớp này — Mở lớp" (mặc định = onJoined) */
+  onOpen?: (classId: string) => void
+}) {
   const [code, setCode] = useState('')
   const [preview, setPreview] = useState<JoinPreview | null>(null)
   const [busy, setBusy] = useState(false)
@@ -48,7 +52,7 @@ export default function JoinClassByCode({ onJoined }: { onJoined: (classId: stri
           </div>
           <div className="cs-section-hint">{preview.memberCount} học viên đang trong lớp</div>
           {preview.alreadyMember
-            ? <button type="button" className="cs-btn cs-btn-soft" onClick={() => onJoined(preview.classId)}>Bạn đã ở trong lớp này — Mở lớp</button>
+            ? <button type="button" className="cs-btn cs-btn-soft" onClick={() => onOpen(preview.classId)}>Bạn đã ở trong lớp này — Mở lớp</button>
             : <button type="button" className="cs-btn cs-btn-primary" onClick={() => void join()} disabled={busy}>{busy ? 'Đang tham gia…' : 'Tham gia lớp'}</button>}
         </div>
       )}

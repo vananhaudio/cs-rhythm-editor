@@ -3,17 +3,18 @@ import { useCallback, useEffect, useState } from 'react'
 import { fetchDiscoverClasses, fetchMyClasses } from './classesApi'
 import type { ClassCard } from './classModel'
 
-export type SocialClasses = { loaded: boolean; mine: ClassCard[]; discover: ClassCard[]; error: string | null; reload: () => void }
+/** mineFailed: riêng danh sách CỦA TÔI không tải được (Home chỉ cần biết điều này, không cần lỗi Khám phá). */
+export type SocialClasses = { loaded: boolean; mine: ClassCard[]; discover: ClassCard[]; error: string | null; mineFailed?: boolean; reload: () => void }
 
 export function useSocialClasses(): SocialClasses {
-  const [state, setState] = useState<{ loaded: boolean; mine: ClassCard[]; discover: ClassCard[]; error: string | null }>(
-    { loaded: false, mine: [], discover: [], error: null })
+  const [state, setState] = useState<{ loaded: boolean; mine: ClassCard[]; discover: ClassCard[]; error: string | null; mineFailed: boolean }>(
+    { loaded: false, mine: [], discover: [], error: null, mineFailed: false })
   const [rev, setRev] = useState(0)
   useEffect(() => {
     let alive = true
     void Promise.all([fetchMyClasses(), fetchDiscoverClasses()]).then(([m, d]) => {
       if (!alive) return
-      setState({ loaded: true, mine: m.ok ? m.value : [], discover: d.ok ? d.value : [], error: !m.ok ? m.message : !d.ok ? d.message : null })
+      setState({ loaded: true, mine: m.ok ? m.value : [], discover: d.ok ? d.value : [], error: !m.ok ? m.message : !d.ok ? d.message : null, mineFailed: !m.ok })
     })
     return () => { alive = false }
   }, [rev])

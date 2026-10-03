@@ -210,7 +210,8 @@ function SignedInShell({ base, view, onSection, onOpenProfile, onOpenThread, onO
       {view.kind === 'bandAdmin' && <BandManagePage key={view.slug} slug={view.slug} onBack={() => onBack({ kind: 'bands' })} />}
       {section === 'home' && <MeHome key={visit} me={me} identityRev={identityRev} canEditAvatar={editor.canEditAvatar} onEditMedia={editor.pick}
         onOpenProfile={onOpenProfile} requests={requests} onSeeAllRequests={() => onSection('friends')}
-        onOpenThread={onOpenThread} onOpenQueue={onOpenQueue} classes={classes} onOpenBands={onOpenBands} />}
+        onOpenThread={onOpenThread} onOpenQueue={onOpenQueue} classes={classes} onOpenClass={onOpenClass}
+        onJoinedClass={() => { classes.reload(); refreshLearningIdentity(me.userId) }} onOpenBands={onOpenBands} />}
       {section === 'friends' && <Friends requests={requests} onOpenProfile={onOpenProfile} />}
       {section === 'chat' && <Chat />}
       {section === 'tools' && <ToolsPage />}

@@ -104,11 +104,11 @@ test("Lớp của tôi (/me/classes): bản đồ các lớp — tên lớp là 
     card("b0000000-0000-4000-8000-0000000000d1", "Tỉa nốt 3 — GL11", true, "completed")])
   const discover = toClassCards([card("b0000000-0000-4000-8000-000000000001", "Lớp người khác", false)])
   const h = renderToStaticMarkup(<ClassesPage classes={{ loaded: true, mine, discover, error: null, reload: noop }} onOpenClass={noop} />)
-  const order = [/<h1 class="cs-page-title">Lớp của tôi/, /cs-classrow-name">Solo Guitar Căn Bản/, /cs-classrow-name">Hành trình 2027/, /Nhập mã lớp<\/button>/,
-    /Lớp trước đây/, /cs-classrow-name">Tỉa nốt 3 — GL11/, /Các lớp khác/, /cs-classrow-name">Lớp người khác/].map(re => pos(h, re))
+  const order = [/<h1 class="cs-page-title">Lớp của tôi/, /">Solo Guitar Căn Bản<\/a>/, /">Hành trình 2027<\/a>/, /Nhập mã lớp<\/button>/,
+    /Lớp trước đây/, /">Tỉa nốt 3 — GL11<\/a>/, /Các lớp khác/, /">Lớp người khác<\/a>/].map(re => pos(h, re))
   assert.deepEqual([...order].sort((a, b) => a - b), order, "thứ tự cố định")
   assert.doesNotMatch(h, /Vào lớp|Tiếp tục học|Hoạt động mới|Đang học|cs-card cs-myclass/)
-  assert.doesNotMatch(src("class-social/sections/MeHome.tsx"), /MyClassesBoard/, "tab Lớp trên Home là feed, không phải bảng lớp")
+  assert.doesNotMatch(src("class-social/sections/MeHome.tsx"), /MyClassesBoard/, "tab Lớp trên Home không phải bảng lớp (dashboard)")
 })
 
 test("dòng hoạt động gọn: HS03 vừa trả bài · Bài trả 1.1 · Chờ Thầy phản hồi", () => {

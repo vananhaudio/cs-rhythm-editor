@@ -468,7 +468,23 @@ try {
     await a.waitForFunction(() => /Bài 4\.3 — Bolero móc kiểu 1/.test(document.querySelector('.cs-feed')?.textContent ?? ''), { timeout: 15000 })
     const board = (await cards(a)).join('\n')
     assert.equal(/Đang tập: Bolero móc kiểu 1 tối nay/.test(board), false, 'tab Lớp KHÔNG có bài tường (không có ngữ cảnh lớp)')
-    assert.equal(await a.$$eval('.cs-myclass, .cs-myclass-enter', e => e.length), 0, 'tab Lớp là feed, không phải bảng lớp')
+    assert.equal(await a.$$eval('.cs-myclass, .cs-myclass-enter', e => e.length), 0, 'tab Lớp không phải bảng lớp (dashboard)')
+    // CLASS ENTRY V2: tab Lớp mở ra là LỚP CỦA TÔI (tên lớp = link) → "+ Nhập mã lớp" → HOẠT ĐỘNG TỪ CÁC LỚP → feed
+    await a.waitForSelector('.cs-home-classes .cs-classrow-name', { timeout: 15000 })
+    assert.equal(await a.$eval('#cs-home-classes-title', h => h.textContent), 'Lớp của tôi')
+    const aTab = await a.$$eval('.cs-home-classes .cs-classrow-name', e => e.map(x => x.textContent))
+    assert.ok(aTab.includes('Đệm hát căn bản — KD18'), 'tab Lớp A: ' + aTab.join(' | '))
+    assert.equal(new Set(aTab).size, aTab.length, 'không trùng lớp')
+    const kd18 = "[...document.querySelectorAll('.cs-home-classes .cs-classrow-name')].find(e => e.textContent === 'Đệm hát căn bản — KD18')"
+    assert.equal(await a.evaluate(`(e => e.tagName + ' ' + e.getAttribute('href'))(${kd18})`), 'A /me/classes/b0000000-0000-4000-8000-0000000000c1')
+    const homeOrder = await a.evaluate(() => {
+      const y = s => document.querySelector(s)?.getBoundingClientRect().top ?? -1
+      return [y('.cs-feed-tabs'), y('.cs-home-classes .cs-classrow'), y('.cs-home-classes .cs-join-open'), y('.cs-home-activity-title'), y('.cs-feed')]
+    })
+    assert.deepEqual([...homeOrder].sort((x, z) => x - z), homeOrder, 'một cột: tabs → lớp → + Nhập mã lớp → Hoạt động từ các lớp → feed ' + homeOrder)
+    assert.equal(await a.$eval('.cs-home-activity-title', h => h.textContent), 'Hoạt động từ các lớp')
+    assert.equal(await a.evaluate(() => /Đang học|Tiếp tục học|Vào lớp/.test(document.querySelector('.cs-home-classes').textContent)), false)
+    await a.screenshot({ path: `${SHOTS}/16a-tab-lop-390.png`, fullPage: true })
     await noRaw(a, 'Tab Lớp')
     await noHorizontalOverflow(a, 'Tab Lớp (390px)')
     // Reload giữ góc nhìn theo URL; Quay lại từ cuộc trao đổi về đúng góc nhìn
@@ -478,12 +494,19 @@ try {
     await a.waitForSelector('.lt-head', { timeout: 15000 })
     await clickText(a, 'Quay lại'); await a.waitForFunction(() => location.pathname === '/me' && location.search === '?feed=classes')
     await a.waitForSelector('.cs-feed-tabs'); assert.equal(await pressedFeed(a), 'Lớp', 'Quay lại về đúng góc nhìn')
+    // Bấm tên lớp trên tab Lớp → thẳng Class Page (Mục lục), không trang trung gian; Quay lại → tab Lớp
+    await a.waitForSelector('.cs-home-classes .cs-classrow-name', { timeout: 15000 }); await a.evaluate(`${kd18}.click()`)
+    await a.waitForFunction(() => location.pathname === '/me/classes/b0000000-0000-4000-8000-0000000000c1', { timeout: 15000 })
+    await a.waitForSelector('.cs-classv2', { timeout: 15000 }); await waitText(a, /Mục lục/)
+    await a.goBack(); await a.waitForFunction(() => location.pathname === '/me' && location.search === '?feed=classes')
+    await a.waitForFunction(() => document.querySelector('.cs-feed-tabs [aria-pressed="true"]')?.textContent === 'Lớp', { timeout: 15000 })
+    await a.waitForSelector('.cs-home-classes .cs-classrow-name', { timeout: 15000 })
     // A chưa có bạn → Bạn bè trống, có lối sang trang Bạn bè
     await clickText(a, 'Bạn bè'); await settleFeed(a)
     await waitText(a, /Chưa có hoạt động mới từ bạn bè\./)
     await noHorizontalOverflow(a, 'Feed Bạn bè (390px)')
     await a.screenshot({ path: `${SHOTS}/16-feed-friends-empty.png` })
-    ok('Feed V1 (A): 3 tab (Dành cho bạn · Lớp · Bạn bè), mặc định Dành cho bạn; Lớp = hoạt động lớp thật (không bài tường); ?feed= giữ qua reload + Quay lại; Bạn bè trống có lối đi')
+    ok('Feed V1 (A): 3 tab (Dành cho bạn · Lớp · Bạn bè), mặc định Dành cho bạn; Lớp = Lớp của tôi (tên lớp → Class Page, Back về tab) → Hoạt động từ các lớp (không bài tường); ?feed= giữ qua reload + Quay lại; Bạn bè trống có lối đi')
 
     // C (không thuộc lớp nào): tab Lớp trống, nhẹ
     const { c: cc, pg: c } = await loginAt('c@test.local', 320)
@@ -493,8 +516,13 @@ try {
     await noHorizontalOverflow(c, 'Feed tabs (320px)')
     await clickText(c, 'Lớp'); await settleFeed(c)
     await waitText(c, /Chưa có hoạt động mới từ các lớp của bạn\./)
+    await waitText(c, /Bạn chưa có lớp nào\./)
+    assert.equal(await c.$$eval('.cs-home-classes .cs-join-open', e => e.length), 1, 'chưa có lớp: + Nhập mã lớp')
+    assert.equal(await c.$$eval('.cs-home-classes .cs-card, .cs-home-classes .cs-btn-primary', e => e.length), 0, 'không card / CTA lớn')
+    assert.equal(await c.$eval('.cs-home-activity-title', h => h.textContent), 'Hoạt động từ các lớp')
     await noHorizontalOverflow(c, 'Tab Lớp trống (320px)')
-    ok('Feed V1 (C, 320px): 3 tab vừa màn hình; tab Lớp trống → câu ngắn')
+    await c.screenshot({ path: `${SHOTS}/16b-tab-lop-empty-320.png`, fullPage: true })
+    ok('Feed V1 (C, 320px): 3 tab vừa màn hình; tab Lớp chưa có lớp → "Bạn chưa có lớp nào." + Nhập mã lớp; hoạt động trống → câu ngắn')
 
     // C ↔ A thành bạn (flow Bạn bè thật) → tab Bạn bè của C có hoạt động của A; B (không phải bạn) không có
     await c.goto(ME + '/u/aaaaaaaa-0000-4000-8000-00000000000a', { waitUntil: 'networkidle0' })
@@ -576,7 +604,9 @@ try {
     await noHorizontalOverflow(e, 'Chỉnh sửa trang cá nhân (390px)')
     // Tên rỗng → không lưu được
     const nameInput = await e.$('.cs-profile-edit input[type="text"]')
-    await nameInput.click({ clickCount: 3 }); await e.keyboard.press('Backspace')
+    // (bôi đen bằng select(): triple-click không chọn hết chữ khi giả lập cảm ứng 390px → test chập chờn/đỏ cả trên main)
+    await nameInput.focus(); await nameInput.evaluate(i => i.select()); await e.keyboard.press('Backspace')
+    await e.waitForFunction(() => document.querySelector('.cs-profile-edit input[type="text"]').value === '', { timeout: 5000 })
     assert.equal(await e.$eval('.cs-profile-edit button[type="submit"]', b => b.disabled), true, 'tên rỗng → Lưu bị khoá')
     // Tệp không phải ảnh → báo rõ, GIỮ tên đang nhập
     await nameInput.type('  Ánh   Dương  Lê  ')

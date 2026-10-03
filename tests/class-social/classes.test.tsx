@@ -125,11 +125,12 @@ test("trang lớp: thành viên thấy 'Bạn là thành viên'; người ngoài
   assert.ok(outsider.indexOf("cs-class-name") < outsider.indexOf("cs-class-codes"), "tên lớp lên đầu; mã lớp nhỏ ở cuối");
   assert.equal(/0 học viên/.test(renderToStaticMarkup(<ClassHeader c={toClassCard(card({ member_count: 0 }))!} />)), false, "không nhấn '0 học viên'");
   assert.equal(/Mua|Đăng ký ngay|giá/i.test(outsider), false, "không biến trang lớp thành trang bán hàng");
-  // Lớp của tôi: TÊN LỚP là lối vào (một nút), một dòng phụ gọn — không nhãn "Đang học"/"Bạn đang tham gia", không số đếm
-  const row = renderToStaticMarkup(<ul><ClassRow c={toClassCard(card())!} onOpen={() => {}} /></ul>);
-  assert.match(row, /<button type="button" class="cs-classrow-name">Đệm hát căn bản — KD18<\/button>/);
+  // Lớp của tôi: TÊN LỚP là lối vào (một LINK tới /me/classes/<id>), một dòng phụ gọn — không nhãn "Đang học"/"Bạn đang tham gia", không số đếm
+  const c0 = toClassCard(card())!;
+  const row = renderToStaticMarkup(<ul><ClassRow c={c0} onOpen={() => {}} /></ul>);
+  assert.match(row, new RegExp(`<a class="cs-classrow-name" href="/me/classes/${c0.id}">Đệm hát căn bản — KD18</a>`));
   assert.match(row, /Thứ 3 · 20:00 · Đệm hát 2/);
-  assert.equal((row.match(/<button/g) || []).length, 1, "không nút phụ (Vào lớp / Tiếp tục học)");
+  assert.equal((row.match(/<(button|a) /g) || []).length, 1, "không nút phụ (Vào lớp / Tiếp tục học)");
   assert.equal(/Đang học|Bạn đang tham gia|học viên|hoạt động/.test(row), false);
 });
 

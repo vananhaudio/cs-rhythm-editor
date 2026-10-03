@@ -19,6 +19,7 @@ import MeThreadsBlock from '../../learning-thread/MeThreadsBlock'
 import FeedTabs from './FeedTabs'
 import { FEED_EMPTY, scopeFromSearch, searchForScope, type FeedScope } from '../posts/feedScope'
 import type { SocialClasses } from '../classes/useSocialClasses'
+import HomeClasses from '../classes/HomeClasses'
 
 /** Góc nhìn Feed đọc từ ?feed= (chia sẻ link / Quay lại về đúng góc nhìn); đổi góc nhìn = thay URL tại chỗ. */
 function useFeedScope(): [FeedScope, (s: FeedScope) => void] {
@@ -33,7 +34,7 @@ function useFeedScope(): [FeedScope, (s: FeedScope) => void] {
 /** Home chỉ hiện vài lời mời mới nhất; đủ danh sách ở trang Bạn bè. */
 const HOME_REQUESTS_MAX = 3
 
-export default function MeHome({ me, identityRev = 0, onOpenProfile, requests, onSeeAllRequests, onOpenThread, onOpenQueue, classes, onOpenBands }: {
+export default function MeHome({ me, identityRev = 0, onOpenProfile, requests, onSeeAllRequests, onOpenThread, onOpenQueue, classes, onOpenClass, onJoinedClass, onOpenBands }: {
   me: ClassIdentity
   identityRev?: number
   /** (không dùng trên Home nữa — đổi ảnh ở Trang cá nhân / menu tài khoản) */
@@ -47,8 +48,11 @@ export default function MeHome({ me, identityRev = 0, onOpenProfile, requests, o
   /** Learning Thread: mở /me/t/<id> · hàng đợi Thầy /me/queue */
   onOpenThread?: (threadId: string) => void
   onOpenQueue?: () => void
-  /** Tab "Lớp" = hoạt động học tập từ các lớp mình thuộc (ghép social_class_activity) — cần danh sách lớp của tôi */
+  /** Tab "Lớp" = LỚP CỦA TÔI (tên lớp → vào lớp) rồi HOẠT ĐỘNG TỪ CÁC LỚP (ghép social_class_activity) — cùng nguồn sidebar//me/classes */
   classes?: SocialClasses
+  onOpenClass?: (classId: string) => void
+  /** Tham gia lớp bằng mã ngay trên tab Lớp → nạp lại danh sách lớp + danh tính học tập (ở lại tab) */
+  onJoinedClass?: (classId: string) => void
   /** Thầy: lối vào Tuyển thành viên Band (/me/bands) */
   onOpenBands?: () => void
 }) {
@@ -117,6 +121,10 @@ export default function MeHome({ me, identityRev = 0, onOpenProfile, requests, o
       <div ref={feedRef} className="cs-feed-anchor">
         {modError && <p className="cs-form-error" role="alert">{modError}</p>}
         <FeedTabs scope={scope} onChange={setScope} />
+        {scope === 'my_classes' && classes && onOpenClass && <>
+          <HomeClasses classes={classes} onOpenClass={onOpenClass} onJoined={onJoinedClass} />
+          <h2 className="cs-subtle-title cs-home-activity-title">Hoạt động từ các lớp</h2>
+        </>}
         {scope === 'my_classes' && classes && !classes.loaded
           ? <p className="cs-loading" role="status">Đang tải…</p>
           : <CommunityFeed state={state} onRetry={() => void reload()} onLoadMore={() => void loadMore()} social={social}

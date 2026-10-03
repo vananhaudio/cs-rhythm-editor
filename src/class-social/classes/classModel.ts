@@ -88,6 +88,15 @@ export function classFullTitle(c: Pick<ClassCard, 'name' | 'code'>): string {
 }
 
 /** Dòng phụ CHO NGƯỜI ĐỌC: lịch học · khoá (không đưa mã lớp/mã khoá lên trước). */
+/** Lớp đã khép lại (kết thúc / gộp / huỷ) — sống ở vùng "Lớp trước đây" của /me/classes. */
+export const PAST_CLASS_STATUSES: ReadonlySet<string> = new Set(['completed', 'merged', 'cancelled'])
+
+/** Lớp hiện tại của tôi — MỘT định nghĩa cho sidebar, tab "Lớp" trên Home và phần chính /me/classes.
+ *  Giữ nguyên thứ tự server (không xếp lại theo hoạt động/tiến độ). */
+export function currentClasses(mine: ClassCard[]): ClassCard[] {
+  return mine.filter(c => !PAST_CLASS_STATUSES.has(c.status ?? ''))
+}
+
 export function classMetaLine(c: ClassCard): string {
   return [c.schedule, c.course?.name].filter(Boolean).join(' · ')
 }

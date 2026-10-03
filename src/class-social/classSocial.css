@@ -663,6 +663,8 @@
 .cs-class-item .cs-nav-text { overflow: hidden; text-overflow: ellipsis; }
 .cs-class-dot { flex-shrink: 0; width: 8px; height: 8px; margin: 0 6px; border-radius: 50%; border: 2px solid var(--cs-faint); background: transparent; }
 .cs-class-dot.is-mine { background: var(--cs-faint); }
+/* Chấm chỉ là hình thay chữ khi sidebar thu gọn — mở rộng thì tên lớp đã đủ (không ký hiệu phải giải mã) */
+.cs-sidebar:not(.is-collapsed) .cs-class-dot { display: none; }
 
 /* Home: ô chia sẻ nhẹ, Feed đi liền ngay sau */
 .cs-home-feedfirst { gap: 12px; }
@@ -1053,6 +1055,15 @@ button.cs-map-title:hover, a.cs-map-title:hover { color: var(--cs-p-strong); }
 .cs-classrow-name { border: none; background: none; padding: 0; text-align: left; font: inherit; font-size: 17px; font-weight: 700;
   color: var(--cs-text); cursor: pointer; overflow-wrap: anywhere; }
 .cs-classrow-name:hover { color: var(--cs-accent); }
+a.cs-classrow-name { text-decoration: none; align-self: flex-start; }
+.cs-classrow-name:focus-visible { outline: 2px solid var(--cs-accent); outline-offset: 3px; border-radius: 4px; }
+/* Home → tab "Lớp": Lớp của tôi (dòng tên lớp, không card) → Hoạt động từ các lớp — một cột dọc */
+.cs-home-classes { display: flex; flex-direction: column; margin: 4px 0 6px; }
+.cs-home-classes .cs-subtle-title { margin-top: 10px; }
+.cs-home-classes .cs-classrow { padding: 10px 4px; }
+.cs-home-classes .cs-classrow-name { font-size: 16px; }
+.cs-home-classes-loading { min-height: 44px; margin: 0; padding: 12px 4px; text-align: left; }
+.cs-home-activity-title { margin-top: 14px; margin-bottom: 10px; }
 .cs-classrow-meta { font-size: 13px; color: var(--cs-muted); overflow-wrap: anywhere; }
 .cs-classrow.is-quiet .cs-classrow-name { font-size: 15px; font-weight: 600; }
 .cs-subtle-title { margin: 22px 4px 2px; font-size: 12.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--cs-muted); }
