@@ -117,6 +117,14 @@ export const SOLO01_BUOI02: LessonDoc = {
         'Thêm Bass vào tác phẩm đã tập ở Buổi 01.',
       ],
     },
+    // ── NHỊP HỌC: điểm ngắt do Owner chốt (03/10/2026) — 3 nhịp, 3 bài trả bắt buộc:
+    //    KỸ THUẬT (2.1) → KỸ NĂNG HAI BÈ (2.2) → TÁC PHẨM (2.3). Mỗi nhịp mở bằng một khối note;
+    //    bài trả đặt ngay sau phần học nó kiểm. id 2.1/2.2/2.3 KHÔNG đổi.
+    {
+      kind: 'note',
+      title: 'Nhịp 1 · Ép ngón i – m',
+      text: 'Hiểu ép ngón, biết chỗ làm việc của ngón cái p, rồi luyện Bài tập kỹ thuật 01. Kết thúc nhịp: Bài trả 2.1 (video).',
+    },
     {
       kind: 'note',
       title: 'Ép ngón là gì',
@@ -145,6 +153,19 @@ export const SOLO01_BUOI02: LessonDoc = {
         'Ô 4: đổi dây nhưng vẫn i – m luân phiên, không dùng một ngón hai lần.',
         'Ô 5: gấp đôi tốc độ — chỉ tăng khi ô 1–4 đã đều.',
       ],
+    },
+    {
+      kind: 'checkpoint',
+      id: '2.1',
+      title: 'Bài trả 2.1 — Ép ngón i – m',
+      prompt: 'Quay video chơi Bài tập kỹ thuật 01 ở ♩ = 60. Thầy xem: i – m luân phiên, không lặp ngón · tiếng chắc và tương đối đều. Dán link video (ví dụ YouTube để chế độ Không công khai).',
+      required: true,
+      accepts: ['video_link'],
+    },
+    {
+      kind: 'note',
+      title: 'Nhịp 2 · Giai điệu + Bass',
+      text: 'Giai điệu như Buổi 01, thêm Bass ở dưới: Âm giai C–Am có Bass, rồi Etude 02. Kết thúc nhịp: Bài trả 2.2 (video).',
     },
     {
       kind: 'score',
@@ -176,6 +197,19 @@ export const SOLO01_BUOI02: LessonDoc = {
         'Bass viết ở bè dưới (đuôi quay xuống): ngân hết ô nhịp, đừng nhấc ngón cái ra sớm.',
         'Bass nhẹ hơn giai điệu — người nghe phải nghe ra câu hát trước.',
       ],
+    },
+    {
+      kind: 'checkpoint',
+      id: '2.2',
+      title: 'Bài trả 2.2 — Giai điệu + Bass',
+      prompt: 'Quay video chơi hoàn chỉnh Etude 02. Thầy xem: Bass và nốt giai điệu đầu ô vào cùng lúc · Bass ngân · giai điệu nổi hơn Bass · i – m giữ luân phiên. Dán link video (ví dụ YouTube để chế độ Không công khai).',
+      required: true,
+      accepts: ['video_link'],
+    },
+    {
+      kind: 'note',
+      title: 'Nhịp 3 · Đưa Bass vào tác phẩm',
+      text: 'Thả Bass vào Diễm Xưa mà vẫn giữ câu hát liền mạch. Kết thúc nhịp: Bài trả 2.3 (video + ghi 3 chỗ còn vướng).',
     },
     {
       kind: 'repertoire',
@@ -214,6 +248,14 @@ export const SOLO01_BUOI02: LessonDoc = {
         { label: 'Bài 5.', text: 'Khoanh trên bản nhạc 3 chỗ Bass còn làm đứt câu hát.' },
       ],
       message: 'Không cần tập hoàn hảo. Hãy mang đúng những chỗ chưa làm được đến buổi học.',
+    },
+    {
+      kind: 'checkpoint',
+      id: '2.3',
+      title: 'Bài trả 2.3 — Diễm Xưa · Melody + Bass',
+      prompt: 'Quay một đoạn Diễm Xưa có Melody + Bass mà bạn đã tập — không cần cả bài, không cần hoàn hảo. Mục tiêu: giữ câu giai điệu liền mạch, thêm Bass mà không làm đứt câu. Dán link video và ghi 3 chỗ còn thấy Bass làm vướng hoặc đứt câu hát.',
+      required: true,
+      accepts: ['video_link', 'text'],
     },
     {
       kind: 'checklist',
