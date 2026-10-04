@@ -31,7 +31,8 @@ test("Hành trình 2027 dùng chung renderer: chỉ khối LessonDocument hiểu
 });
 
 test("bộ kiểm BẮT được lệch mạch: loại khối lạ · thiếu objectives · đảo đuôi buổi · bài trả sai id / ngoài mạch", () => {
-  const base = SOLO01_BUOI05.sections;
+  // nền = Buổi 05 BỎ các bài trả thật (để test chèn bài trả giả mà không trùng id)
+  const base = SOLO01_BUOI05.sections.filter(s => s.kind !== "checkpoint");
   assert.ok(solo01Problems([{ kind: "hero", title: "x" } as unknown as LessonSection, ...base], 5).some(p => /loại "hero"/.test(p)));
   assert.ok(solo01Problems(base.filter(s => s.kind !== "objectives"), 5).some(p => /objectives/.test(p)));
   const swapped = [...base.slice(0, -2), base[base.length - 1], base[base.length - 2]];
