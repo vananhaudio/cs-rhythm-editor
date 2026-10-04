@@ -7,9 +7,16 @@
 // Mô hình lưu (giống hệt ở mock và rpc):
 //   Lưu nội dung (lời / nhịp / BPM) = tạo PHIÊN BẢN MỚI ở dạng BẢN NHÁP. Bản đang dùng không đổi cho tới khi
 //   thầy bấm Duyệt. Tên bài / tác giả thuộc về BÀI, sửa là có hiệu lực ngay.
+//   File nguồn (PDF/ảnh sheet) thuộc về PHIÊN BẢN: tải lên thư mục {uid}/{version_id}/ của phiên bản SẮP tạo
+//   (version_id do client sinh trước — `newVersionId()`), rồi lưu = ghi phiên bản kèm danh sách file. Phiên bản
+//   đã ghi thì bộ file nguồn đóng băng; muốn thay nguồn = tạo phiên bản mới (file cũ được CHÉP sang, không dời).
 import { matchesQuery } from './masterLibrary.ts'
 import { canonicalChordText, validateChordDraft } from './chordText.ts'
 import type { ChordDraft, ChordMeter } from './chordText.ts'
+import { SOURCE_BUCKET, createMemorySourceStore, createRefusingSourceStore, createSupabaseSourceStore, parseSourcePath, sourcesFromServer, sourcesPayload } from './chordSources.ts'
+import type { ChordSource, ChordSourceStore } from './chordSources.ts'
+import { parseAnchors } from './chordAnchors.ts'
+import type { AnchorsStatus, ChordAnchors } from './chordAnchors.ts'
 
 /** current = bản đang dùng · draft = bản nháp chưa duyệt · old = đã duyệt nhưng không còn là bản đang dùng · discarded = bản nháp đã bỏ */
 export type ChordVersionStatus = 'current' | 'draft' | 'old' | 'discarded'
@@ -33,19 +40,31 @@ export type ChordSheetDetail = ChordSheetSummary & {
   meter: ChordMeter | null
   suggestedBpm: number | null
   hasSource: boolean
+  /** File nguồn ĐÃ GẮN với phiên bản này (bất biến), theo thứ tự trang. */
+  sources: ChordSource[]
+  /** null = chưa có, hoặc dữ liệu không đọc được theo lời của phiên bản này. */
+  anchors: ChordAnchors | null
+  anchorsStatus: AnchorsStatus
 }
+
+/** Phiên bản sắp ghi: version_id đã dùng để tải file nguồn, và danh sách file (đã nằm trong bucket). */
+export type ChordSaveOptions = { versionId?: string; sources?: ChordSource[] }
 
 /** Phần NỘI DUNG của một phiên bản (không gồm tên bài/tác giả — hai thứ đó thuộc về bài). */
 export type ChordContent = Pick<ChordDraft, 'text' | 'meter' | 'suggestedBpm'>
 
 export interface ChordLibrary {
   readonly mode: 'mock' | 'rpc' | 'disabled'
+  /** Nơi lưu file nguồn (cùng chế độ với thư viện). */
+  readonly sources: ChordSourceStore
+  /** version_id cho phiên bản SẮP tạo — để tải file nguồn trước khi lưu. */
+  newVersionId(): string
   searchChordSheets(query: string): Promise<ChordSheetSummary[]>
   getChordSheet(versionId: string): Promise<ChordSheetDetail>
   /** Bài mới + phiên bản đầu tiên, ở dạng bản nháp. */
-  createChordSheet(draft: ChordDraft): Promise<ChordSheetDetail>
+  createChordSheet(draft: ChordDraft, options?: ChordSaveOptions): Promise<ChordSheetDetail>
   /** Sửa nội dung = phiên bản MỚI ở dạng bản nháp (phiên bản cũ bất biến). `fromVersionId` = bản đang sửa. */
-  createChordSheetVersion(sheetId: string, content: ChordContent, fromVersionId: string): Promise<ChordSheetDetail>
+  createChordSheetVersion(sheetId: string, content: ChordContent, fromVersionId: string, options?: ChordSaveOptions): Promise<ChordSheetDetail>
   updateChordSheetInfo(sheetId: string, info: Pick<ChordDraft, 'title' | 'composer'>): Promise<void>
   /** Duyệt = đặt làm bản đang dùng. */
   approveChordSheetVersion(versionId: string): Promise<ChordSheetDetail>
@@ -57,11 +76,14 @@ export interface ChordLibrary {
 
 const firstError = (draft: ChordDraft) => Object.values(validateChordDraft(draft))[0]
 const sameMeter = (a: ChordMeter | null, b: ChordMeter | null) => (a?.beats ?? null) === (b?.beats ?? null) && (a?.beatType ?? null) === (b?.beatType ?? null)
+/** Như chord_source_key ở máy chủ: bộ file nguồn so theo sha256 đã sắp xếp. */
+const sourceKey = (sources: ChordSource[] | undefined) => (sources ?? []).map(source => source.sha256).sort().join(',')
 
 // ── MOCK ────────────────────────────────────────────────────────────────────────────────────
 type MockVersion = {
   versionId: string; versionNumber: number; text: string; meter: ChordMeter | null; suggestedBpm: number | null
   hasAnchors: boolean; createdAt: string; review: 'private' | 'approved' | 'rejected'
+  sources?: ChordSource[]; anchors?: ChordAnchors | null
 }
 type MockSheet = { sheetId: string; title: string; composer: string | null; currentVersionId: string | null; versions: MockVersion[] }
 
@@ -76,6 +98,7 @@ const SEED: MockSheet[] = IS_PROD_BUILD ? [] : [
     sheetId: 'mock-sheet-01', title: 'Bài thử 01', composer: 'Dữ liệu mẫu', currentVersionId: 'mock-version-01',
     versions: [{
       versionId: 'mock-version-01', versionNumber: 1, meter: { beats: 4, beatType: 4 }, suggestedBpm: 80, hasAnchors: true, createdAt: '2026-10-01T08:00:00.000Z', review: 'approved',
+      anchors: { measures: [{ line: 0, token: 0 }, { line: 0, token: 5 }, { line: 1, token: 0 }, { line: 1, token: 4 }, { line: 2, token: 0 }, { line: 2, token: 3 }, { line: 2, token: 4 }, { line: 2, token: 7 }, { line: 3, token: 0 }, { line: 3, token: 3 }, { line: 3, token: 5 }] },
       text: '1. [C] Một câu hát mẫu cho [Am] buổi chiều\n[F] Dòng tiếp theo đi [G] thật chậm\nĐK: [C] Hát lên cho [Em] vui, [F] hát cho quên [G] ngày dài\n[Am] Rồi ta về [G] lại câu [C] đầu',
     }],
   },
@@ -99,7 +122,10 @@ type MockOptions = {
   storage?: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> | null
   newId?: () => string
   now?: () => string
+  /** Chủ thư mục file nguồn trong chế độ thử. */
+  ownerId?: string
 }
+export const MOCK_OWNER_ID = '00000000-0000-4000-8000-00000000a11a'
 
 export function createMockChordLibrary(options: MockOptions = {}): ChordLibrary {
   const storage = options.storage ?? null
@@ -130,10 +156,23 @@ export function createMockChordLibrary(options: MockOptions = {}): ChordLibrary 
     sheetId: sheet.sheetId, versionId: version.versionId, title: sheet.title, composer: sheet.composer,
     hasAnchors: version.hasAnchors, updatedAt: version.createdAt, status: statusOf(sheet, version), draftVersionId: newerDraft(sheet, version),
   })
-  const detail = (sheet: MockSheet, version: MockVersion): ChordSheetDetail => ({
-    ...summary(sheet, version), versionNumber: version.versionNumber, text: version.text,
-    meter: version.meter, suggestedBpm: version.suggestedBpm, hasSource: false,
-  })
+  const detail = (sheet: MockSheet, version: MockVersion): ChordSheetDetail => {
+    const anchors = parseAnchors(version.anchors ?? null, version.text)
+    return {
+      ...summary(sheet, version), versionNumber: version.versionNumber, text: version.text,
+      meter: version.meter, suggestedBpm: version.suggestedBpm, hasSource: !!version.sources?.length,
+      sources: version.sources ?? [], anchors, anchorsStatus: anchors ? 'ready' : 'none',
+    }
+  }
+  const store = createMemorySourceStore({ ownerId: options.ownerId ?? MOCK_OWNER_ID, isRecorded: id => sheets.some(sheet => sheet.versions.some(version => version.versionId === id)) })
+  /** Như máy chủ: thư mục phiên bản phải chứa ĐÚNG các file khai trong sources. */
+  function checkSources(versionId: string, sources: ChordSource[]) {
+    const inFolder = [...store.files.keys()].filter(path => parseSourcePath(path)?.versionId === versionId).sort()
+    const listed = sources.map(source => source.path).sort()
+    if (sources.some(source => parseSourcePath(source.path)?.versionId !== versionId)) throw new Error('file nguồn không hợp lệ — đường dẫn phải nằm trong thư mục của phiên bản này')
+    if (listed.some(path => !store.files.has(path))) throw new Error('file nguồn chưa được tải lên')
+    if (inFolder.join('|') !== listed.join('|')) throw new Error('thư mục phiên bản có file chưa được khai trong sources — khai đủ hoặc xoá bớt')
+  }
   const missing = () => new Error('Không tìm thấy bài này trong dữ liệu thử.')
   const findSheet = (sheetId: string) => {
     const sheet = sheets.find(entry => entry.sheetId === sheetId)
@@ -150,6 +189,8 @@ export function createMockChordLibrary(options: MockOptions = {}): ChordLibrary 
 
   return {
     mode: 'mock',
+    sources: store,
+    newVersionId: newId,
     async searchChordSheets(query) {
       return sheets.filter(sheet => matchesQuery(sheet, query))
         .flatMap(sheet => { const version = lead(sheet); return version ? [summary(sheet, version)] : [] })
@@ -159,30 +200,37 @@ export function createMockChordLibrary(options: MockOptions = {}): ChordLibrary 
       const { sheet, version } = findVersion(versionId)
       return detail(sheet, version)
     },
-    async createChordSheet(draft) {
+    async createChordSheet(draft, saveOptions = {}) {
       const error = firstError(draft)
       if (error) throw new Error(error)
-      const version: MockVersion = { versionId: newId(), versionNumber: 1, text: canonicalChordText(draft.text), meter: draft.meter, suggestedBpm: draft.suggestedBpm, hasAnchors: false, createdAt: now(), review: 'private' }
+      const versionId = saveOptions.versionId ?? newId()
+      checkSources(versionId, saveOptions.sources ?? [])
+      const version: MockVersion = { versionId, versionNumber: 1, text: canonicalChordText(draft.text), meter: draft.meter, suggestedBpm: draft.suggestedBpm, hasAnchors: false, createdAt: now(), review: 'private', sources: saveOptions.sources ?? [] }
       const sheet: MockSheet = { sheetId: newId(), title: draft.title.trim(), composer: draft.composer.trim() || null, currentVersionId: null, versions: [version] }
       sheets = [sheet, ...sheets]
       persist()
       return detail(sheet, version)
     },
-    async createChordSheetVersion(sheetId, content, fromVersionId) {
+    async createChordSheetVersion(sheetId, content, fromVersionId, saveOptions = {}) {
       const sheet = findSheet(sheetId)
       const error = firstError({ title: sheet.title, composer: sheet.composer ?? '', ...content })
       if (error) throw new Error(error)
       const text = canonicalChordText(content.text)
-      // Như máy chủ: trùng = cùng lời + cùng nhịp + cùng BPM với bản đang dùng hoặc một bản nháp còn hiệu lực.
+      const versionId = saveOptions.versionId ?? newId()
+      checkSources(versionId, saveOptions.sources ?? [])
+      // Như máy chủ: trùng = cùng lời + nhịp + BPM + bộ file nguồn với bản đang dùng hoặc một bản nháp còn hiệu lực.
       const same = sheet.versions.find(entry => entry.review !== 'rejected' && (entry.review === 'private' || entry.versionId === sheet.currentVersionId)
-        && entry.text === text && sameMeter(entry.meter, content.meter) && entry.suggestedBpm === content.suggestedBpm)
+        && entry.text === text && sameMeter(entry.meter, content.meter) && entry.suggestedBpm === content.suggestedBpm
+        && sourceKey(entry.sources) === sourceKey(saveOptions.sources))
       if (same) return detail(sheet, same)
       const from = sheet.versions.find(entry => entry.versionId === fromVersionId)
+      // Vạch nhịp neo theo từng chữ của lời: đổi lời là neo cũ hết hiệu lực. Chỉ đổi nhịp/BPM/nguồn thì giữ.
+      const keepAnchors = !!from?.hasAnchors && from.text === text
       const version: MockVersion = {
-        versionId: newId(), versionNumber: Math.max(...sheet.versions.map(entry => entry.versionNumber)) + 1,
+        versionId, versionNumber: Math.max(...sheet.versions.map(entry => entry.versionNumber)) + 1,
         text, meter: content.meter, suggestedBpm: content.suggestedBpm,
-        // Vạch nhịp neo theo từng chữ của lời: đổi lời là neo cũ hết hiệu lực. Chỉ đổi nhịp/BPM thì giữ.
-        hasAnchors: !!from?.hasAnchors && from.text === text, createdAt: now(), review: 'private',
+        hasAnchors: keepAnchors, anchors: keepAnchors ? from?.anchors ?? null : null, createdAt: now(), review: 'private',
+        sources: saveOptions.sources ?? [],
       }
       sheet.versions.push(version)
       persist()
@@ -236,7 +284,7 @@ function rpcError(message: string): Error {
   return new Error(message || 'Không kết nối được Thư viện hợp âm.')
 }
 
-export function createRpcChordLibrary(rpc: RpcCall): ChordLibrary {
+export function createRpcChordLibrary(rpc: RpcCall, sourceStore: ChordSourceStore = createRefusingSourceStore('Chưa nối kho file nguồn.')): ChordLibrary {
   async function call(fn: string, args: Record<string, unknown>): Promise<unknown> {
     let reply: Awaited<ReturnType<RpcCall>>
     try { reply = await rpc(fn, args) }
@@ -252,23 +300,32 @@ export function createRpcChordLibrary(rpc: RpcCall): ChordLibrary {
   })
   async function get(versionId: string): Promise<ChordSheetDetail> {
     const row = await call('chord_sheet_get', { p_version_id: versionId }) as Row
+    const text = String(row.text)
+    const sources = sourcesFromServer(row.sources)
+    const status = String(row.anchors_status ?? 'none')
     return {
       ...toSummary(row, row.draft_version_id == null ? null : String(row.draft_version_id)),
-      versionNumber: Number(row.version_number), text: String(row.text),
+      versionNumber: Number(row.version_number), text,
       meter: (row.meter as ChordMeter | null) ?? null,
       suggestedBpm: row.suggested_bpm == null ? null : Number(row.suggested_bpm),
-      hasSource: Array.isArray(row.sources) && row.sources.length > 0,
+      hasSource: sources.length > 0, sources,
+      anchors: parseAnchors(row.anchors ?? null, text),
+      anchorsStatus: (['none', 'processing', 'needs_review', 'ready', 'failed'].includes(status) ? status : 'none') as AnchorsStatus,
     }
   }
   // Lưu = ĐÓNG GÓP (bản nháp, chưa duyệt). KHÔNG tự duyệt ngầm: duyệt là hành động riêng của thầy.
   // Máy chủ báo `duplicate` = nội dung y hệt một bản đã có → trả chính bản đó, không có phiên bản rác.
-  async function contribute(args: Record<string, unknown>): Promise<ChordSheetDetail> {
+  async function contribute(args: Record<string, unknown>, saveOptions: ChordSaveOptions = {}): Promise<ChordSheetDetail> {
+    if (saveOptions.versionId) args.p_version_id = saveOptions.versionId
+    if (saveOptions.sources?.length) args.p_sources = sourcesPayload(saveOptions.sources)
     const result = await call('chord_sheet_contribute', args) as Row
     return get(String(result.version_id))
   }
 
   return {
     mode: 'rpc',
+    sources: sourceStore,
+    newVersionId: () => crypto.randomUUID(),
     async searchChordSheets(query) {
       const rows = (await call('chord_sheet_search', { p_query: query, p_limit: 50 }) as Row[])
         .filter(row => row.review_status !== 'rejected')
@@ -285,19 +342,19 @@ export function createRpcChordLibrary(rpc: RpcCall): ChordLibrary {
       })
     },
     getChordSheet: get,
-    async createChordSheet(draft) {
+    async createChordSheet(draft, saveOptions) {
       const error = firstError(draft)
       if (error) throw new Error(error)
       return contribute({
         p_text: draft.text, p_title: draft.title.trim(), p_composer: draft.composer.trim() || null,
         p_meter: draft.meter, p_suggested_bpm: draft.suggestedBpm,
-      })
+      }, saveOptions)
     },
-    async createChordSheetVersion(sheetId, content, fromVersionId) {
+    async createChordSheetVersion(sheetId, content, fromVersionId, saveOptions) {
       return contribute({
         p_text: content.text, p_sheet_id: sheetId, p_parent_version_id: fromVersionId,
         p_meter: content.meter, p_suggested_bpm: content.suggestedBpm,
-      })
+      }, saveOptions)
     },
     async updateChordSheetInfo(sheetId, info) {
       await call('chord_sheet_update_info', { p_sheet_id: sheetId, p_title: info.title.trim(), p_composer: info.composer.trim() || null })
@@ -319,6 +376,8 @@ export function createDisabledChordLibrary(): ChordLibrary {
   const refuse = async (): Promise<never> => { throw new Error(DISABLED_MESSAGE) }
   return {
     mode: 'disabled',
+    sources: createRefusingSourceStore(DISABLED_MESSAGE),
+    newVersionId: () => crypto.randomUUID(),
     searchChordSheets: refuse, getChordSheet: refuse, createChordSheet: refuse, createChordSheetVersion: refuse,
     updateChordSheetInfo: refuse, approveChordSheetVersion: refuse, discardChordSheetVersion: refuse,
   }
@@ -340,10 +399,11 @@ export function getChordLibrary(): ChordLibrary {
   if (instance) return instance
   const mode = chooseChordBackend({ prod: import.meta.env?.PROD ?? true, setting: import.meta.env?.VITE_CHORD_LIBRARY_BACKEND })
   if (mode === 'rpc') {
-    instance = createRpcChordLibrary(async (fn, args) => {
-      const { supabase } = await import('../supabase.ts')
-      return supabase.rpc(fn, args)
-    })
+    const client = async () => (await import('../supabase.ts')).supabase
+    instance = createRpcChordLibrary(async (fn, args) => (await client()).rpc(fn, args), createSupabaseSourceStore({
+      bucket: async () => (await client()).storage.from(SOURCE_BUCKET),
+      userId: async () => (await (await client()).auth.getUser()).data.user?.id ?? null,
+    }))
   } else if (mode === 'mock') {
     let storage: Storage | null = null
     try { storage = globalThis.localStorage ?? null } catch { /* bị chặn (chế độ riêng tư) → chỉ giữ trong phiên */ }

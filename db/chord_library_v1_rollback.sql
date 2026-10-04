@@ -37,6 +37,7 @@ drop table if exists public.chord_sheet_versions;
 drop table if exists public.chord_sheets;
 drop function if exists public.chord_sheet_versions_guard();
 drop function if exists public.chord_meter_ok(jsonb);
+drop function if exists public.chord_source_key(jsonb);
 drop function if exists public.chord_canonical_text(text);
 drop function if exists public.chord_fold_vi(text);
 delete from public.tool_capabilities where tool_id = 'chordlib';

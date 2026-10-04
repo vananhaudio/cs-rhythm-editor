@@ -73,6 +73,27 @@
 .tv-chords .cl-warn { margin: 10px 0 0; padding: 8px 12px; border-radius: 8px; background: #fff6dc; color: #5c4a14; font-size: 14px; }
 .tv-chords .cl-placeholder { margin: 10px 0 0; color: #7a857c; font-size: 14px; }
 
+.tv-chords .cl-help strong { font-weight: 700; }
+/* ── Nguồn sheet ── */
+.tv-chords .cl-sources { display: grid; gap: 8px; margin: 0 0 12px; padding: 0; list-style: none; }
+.tv-chords .cl-src { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; padding: 10px 12px; border: 1px solid #d8dfd6; border-radius: 9px; }
+.tv-chords .cl-src[data-kind=pending] { border-style: dashed; border-color: #e3c98b; background: #fffaf0; }
+.tv-chords .cl-src-main { display: grid; gap: 2px; min-width: 0; font-size: 14px; }
+.tv-chords .cl-src-main span { color: #526456; overflow-wrap: anywhere; }
+.tv-chords .cl-src-tag { color: #256b43; font-size: 12px; font-style: normal; font-weight: 700; }
+.tv-chords .cl-src[data-kind=pending] .cl-src-tag { color: #6b5310; }
+.tv-chords .cl-src-actions { display: flex; gap: 8px; }
+.tv-chords .cl-upload { position: relative; display: inline-flex; align-items: center; margin-top: 4px; cursor: pointer; }
+.tv-chords .cl-upload[data-disabled=true] { opacity: .5; cursor: default; }
+.tv-chords .cl-upload input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: inherit; }
+/* ── Vạch nhịp ── */
+.tv-chords .cl-anchor-src { margin: 10px 0 8px; }
+.tv-chords .cl-analyze { margin-bottom: 8px; }
+.tv-chords .cl-anchor-view { margin-top: 8px; padding: 10px 12px; border-radius: 9px; background: #f7f8f6; }
+.tv-chords .cl-anchor-line { margin: 0 0 4px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
+.tv-chords .cl-anchor-label { margin-right: 8px; color: #7a857c; }
+.tv-chords .cl-anchor-view .cl-placeholder { margin: 0; }
+
 /* ── Xem thử: hợp âm nằm trên chữ ── */
 .tv-chords .cl-chordset { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 14px; color: #526456; font-size: 13px; }
 .tv-chords .cl-chordset span { padding: 2px 8px; border-radius: 999px; background: #eef1eb; color: #26352d; font-weight: 700; }

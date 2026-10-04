@@ -290,9 +290,9 @@ MS_SAME=$(python3 -c "import time; print(int((time.time() - $T0) * 1000))"); wai
 
 echo "── End-to-end: adapter RPC thật (src/thuvien/chordLibrary.ts) ↔ SQL thật"
 CHORD_PSQL="$PGBIN/psql" CHORD_PGHOST="$TMP" CHORD_PGPORT="$PORT" CHORD_PGDATABASE=tva_chord \
-  node --experimental-strip-types --no-warnings --test "$ROOT/tests/thuvien-db/e2e.test.ts" > "$TMP/e2e.log" 2>&1 || { cat "$TMP/e2e.log"; fail "end-to-end adapter ↔ DB"; }
-[ "$(sed -n 's/^# pass //p' "$TMP/e2e.log")" = "2" ] && [ "$(sed -n 's/^# skipped //p' "$TMP/e2e.log")" = "0" ] \
-  && ok "E2E bàn biên tập qua adapter thật: tạo → sửa tên → sửa lời → chỉ đổi BPM/nhịp → bỏ nháp → duyệt → tìm lại; quyền học viên" \
+  node --experimental-strip-types --no-warnings --test "$SRC/tests/thuvien-db/e2e.test.ts" "$SRC/tests/thuvien-db/sources-e2e.test.ts" > "$TMP/e2e.log" 2>&1 || { cat "$TMP/e2e.log"; fail "end-to-end adapter ↔ DB"; }
+[ "$(sed -n 's/^# pass //p' "$TMP/e2e.log")" = "4" ] && [ "$(sed -n 's/^# skipped //p' "$TMP/e2e.log")" = "0" ] \
+  && ok "E2E qua adapter thật: bàn biên tập (tạo → sửa → chỉ đổi BPM/nhịp → bỏ nháp → duyệt → tìm lại; quyền học viên) + FILE NGUỒN (mô hình Storage API: nạp → lưu kèm nguồn → thư mục đã ghi đóng băng → thay nguồn = phiên bản mới; link ký có hạn; học viên bị chặn)" \
   || { cat "$TMP/e2e.log"; fail "end-to-end không chạy đủ"; }
 
 echo "── Rollback"
@@ -310,6 +310,21 @@ mig tva_rb "$ROLLBACK" >/dev/null || fail "rollback lần 2"; ok "rollback lần
   && ok "rollback gỡ trigger N1 trên storage.objects (trigger Storage khác giữ nguyên — xem dấu vân tay)" || fail "rollback còn trigger chord trên storage.objects"
 [ "$(mxl tva_rb)" = "$MXL1" ] && [ "$(others tva_rb)" = "$OTH1" ] && ok "sau rollback: MusicXML Library + mọi object sẵn có nguyên vẹn" || fail "rollback đụng object khác"
 mig tva_rb "$SETUP" >/dev/null && [ "$(q tva_rb "select count(*) from pg_class where relname in ('chord_sheets', 'chord_sheet_versions')")" = "2" ] && ok "cài lại sau rollback" || fail "cài lại"
+
+echo "── V1.1 delta (production đã có V1): cài V1 cũ + delta == cài bản mới; chạy lại; rollback về NGUYÊN VĂN V1"
+DELTA="$SRC/db/chord_library_v1_1_sources_setup.sql"; DELTA_RB="$SRC/db/chord_library_v1_1_sources_rollback.sql"
+if [ -f "$DELTA" ] && git -C "$ROOT" cat-file -e 59de4cd:db/chord_library_v1_setup.sql 2>/dev/null; then
+  git -C "$ROOT" show 59de4cd:db/chord_library_v1_setup.sql > "$TMP/v1_setup.sql"
+  fnsig() { q "$1" "select md5(string_agg(p.oid::regprocedure::text || md5(p.prosrc) || coalesce(p.proacl::text, '') || coalesce(obj_description(p.oid, 'pg_proc'), ''), '|' order by p.oid::regprocedure::text)) from pg_proc p where p.pronamespace = 'public'::regnamespace and (p.proname like 'chord%' or p.proname = 'my_chordlib_caps')"; }
+  baseline tva_v11a; mig tva_v11a "$SETUP" >/dev/null; NEW=$(fnsig tva_v11a)
+  baseline tva_v11b; mig tva_v11b "$TMP/v1_setup.sql" >/dev/null; OLD=$(fnsig tva_v11b); MX0=$(mxl tva_v11b); OT0=$(others tva_v11b)
+  mig tva_v11b "$DELTA" >/dev/null || fail "delta V1.1 lần 1"
+  [ "$(fnsig tva_v11b)" = "$NEW" ] && ok "V1 cũ + delta V1.1 = cài bản mới (thân hàm, quyền, nhãn: md5 khớp)" || fail "delta V1.1 lệch bản cài mới"
+  mig tva_v11b "$DELTA" >/dev/null && [ "$(fnsig tva_v11b)" = "$NEW" ] && ok "delta V1.1 chạy lại: không đổi gì (idempotent)" || fail "delta V1.1 chạy lại"
+  [ "$(mxl tva_v11b)" = "$MX0" ] && [ "$(others tva_v11b)" = "$OT0" ] && ok "delta V1.1 không đụng MusicXML Library, không đổi object ngoài chord_*" || fail "delta đụng object ngoài phạm vi"
+  mig tva_v11b "$DELTA_RB" >/dev/null && [ "$(fnsig tva_v11b)" = "$OLD" ] && ok "rollback V1.1 → hàm về NGUYÊN VĂN V1 (md5 khớp)" || fail "rollback V1.1 lệch V1"
+  baseline tva_v11c; if mig tva_v11c "$DELTA" >/dev/null 2>&1; then fail "delta lẽ ra phải dừng khi chưa có V1"; fi; ok "delta V1.1 DỪNG khi DB chưa có Thư viện hợp âm V1"
+fi
 
 echo "── Cổng drift"
 baseline tva_drift1

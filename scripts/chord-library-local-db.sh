@@ -28,5 +28,5 @@ else
   "$PGBIN/pg_ctl" -D "$DIR/data" -o "-p $PORT -k $DIR -c listen_addresses=''" -l "$DIR/pg.log" -w start >/dev/null
   echo "Dùng lại DB tạm $DB ($(psqld -d "$DB" -tA -c 'select count(*) from chord_sheets') bài)."
 fi
-CHORD_PSQL="$PGBIN/psql" CHORD_PGHOST="$DIR" CHORD_PGPORT="$PORT" CHORD_PGDATABASE="$DB" \
+CHORD_PSQL="$PGBIN/psql" CHORD_PGHOST="$DIR" CHORD_PGPORT="$PORT" CHORD_PGDATABASE="$DB" CHORD_FILES_DIR="$DIR/files" \
   node --experimental-strip-types --no-warnings "$ROOT/tests/thuvien-db/local-bridge.ts"

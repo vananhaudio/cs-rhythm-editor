@@ -3,10 +3,12 @@ import { createRoot } from 'react-dom/client'
 import '../../../src/index.css'
 import ThuVienPage from '../../../src/thuvien/ThuVienPage.tsx'
 import { createRpcChordLibrary } from '../../../src/thuvien/chordLibrary.ts'
+import { createBridgeSourceStore } from './bridgeStore.ts'
 
 // Trang thử — CHỈ chạy với dev server, bỏ qua cổng admin của AppRouter.
 //   (mặc định)       → dữ liệu thử trong trình duyệt (mock), có băng cảnh báo.
-//   ?db=local        → RPC THẬT trên Postgres TẠM qua scripts/chord-library-local-db.sh (cầu 127.0.0.1:54399).
+//   ?db=local        → RPC THẬT trên Postgres TẠM qua scripts/chord-library-local-db.sh (cầu 127.0.0.1:54399);
+//                      file nguồn đi qua mô phỏng Storage API (policy + trigger N1 thật), byte lưu ở /tmp/chord-library-localdb/files.
 //   ?db=local&as=student → cùng DB, đóng vai học viên (để thấy quyền bị chặn).
 const params = new URLSearchParams(location.search)
 const as = params.get('as') ?? 'admin'
@@ -15,7 +17,7 @@ const local = params.get('db') === 'local'
       const reply = await fetch(`http://127.0.0.1:54399/rpc/${fn}`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-chord-as': as }, body: JSON.stringify(args) })
       if (!reply.ok) return { data: null, error: { message: `Cầu DB tạm trả ${reply.status}` } }
       return reply.json()
-    })
+    }, createBridgeSourceStore('http://127.0.0.1:54399', as))
   : undefined
 
 createRoot(document.getElementById('root')!).render(<StrictMode>
