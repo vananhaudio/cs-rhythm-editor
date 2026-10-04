@@ -4,7 +4,8 @@
 #   bash scripts/test-chord-library-db.sh
 # Phủ: migration ×2 (idempotent, một transaction) · kho MusicXML không đổi một byte (bảng thế thân)
 # · chord_fold_vi đối chiếu foldVi THẬT của repo · chạy lại rls_setup.sql (self_managed) · quyền bảng/EXECUTE
-# · test SQL theo identity (A–G) · ca ĐỒNG THỜI (2 phiên psql + pgbench) · rollback chặn khi có dữ liệu
+# · test SQL theo identity (A–G) · ca ĐỒNG THỜI (2 phiên psql + pgbench) · END-TO-END adapter RPC thật ↔ SQL
+# · rollback chặn khi có dữ liệu
 # · rollback ×2 + cài lại · cổng drift.
 # SRC = nơi chứa file chord_library (mặc định = repo); ROOT = repo (file sẵn có). Tách ra để chạy được
 # bộ file từ thư mục khác trước khi chép vào repo.
@@ -100,8 +101,8 @@ echo "── Quyền bảng + EXECUTE"
 [ "$(q tva_chord "select count(*) from pg_proc p where (p.proname like 'chord%' or p.proname = 'my_chordlib_caps') and has_function_privilege('anon', p.oid, 'execute')")" = "0" ] \
   && ok "anon: 0 hàm chord_* gọi được" || fail "anon gọi được hàm"
 [ "$(q tva_chord "select string_agg(p.proname, ',' order by p.proname) from pg_proc p where (p.proname like 'chord%' or p.proname = 'my_chordlib_caps') and has_function_privilege('authenticated', p.oid, 'execute')")" \
-  = "chord_fold_vi,chord_sheet_approve,chord_sheet_contribute,chord_sheet_get,chord_sheet_reject,chord_sheet_search,chord_source_can_write,chordlib_can,my_chordlib_caps" ] \
-  && ok "authenticated: đúng 9 hàm (5 RPC + caps + 3 hàm phụ)" || fail "danh sách EXECUTE của authenticated lệch"
+  = "chord_fold_vi,chord_sheet_approve,chord_sheet_contribute,chord_sheet_get,chord_sheet_reject,chord_sheet_search,chord_sheet_update_info,chord_source_can_write,chordlib_can,my_chordlib_caps" ] \
+  && ok "authenticated: đúng 10 hàm (6 RPC + caps + 3 hàm phụ)" || fail "danh sách EXECUTE của authenticated lệch"
 [ "$(q tva_chord "select count(*) from pg_proc p join pg_namespace s on s.oid = p.pronamespace where s.nspname = 'public' and (p.proname like 'chord%' or p.proname = 'my_chordlib_caps') and coalesce(obj_description(p.oid, 'pg_proc'), '') not like 'chord_library_v1:%'")" = "0" ] \
   && ok "mọi hàm đều mang nhãn chord_library_v1 (cổng drift nhận ra)" || fail "hàm thiếu nhãn"
 
@@ -202,6 +203,13 @@ NTX=$(sed -n 's/^number of transactions actually processed: \([0-9]*\).*/\1/p' "
 [ "$(q tva_chord "select count(*) from chord_sheets s where s.id = '$H_SHEET' and s.canonical_version_id in ('$H_VER', '$H_VER2')")/$(q tva_chord "select count(*) = count(distinct version_number) from chord_sheet_versions where sheet_id = '$H_SHEET'")" = "1/t" ] \
   && ok "H1: sau tải — con trỏ canonical hợp lệ, version_number không trùng" || fail "H1: trạng thái sai sau tải"
 # <<< CONCURRENCY
+
+echo "── End-to-end: adapter RPC thật (src/thuvien/chordLibrary.ts) ↔ SQL thật"
+CHORD_PSQL="$PGBIN/psql" CHORD_PGHOST="$TMP" CHORD_PGPORT="$PORT" CHORD_PGDATABASE=tva_chord \
+  node --experimental-strip-types --no-warnings --test "$ROOT/tests/thuvien-db/e2e.test.ts" > "$TMP/e2e.log" 2>&1 || { cat "$TMP/e2e.log"; fail "end-to-end adapter ↔ DB"; }
+[ "$(sed -n 's/^# pass //p' "$TMP/e2e.log")" = "2" ] && [ "$(sed -n 's/^# skipped //p' "$TMP/e2e.log")" = "0" ] \
+  && ok "E2E bàn biên tập qua adapter thật: tạo → sửa tên → sửa lời → chỉ đổi BPM/nhịp → bỏ nháp → duyệt → tìm lại; quyền học viên" \
+  || { cat "$TMP/e2e.log"; fail "end-to-end không chạy đủ"; }
 
 echo "── Rollback"
 if mig tva_chord "$ROLLBACK" >/dev/null 2>&1; then fail "rollback lẽ ra phải DỪNG khi có đóng góp"; fi

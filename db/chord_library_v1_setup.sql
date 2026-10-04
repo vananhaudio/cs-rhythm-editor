@@ -455,10 +455,13 @@ begin
     if p_parent_version_id is not null then
       raise exception 'CHORDLIB_INVALID: bài mới không có phiên bản cha' using errcode = '22023';
     end if;
-    -- Gửi lại y hệt (cùng người, cùng tên bài, cùng nội dung, chưa bị từ chối) → trả bản đã có.
+    -- Gửi lại y hệt (cùng người, cùng tên bài, cùng NỘI DUNG, chưa bị từ chối) → trả bản đã có.
+    -- Nội dung = lời + nhịp + BPM. text_hash vẫn CHỈ băm lời (neo ô nhịp bám theo lời) — nên trùng
+    -- text_hash chưa đủ để gọi là trùng: đổi riêng nhịp hoặc BPM là một phiên bản mới hợp lệ.
     select v.id, v.sheet_id into v_dup, v_dup_sheet
       from public.chord_sheet_versions v join public.chord_sheets s on s.id = v.sheet_id
      where v.contributed_by = v_uid and v.text_hash = v_hash and v.review_status <> 'rejected'
+       and v.meter is not distinct from p_meter and v.suggested_bpm is not distinct from p_suggested_bpm
        and s.title_key = public.chord_fold_vi(v_title)
      order by v.created_at limit 1;
     if v_dup is not null then
@@ -472,9 +475,11 @@ begin
          or exists (select 1 from public.chord_sheet_versions v where v.sheet_id = p_sheet_id and v.contributed_by = v_uid)) then
       raise exception 'CHORDLIB_NOT_FOUND' using errcode = 'P0002';
     end if;
-    -- Trùng nội dung với bản chuẩn hiện hành, hoặc với bản mình đã gửi (chưa bị từ chối) → trả bản đó.
+    -- Trùng NỘI DUNG (lời + nhịp + BPM) với bản chuẩn hiện hành, hoặc với bản mình đã gửi (chưa bị từ
+    -- chối) → trả bản đó.
     select v.id into v_dup from public.chord_sheet_versions v
      where v.sheet_id = p_sheet_id and v.text_hash = v_hash
+       and v.meter is not distinct from p_meter and v.suggested_bpm is not distinct from p_suggested_bpm
        and (v.id = v_sheet.canonical_version_id or (v.contributed_by = v_uid and v.review_status <> 'rejected'))
      order by (v.id = v_sheet.canonical_version_id) desc nulls last, v.created_at limit 1;
     if v_dup is not null then
@@ -541,6 +546,12 @@ begin
     'anchors', v.anchors, 'anchors_status', v.anchors_status, 'generator', v.generator,
     'review_status', v.review_status, 'reviewed_at', v.reviewed_at,
     'mine', coalesce(v.contributed_by = v_uid, false), 'created_at', v.created_at)
+  -- Bàn biên tập: đang xem một bản mà bài còn bản chờ duyệt MỚI HƠN → trỏ tới bản đó. Chỉ cho người review.
+  || case when v_review then jsonb_build_object('draft_version_id', (
+       select x.id from public.chord_sheet_versions x
+        where x.sheet_id = v.sheet_id and x.review_status = 'private' and x.version_number > v.version_number
+        order by x.version_number desc limit 1))
+     else '{}'::jsonb end
   || case when v_inner then jsonb_build_object(
        'sources', v.sources, 'anchor_review', v.anchor_review, 'rejection_reason', v.rejection_reason,
        'contributed_by', v.contributed_by, 'reviewed_by', v.reviewed_by)
@@ -648,6 +659,36 @@ begin
 end $$;
 comment on function public.chord_sheet_reject(uuid, text) is 'chord_library_v1: từ chối một đóng góp (chỉ người review)';
 
+-- 6f) SỬA TÊN BÀI / TÁC GIẢ của một bài đã có. Chỉ người có quyền review (bàn biên tập của thầy).
+-- Tên bài/tác giả là danh tính của BÀI, không thuộc phiên bản: sửa ở đây KHÔNG tạo phiên bản, không đụng
+-- nội dung phiên bản nào, không dời con trỏ canonical, không đổi created_by. title_key/composer_key là
+-- cột sinh nên tự cập nhật theo. Có hiệu lực ngay (không qua duyệt) — vì người sửa chính là người duyệt.
+create or replace function public.chord_sheet_update_info(p_sheet_id uuid, p_title text, p_composer text default null)
+returns jsonb language plpgsql security definer set search_path = '' as $$
+declare
+  v_uid uuid := auth.uid();
+  v_title text := btrim(coalesce(p_title, ''));
+  v_composer text := nullif(btrim(coalesce(p_composer, '')), '');
+  v_sheet public.chord_sheets%rowtype;
+begin
+  if v_uid is null or not public.chordlib_can('review') then
+    raise exception 'CHORDLIB_FORBIDDEN' using errcode = '42501';
+  end if;
+  if length(v_title) not between 1 and 200 then
+    raise exception 'CHORDLIB_INVALID: thiếu tên bài (1–200 ký tự)' using errcode = '22023';
+  end if;
+  if v_composer is not null and length(v_composer) > 200 then
+    raise exception 'CHORDLIB_INVALID: tên tác giả quá dài' using errcode = '22023';
+  end if;
+  select * into v_sheet from public.chord_sheets s where s.id = p_sheet_id for update;
+  if v_sheet.id is null then raise exception 'CHORDLIB_NOT_FOUND' using errcode = 'P0002'; end if;
+  if v_sheet.title is distinct from v_title or v_sheet.composer is distinct from v_composer then
+    update public.chord_sheets set title = v_title, composer = v_composer, updated_at = now() where id = p_sheet_id;
+  end if;
+  return jsonb_build_object('ok', true, 'sheet_id', p_sheet_id, 'title', v_title, 'composer', v_composer);
+end $$;
+comment on function public.chord_sheet_update_info(uuid, text, text) is 'chord_library_v1: sửa tên bài / tác giả (chỉ người review)';
+
 -- ── 7) Bucket riêng tư cho file nguồn (PDF/ảnh sheet) ───────────────────────────────────────
 -- Đường dẫn: {uid}/{version_id}/{0-9}.{ext}. Không URL công khai — xem bằng signed URL (cần quyền SELECT
 -- dưới đây). Không HEIC ở V1.
@@ -725,14 +766,14 @@ revoke all on function
   public.chord_sheet_search(text, integer),
   public.chord_sheet_contribute(text, text, text, jsonb, integer, jsonb, uuid, uuid, uuid),
   public.chord_sheet_get(uuid), public.chord_sheet_approve(uuid, uuid), public.chord_sheet_reject(uuid, text),
-  public.chord_source_can_write(text, text)
+  public.chord_sheet_update_info(uuid, text, text), public.chord_source_can_write(text, text)
 from public, anon, authenticated;
 grant execute on function
   public.chord_fold_vi(text), public.chordlib_can(text), public.my_chordlib_caps(),
   public.chord_sheet_search(text, integer),
   public.chord_sheet_contribute(text, text, text, jsonb, integer, jsonb, uuid, uuid, uuid),
   public.chord_sheet_get(uuid), public.chord_sheet_approve(uuid, uuid), public.chord_sheet_reject(uuid, text),
-  public.chord_source_can_write(text, text)
+  public.chord_sheet_update_info(uuid, text, text), public.chord_source_can_write(text, text)
 to authenticated;
 
 notify pgrst, 'reload schema';

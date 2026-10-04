@@ -94,7 +94,7 @@ select t.ok((select v ->> 'text' = t.canon(t.loi())
                and v ->> 'text_hash' = encode(sha256(convert_to(v ->> 'text', 'UTF8')), 'hex')
                and v ->> 'text' !~ E'\r' from t.kv where k = 'a1get'),
   'text lưu dạng chuẩn; text_hash = sha256(utf8(text)) — consumer tự băm lại là khớp');
-select t.ok(public.chord_sheet_contribute(p_text => t.loi(), p_title => 'CON ĐƯỜNG XƯA EM ĐI')
+select t.ok(public.chord_sheet_contribute(p_text => t.loi(), p_title => 'CON ĐƯỜNG XƯA EM ĐI', p_meter => '{"beats": 4, "beatType": 4}', p_suggested_bpm => 66)
   = jsonb_build_object('ok', true, 'duplicate', true, 'sheet_id', t.id('a1', 'sheet_id'), 'version_id', t.id('a1')),
   'A gửi lại y hệt (tên viết HOA) → duplicate, trả bản đã có, không tạo bài mới');
 select t.ok(jsonb_array_length(public.chord_sheet_search('con duong xua')) = 1
@@ -155,8 +155,8 @@ select t.ok((select v ->> 'version_number' = '2' and v ->> 'review_status' = 'pr
 select t.ok(public.chord_sheet_get(t.id('a2')) ->> 'parent_version_id' = t.id('a1')::text, 'v2 có parent_version_id = v1');
 select t.ok(public.chord_sheet_get(t.id('a1')) ->> 'is_canonical' = 'true'
   and public.chord_sheet_get(t.id('a2')) ->> 'canonical_version_id' = t.id('a1')::text, 'có v2 rồi nhưng bản chuẩn VẪN là v1');
-select t.ok(public.chord_sheet_contribute(p_text => t.loi(), p_sheet_id => t.id('a1', 'sheet_id')) ->> 'version_id' = t.id('a1')::text,
-  'gửi nội dung trùng bản chuẩn → duplicate, trả bản chuẩn');
+select t.ok(public.chord_sheet_contribute(p_text => t.loi(), p_sheet_id => t.id('a1', 'sheet_id'), p_meter => '{"beats": 4, "beatType": 4}', p_suggested_bpm => 66) ->> 'version_id' = t.id('a1')::text,
+  'gửi nội dung trùng bản chuẩn (lời + nhịp + BPM) → duplicate, trả bản chuẩn');
 select t.ok(jsonb_array_length(public.chord_sheet_search('con duong')) = 2, 'A thấy 2 dòng: bản chuẩn + v2 private của mình');
 
 select t.as_user('B');
@@ -270,6 +270,71 @@ select t.fails(format($q$update public.chord_sheet_versions set review_status = 
 select t.as_user('T');
 select t.ok(public.chord_sheet_reject(t.id('a5'), 'chưa đạt') ->> 'review_status' = 'rejected', 'bản private vẫn reject bình thường');
 select t.ok(public.chord_sheet_approve(t.id('n1')) ->> 'canonical_version_id' = t.id('n1')::text, 'approve tại chỗ một bản đã duyệt (chọn lại bản chuẩn) vẫn chạy');
+
+-- ── Bàn biên tập (lát 3): sửa tên bài/tác giả · trùng = lời + nhịp + BPM · bản nháp mới hơn ──
+select t.as_user('A');
+select t.fails(format('select public.chord_sheet_update_info(%L, %L, %L)', t.id('a1', 'sheet_id'), 'Tên do học viên đổi', null),
+  'học viên KHÔNG sửa được tên bài/tác giả (kể cả bài mình đóng góp)', 'CHORDLIB_FORBIDDEN');
+select t.as_anon();
+select t.fails(format('select public.chord_sheet_update_info(%L, %L)', t.id('a1', 'sheet_id'), 'x'), 'khách KHÔNG gọi được update_info', 'permission denied');
+select t.as_user('T');
+select t.put('before_info', (select jsonb_build_object('canon', public.chord_sheet_get(t.id('n1')) ->> 'canonical_version_id',
+  'hash', public.chord_sheet_get(t.id('n1')) ->> 'text_hash', 'text', public.chord_sheet_get(t.id('n1')) ->> 'text')));
+select t.ok(public.chord_sheet_update_info(t.id('a1', 'sheet_id'), E'  Con Đường Xưa Em Đi  ', '  Châu Kỳ – Hồ Đình Phương ')
+  = jsonb_build_object('ok', true, 'sheet_id', t.id('a1', 'sheet_id'), 'title', 'Con Đường Xưa Em Đi', 'composer', 'Châu Kỳ – Hồ Đình Phương'),
+  'thầy sửa tên bài + tác giả → trả giá trị đã cắt khoảng trắng');
+select t.ok(public.chord_sheet_get(t.id('n1')) ->> 'title' = 'Con Đường Xưa Em Đi'
+  and public.chord_sheet_get(t.id('a1')) ->> 'composer' = 'Châu Kỳ – Hồ Đình Phương'
+  and public.chord_sheet_get(t.id('n1')) ->> 'canonical_version_id' = (select v ->> 'canon' from t.kv where k = 'before_info')
+  and public.chord_sheet_get(t.id('n1')) ->> 'text_hash' = (select v ->> 'hash' from t.kv where k = 'before_info')
+  and public.chord_sheet_get(t.id('n1')) ->> 'text' = (select v ->> 'text' from t.kv where k = 'before_info'),
+  'đổi tên: MỌI phiên bản của bài thấy tên mới; con trỏ canonical, lời, hash KHÔNG đổi');
+select t.ok(jsonb_array_length(public.chord_sheet_search('HO DINH phuong')) >= 1
+  and jsonb_array_length(public.chord_sheet_search('CON DUONG XUA')) >= 1, 'tìm không dấu theo tên/tác giả MỚI → thấy (khoá tự cập nhật)');
+select t.reset();
+select t.ok((select title_key = 'con duong xua em di' and composer_key = 'chau ky – ho dinh phuong' and created_by = t.u('A')
+               and (select count(*) from public.chord_sheet_versions v where v.sheet_id = s.id) = 5
+               from public.chord_sheets s where s.id = t.id('a1', 'sheet_id')),
+  'title_key/composer_key chuẩn hoá lại sau khi đổi tên; created_by và số phiên bản không đổi');
+select t.as_user('T');
+select t.ok(public.chord_sheet_update_info(t.id('a1', 'sheet_id'), 'Con Đường Xưa Em Đi', '   ') ->> 'composer' is null, 'tác giả toàn khoảng trắng → null');
+select t.fails(format('select public.chord_sheet_update_info(%L, %L)', t.id('a1', 'sheet_id'), '   '), 'tên bài rỗng → chặn', 'CHORDLIB_INVALID');
+select t.fails(format('select public.chord_sheet_update_info(%L, %L)', t.id('a1', 'sheet_id'), repeat('x', 201)), 'tên bài > 200 ký tự → chặn', 'CHORDLIB_INVALID');
+select t.fails(format('select public.chord_sheet_update_info(%L, %L)', gen_random_uuid(), 'x'), 'bài không tồn tại → NOT_FOUND', 'CHORDLIB_NOT_FOUND');
+select t.ok(public.chord_sheet_update_info(t.id('a1', 'sheet_id'), 'Con đường xưa em đi', 'Châu Kỳ') ->> 'ok' = 'true', 'trả tên bài về như cũ');
+select t.as_user('X');
+select t.ok(public.chord_sheet_update_info(t.id('x1', 'sheet_id'), 'Nắng Thuỷ Tinh', 'Trịnh Công Sơn') ->> 'ok' = 'true', 'admin sửa tên bài/tác giả PASS');
+
+-- Trùng = lời + nhịp + BPM. text_hash vẫn chỉ băm LỜI.
+select t.put('d1', public.chord_sheet_contribute(p_text => 'bài đo trùng [C]', p_title => 'Đo Trùng', p_meter => '{"beats": 4, "beatType": 4}', p_suggested_bpm => 80));
+select t.ok(public.chord_sheet_contribute(p_text => 'bài đo trùng [C]', p_title => 'Đo Trùng', p_meter => '{"beats": 4, "beatType": 4}', p_suggested_bpm => 80)
+  ->> 'duplicate' = 'true', 'bài mới: cùng lời + cùng nhịp + cùng BPM → duplicate');
+select t.ok(public.chord_sheet_contribute(p_text => 'bài đo trùng [C]', p_sheet_id => t.id('d1', 'sheet_id'), p_meter => '{"beatType": 4, "beats": 4}', p_suggested_bpm => 80)
+  ->> 'version_id' = t.id('d1')::text, 'bài đã có: cùng lời + cùng nhịp (khoá JSON khác thứ tự) + cùng BPM → duplicate, trả bản cũ');
+select t.put('d2', public.chord_sheet_contribute(p_text => 'bài đo trùng [C]', p_sheet_id => t.id('d1', 'sheet_id'), p_meter => '{"beats": 3, "beatType": 4}', p_suggested_bpm => 80));
+select t.ok((select v ->> 'duplicate' = 'false' and v ->> 'version_number' = '2' from t.kv where k = 'd2'), 'cùng lời, KHÁC nhịp → phiên bản mới (v2)');
+select t.put('d3', public.chord_sheet_contribute(p_text => 'bài đo trùng [C]', p_sheet_id => t.id('d1', 'sheet_id'), p_meter => '{"beats": 3, "beatType": 4}', p_suggested_bpm => 96));
+select t.ok((select v ->> 'duplicate' = 'false' and v ->> 'version_number' = '3' from t.kv where k = 'd3'), 'cùng lời, KHÁC BPM → phiên bản mới (v3)');
+select t.put('d4', public.chord_sheet_contribute(p_text => 'bài đo trùng [C]', p_sheet_id => t.id('d1', 'sheet_id'), p_meter => '{"beats": 3, "beatType": 4}'));
+select t.ok((select v ->> 'duplicate' = 'false' and v ->> 'version_number' = '4' from t.kv where k = 'd4'), 'BPM có giá trị → BPM null → phiên bản mới (v4)');
+select t.put('d5', public.chord_sheet_contribute(p_text => 'bài đo trùng [C]', p_sheet_id => t.id('d1', 'sheet_id'), p_suggested_bpm => 96));
+select t.ok((select v ->> 'duplicate' = 'false' and v ->> 'version_number' = '5' from t.kv where k = 'd5'), 'nhịp có giá trị → nhịp null (BPM null → 96) → phiên bản mới (v5)');
+select t.ok(public.chord_sheet_contribute(p_text => E'bài đo trùng [C]  \r\n', p_sheet_id => t.id('d1', 'sheet_id'), p_suggested_bpm => 96) ->> 'version_id' = t.id('d5')::text,
+  'lời chỉ khác khoảng trắng cuối dòng + cùng nhịp/BPM → vẫn duplicate (so trên lời đã chuẩn hoá)');
+select t.reset();
+select t.ok((select count(distinct v.text_hash) = 1 and count(*) = 5 from public.chord_sheet_versions v where v.sheet_id = t.id('d1', 'sheet_id')),
+  '5 phiên bản cùng lời → CÙNG text_hash (text_hash vẫn chỉ băm lời, không trộn nhịp/BPM)');
+select t.as_user('X');
+select t.ok(public.chord_sheet_get(t.id('d1')) ->> 'draft_version_id' = t.id('d5')::text
+  and public.chord_sheet_get(t.id('d5')) -> 'draft_version_id' = 'null', 'người review: get trả bản nháp MỚI NHẤT mới hơn bản đang xem; bản mới nhất thì null');
+select t.ok(public.chord_sheet_approve(t.id('d3')) ->> 'canonical_version_id' = t.id('d3')::text, 'duyệt v3 (chỉ khác BPM so với v2)');
+select t.ok(public.chord_sheet_contribute(p_text => 'bài đo trùng [C]', p_sheet_id => t.id('d1', 'sheet_id'), p_meter => '{"beats": 3, "beatType": 4}', p_suggested_bpm => 96)
+  ->> 'version_id' = t.id('d3')::text, 'gửi lại đúng nội dung của bản chuẩn → duplicate, trả bản chuẩn');
+select t.ok(public.chord_sheet_get(t.id('d3')) ->> 'draft_version_id' = t.id('d5')::text
+  and public.chord_sheet_get(t.id('d2')) ->> 'suggested_bpm' = '80' and public.chord_sheet_get(t.id('d2')) ->> 'review_status' = 'private',
+  'bản chuẩn v3 vẫn báo còn nháp v5 mới hơn; v2 cũ nguyên vẹn');
+select t.as_user('A');
+select t.ok(not (public.chord_sheet_get(t.id('d3')) ? 'draft_version_id'), 'học viên đọc bản chuẩn: KHÔNG có trường draft_version_id');
 
 -- Ma trận quyền: Admin tắt contribute của học viên → chặn ngay, không cần sửa code
 select t.reset();

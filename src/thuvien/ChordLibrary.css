@@ -1,0 +1,105 @@
+/* Mục "Hợp âm chuẩn hóa" của /thuvien + thanh chuyển mục. Cùng bảng màu với ThuVienPage.css.
+   Mọi selector đi theo CLASS (tv-tabs, cl-*) — không theo vị trí — để không đụng bố cục mục MusicXML. */
+
+/* ── Thanh chuyển mục (nằm trong cả main.thu-vien lẫn main.tv-chords) ── */
+.tv-tabs { display: flex; gap: 6px; max-width: 960px; margin: 0 auto 24px; padding: 4px; border: 1px solid #d8dfd6; border-radius: 12px; background: #eef1eb; box-sizing: border-box; }
+.tv-tabs .tv-tab { flex: 1 1 0; min-width: 0; min-height: 44px; padding: 8px 10px; border: 0; border-radius: 9px; background: transparent; color: #526456; font: inherit; font-size: 15px; font-weight: 600; line-height: 1.25; cursor: pointer; }
+.tv-tabs .tv-tab[aria-current=page] { background: #fff; color: #26352d; box-shadow: 0 1px 2px rgba(38, 53, 45, .14); cursor: default; }
+.tv-tabs .tv-tab:focus-visible, .tv-chords :is(button, input, select, textarea, a):focus-visible { outline: 2px solid #32664a; outline-offset: 2px; }
+
+/* ── Trang ── */
+.tv-chords { min-height: 100vh; padding: 32px 20px 64px; background: #f7f5ef; color: #26352d; text-align: left; box-sizing: border-box; }
+.tv-chords *, .tv-chords *::before { box-sizing: border-box; }
+.tv-chords .cl-wrap { max-width: 960px; margin: 0 auto; }
+.tv-chords .cl-wrap-wide { max-width: 1240px; }
+.tv-chords h1 { margin: 0; color: #26352d; font-size: 30px; font-weight: 700; letter-spacing: 0; overflow-wrap: anywhere; }
+.tv-chords h2 { margin: 0 0 12px; color: #26352d; font-size: 14px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.tv-chords a { color: #32664a; font-size: 14px; }
+.tv-chords button { font: inherit; cursor: pointer; }
+.tv-chords button:disabled { cursor: default; opacity: .5; }
+.tv-chords .cl-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 20px; }
+
+.tv-chords .cl-mock { margin: 0 0 20px; padding: 10px 14px; border: 1px solid #e3c98b; border-radius: 9px; background: #fff6dc; color: #5c4a14; font-size: 14px; line-height: 1.5; }
+.tv-chords .cl-link { padding: 0; border: 0; background: none; color: #32664a; font-size: inherit; text-decoration: underline; }
+.tv-chords .cl-notice { margin: 0 0 20px; padding: 12px 14px; border-radius: 9px; background: #e7f1e9; color: #1f4a33; }
+.tv-chords .cl-notice-bad { background: #fbe9e6; color: #8a2a1c; }
+
+.tv-chords .cl-actions { display: flex; gap: 12px; margin-bottom: 24px; }
+.tv-chords .cl-primary { flex: none; min-height: 44px; padding: 10px 18px; border: 0; border-radius: 9px; background: #32664a; color: #fff; font-weight: 700; }
+.tv-chords input, .tv-chords select, .tv-chords textarea { width: 100%; border: 1px solid #ccd5ca; border-radius: 9px; background: #fff; color: #26352d; padding: 10px 12px; font: inherit; font-size: 16px; }
+.tv-chords .cl-actions input { flex: 1; min-width: 0; }
+.tv-chords [aria-invalid=true] { border-color: #b3402f; }
+
+/* ── Danh sách ── */
+.tv-chords .cl-list { margin: 0; padding: 0; list-style: none; overflow: hidden; border: 1px solid #d8dfd6; border-radius: 12px; background: #fff; }
+.tv-chords .cl-item { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 12px 24px; padding: 14px 16px; }
+.tv-chords .cl-item + .cl-item { border-top: 1px solid #edf0eb; }
+.tv-chords .cl-item-name { display: grid; gap: 2px; min-width: 0; }
+.tv-chords .cl-item-name strong { font-size: 17px; overflow-wrap: anywhere; }
+.tv-chords .cl-item-name span { color: #526456; font-size: 14px; overflow-wrap: anywhere; }
+.tv-chords .cl-item-status { display: grid; gap: 4px; width: 11.5rem; }  /* rộng cố định → cột trạng thái thẳng hàng giữa các bài */
+.tv-chords .cl-status { display: grid; grid-template-columns: 5.5rem auto; gap: 8px; font-size: 14px; }
+.tv-chords .cl-status-label { color: #526456; }
+.tv-chords .cl-status-value { font-weight: 600; color: #7a857c; white-space: nowrap; }
+.tv-chords .cl-status[data-on=true] .cl-status-value { color: #256b43; }
+.tv-chords .cl-open { min-width: 72px; min-height: 40px; padding: 8px 16px; border: 1px solid #32664a; border-radius: 9px; background: #fff; color: #32664a; font-weight: 700; }
+.tv-chords .cl-empty { margin: 0; padding: 28px 16px; text-align: center; color: #526456; }
+
+.tv-chords .cl-tag { display: inline-block; margin-left: 8px; padding: 1px 8px; border-radius: 999px; background: #fff0c9; color: #6b5310; font-size: 12px; font-style: normal; font-weight: 700; vertical-align: 2px; white-space: nowrap; }
+
+/* ── Trạng thái phiên bản (đang dùng / bản nháp) ── */
+.tv-chords .cl-state { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; margin: 0 0 20px; padding: 10px 14px; border: 1px solid #d8dfd6; border-radius: 9px; background: #fff; font-size: 14px; line-height: 1.5; }
+.tv-chords .cl-state p { flex: 1 1 260px; margin: 0; }
+.tv-chords .cl-state[data-status=draft] { border-color: #e3c98b; background: #fffaf0; }
+.tv-chords .cl-state[data-status=current] { border-color: #b9d6c2; background: #f1f8f3; }
+.tv-chords .cl-state-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.tv-chords .cl-secondary { min-height: 40px; padding: 8px 14px; border: 1px solid #ccd5ca; border-radius: 9px; background: #fff; color: #26352d; font-weight: 600; white-space: nowrap; }
+.tv-chords .cl-approve { border-color: #32664a; background: #32664a; color: #fff; }
+
+/* ── Bàn làm việc ── */
+.tv-chords .cl-editor-head { position: sticky; top: 0; z-index: 2; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 16px; margin: -12px -8px 16px; padding: 12px 8px; background: #f7f5ef; }
+.tv-chords .cl-editor-head h1 { font-size: 24px; }
+.tv-chords .cl-back { min-height: 44px; padding: 8px 12px; border: 1px solid #ccd5ca; border-radius: 9px; background: #fff; color: #26352d; white-space: nowrap; }
+.tv-chords .cl-editor { display: grid; gap: 20px; align-items: start; }
+.tv-chords .cl-col { display: grid; gap: 20px; min-width: 0; }
+.tv-chords .cl-card { min-width: 0; padding: 20px; border: 1px solid #d8dfd6; border-radius: 12px; background: #fff; }
+.tv-chords .cl-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.tv-chords .cl-field { display: grid; gap: 5px; min-width: 0; font-size: 14px; font-weight: 600; }
+.tv-chords .cl-field-wide { grid-column: 1 / -1; }
+.tv-chords .cl-error { color: #b3402f; font-size: 13px; font-weight: 500; }
+.tv-chords .cl-help { margin: 0 0 12px; color: #526456; font-size: 14px; line-height: 1.55; }
+.tv-chords code { padding: 1px 5px; border-radius: 5px; background: #eef1eb; font-size: 13px; overflow-wrap: anywhere; }
+.tv-chords textarea { display: block; min-height: 340px; resize: vertical; line-height: 1.65; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 16px; tab-size: 2; }
+.tv-chords .cl-warn { margin: 10px 0 0; padding: 8px 12px; border-radius: 8px; background: #fff6dc; color: #5c4a14; font-size: 14px; }
+.tv-chords .cl-placeholder { margin: 10px 0 0; color: #7a857c; font-size: 14px; }
+
+/* ── Xem thử: hợp âm nằm trên chữ ── */
+.tv-chords .cl-chordset { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 14px; color: #526456; font-size: 13px; }
+.tv-chords .cl-chordset span { padding: 2px 8px; border-radius: 999px; background: #eef1eb; color: #26352d; font-weight: 700; }
+.tv-chords .cl-sheet { font-size: 18px; line-height: 1.35; }
+.tv-chords .cl-line { display: flex; flex-wrap: wrap; align-items: flex-end; margin: 0 0 6px; }
+.tv-chords .cl-line-gap { height: 14px; }
+.tv-chords .cl-seg { display: inline-flex; flex-direction: column; max-width: 100%; }
+.tv-chords .cl-chord { min-height: 1.3em; padding-right: 6px; color: #b3402f; font-size: 15px; font-weight: 700; white-space: nowrap; }
+.tv-chords .cl-line[data-chords=false] .cl-chord { display: none; }
+.tv-chords .cl-lyric { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+@media (min-width: 1024px) {
+  /* Cột soạn rộng hơn cột xem thử: một câu hát kèm hợp âm thường dài 50–70 ký tự. */
+  .tv-chords .cl-editor { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 24px; }
+  .tv-chords textarea { font-size: 15px; }
+  .tv-chords .cl-preview { position: sticky; top: 76px; max-height: calc(100vh - 96px); overflow: auto; }
+}
+@media (max-width: 640px) {
+  .tv-chords { padding: 24px 16px 48px; }
+  .tv-chords h1 { font-size: 23px; }
+  .tv-chords .cl-actions { flex-direction: column; }
+  .tv-chords .cl-item { grid-template-columns: minmax(0, 1fr) auto; }
+  .tv-chords .cl-item-name { grid-column: 1 / -1; }
+  .tv-chords .cl-editor-head { grid-template-columns: auto 1fr auto; gap: 10px; margin: -8px -4px 12px; padding: 8px 4px; }
+  .tv-chords .cl-editor-head h1 { font-size: 18px; }
+  .tv-chords .cl-card { padding: 16px; }
+  .tv-chords .cl-fields { gap: 12px; }
+  .tv-chords textarea { min-height: 280px; }
+  .tv-tabs .tv-tab { font-size: 14px; }
+}

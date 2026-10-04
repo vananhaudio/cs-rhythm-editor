@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Thư viện — trang thử (chỉ chạy với npm run dev)</title>
+  </head>
+  <body>
+    <!-- Dựng ThuVienPage TRỰC TIẾP, bỏ qua cổng admin của AppRouter, để xem bố cục khi chưa đăng nhập.
+         Chỉ tồn tại ở dev server (không nằm trong đồ thị build của index.html). Mục MusicXML ở đây sẽ báo
+         lỗi tải vì khách không đọc được kho — đúng như RLS quy định. -->
+    <div id="root"></div>
+    <script type="module" src="./main.tsx"></script>
+  </body>
+</html>

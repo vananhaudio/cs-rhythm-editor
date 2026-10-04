@@ -1,16 +1,45 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
-import type { ChangeEvent } from 'react'
+import type { ChangeEvent, ReactNode } from 'react'
 import { importMusicXml, listLibrary, matchesQuery, prepareMusicXml } from './masterLibrary.ts'
 import type { LibraryItem } from './masterLibrary.ts'
 import { scoreIdFromSearch } from './viewScore.ts'
+import { sectionFromSearch, sectionUrl } from './sections.ts'
+import type { ThuVienSection } from './sections.ts'
+import type { ChordLibrary } from './chordLibrary.ts'
+import ThuVienTabs from './ThuVienTabs.tsx'
 import './ThuVienPage.css'
+import './ChordLibrary.css'
 
 // Verovio (wasm) chỉ tải khi mở một bản nhạc, không làm chậm danh sách.
 const ScoreViewer = lazy(() => import('./ScoreViewer.tsx'))
+const ChordLibraryPage = lazy(() => import('./ChordLibraryPage.tsx'))
 
 type Prepared = ReturnType<typeof prepareMusicXml>
 
-export default function ThuVienPage() {
+/** /thuvien có hai mục; mỗi mục tự lo phần của mình. Mục MusicXML giữ nguyên hành vi cũ. */
+export default function ThuVienPage({ chordLibrary }: { chordLibrary?: ChordLibrary } = {}) {
+  const [section, setSection] = useState<ThuVienSection>(() => sectionFromSearch(window.location.search))
+
+  useEffect(() => {
+    const sync = () => setSection(sectionFromSearch(window.location.search))
+    window.addEventListener('popstate', sync)
+    return () => window.removeEventListener('popstate', sync)
+  }, [])
+
+  function change(next: ThuVienSection) {
+    window.history.pushState(null, '', sectionUrl(window.location.href, next))
+    setSection(next)
+    window.scrollTo(0, 0)
+  }
+
+  const tabs = <ThuVienTabs section={section} onChange={change} />
+  if (section === 'chords') {
+    return <Suspense fallback={<main className="tv-chords"><p className="cl-empty">Đang mở Hợp âm chuẩn hóa…</p></main>}><ChordLibraryPage tabs={tabs} library={chordLibrary} /></Suspense>
+  }
+  return <MusicXmlLibrary tabs={tabs} />
+}
+
+function MusicXmlLibrary({ tabs }: { tabs: ReactNode }) {
   const [items, setItems] = useState<LibraryItem[]>([])
   const [listState, setListState] = useState<'loading' | 'ready' | 'error'>('loading')
   const [listError, setListError] = useState('')
@@ -102,6 +131,7 @@ export default function ThuVienPage() {
 
   const shown = items.filter(item => matchesQuery(item, query))
   return <main className="thu-vien min-h-screen bg-[#f7f5ef] px-4 py-8 text-[#26352d] sm:px-8">
+    {tabs}
     <div className="mx-auto max-w-4xl">
       <div className="mb-7 flex items-center justify-between gap-4">
         <h1 className="text-2xl font-bold sm:text-3xl">THƯ VIỆN BẢN NHẠC</h1>

@@ -1,5 +1,5 @@
 {
   "extends": "../musicxml-renderer/tsconfig.json",
   "compilerOptions": { "types": ["node", "vite/client"] },
-  "include": ["../../src/musicxml-beats/**/*.ts", "../../src/thuvien/*.ts", "../../src/nhipphach/scoreMetadata.ts", "./*.ts"]
+  "include": ["../../src/musicxml-beats/**/*.ts", "../../src/thuvien/*.ts", "../../src/nhipphach/scoreMetadata.ts", "./*.ts", "../thuvien-db/*.ts"]
 }
