@@ -70,3 +70,23 @@ test("Logo chuẩn Thầy Văn Anh Guitar trên top bar (cùng cặp với trang
   assert.match(layout, />Thầy Văn Anh Guitar</);
   assert.equal(/Văn Anh Class|VĂN ANH CLASS/.test(layout.replace(/\/\/.*$/gm, "")), false);
 });
+
+test("Thầy/admin KHÔNG có hồ sơ học sinh vẫn tự đổi ảnh: cùng bucket, qua RPC chỉ-của-mình, không tạo edu_students", () => {
+  const api = read("class-social/profile/profileApi.ts");
+  const editor = read("class-social/profile/useProfileMediaEditor.tsx");
+  const session = read("class-social/useClassSession.ts");
+  // cùng bucket + quy ước tên, ghi qua RPC (app_users vẫn chỉ-đọc với client)
+  assert.match(api, /upload\(avatarPath\(userId\), blob\)/);
+  assert.match(api, /rpc\('class_set_my_avatar', \{ p_url: up\.value \}\)/);
+  assert.equal(/from\('app_users'\)\.(update|upsert|insert)/.test(api + editor + session), false, "client không ghi app_users");
+  assert.equal(/from\('edu_students'\)\.(insert|upsert)/.test(api + editor + session), false, "không tạo hồ sơ học sinh");
+  // nút đổi ảnh: học sinh như cũ + tài khoản giáo viên (teacher/admin) không có hồ sơ
+  assert.match(editor, /canEditAvatar = !!me\.studentId \|\| me\.role === 'teacher'/);
+  assert.match(editor, /me\.studentId \? await saveAvatar\(me\.studentId, draft\.blob\)\s*: await saveAccountAvatar\(me\.userId, draft\.blob\)/);
+  // /me đọc ảnh tài khoản từ app_users (cùng bậc dự phòng với class_public_identity), không từ auth metadata
+  assert.match(session, /select\('role,avatar_url'\)/);
+  assert.match(session, /avatarUrl: appUser\?\.avatar_url \?\? null/);
+  assert.equal(/meta\.avatar_url/.test(session), false);
+  const sql = readFileSync(new URL("../../db/account_avatar_v1_setup.sql", import.meta.url), "utf8");
+  assert.match(sql, /coalesce\(s\.avatar_url, au\.avatar_url\)/);
+});

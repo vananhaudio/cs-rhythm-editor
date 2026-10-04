@@ -46,12 +46,20 @@ export function displayNameOf(r: { display_name?: string | null; full_name?: str
   return raw.includes('@') ? raw.split('@')[0] : raw
 }
 
+/** role + ảnh của tài khoản. Cột avatar_url chưa có (DB chưa migrate) → đọc lại chỉ role, không mất chế độ giáo viên. */
+async function fetchAppUser(userId: string): Promise<{ role: string | null; avatar_url: string | null } | null> {
+  const full = await supabase.from('app_users').select('role,avatar_url').eq('id', userId).maybeSingle<{ role: string | null; avatar_url: string | null }>()
+  if (!full.error) return full.data
+  const { data } = await supabase.from('app_users').select('role').eq('id', userId).maybeSingle<{ role: string | null }>()
+  return data ? { role: data.role, avatar_url: null } : null
+}
+
 async function loadSession(): Promise<ClassSession> {
   const { data: { session } } = await supabase.auth.getSession()
   const user = session?.user
   if (!user?.id) return { status: 'signed-out' }
 
-  const { data: appUser } = await supabase.from('app_users').select('role').eq('id', user.id).maybeSingle<{ role: string | null }>()
+  const appUser = await fetchAppUser(user.id)
   const isTeacher = appUser?.role === 'teacher' || appUser?.role === 'admin'
   const coverUrl = await fetchCover(user.id)
 
@@ -75,13 +83,14 @@ async function loadSession(): Promise<ClassSession> {
   }
 
   if (isTeacher) {
-    const meta = (user.user_metadata ?? {}) as { full_name?: string; avatar_url?: string }
+    // Ảnh của tài khoản không có hồ sơ học sinh = app_users.avatar_url (bậc dự phòng của class_public_identity)
+    const meta = (user.user_metadata ?? {}) as { full_name?: string }
     return {
       status: 'ready',
       me: {
         role: 'teacher', userId: user.id, studentId: null,
         name: meta.full_name?.trim() || 'Thầy Văn Anh', email: user.email ?? null,
-        avatarUrl: meta.avatar_url ?? null, level: null, enrolledAt: null, htMember: false, isTeacher: true, coverUrl,
+        avatarUrl: appUser?.avatar_url ?? null, level: null, enrolledAt: null, htMember: false, isTeacher: true, coverUrl,
       },
     }
   }

@@ -30,6 +30,20 @@ export async function saveAvatar(studentId: string, blob: Blob): Promise<Result<
   }
 }
 
+/** Đổi ảnh đại diện của tài khoản KHÔNG có hồ sơ học sinh (Thầy/admin): ảnh `<userId>-<ms>.jpg` cùng bucket,
+ *  lưu qua RPC class_set_my_avatar (server chỉ ghi hàng của auth.uid(); class_public_identity đọc làm bậc dự phòng). */
+export async function saveAccountAvatar(userId: string, blob: Blob): Promise<Result<string>> {
+  try {
+    const up = await upload(avatarPath(userId), blob)
+    if (!up.ok) return up
+    const { error, status } = await supabase.rpc('class_set_my_avatar', { p_url: up.value })
+    if (error) { devWarn('account avatar', error); return { ok: false, message: friendlyError({ ...error, status }, 'post', online()) } }
+    return { ok: true, value: up.value }
+  } catch (e) {
+    return { ok: false, message: friendlyError(e as Error, 'post', online()) }
+  }
+}
+
 /** Đổi tên hiển thị: edu_students.display_name của CHÍNH học sinh — đúng cột App học sửa (RLS: chỉ hàng của mình). */
 export async function saveDisplayName(studentId: string, name: string): Promise<Result<string>> {
   try {

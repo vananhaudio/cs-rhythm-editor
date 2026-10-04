@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Camera, X } from 'lucide-react'
 import type { ClassIdentity } from '../useClassSession'
 import { PREPARE_ERROR_TEXT, prepareImage, type ImageKind } from './imageFile'
-import { saveAvatar, saveCover } from './profileApi'
+import { saveAccountAvatar, saveAvatar, saveCover } from './profileApi'
 
 type Draft = { kind: ImageKind; blob: Blob; previewUrl: string }
 export type IdentityPatch = Partial<Pick<ClassIdentity, 'avatarUrl' | 'coverUrl' | 'name'>>
@@ -20,8 +20,9 @@ export function useProfileMediaEditor(me: ClassIdentity, onChanged: (p: Identity
   const [error, setError] = useState<string | null>(null)
   const inFlight = useRef(false)
 
-  /** Ảnh đại diện nằm ở hồ sơ học sinh (edu_students) — tài khoản không có hồ sơ học sinh thì chưa đổi được. */
-  const canEditAvatar = !!me.studentId
+  /** Học sinh: ảnh ở edu_students (cùng App học). Thầy/admin không có hồ sơ học sinh: ảnh ở app_users qua RPC
+   *  class_set_my_avatar. Cả hai đều do class_public_identity đọc → một người một ảnh. */
+  const canEditAvatar = !!me.studentId || me.role === 'teacher'
   const pick = useCallback((kind: ImageKind) => {
     if (kind === 'avatar' && !canEditAvatar) return
     setError(null)
@@ -53,9 +54,9 @@ export function useProfileMediaEditor(me: ClassIdentity, onChanged: (p: Identity
   const save = async () => {
     if (!draft || inFlight.current) return
     inFlight.current = true; setSaving(true); setError(null)
-    const r = draft.kind === 'avatar'
-      ? await saveAvatar(me.studentId as string, draft.blob)
-      : await saveCover(me.userId, draft.blob)
+    const r = draft.kind === 'cover' ? await saveCover(me.userId, draft.blob)
+      : me.studentId ? await saveAvatar(me.studentId, draft.blob)
+      : await saveAccountAvatar(me.userId, draft.blob)
     inFlight.current = false; setSaving(false)
     if (!r.ok) { setError(r.message); return }     // giữ ảnh xem trước để thử lại
     onChanged(draft.kind === 'avatar' ? { avatarUrl: r.value } : { coverUrl: r.value })
