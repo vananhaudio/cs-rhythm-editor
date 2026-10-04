@@ -61,6 +61,8 @@ others() { q "$1" "select md5(
     coalesce((select string_agg(p.proname || md5(p.prosrc) || coalesce(p.proacl::text, ''), ',' order by p.proname, p.oid::regprocedure::text)
        from pg_proc p join pg_namespace s on s.oid = p.pronamespace
       where s.nspname in ('public', 'storage', 'auth') and p.proname not like 'chord%' and p.proname <> 'my_chordlib_caps'), '')
+ || coalesce((select string_agg(c.relname || '.' || tg.tgname || md5(pg_get_triggerdef(tg.oid)), ',' order by c.relname, tg.tgname)
+       from pg_trigger tg join pg_class c on c.oid = tg.tgrelid where not tg.tgisinternal and tg.tgname not like 'chord%'), '')
  || coalesce((select string_agg(schemaname || tablename || policyname || cmd || roles::text || coalesce(qual, '') || coalesce(with_check, ''), ',' order by schemaname, tablename, policyname)
        from pg_policies where policyname not like 'chord sheet sources%'), '')
  || coalesce((select string_agg(c.relname || coalesce(c.relacl::text, '') || c.relrowsecurity::text, ',' order by c.relname)
@@ -182,7 +184,7 @@ sess -c "$(as $UX) insert into storage.objects (bucket_id, name) values ('chord-
 sleep 0.4
 sess -c "$(as $UX) delete from storage.objects where name = '$UX/$V2/1.png';" >/dev/null
 OUT="$(sess -c "$(as $UX) insert into storage.objects (bucket_id, name) values ('chord-sheet-sources', '$UX/$V2/2.png');")"; wait
-[ "$(q tva_chord "select count(*) from storage.objects where name like '$UX/$V2/%'")/$(q tva_chord "select jsonb_array_length(sources) from chord_sheet_versions where id = '$V2'")" = "1/1" ] && echo "$OUT" | grep -q 'row-level security' \
+[ "$(q tva_chord "select count(*) from storage.objects where name like '$UX/$V2/%'")/$(q tva_chord "select jsonb_array_length(sources) from chord_sheet_versions where id = '$V2'")" = "1/1" ] && echo "$OUT" | grep -qE 'row-level security|CHORDLIB_SOURCE' \
   && ok "M5: đóng góp ↔ xoá/tải thêm đồng thời (đóng góp trước) → file còn nguyên, không thêm được file mồ côi" || { echo "$OUT"; fail "M5: file nguồn bị xoá/thêm sau khi phiên bản đã ghi"; }
 
 # H1 — approve ↔ contribute (cha = bản đang được duyệt) dưới tải: không deadlock, không client nào chết.
@@ -204,6 +206,88 @@ NTX=$(sed -n 's/^number of transactions actually processed: \([0-9]*\).*/\1/p' "
   && ok "H1: sau tải — con trỏ canonical hợp lệ, version_number không trùng" || fail "H1: trạng thái sai sau tải"
 # <<< CONCURRENCY
 
+# >>> N1 — MÔ HÌNH STORAGE API: lượt THỬ policy (authenticated, RLS) rồi ROLLBACK → lượt GHI THẬT (postgres,
+# đi vòng RLS như Storage ghi bằng superuser). Hai bước là hai phiên khác nhau; khoá của lượt thử đã nhả.
+n1_harness() {   # $1 = database
+  local db=$1
+  cat > "$TMP/n1_upload.sh" <<EOS
+#!/usr/bin/env bash
+# upload <uid> <bucket> <name>: thử policy → rollback → (nếu thử đạt) ghi thật. In "ok" hoặc "no:<bước>".
+uid=\$1; bucket=\$2; name=\$3
+P() { "$PGBIN/psql" -X -q -tA -h "$TMP" -p "$PORT" -U postgres -d $db "\$@" 2>&1; }
+trial=\$(P -c "begin; select set_config('request.jwt.claims', '{\"sub\":\"\$uid\",\"role\":\"authenticated\"}', true); set local role authenticated;
+  insert into storage.objects (bucket_id, name, owner) values ('\$bucket', '\$name', '\$uid'); rollback;")
+# Bucket khác không có policy cho vai authenticated ở fixture — chỉ đo lượt ghi thật (trigger phải trả NEW ngay).
+[ "\$bucket" = chord-sheet-sources ] && case "\$trial" in *ERROR*) echo "no:trial"; exit 0;; esac
+sleep "0.\$((RANDOM % 30))"
+real=\$(P -c "insert into storage.objects (bucket_id, name, owner) values ('\$bucket', '\$name', '\$uid')")
+case "\$real" in *ERROR*) echo "no:real";; *) echo ok;; esac
+EOS
+  chmod +x "$TMP/n1_upload.sh"
+}
+n1_run() {   # $1 = database → in: "<ux_rows>/<ut_rows>/<other_bucket_rows>/<real_rejects>"
+  local db=$1 UXN UTN
+  UXN=$(q "$db" "select count(*) from storage.objects where bucket_id = 'chord-sheet-sources' and name like '$UX/%'")
+  UTN=$(q "$db" "select count(*) from storage.objects where bucket_id = 'chord-sheet-sources' and name like '$UT/%'")
+  : > "$TMP/n1_jobs"
+  for d in 1 2 3 4 5 6 7 8; do
+    VX=$(q "$db" "select gen_random_uuid()"); VT=$(q "$db" "select gen_random_uuid()")
+    for n in 0 1 2 3 4 5; do
+      echo "$UX chord-sheet-sources $UX/$VX/$n.png" >> "$TMP/n1_jobs"
+      echo "$UT chord-sheet-sources $UT/$VT/$n.pdf" >> "$TMP/n1_jobs"
+    done
+  done
+  for n in $(seq 1 20); do echo "$UX bucket-khac-n1 tu-do/$n-$RANDOM.png" >> "$TMP/n1_jobs"; done
+  sort -R "$TMP/n1_jobs" | xargs -P 64 -L 1 "$TMP/n1_upload.sh" > "$TMP/n1_out"
+  echo "$(( $(q "$db" "select count(*) from storage.objects where bucket_id = 'chord-sheet-sources' and name like '$UX/%'") - UXN ))/$(( $(q "$db" "select count(*) from storage.objects where bucket_id = 'chord-sheet-sources' and name like '$UT/%'") - UTN ))/$(q "$db" "select count(*) from storage.objects where bucket_id = 'bucket-khac-n1'")/$(grep -c 'no:real' "$TMP/n1_out")"
+}
+
+echo "── N1: mô hình Storage API (thử policy → rollback → ghi thật) · 116 request song song, 2 người × 8 thư mục + bucket khác"
+q tva_chord "insert into storage.buckets (id, name, public) values ('bucket-khac-n1', 'bucket-khac-n1', true) on conflict do nothing" >/dev/null
+q tva_chord "delete from storage.objects o where o.bucket_id = 'chord-sheet-sources' and (o.name like '$UX/%' or o.name like '$UT/%') and not exists (select 1 from chord_sheet_versions v where v.id::text = split_part(o.name, '/', 2))" >/dev/null
+n1_harness tva_chord
+R=$(n1_run tva_chord)
+[ "${R%%/*}" = "20" ] && [ "$(echo "$R" | cut -d/ -f2)" = "20" ] && [ "$(echo "$R" | cut -d/ -f3)" = "20" ] && [ "$(echo "$R" | cut -d/ -f4)" -gt 0 ] \
+  && ok "N1: 48 lượt tải song song/người (vượt hạn mức) → mỗi người dừng ĐÚNG 20 file chưa gắn; $(echo "$R" | cut -d/ -f4) lượt bị TRIGGER chặn ở bước ghi thật dù đã qua lượt thử; bucket khác: 20/20 lọt" \
+  || { sort "$TMP/n1_out" | uniq -c; fail "N1: kết quả $R (mong đợi 20/20/20/>0)"; }
+[ "$(q tva_chord "select count(*) from (select split_part(name, '/', 2) from storage.objects where bucket_id = 'chord-sheet-sources' group by 1 having count(*) > 10) z")" = "0" ] \
+  && ok "N1: không thư mục phiên bản nào quá 10 file" || fail "N1: có thư mục quá 10 file"
+
+# Thư mục ĐÃ GHI ↔ tải song song: đóng góp V (khai 1 file) chạy cùng lúc 20 lượt tải vào chính V.
+VF=$(q tva_chord "select gen_random_uuid()")
+q tva_chord "delete from storage.objects o where o.bucket_id = 'chord-sheet-sources' and o.name like '$UX/%' and not exists (select 1 from chord_sheet_versions v where v.id::text = split_part(o.name, '/', 2))" >/dev/null
+"$TMP/n1_upload.sh" "$UX" chord-sheet-sources "$UX/$VF/0.png" | grep -q ok || fail "N1: không tải được file đầu của VF"
+SRCF="[{\"path\": \"$UX/$VF/0.png\", \"mime\": \"image/png\", \"sha256\": \"$(printf 'a%.0s' $(seq 64))\"}]"
+: > "$TMP/n1_jobs2"; for n in 1 2 3 4 5 6 7 8 9; do for e in png pdf; do echo "$UX chord-sheet-sources $UX/$VF/$n.$e" >> "$TMP/n1_jobs2"; done; done
+( sess -c "$(as $UX) begin; select public.chord_sheet_contribute(p_text => 'n1 đua', p_title => 'N1 đua', p_version_id => '$VF', p_sources => '$SRCF'); select pg_sleep(0.6); commit;" > "$TMP/n1_contrib" ) &
+xargs -P 18 -L 1 "$TMP/n1_upload.sh" < "$TMP/n1_jobs2" > "$TMP/n1_out2"; wait
+REC=$(q tva_chord "select count(*) from chord_sheet_versions where id = '$VF'")
+FILES=$(q tva_chord "select count(*) from storage.objects where bucket_id = 'chord-sheet-sources' and name like '$UX/$VF/%'")
+if [ "$REC" = "1" ]; then
+  [ "$FILES" = "$(q tva_chord "select jsonb_array_length(sources) from chord_sheet_versions where id = '$VF'")" ] \
+    && ok "N1: đóng góp thắng cuộc đua → thư mục đã ghi có ĐÚNG $FILES file = sources; $(grep -c 'no:' "$TMP/n1_out2")/18 lượt tải sau bị chặn" \
+    || fail "N1: thư mục đã ghi có $FILES file, khác sources"
+else
+  grep -q 'chưa được khai' "$TMP/n1_contrib" && ok "N1: tải lọt trước đóng góp → đóng góp bị TỪ CHỐI (thư mục có file chưa khai), không ghi phiên bản sai" \
+    || { cat "$TMP/n1_contrib"; fail "N1: phiên bản không được ghi mà không rõ lý do"; }
+fi
+
+# Người khác nhau KHÔNG chờ nhau: X giữ lượt ghi thật (khoá theo uid) 2 giây; T ghi ngay.
+VS=$(q tva_chord "select gen_random_uuid()"); VT2=$(q tva_chord "select gen_random_uuid()")
+q tva_chord "delete from storage.objects o where o.bucket_id = 'chord-sheet-sources' and o.name like '$UT/%' and not exists (select 1 from chord_sheet_versions v where v.id::text = split_part(o.name, '/', 2))" >/dev/null
+( sess -c "begin; insert into storage.objects (bucket_id, name, owner) values ('chord-sheet-sources', '$UX/$VS/0.png', '$UX'); select pg_sleep(2); commit;" >/dev/null ) &
+sleep 0.4
+T0=$(python3 -c 'import time; print(time.time())')
+sess -c "insert into storage.objects (bucket_id, name, owner) values ('chord-sheet-sources', '$UT/$VT2/0.png', '$UT')" >/dev/null
+MS_OTHER=$(python3 -c "import time; print(int((time.time() - $T0) * 1000))")
+T0=$(python3 -c 'import time; print(time.time())')
+sess -c "insert into storage.objects (bucket_id, name, owner) values ('chord-sheet-sources', '$UX/$VS/1.png', '$UX')" >/dev/null
+MS_SAME=$(python3 -c "import time; print(int((time.time() - $T0) * 1000))"); wait
+[ "$MS_OTHER" -lt 800 ] && [ "$MS_SAME" -gt 1000 ] \
+  && ok "N1: khoá theo uid — người KHÁC ghi ngay (${MS_OTHER} ms), CÙNG người phải chờ (${MS_SAME} ms)" \
+  || fail "N1: khoá sai phạm vi (khác người ${MS_OTHER} ms, cùng người ${MS_SAME} ms)"
+# <<< N1
+
 echo "── End-to-end: adapter RPC thật (src/thuvien/chordLibrary.ts) ↔ SQL thật"
 CHORD_PSQL="$PGBIN/psql" CHORD_PGHOST="$TMP" CHORD_PGPORT="$PORT" CHORD_PGDATABASE=tva_chord \
   node --experimental-strip-types --no-warnings --test "$ROOT/tests/thuvien-db/e2e.test.ts" > "$TMP/e2e.log" 2>&1 || { cat "$TMP/e2e.log"; fail "end-to-end adapter ↔ DB"; }
@@ -222,6 +306,8 @@ mig tva_rb "$ROLLBACK" >/dev/null || fail "rollback lần 1"; ok "rollback lần
 mig tva_rb "$ROLLBACK" >/dev/null || fail "rollback lần 2"; ok "rollback lần 2 (idempotent)"
 [ "$(q tva_rb "select count(*) from pg_proc where proname like 'chord%' or proname = 'my_chordlib_caps'")/$(q tva_rb "select count(*) from pg_class where relname like 'chord\_sheet%'")/$(q tva_rb "select count(*) from pg_policies where policyname like 'chord sheet sources%'")/$(q tva_rb "select (select count(*) from tool_capabilities where tool_id = 'chordlib') + (select count(*) from edu_tools where id = 'chordlib')")" = "0/0/0/0" ] \
   && ok "rollback gỡ sạch hàm + bảng + policy storage + capability" || fail "rollback còn sót"
+[ "$(q tva_rb "select count(*) from pg_trigger where tgrelid = 'storage.objects'::regclass and tgname like 'chord%'")" = "0" ] \
+  && ok "rollback gỡ trigger N1 trên storage.objects (trigger Storage khác giữ nguyên — xem dấu vân tay)" || fail "rollback còn trigger chord trên storage.objects"
 [ "$(mxl tva_rb)" = "$MXL1" ] && [ "$(others tva_rb)" = "$OTH1" ] && ok "sau rollback: MusicXML Library + mọi object sẵn có nguyên vẹn" || fail "rollback đụng object khác"
 mig tva_rb "$SETUP" >/dev/null && [ "$(q tva_rb "select count(*) from pg_class where relname in ('chord_sheets', 'chord_sheet_versions')")" = "2" ] && ok "cài lại sau rollback" || fail "cài lại"
 

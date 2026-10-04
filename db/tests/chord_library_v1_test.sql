@@ -31,7 +31,11 @@ create function t.ok(cond boolean, msg text) returns void language plpgsql as $$
 end $$;
 create function t.fails(q text, msg text, p_expect text default null) returns void language plpgsql as $$ begin
   begin execute q; exception when others then
-    if p_expect is not null and position(p_expect in sqlerrm) = 0 then raise exception 'FAIL: % — sai lý do: %', msg, sqlerrm; end if;
+    -- 'BLOCKED_WRITE': lượt ghi storage bị chặn bởi policy (RLS) HOẶC bởi trigger N1 — trigger BEFORE chạy trước
+    -- WITH CHECK nên lý do nào hiện ra tuỳ thứ tự; cái cần chứng minh là dòng KHÔNG được ghi.
+    if p_expect = 'BLOCKED_WRITE' then
+      if sqlerrm not like '%row-level security%' and sqlerrm not like '%CHORDLIB_SOURCE%' then raise exception 'FAIL: % — sai lý do: %', msg, sqlerrm; end if;
+    elsif p_expect is not null and position(p_expect in sqlerrm) = 0 then raise exception 'FAIL: % — sai lý do: %', msg, sqlerrm; end if;
     raise notice 'PASS: % (bị chặn: %)', msg, sqlerrm; return; end;
   raise exception 'FAIL: % — lẽ ra phải bị chặn', msg;
 end $$;
@@ -366,9 +370,9 @@ select t.as_user('A');
 insert into storage.objects (bucket_id, name, owner) values ('chord-sheet-sources', t.p('A', '1.png'), t.u('A'));
 insert into storage.objects (bucket_id, name, owner) values ('chord-sheet-sources', t.p('A', '2.pdf'), t.u('A'));
 select t.ok((select count(*) = 2 from storage.objects where bucket_id = 'chord-sheet-sources'), 'A tải lên thư mục của mình ({uid}/{version_id}/{n}.{ext}) + đọc lại được');
-select t.fails(format($q$insert into storage.objects (bucket_id, name) values ('chord-sheet-sources', %L)$q$, t.p('A', '3.heic')), 'HEIC → chặn', 'row-level security');
-select t.fails(format($q$insert into storage.objects (bucket_id, name) values ('chord-sheet-sources', %L)$q$, t.p('B', '1.png')), 'A KHÔNG tải vào thư mục của B', 'row-level security');
-select t.fails(format($q$insert into storage.objects (bucket_id, name) values ('chord-sheet-sources', %L)$q$, t.u('A')::text || '/tu-do/1.png'), 'đường dẫn sai khuôn → chặn', 'row-level security');
+select t.fails(format($q$insert into storage.objects (bucket_id, name) values ('chord-sheet-sources', %L)$q$, t.p('A', '3.heic')), 'HEIC → chặn', 'BLOCKED_WRITE');
+select t.fails(format($q$insert into storage.objects (bucket_id, name) values ('chord-sheet-sources', %L)$q$, t.p('B', '1.png')), 'A KHÔNG tải vào thư mục của B', 'BLOCKED_WRITE');
+select t.fails(format($q$insert into storage.objects (bucket_id, name) values ('chord-sheet-sources', %L)$q$, t.u('A')::text || '/tu-do/1.png'), 'đường dẫn sai khuôn → chặn', 'BLOCKED_WRITE');
 select t.fails(format($q$select public.chord_sheet_contribute(p_text => 'có nguồn', p_title => 'Bài có nguồn', p_version_id => %L, p_sources => %L)$q$, t.id('f'),
     jsonb_build_array(jsonb_build_object('path', t.p('A', '9.png'), 'mime', 'image/png', 'sha256', repeat('b', 64)))),
   'khai file nguồn CHƯA tải lên → chặn', 'CHORDLIB_INVALID');
@@ -382,7 +386,7 @@ select t.put('s1', public.chord_sheet_contribute(p_text => 'có nguồn [Am]', p
 select t.ok(t.id('s1') = t.id('f') and jsonb_array_length(public.chord_sheet_get(t.id('s1')) -> 'sources') = 2,
   'A đóng góp kèm 2 file nguồn (version_id do client sinh) → sources ghi đúng');
 select t.fails(format($q$insert into storage.objects (bucket_id, name) values ('chord-sheet-sources', %L)$q$, t.p('A', '3.png')),
-  'phiên bản đã ghi → KHÔNG thêm được file nguồn nữa', 'row-level security');
+  'phiên bản đã ghi → KHÔNG thêm được file nguồn nữa', 'BLOCKED_WRITE');
 delete from storage.objects where bucket_id = 'chord-sheet-sources';
 select t.ok((select count(*) = 2 from storage.objects where bucket_id = 'chord-sheet-sources'), 'phiên bản đã ghi → A KHÔNG xoá được file nguồn (bằng chứng)');
 insert into storage.objects (bucket_id, name) values ('chord-sheet-sources', t.u('A')::text || '/' || t.id('f', 'v2')::text || '/1.webp');
@@ -433,12 +437,12 @@ create function t.q(v text, n text) returns text language sql as $$ select t.u('
 grant execute on function t.q(text, text) to anon, authenticated;
 select t.as_user('B');
 select t.fails(format($q$insert into storage.objects (bucket_id, name) values ('chord-sheet-sources', %L)$q$, t.q('v1', '10.png')),
-  'H2: số file hai chữ số ({n} = 10) → chặn (tối đa 0–9 = 10 file một phiên bản)', 'row-level security');
+  'H2: số file hai chữ số ({n} = 10) → chặn (tối đa 0–9 = 10 file một phiên bản)', 'BLOCKED_WRITE');
 insert into storage.objects (bucket_id, name) select 'chord-sheet-sources', t.q('v1', n || '.png') from generate_series(0, 9) n;
 insert into storage.objects (bucket_id, name) select 'chord-sheet-sources', t.q('v2', n || '.pdf') from generate_series(0, 9) n;
 select t.ok((select count(*) = 20 from storage.objects where name like t.u('B')::text || '/%'), 'H2: B tải được 20 file chưa gắn phiên bản');
 select t.fails(format($q$insert into storage.objects (bucket_id, name) values ('chord-sheet-sources', %L)$q$, t.q('v3', '0.png')),
-  'H2: file thứ 21 chưa gắn phiên bản → chặn (hết hạn mức)', 'row-level security');
+  'H2: file thứ 21 chưa gắn phiên bản → chặn (hết hạn mức)', 'BLOCKED_WRITE');
 delete from storage.objects where name = t.q('v2', '9.pdf');
 insert into storage.objects (bucket_id, name) values ('chord-sheet-sources', t.q('v3', '0.png'));
 select t.ok((select count(*) = 20 from storage.objects where name like t.u('B')::text || '/%'), 'H2: xoá bớt một file → tải tiếp được (hạn mức tính theo file đang có)');
@@ -450,7 +454,7 @@ insert into storage.objects (bucket_id, name) values ('chord-sheet-sources', t.q
 select t.ok((select count(*) = 30 from storage.objects where name like t.u('B')::text || '/%'),
   'H2: đóng góp xong (10 file đã gắn phiên bản) → hạn mức được trả lại, tải tiếp tới đủ 20 file chưa gắn');
 select t.fails(format($q$insert into storage.objects (bucket_id, name) values ('chord-sheet-sources', %L)$q$, t.u('B')::text || '/' || gen_random_uuid() || '/0.png'),
-  'H2: …nhưng vẫn không vượt 20 file chưa gắn phiên bản', 'row-level security');
+  'H2: …nhưng vẫn không vượt 20 file chưa gắn phiên bản', 'BLOCKED_WRITE');
 delete from storage.objects where name like t.u('B')::text || '/' || t.id('q', 'v2')::text || '/%';
 delete from storage.objects where name like t.u('B')::text || '/' || t.id('q', 'v3')::text || '/%';
 select t.ok((select count(*) = 10 from storage.objects where name like t.u('B')::text || '/%'), 'B dọn được file chưa gắn phiên bản; 10 file đã gắn thì còn nguyên');
@@ -470,7 +474,7 @@ select t.as_user('B');
 select t.ok((select count(*) = 0 from storage.objects where bucket_id = 'chord-sheet-sources' and name like t.u('A')::text || '/%'), 'học viên khác (B) KHÔNG đọc được file nguồn của A');
 select t.as_anon();
 select t.ok((select count(*) = 0 from storage.objects where bucket_id = 'chord-sheet-sources'), 'khách KHÔNG đọc được file nguồn');
-select t.fails(format($q$insert into storage.objects (bucket_id, name) values ('chord-sheet-sources', %L)$q$, t.p('A', '5.png')), 'khách KHÔNG tải lên được', 'row-level security');
+select t.fails(format($q$insert into storage.objects (bucket_id, name) values ('chord-sheet-sources', %L)$q$, t.p('A', '5.png')), 'khách KHÔNG tải lên được', 'BLOCKED_WRITE');
 select t.as_user('T');
 select t.ok((select count(*) = 13 and count(distinct split_part(name, '/', 1)) = 2 from storage.objects where bucket_id = 'chord-sheet-sources'), 'thầy đọc được file nguồn của mọi người (3 của A + 10 của B)');
 select t.as_user('X');
@@ -481,6 +485,67 @@ select t.as_user('B');
 select t.ok(not (public.chord_sheet_get(t.id('s1')) ? 'sources')
   and (select count(*) = 0 from storage.objects where bucket_id = 'chord-sheet-sources' and name like t.u('A')::text || '/%'),
   'bài đã duyệt: B đọc lời + hợp âm nhưng file nguồn vẫn KHÔNG mở cho B');
+
+-- ── N1) Trigger ở LƯỢT GHI THẬT (thư mục của T — C đã chạm trần 30 bản chờ ở ca trước): ghi bằng postgres (đi vòng RLS như Storage API ghi bằng superuser) vẫn bị ép luật ──
+select t.reset();
+select t.put('n1t', jsonb_build_object('v1', gen_random_uuid(), 'v2', gen_random_uuid(), 'v3', gen_random_uuid()));
+create function t.c(k text, v text, n text) returns text language sql as $$ select t.u(k)::text || '/' || t.id('n1t', v)::text || '/' || n $$;
+grant execute on function t.c(text, text, text) to anon, authenticated;
+select t.ok((select count(*) = 1 from pg_trigger where tgrelid = 'storage.objects'::regclass and tgname = 'chord_source_guard_trg'), 'N1: đúng MỘT trigger chord_source_guard_trg trên storage.objects');
+-- bucket khác: không bị ảnh hưởng (tên tuỳ ý, kể cả tên lạ, chủ tuỳ ý)
+insert into storage.buckets (id, name, public) values ('bucket-khac', 'bucket-khac', true) on conflict do nothing;
+insert into storage.objects (bucket_id, name, owner) values ('bucket-khac', 'không-theo-khuôn/../ảnh.heic', t.u('B')), ('bucket-khac', t.c('A', 'v1', '1.png'), t.u('B'));
+insert into storage.objects (bucket_id, name) select 'bucket-khac', 'nhieu/' || g || '.png' from generate_series(1, 30) g;
+update storage.objects set name = 'doi-ten.png' where bucket_id = 'bucket-khac' and name = 'nhieu/1.png';
+select t.ok((select count(*) = 32 from storage.objects where bucket_id = 'bucket-khac'), 'N1: bucket khác ghi/đổi tên tự do — trigger trả NEW ngay, không áp luật');
+-- đường dẫn
+select t.fails($q$insert into storage.objects (bucket_id, name) values ('chord-sheet-sources', 'khong-phai-uuid/x/1.png')$q$, 'N1: lượt ghi thật — đường dẫn không bắt đầu bằng uid → chặn', 'CHORDLIB_SOURCE');
+select t.fails(format($q$insert into storage.objects (bucket_id, name) values ('chord-sheet-sources', %L)$q$, t.c('A', 'v1', '10.png')), 'N1: lượt ghi thật — n = 10 → chặn', 'CHORDLIB_SOURCE');
+select t.fails(format($q$insert into storage.objects (bucket_id, name) values ('chord-sheet-sources', %L)$q$, t.c('A', 'v1', '1.heic')), 'N1: lượt ghi thật — đuôi .heic → chặn', 'CHORDLIB_SOURCE');
+select t.fails(format($q$insert into storage.objects (bucket_id, name) values ('chord-sheet-sources', %L)$q$, upper(t.c('A', 'v1', '1.png'))), 'N1: lượt ghi thật — uuid viết HOA → chặn', 'CHORDLIB_SOURCE');
+select t.fails(format($q$insert into storage.objects (bucket_id, name, owner) values ('chord-sheet-sources', %L, %L)$q$, t.c('A', 'v1', '1.png'), t.u('B')),
+  'N1: chủ file (owner do Storage ghi từ JWT) ≠ uid trong đường dẫn → chặn', 'chủ file không khớp');
+-- C) tối đa 10 file / phiên bản (kể cả khi đổi đuôi: 0.png + 0.pdf + …)
+insert into storage.objects (bucket_id, name, owner) select 'chord-sheet-sources', t.c('T', 'v1', n || '.' || e), t.u('T')
+  from generate_series(0, 4) n, unnest(array['png', 'pdf']) e;
+select t.ok((select count(*) = 10 from storage.objects where name like t.u('T')::text || '/' || t.id('n1t', 'v1')::text || '/%'), 'N1: 10 file (5 số × 2 đuôi) vào một thư mục phiên bản');
+select t.fails(format($q$insert into storage.objects (bucket_id, name, owner) values ('chord-sheet-sources', %L, %L)$q$, t.c('T', 'v1', '9.webp'), t.u('T')),
+  'N1: file thứ 11 trong cùng thư mục phiên bản → chặn (dù tên khác)', 'tối đa 10 file nguồn');
+-- B) hạn mức 20 file chưa gắn — kể cả MỘT câu lệnh chèn nhiều dòng
+select t.fails(format($q$insert into storage.objects (bucket_id, name, owner) select 'chord-sheet-sources', %L || n || '.png', %L::uuid from generate_series(0, 9) n
+  union all select 'chord-sheet-sources', %L || n || '.png', %L::uuid from generate_series(0, 9) n$q$,
+  t.u('T')::text || '/' || t.id('n1t', 'v2')::text || '/', t.u('T'), t.u('T')::text || '/' || t.id('n1t', 'v3')::text || '/', t.u('T')),
+  'N1: MỘT câu INSERT 20 dòng khi đã có 10 → chặn cả câu (trigger thấy các dòng trước trong cùng câu)', 'đã có 20 file');
+select t.ok((select count(*) = 10 from storage.objects where bucket_id = 'chord-sheet-sources' and name like t.u('T')::text || '/%'), 'N1: …và không dòng nào của câu đó được ghi');
+insert into storage.objects (bucket_id, name, owner) select 'chord-sheet-sources', t.c('T', 'v2', n || '.png'), t.u('T') from generate_series(0, 9) n;
+select t.fails(format($q$insert into storage.objects (bucket_id, name, owner) values ('chord-sheet-sources', %L, %L)$q$, t.c('T', 'v3', '0.png'), t.u('T')),
+  'N1: lượt ghi thật — file thứ 21 chưa gắn phiên bản → chặn', 'đã có 20 file');
+-- A + D) thư mục đã thành phiên bản → không thêm được (lượt ghi thật)
+select t.as_user('T');
+delete from storage.objects where name like t.u('T')::text || '/' || t.id('n1t', 'v2')::text || '/%';
+select t.ok(public.chord_sheet_contribute(p_text => 'n1 đã ghi', p_title => 'N1 đã ghi', p_version_id => t.id('n1t', 'v1'),
+  p_sources => (select jsonb_agg(jsonb_build_object('path', o.name, 'mime', case when o.name like '%.pdf' then 'application/pdf' else 'image/png' end, 'sha256', repeat('f', 64)) order by o.name)
+                  from storage.objects o where o.name like t.u('T')::text || '/' || t.id('n1t', 'v1')::text || '/%')) ->> 'ok' = 'true', 'T đóng góp phiên bản v1 với 10 file nguồn');
+select t.reset();
+select t.fails(format($q$insert into storage.objects (bucket_id, name, owner) values ('chord-sheet-sources', %L, %L)$q$, t.c('T', 'v1', '9.png'), t.u('T')),
+  'N1: lượt ghi thật vào thư mục của phiên bản ĐÃ GHI → chặn (kể cả bằng postgres)', 'phiên bản đã ghi');
+select t.fails(format($q$insert into storage.objects (bucket_id, name) values ('chord-sheet-sources', %L)$q$, t.c('T', 'v1', '9.webp')),
+  'N1: …kể cả không có chủ (owner null)', 'phiên bản đã ghi');
+-- UPDATE: đổi tên / dời bucket
+select t.fails(format($q$update storage.objects set name = %L where name = %L$q$, t.c('T', 'v3', '0.png'), t.c('T', 'v1', '0.png')),
+  'N1: đổi tên file trong bucket nguồn → chặn', 'CHORDLIB_SOURCE');
+select t.fails(format($q$update storage.objects set bucket_id = 'bucket-khac' where name = %L$q$, t.c('T', 'v1', '0.png')),
+  'N1: dời file nguồn sang bucket khác → chặn', 'không đổi tên / không dời');
+select t.fails(format($q$update storage.objects set bucket_id = 'chord-sheet-sources' where bucket_id = 'bucket-khac' and name = %L$q$, t.c('A', 'v1', '1.png')),
+  'N1: dời file TỪ bucket khác VÀO bucket nguồn → xét như tải lên mới (chủ ≠ uid → chặn)', 'chủ file không khớp');
+update storage.objects set metadata = '{"mimetype": "image/png", "size": 1}' where name = t.c('T', 'v1', '0.png');
+select t.ok((select metadata ->> 'size' = '1' from storage.objects where name = t.c('T', 'v1', '0.png')), 'N1: cập nhật metadata (không đổi tên/bucket) KHÔNG bị trigger đụng tới');
+select t.ok((select count(*) = 0 from storage.objects o where o.bucket_id = 'chord-sheet-sources' and o.name like t.u('T')::text || '/' || t.id('n1t', 'v1')::text || '/%'
+              and not exists (select 1 from public.chord_sheet_versions v, jsonb_array_elements(v.sources) e where v.id = t.id('n1t', 'v1') and e ->> 'path' = o.name)),
+  'N1: thư mục phiên bản đã ghi không có file nào nằm ngoài sources');
+select t.as_user('A');
+select t.fails($q$select public.chord_source_rule(gen_random_uuid(), 'x', 'insert')$q$, 'N1: luật ghi không gọi thẳng được từ client', 'permission denied');
+select t.reset();
 
 -- ── Xoá tài khoản: đóng góp ở lại, không còn tên ──────────────────────────────
 select t.reset();

@@ -33,6 +33,7 @@
 --
 -- ⛔ CỔNG DEPLOY — CHƯA CHẠY FILE NÀY TRÊN PRODUCTION cho tới khi (review 04/10/2026):
 --   1. Xác nhận trên Supabase thật: `select rolbypassrls from pg_roles where rolname = 'postgres'` = true.
+--      → ĐÃ XÁC NHẬN 04/10/2026 (chỉ đọc): postgres rolbypassrls = true; có quyền TRIGGER trên storage.objects.
 --      Các hàm SECURITY DEFINER dưới đây đọc storage.objects bằng quyền chủ hàm. Nếu chủ hàm KHÔNG thấy
 --      được dòng (RLS áp lên nó) thì hạn mức 20 file đếm ra 0 và MẤT TÁC DỤNG (hở), còn mọi đóng góp
 --      kèm file thì bị từ chối (đóng).
@@ -40,8 +41,9 @@
 --      dòng bằng quyền superuser (không qua RLS). Khi đó hạn mức và điều kiện "phiên bản chưa ghi" ở mục 7
 --      chỉ đúng tại lúc thử: tải song song có thể vượt 20 file, và file có thể lọt vào thư mục của phiên
 --      bản đã ghi. Kiểm cả đường tải resumable (TUS) và signed upload.
---   3. Nếu N1 tồn tại: phải xử lý (trigger BEFORE INSERT trên storage.objects cho bucket này, hoặc job dọn
---      định kỳ) HOẶC Owner chấp nhận rõ bằng văn bản — TRƯỚC khi bật bất kỳ UI tải file nào.
+--   3. N1 ĐÃ XỬ LÝ (04/10, phương án 1 do Owner chọn): trigger chord_source_guard_trg ép lại luật ở lượt ghi
+--      thật (mục 7). Còn phải xác nhận trên production rằng trigger thật sự chặn được một lượt tải qua
+--      Storage API (một lần tải thử vượt luật → bị từ chối) TRƯỚC khi bật UI tải file.
 --   Cũng cần xem trên production: metadata.mimetype có phải kiểu trần không (mục 6b đối chiếu với nó);
 --   không policy storage cũ nào thiếu lọc bucket_id; DDL thật của edu_tools khớp câu INSERT ở mục 5.
 --   Backlog đã chấp nhận, chưa sửa: hàng chờ duyệt cắt ở 50 (M6) · bản approved chưa có đường thu hồi (N4)
@@ -83,6 +85,10 @@ begin
    where s.nspname = 'public' and c.relname in ('chord_sheets', 'chord_sheet_versions')
      and coalesce(obj_description(c.oid, 'pg_class'), '') not like 'chord_library_v1:%';
   if n > 0 then raise exception 'GATE: đã có % bảng chord_sheets/chord_sheet_versions lạ — dừng', n; end if;
+  -- Trigger N1 trên storage.objects: cần quyền TRIGGER (bảng thuộc supabase_storage_admin).
+  if not has_table_privilege(current_user, 'storage.objects', 'TRIGGER') then
+    raise exception 'GATE: % không có quyền TRIGGER trên storage.objects — dừng', current_user;
+  end if;
 end $gate$;
 
 -- ── 1) Chuẩn hoá ────────────────────────────────────────────────────────────────────────────
@@ -700,40 +706,96 @@ on conflict (id) do update
       file_size_limit = excluded.file_size_limit,
       allowed_mime_types = excluded.allowed_mime_types;
 
--- Cổng GHI của bucket (tải lên + xoá). Policy chạy bằng quyền người gọi (không đọc được bảng) nên hỏi qua
--- hàm này. Hàm CHỈ trả lời về thư mục của CHÍNH người gọi — tên nào khác trả false ngay, không tra gì.
---   • Tên phải đúng khuôn {uid}/{uuid}/{0-9}.{ext}: tối đa 10 file một phiên bản, khớp trần 10 sources.
---   • Giữ khoá tư vấn theo người gọi (cùng khoá với chord_sheet_contribute) rồi mới kiểm → tải lên/xoá
---     không chạy chéo với một lượt đóng góp đang ghi. VOLATILE: mỗi lần gọi đọc dữ liệu MỚI NHẤT sau khi
---     có khoá, không dùng ảnh chụp cũ của câu lệnh.
---   • "Đã ghi" = thư mục thuộc một phiên bản của CHÍNH người gọi (so uuid, dùng khoá chính). Version id
---     của người khác không làm kết quả khác đi → hàm không cho biết một id lạ có tồn tại hay không.
---   • Tải lên: tối đa 20 file CHƯA gắn phiên bản cho mỗi người (2 phiên bản đang soạn). Hết hạn mức →
---     đóng góp cho xong, hoặc xoá bớt. Xoá: chỉ file chưa gắn phiên bản.
--- COST cao để điều kiện rẻ (bucket_id) được xét trước.
-create or replace function public.chord_source_can_write(p_name text, p_op text)
-returns boolean language plpgsql volatile security definer set search_path = '' cost 1000 as $$
+-- LUẬT GHI của bucket — MỘT nguồn duy nhất, dùng chung cho policy (lượt THỬ của Storage API) và trigger
+-- (lượt GHI THẬT). Trả NULL = cho phép; chuỗi = lý do từ chối. `p_uid` là chủ thư mục:
+--   • policy: auth.uid() của người gọi (tên ngoài thư mục của chính mình → từ chối, không tra gì);
+--   • trigger: uid đọc từ chính đường dẫn đã qua regex (lượt ghi thật chạy bằng superuser, không có JWT).
+-- Luật:
+--   • Tên đúng khuôn {uid}/{uuid}/{0-9}.{pdf|jpg|jpeg|png|webp}.
+--   • Giữ khoá tư vấn theo uid (cùng khoá với chord_sheet_contribute) RỒI mới đếm/kiểm → các lượt ghi của
+--     cùng một người xếp hàng; người khác không chờ nhau. Giữ tới hết transaction.
+--   • Thư mục {uuid} đã là một phiên bản của chủ thư mục ("đã ghi") → không thêm, không xoá: bộ file nguồn
+--     là bằng chứng. Version id của người khác không làm kết quả khác đi (không lộ tồn tại).
+--   • Tải lên: tối đa 10 file trong một thư mục phiên bản, và tối đa 20 file CHƯA gắn phiên bản cho mỗi người.
+-- VOLATILE: mỗi lần gọi đọc dữ liệu MỚI NHẤT sau khi có khoá, không dùng ảnh chụp cũ của câu lệnh.
+create or replace function public.chord_source_rule(p_uid uuid, p_name text, p_op text)
+returns text language plpgsql volatile security definer set search_path = '' as $$
 declare
-  v_uid uuid := auth.uid();
+  v_version uuid;
   v_n integer;
 begin
-  if v_uid is null or p_name is null or p_op is null or p_op not in ('insert', 'delete')
-     or p_name !~ ('^' || v_uid::text || '/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/[0-9]\.(pdf|jpg|jpeg|png|webp)$') then
-    return false;
+  if p_uid is null or p_name is null or p_op is null or p_op not in ('insert', 'delete')
+     or p_name !~ ('^' || p_uid::text || '/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/[0-9]\.(pdf|jpg|jpeg|png|webp)$') then
+    return 'đường dẫn phải là {uid}/{version_id}/{0-9}.{pdf|jpg|jpeg|png|webp}';
   end if;
-  perform pg_advisory_xact_lock(hashtextextended('chordlib:' || v_uid::text, 0));
-  if exists (select 1 from public.chord_sheet_versions v
-              where v.id = split_part(p_name, '/', 2)::uuid and v.contributed_by = v_uid) then
-    return false;
+  v_version := split_part(p_name, '/', 2)::uuid;
+  perform pg_advisory_xact_lock(hashtextextended('chordlib:' || p_uid::text, 0));
+  if exists (select 1 from public.chord_sheet_versions v where v.id = v_version and v.contributed_by = p_uid) then
+    return 'phiên bản đã ghi — bộ file nguồn không đổi được nữa';
   end if;
-  if p_op = 'delete' then return true; end if;
+  if p_op = 'delete' then return null; end if;
   select count(*) into v_n from storage.objects o
-   where o.bucket_id = 'chord-sheet-sources' and o.name like v_uid::text || '/%'
+   where o.bucket_id = 'chord-sheet-sources' and o.name like p_uid::text || '/' || v_version::text || '/%';
+  if v_n >= 10 then return 'một phiên bản tối đa 10 file nguồn'; end if;
+  select count(*) into v_n from storage.objects o
+   where o.bucket_id = 'chord-sheet-sources' and o.name like p_uid::text || '/%'
      and not exists (select 1 from public.chord_sheet_versions v
-                      where v.contributed_by = v_uid and v.id::text = split_part(o.name, '/', 2));
-  return v_n < 20;
+                      where v.contributed_by = p_uid and v.id::text = split_part(o.name, '/', 2));
+  if v_n >= 20 then return 'đã có 20 file chưa gắn phiên bản — đóng góp cho xong hoặc xoá bớt'; end if;
+  return null;
 end $$;
+comment on function public.chord_source_rule(uuid, text, text) is 'chord_library_v1: luật ghi file nguồn (dùng chung cho policy + trigger)';
+
+-- Cổng của policy (lượt THỬ): chỉ trả lời về thư mục của CHÍNH người gọi.
+-- COST cao để điều kiện rẻ (bucket_id) được xét trước.
+create or replace function public.chord_source_can_write(p_name text, p_op text)
+returns boolean language sql volatile security definer set search_path = '' cost 1000 as $$
+  select public.chord_source_rule(auth.uid(), p_name, p_op) is null;
+$$;
 comment on function public.chord_source_can_write(text, text) is 'chord_library_v1: cổng tải lên/xoá file nguồn (thư mục của chính mình, hạn mức, chưa gắn phiên bản)';
+
+-- N1 — LƯỢT GHI THẬT. Storage API kiểm policy INSERT bằng một transaction THỬ rồi rollback (khoá tư vấn
+-- nhả theo), tải file, rồi mới ghi dòng bằng quyền superuser — không qua RLS. Vì vậy mọi luật ở trên phải
+-- được ép LẠI ở đây, trong chính transaction ghi dòng. Trigger chỉ đụng bucket chord-sheet-sources; bucket
+-- khác trả NEW ngay ở dòng đầu. Không ghi bảng nào (không đệ quy). Không đụng SELECT/DELETE.
+--   • INSERT vào bucket này → luật 'insert' với uid đọc từ đường dẫn; nếu dòng có chủ (owner/owner_id do
+--     Storage ghi từ JWT) thì chủ đó phải trùng uid trong đường dẫn.
+--   • UPDATE đổi tên / đổi bucket: không có policy UPDATE nên ứng dụng không bao giờ làm việc này — chặn đổi
+--     tên/dời khỏi bucket; dời TỪ bucket khác VÀO thì xét như một lượt tải lên mới.
+create or replace function public.chord_source_guard()
+returns trigger language plpgsql security definer set search_path = '' as $$
+declare
+  v_uid uuid;
+  v_owner text;
+  v_reason text;
+begin
+  if tg_op = 'UPDATE' then
+    if new.bucket_id is not distinct from old.bucket_id and new.name is not distinct from old.name then return new; end if;
+    if old.bucket_id = 'chord-sheet-sources' then
+      raise exception 'CHORDLIB_SOURCE: file nguồn không đổi tên / không dời được' using errcode = '42501';
+    end if;
+  end if;
+  if new.bucket_id is distinct from 'chord-sheet-sources' then return new; end if;
+  if coalesce(new.name, '') !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/' then
+    raise exception 'CHORDLIB_SOURCE: đường dẫn phải là {uid}/{version_id}/{0-9}.{pdf|jpg|jpeg|png|webp}' using errcode = '42501';
+  end if;
+  v_uid := split_part(new.name, '/', 1)::uuid;
+  v_owner := coalesce(to_jsonb(new) ->> 'owner_id', to_jsonb(new) ->> 'owner');
+  if v_owner is not null and v_owner <> v_uid::text then
+    raise exception 'CHORDLIB_SOURCE: chủ file không khớp thư mục' using errcode = '42501';
+  end if;
+  v_reason := public.chord_source_rule(v_uid, new.name, 'insert');
+  if v_reason is not null then
+    raise exception 'CHORDLIB_SOURCE: %', v_reason using errcode = '42501';
+  end if;
+  return new;
+end $$;
+comment on function public.chord_source_guard() is 'chord_library_v1: trigger ép luật file nguồn ở lượt ghi thật (N1)';
+drop trigger if exists chord_source_guard_trg on storage.objects;
+create trigger chord_source_guard_trg
+  before insert or update of bucket_id, name on storage.objects
+  for each row execute function public.chord_source_guard();
+
 -- Tên cũ của bản nháp trước khi review (chưa từng lên production) — gỡ nếu còn.
 drop policy if exists "chord sheet sources read"    on storage.objects;
 drop policy if exists "chord sheet sources insert"  on storage.objects;
@@ -766,7 +828,8 @@ revoke all on function
   public.chord_sheet_search(text, integer),
   public.chord_sheet_contribute(text, text, text, jsonb, integer, jsonb, uuid, uuid, uuid),
   public.chord_sheet_get(uuid), public.chord_sheet_approve(uuid, uuid), public.chord_sheet_reject(uuid, text),
-  public.chord_sheet_update_info(uuid, text, text), public.chord_source_can_write(text, text)
+  public.chord_sheet_update_info(uuid, text, text), public.chord_source_can_write(text, text),
+  public.chord_source_rule(uuid, text, text), public.chord_source_guard()
 from public, anon, authenticated;
 grant execute on function
   public.chord_fold_vi(text), public.chordlib_can(text), public.my_chordlib_caps(),
