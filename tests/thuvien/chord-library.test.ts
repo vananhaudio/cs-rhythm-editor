@@ -267,7 +267,8 @@ test('rpc: tìm → gộp theo BÀI: bản đang dùng làm đại diện, kèm 
 test('rpc: thêm bài = contribute rồi đọc lại — KHÔNG tự duyệt', async () => {
   const { rpc, calls } = fakeRpc({
     chord_sheet_contribute: () => ({ ok: true, duplicate: false, sheet_id: 's1', version_id: 'v1' }),
-    chord_sheet_get: () => row({ is_canonical: false, review_status: 'private', meter: { beats: 3, beatType: 4 }, suggested_bpm: 96, sources: [{ path: 'x' }] }),
+    chord_sheet_get: () => row({ is_canonical: false, review_status: 'private', meter: { beats: 3, beatType: 4 }, suggested_bpm: 96,
+      sources: [{ path: `${'a'.repeat(8)}-0000-4000-8000-${'a'.repeat(12)}/${'b'.repeat(8)}-0000-4000-8000-${'b'.repeat(12)}/0.png`, mime: 'image/png', sha256: 'c'.repeat(64), size_bytes: 70, page: 1 }, { path: 'rác' }] }),
   })
   const detail = await createRpcChordLibrary(rpc).createChordSheet(draft({ title: ' Bài ', composer: ' ', meter: { beats: 3, beatType: 4 }, suggestedBpm: 96 }))
   assert.deepEqual(calls.map(call => call.fn), ['chord_sheet_contribute', 'chord_sheet_get'])

@@ -129,6 +129,15 @@ returns boolean language sql immutable parallel safe set search_path = '' as $$
 $$;
 comment on function public.chord_meter_ok(jsonb) is 'chord_library_v1: kiểm hình dạng meter';
 
+-- Bộ file nguồn của một phiên bản → một khoá so sánh: các sha256 đã sắp xếp. Hai phiên bản cùng lời/nhịp/BPM
+-- nhưng KHÁC bộ file nguồn là hai phiên bản khác nhau (thay sheet nguồn = phiên bản mới). Rỗng/null → ''.
+create or replace function public.chord_source_key(p jsonb)
+returns text language sql immutable parallel safe set search_path = '' as $$
+  select coalesce((select string_agg(e ->> 'sha256', ',' order by e ->> 'sha256')
+                     from jsonb_array_elements(case when jsonb_typeof(p) = 'array' then p else '[]'::jsonb end) e), '');
+$$;
+comment on function public.chord_source_key(jsonb) is 'chord_library_v1: khoá so sánh bộ file nguồn (sha256 đã sắp xếp)';
+
 -- ── 2) Bảng ─────────────────────────────────────────────────────────────────────────────────
 -- Một BÀI: danh tính để tìm. title_key/composer_key là cột SINH — không ai gửi khoá sai được.
 create table if not exists public.chord_sheets (
@@ -462,12 +471,13 @@ begin
       raise exception 'CHORDLIB_INVALID: bài mới không có phiên bản cha' using errcode = '22023';
     end if;
     -- Gửi lại y hệt (cùng người, cùng tên bài, cùng NỘI DUNG, chưa bị từ chối) → trả bản đã có.
-    -- Nội dung = lời + nhịp + BPM. text_hash vẫn CHỈ băm lời (neo ô nhịp bám theo lời) — nên trùng
-    -- text_hash chưa đủ để gọi là trùng: đổi riêng nhịp hoặc BPM là một phiên bản mới hợp lệ.
+    -- Nội dung = lời + nhịp + BPM + bộ file nguồn. text_hash vẫn CHỈ băm lời (neo ô nhịp bám theo lời) — nên
+    -- trùng text_hash chưa đủ để gọi là trùng: đổi riêng nhịp, BPM, hay sheet nguồn là một phiên bản mới hợp lệ.
     select v.id, v.sheet_id into v_dup, v_dup_sheet
       from public.chord_sheet_versions v join public.chord_sheets s on s.id = v.sheet_id
      where v.contributed_by = v_uid and v.text_hash = v_hash and v.review_status <> 'rejected'
        and v.meter is not distinct from p_meter and v.suggested_bpm is not distinct from p_suggested_bpm
+       and public.chord_source_key(v.sources) = public.chord_source_key(v_sources)
        and s.title_key = public.chord_fold_vi(v_title)
      order by v.created_at limit 1;
     if v_dup is not null then
@@ -481,11 +491,12 @@ begin
          or exists (select 1 from public.chord_sheet_versions v where v.sheet_id = p_sheet_id and v.contributed_by = v_uid)) then
       raise exception 'CHORDLIB_NOT_FOUND' using errcode = 'P0002';
     end if;
-    -- Trùng NỘI DUNG (lời + nhịp + BPM) với bản chuẩn hiện hành, hoặc với bản mình đã gửi (chưa bị từ
-    -- chối) → trả bản đó.
+    -- Trùng NỘI DUNG (lời + nhịp + BPM + bộ file nguồn) với bản chuẩn hiện hành, hoặc với bản mình đã gửi
+    -- (chưa bị từ chối) → trả bản đó.
     select v.id into v_dup from public.chord_sheet_versions v
      where v.sheet_id = p_sheet_id and v.text_hash = v_hash
        and v.meter is not distinct from p_meter and v.suggested_bpm is not distinct from p_suggested_bpm
+       and public.chord_source_key(v.sources) = public.chord_source_key(v_sources)
        and (v.id = v_sheet.canonical_version_id or (v.contributed_by = v_uid and v.review_status <> 'rejected'))
      order by (v.id = v_sheet.canonical_version_id) desc nulls last, v.created_at limit 1;
     if v_dup is not null then
@@ -823,7 +834,7 @@ create policy "chord sheet sources cleanup" on storage.objects
 
 -- ── 8) Quyền gọi hàm ────────────────────────────────────────────────────────────────────────
 revoke all on function
-  public.chord_fold_vi(text), public.chord_canonical_text(text), public.chord_meter_ok(jsonb),
+  public.chord_fold_vi(text), public.chord_canonical_text(text), public.chord_meter_ok(jsonb), public.chord_source_key(jsonb),
   public.chord_sheet_versions_guard(), public.chordlib_can(text), public.my_chordlib_caps(),
   public.chord_sheet_search(text, integer),
   public.chord_sheet_contribute(text, text, text, jsonb, integer, jsonb, uuid, uuid, uuid),

@@ -5,6 +5,9 @@ import type { ChordLibrary, ChordSheetDetail, ChordSheetSummary } from './chordL
 import { BPM_RANGE, METER_CHOICES, canonicalChordText, chordTextIssues, formatMeter, listChords, parseBpm, parseChordText, parseMeter, validateChordDraft } from './chordText.ts'
 import type { ChordDraft, ChordDraftErrors } from './chordText.ts'
 import { NEW_CHORD_SHEET, chordSheetFromSearch, sectionUrl } from './sections.ts'
+import { MAX_SOURCE_FILES, SOURCE_ACCEPT, formatBytes, nextFreeIndex, parseSourcePath, sha256Hex, sourceErrorMessage, sourceFileProblem, sourceKindLabel, sourceMimeOf, sourcePath } from './chordSources.ts'
+import type { ChordSource } from './chordSources.ts'
+import { ANCHORS_STATUS_LABEL, renderAnchors } from './chordAnchors.ts'
 
 // Mục "Hợp âm chuẩn hóa" của /thuvien — bàn làm việc của thầy: tìm, thêm, sửa lời + hợp âm.
 // Mọi đọc/ghi đi qua `library` (src/thuvien/chordLibrary.ts); component không biết Supabase.
@@ -143,13 +146,19 @@ function ChordEditor({ library, versionId, onClose, onSaved, onOpenVersion }: {
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
   const [failed, setFailed] = useState('')
+  // File nguồn cho phiên bản SẮP lưu: bản đã gắn (giữ lại sẽ được CHÉP sang phiên bản mới) + file mới nạp vào
+  // thư mục {uid}/{draftId}/. draftId = version_id của phiên bản sắp tạo, sinh sẵn để tải file trước khi lưu.
+  const [plan, setPlan] = useState<PlanItem[]>([])
+  const [draftId, setDraftId] = useState(() => library.newVersionId())
+  const [sourceBusy, setSourceBusy] = useState(false)
+  const [sourceError, setSourceError] = useState('')
 
   useEffect(() => {
     if (!versionId) return
     let active = true
     library.getChordSheet(versionId).then(data => {
       if (!active) return
-      setDetail(data); setSaved(formOf(data)); setForm(formOf(data)); setLoad('ready')
+      setDetail(data); setSaved(formOf(data)); setForm(formOf(data)); setPlan(planOf(data)); setLoad('ready')
     }).catch(cause => {
       if (!active) return
       setLoadError(cause instanceof Error ? cause.message : 'Không mở được bài.')
@@ -161,7 +170,9 @@ function ChordEditor({ library, versionId, onClose, onSaved, onOpenVersion }: {
   const set = (patch: Partial<Form>) => { setForm(current => ({ ...current, ...patch })); setMessage(''); setFailed('') }
   const infoChanged = form.title.trim() !== saved.title.trim() || form.composer.trim() !== saved.composer.trim()
   const contentChanged = canonicalChordText(form.text) !== canonicalChordText(saved.text) || form.meter !== saved.meter || form.bpm.trim() !== saved.bpm.trim()
-  const dirty = infoChanged || contentChanged
+  const pending = plan.filter(item => item.kind === 'pending')
+  const sourcesChanged = pending.length > 0 || plan.length !== (detail?.sources.length ?? 0)
+  const dirty = infoChanged || contentChanged || sourcesChanged
   const lines = useMemo(() => parseChordText(form.text), [form.text])
   const chords = useMemo(() => listChords(form.text), [form.text])
   const issues = useMemo(() => chordTextIssues(form.text), [form.text])
@@ -170,19 +181,47 @@ function ChordEditor({ library, versionId, onClose, onSaved, onOpenVersion }: {
   const anchorsWillReset = !!detail?.hasAnchors && canonicalChordText(form.text) !== canonicalChordText(saved.text)
   const mock = library.mode === 'mock'
 
-  function close() {
-    if (dirty && !window.confirm('Có thay đổi chưa lưu. Rời khỏi bài này?')) return
-    onClose()
+  /** Rời bài: còn thay đổi → hỏi; file đã nạp mà chưa lưu → xoá luôn (không để file mồ côi chiếm hạn mức). */
+  async function leave(then: () => void) {
+    const ask = pending.length
+      ? `Có ${pending.length} file nguồn đã nạp nhưng chưa lưu — rời khỏi sẽ xoá các file này. Rời khỏi bài?`
+      : 'Có thay đổi chưa lưu. Rời khỏi bài này?'
+    if (dirty && !window.confirm(ask)) return
+    for (const item of pending) { try { await library.sources.remove(item.source.path) } catch { /* đã gắn hoặc đã mất: bỏ qua */ } }
+    then()
   }
+  const close = () => void leave(() => onClose())
 
-  const adopt = (next: ChordSheetDetail) => { setDetail(next); setSaved(formOf(next)); setForm(formOf(next)) }
+  const adopt = (next: ChordSheetDetail) => {
+    setDetail(next); setSaved(formOf(next)); setForm(formOf(next)); setPlan(planOf(next)); setSourceError('')
+    setDraftId(library.newVersionId())
+  }
   const suffix = mock ? ' (Dữ liệu thử — chưa lưu production.)' : ''
 
   // Lưu: tên bài/tác giả → sửa BÀI (có hiệu lực ngay). Lời/nhịp/BPM → PHIÊN BẢN MỚI ở dạng bản nháp;
   // bản đang dùng không đổi cho tới khi bấm Duyệt. Không đổi gì → không gọi máy chủ, không có phiên bản rác.
   // Sau mỗi lần lưu, form nạp lại từ đúng dữ liệu máy chủ trả về. Lỗi → báo lỗi, không báo "đã lưu".
+  /** Đưa mọi file "đã gắn" còn giữ trong danh sách sang thư mục phiên bản sắp tạo (CHÉP qua Storage, không dời). */
+  async function carryAttached(owner: string): Promise<PlanItem[]> {
+    let current = plan
+    for (const item of plan) {
+      if (item.kind !== 'attached') continue
+      const used = current.filter(entry => entry.kind === 'pending').map(entry => parseSourcePath(entry.source.path)!.index)
+      const index = nextFreeIndex(used)
+      if (index === null) throw new Error(`Một phiên bản tối đa ${MAX_SOURCE_FILES} file nguồn.`)
+      const to = sourcePath(owner, draftId, index, item.source.mime)
+      await library.sources.copy(item.source.path, to)
+      current = current.map(entry => entry.key === item.key ? { ...entry, kind: 'pending', source: { ...entry.source, path: to } } : entry)
+      setPlan(current)
+    }
+    return current
+  }
+
+  // Lưu: tên bài/tác giả → sửa BÀI (có hiệu lực ngay). Lời/nhịp/BPM/file nguồn → PHIÊN BẢN MỚI ở dạng bản nháp
+  // (version_id = draftId, file nguồn đã nằm sẵn trong thư mục của nó); bản đang dùng không đổi cho tới khi bấm
+  // Duyệt. Không đổi gì → không gọi máy chủ. Lỗi → báo lỗi, không báo "đã lưu"; file đã nạp vẫn còn để lưu lại/xoá.
   async function save() {
-    if (busy) return
+    if (busy || sourceBusy) return
     const draft = draftOf(form)
     const found = validateChordDraft(draft)
     setErrors(found)
@@ -191,10 +230,18 @@ function ChordEditor({ library, versionId, onClose, onSaved, onOpenVersion }: {
     if (detail && !dirty) { setMessage('Chưa có thay đổi nào để lưu.'); return }
     setBusy(true)
     try {
+      const needsVersion = !detail || contentChanged || sourcesChanged
+      let sources: ChordSource[] = []
+      if (needsVersion && plan.length) {
+        const owner = await library.sources.ownerId()
+        sources = (await carryAttached(owner)).map((item, at) => ({ ...item.source, page: at + 1 }))
+      }
+      const options = { versionId: draftId, sources }
       if (!detail) {
-        const next = await library.createChordSheet(draft)
+        const next = await library.createChordSheet(draft, options)
+        await afterVersion(next, sources)
         adopt(next); onSaved(next)
-        setMessage(`Đã lưu bản nháp (phiên bản ${next.versionNumber}) — bấm “Duyệt bản này” để đặt làm bản đang dùng.${suffix}`)
+        setMessage(`Đã lưu bản nháp (phiên bản ${next.versionNumber}${sources.length ? `, ${sources.length} file nguồn` : ''}) — bấm “Duyệt bản này” để đặt làm bản đang dùng.${suffix}`)
         return
       }
       if (infoChanged) {
@@ -203,18 +250,83 @@ function ChordEditor({ library, versionId, onClose, onSaved, onOpenVersion }: {
         setSaved(current => ({ ...current, title: form.title, composer: form.composer }))
         setDetail(current => current && { ...current, title: form.title.trim(), composer: form.composer.trim() || null })
       }
-      const next = contentChanged
-        ? await library.createChordSheetVersion(detail.sheetId, draft, detail.versionId)
+      const next = needsVersion
+        ? await library.createChordSheetVersion(detail.sheetId, draft, detail.versionId, options)
         : await library.getChordSheet(detail.versionId)
+      const duplicate = needsVersion && next.versionId !== draftId
+      if (needsVersion) await afterVersion(next, sources)
       adopt(next); onSaved(next)
-      setMessage((contentChanged
-        ? next.status === 'draft'
-          ? `Đã lưu bản nháp (phiên bản ${next.versionNumber}). Bản đang dùng chưa đổi — bấm “Duyệt bản này” để dùng bản mới.`
+      setMessage((needsVersion
+        ? !duplicate
+          ? `Đã lưu bản nháp (phiên bản ${next.versionNumber}${sources.length ? `, ${sources.length} file nguồn` : ''}). Bản đang dùng chưa đổi — bấm “Duyệt bản này” để dùng bản mới.`
           : `Nội dung này trùng phiên bản ${next.versionNumber} đã có — đã mở phiên bản đó, không tạo thêm.`
         : 'Đã lưu tên bài / tác giả.') + suffix)
     } catch (cause) {
-      setFailed(cause instanceof Error ? cause.message : 'Không lưu được.')
+      setFailed(cause instanceof Error ? sourceErrorMessage(cause.message) : 'Không lưu được.')
     } finally { setBusy(false) }
+  }
+
+  /** Máy chủ báo trùng (trả phiên bản khác draftId) → file vừa đưa vào thư mục draftId không gắn vào đâu: dọn. */
+  async function afterVersion(next: ChordSheetDetail, sources: ChordSource[]) {
+    if (next.versionId === draftId) return
+    for (const source of sources) { try { await library.sources.remove(source.path) } catch { /* bỏ qua */ } }
+  }
+
+  async function addFiles(files: File[]) {
+    if (!files.length || sourceBusy) return
+    setSourceBusy(true); setSourceError(''); setMessage('')
+    const problems: string[] = []
+    let current = plan
+    try {
+      const owner = await library.sources.ownerId()
+      for (const file of files) {
+        const problem = sourceFileProblem(file, current.length)
+        if (problem) { problems.push(problem); continue }
+        const mime = sourceMimeOf(file)!
+        const used = current.filter(entry => entry.kind === 'pending').map(entry => parseSourcePath(entry.source.path)!.index)
+        // Chỗ trống phải chừa đủ cho các file "đã gắn" sẽ được chép sang khi lưu.
+        const reserved = current.filter(entry => entry.kind === 'attached').length
+        const index = nextFreeIndex(used)
+        if (index === null || used.length + reserved >= MAX_SOURCE_FILES) { problems.push(`Một phiên bản tối đa ${MAX_SOURCE_FILES} file nguồn.`); break }
+        const path = sourcePath(owner, draftId, index, mime)
+        try {
+          const sha256 = await sha256Hex(await file.arrayBuffer())
+          await library.sources.upload(path, file, mime)
+          current = [...current, { key: path, kind: 'pending', name: file.name, source: { path, mime, sha256, sizeBytes: file.size, page: current.length + 1 } }]
+          setPlan(current)
+        } catch (cause) {
+          problems.push(`“${file.name}”: ${sourceErrorMessage(cause instanceof Error ? cause.message : '')}`)
+        }
+      }
+    } catch (cause) {
+      problems.push(sourceErrorMessage(cause instanceof Error ? cause.message : ''))
+    } finally {
+      setSourceError(problems.join(' '))
+      setSourceBusy(false)
+    }
+  }
+
+  async function removeItem(item: PlanItem) {
+    if (sourceBusy) return
+    setSourceError('')
+    if (item.kind === 'attached') { setPlan(current => current.filter(entry => entry.key !== item.key)); return }
+    setSourceBusy(true)
+    try {
+      await library.sources.remove(item.source.path)
+      setPlan(current => current.filter(entry => entry.key !== item.key))
+    } catch (cause) {
+      setSourceError(sourceErrorMessage(cause instanceof Error ? cause.message : ''))
+    } finally { setSourceBusy(false) }
+  }
+
+  async function viewItem(item: PlanItem) {
+    setSourceError('')
+    try {
+      const url = await library.sources.viewUrl(item.source.path)
+      window.open(url, '_blank', 'noopener')
+    } catch (cause) {
+      setSourceError(sourceErrorMessage(cause instanceof Error ? cause.message : ''))
+    }
   }
 
   async function approve() {
@@ -252,7 +364,7 @@ function ChordEditor({ library, versionId, onClose, onSaved, onOpenVersion }: {
     <header className="cl-editor-head">
       <button type="button" className="cl-back" onClick={close}>← Danh sách</button>
       <h1>{detail ? detail.title : 'Thêm bài'}</h1>
-      <button type="button" className="cl-primary" onClick={() => void save()} disabled={busy}>{busy ? 'Đang lưu…' : 'Lưu'}</button>
+      <button type="button" className="cl-primary" onClick={() => void save()} disabled={busy || sourceBusy}>{busy ? 'Đang lưu…' : 'Lưu'}</button>
     </header>
     <MockBanner library={library} />
     {detail && <div className="cl-state" data-status={detail.status} role="group" aria-label="Trạng thái phiên bản">
@@ -265,7 +377,7 @@ function ChordEditor({ library, versionId, onClose, onSaved, onOpenVersion }: {
         {(detail.status === 'draft' || detail.status === 'old') && dirty && <> Lưu thay đổi trước khi duyệt.</>}
       </p>
       <div className="cl-state-actions">
-        {detail.draftVersionId && <button type="button" className="cl-secondary" disabled={busy} onClick={() => { if (!dirty || window.confirm('Có thay đổi chưa lưu. Rời khỏi bản này?')) onOpenVersion(detail.draftVersionId!) }}>Mở bản nháp</button>}
+        {detail.draftVersionId && <button type="button" className="cl-secondary" disabled={busy} onClick={() => void leave(() => onOpenVersion(detail.draftVersionId!))}>Mở bản nháp</button>}
         {(detail.status === 'draft' || detail.status === 'old') && <button type="button" className="cl-secondary cl-approve" disabled={busy || dirty} onClick={() => void approve()}>{detail.status === 'draft' ? 'Duyệt bản này' : 'Dùng lại bản này'}</button>}
         {detail.status === 'draft' && <button type="button" className="cl-secondary" disabled={busy} onClick={() => void discard()}>Bỏ bản nháp</button>}
       </div>
@@ -309,16 +421,36 @@ function ChordEditor({ library, versionId, onClose, onSaved, onOpenVersion }: {
           {anchorsWillReset && <p className="cl-warn" role="note">Bài này đã có vạch nhịp theo lời cũ. Lưu lời mới thì vạch nhịp phải làm lại.</p>}
         </section>
 
-        <section className="cl-card" aria-label="Vạch nhịp">
-          <h2>Vạch nhịp</h2>
-          <Status label="Trạng thái" on={!!detail?.hasAnchors && !anchorsWillReset} yes="Đã có" />
-          {!(detail?.hasAnchors && !anchorsWillReset) && <p className="cl-placeholder">Chưa có dữ liệu vạch nhịp.</p>}
-        </section>
+        <AnchorSection detail={detail} willReset={anchorsWillReset} sourceCount={plan.length} sourcesSaved={!sourcesChanged} />
 
         <section className="cl-card" aria-label="Nguồn sheet">
           <h2>Nguồn sheet</h2>
-          <Status label="Trạng thái" on={!!detail?.hasSource} />
-          <p className="cl-placeholder">PDF/ảnh sẽ được bổ sung ở bước tiếp theo.</p>
+          <p className="cl-help">PDF, JPEG, PNG hoặc WebP · tối đa 20 MB/file · tối đa {MAX_SOURCE_FILES} file. File gắn với phiên bản khi bấm <strong>Lưu</strong>; phiên bản đã lưu thì bộ nguồn không đổi được nữa — thay nguồn là lưu thành phiên bản mới.</p>
+          {plan.length > 0
+            ? <ol className="cl-sources" aria-label="Danh sách file nguồn">
+              {plan.map((item, at) => <li key={item.key} className="cl-src" data-kind={item.kind}>
+                <div className="cl-src-main">
+                  <strong>{item.source.mime === 'application/pdf' ? `PDF ${at + 1}` : `Trang ${at + 1}`}</strong>
+                  <span>{item.name} · {sourceKindLabel(item.source.mime)} · {formatBytes(item.source.sizeBytes)}</span>
+                  <em className="cl-src-tag">{item.kind === 'attached' ? `Đã gắn với phiên bản ${detail?.versionNumber}` : 'Chưa lưu'}</em>
+                </div>
+                <div className="cl-src-actions">
+                  <button type="button" className="cl-secondary" onClick={() => void viewItem(item)}>Xem</button>
+                  <button type="button" className="cl-secondary" disabled={sourceBusy || busy} onClick={() => void removeItem(item)}
+                    aria-label={`${item.kind === 'attached' ? 'Bỏ khỏi phiên bản mới' : 'Xoá'} ${item.name}`}>{item.kind === 'attached' ? 'Bỏ khỏi bản mới' : 'Xoá'}</button>
+                </div>
+              </li>)}
+            </ol>
+            : <p className="cl-placeholder">{detail?.sources.length ? 'Đã bỏ hết file nguồn khỏi phiên bản mới.' : 'Chưa có file nguồn.'}</p>}
+          {detail && detail.sources.length > 0 && sourcesChanged && <p className="cl-warn" role="note">Phiên bản {detail.versionNumber} giữ nguyên bộ nguồn cũ (đã gắn, không sửa được). Bấm Lưu để tạo phiên bản mới với bộ nguồn này.</p>}
+          {detail && detail.sources.length > 0 && !sourcesChanged && <p className="cl-placeholder">File đã gắn với phiên bản — muốn thay nguồn: thêm/bỏ file rồi Lưu thành phiên bản mới.</p>}
+          <label className="cl-secondary cl-upload" data-disabled={sourceBusy || busy || plan.length >= MAX_SOURCE_FILES || library.mode === 'disabled'}>
+            {sourceBusy ? 'Đang nạp…' : '+ Nạp PDF / ảnh'}
+            <input type="file" multiple accept={SOURCE_ACCEPT} aria-label="Chọn file PDF hoặc ảnh sheet"
+              disabled={sourceBusy || busy || plan.length >= MAX_SOURCE_FILES || library.mode === 'disabled'}
+              onChange={event => { const files = [...(event.target.files ?? [])]; event.target.value = ''; void addFiles(files) }} />
+          </label>
+          {sourceError && <p className="cl-error" role="alert">{sourceError}</p>}
         </section>
       </div>
 
@@ -338,4 +470,27 @@ function ChordEditor({ library, versionId, onClose, onSaved, onOpenVersion }: {
       </section>
     </div>
   </div>
+}
+
+type PlanItem = { key: string; kind: 'attached' | 'pending'; name: string; source: ChordSource }
+const planOf = (detail: ChordSheetDetail): PlanItem[] =>
+  detail.sources.map(source => ({ key: source.path, kind: 'attached', name: `sheet-${String(source.page).padStart(2, '0')}.${source.path.split('.').pop()}`, source }))
+
+/** Vạch nhịp — khung cho lát phân tích sau: trạng thái, nguồn, nút Phân tích (chưa bật), xem lại vạch nhịp đã có. */
+function AnchorSection({ detail, willReset, sourceCount, sourcesSaved }: { detail: ChordSheetDetail | null; willReset: boolean; sourceCount: number; sourcesSaved: boolean }) {
+  const status = willReset || !detail ? 'none' : detail.anchorsStatus
+  const anchors = willReset ? null : detail?.anchors ?? null
+  const lines = anchors && detail ? renderAnchors(detail.text, anchors) : []
+  return <section className="cl-card" aria-label="Vạch nhịp">
+    <h2>Vạch nhịp</h2>
+    <Status label="Trạng thái" on={status === 'ready'} yes={ANCHORS_STATUS_LABEL.ready} no={ANCHORS_STATUS_LABEL[status]} />
+    <p className="cl-help cl-anchor-src">Nguồn: {sourceCount ? `${sourceCount} file sheet${sourcesSaved ? '' : ' (chưa lưu)'}` : 'chưa có file sheet'}</p>
+    <button type="button" className="cl-secondary cl-analyze" disabled title="Sẽ có ở bước tiếp theo">Phân tích vạch nhịp</button>
+    <p className="cl-help">Tính năng phân tích sẽ đọc các vạch nhịp trên bản nhạc và ghép chúng với lời + hợp âm.</p>
+    <div className="cl-anchor-view" aria-label="Xem vạch nhịp">
+      {lines.length
+        ? lines.map((line, at) => <p key={at} className="cl-anchor-line">{line.label && <span className="cl-anchor-label">{line.label}</span>}{line.text}</p>)
+        : <p className="cl-placeholder">{willReset ? 'Lời đã đổi — vạch nhịp cũ không còn khớp, cần phân tích lại sau khi lưu.' : detail?.hasAnchors && !anchors ? 'Dữ liệu vạch nhịp không đọc được theo lời hiện tại.' : 'Chưa có dữ liệu vạch nhịp.'}</p>}
+    </div>
+  </section>
 }

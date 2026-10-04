@@ -547,6 +547,39 @@ select t.as_user('A');
 select t.fails($q$select public.chord_source_rule(gen_random_uuid(), 'x', 'insert')$q$, 'N1: luật ghi không gọi thẳng được từ client', 'permission denied');
 select t.reset();
 
+-- ── V1.1) Bộ file nguồn tính vào phép dò trùng: chỉ thay sheet nguồn = phiên bản mới ──
+select t.reset();
+select t.put('src', jsonb_build_object('v1', gen_random_uuid(), 'v2', gen_random_uuid(), 'v3', gen_random_uuid(), 'v4', gen_random_uuid()));
+create function t.sp(v text, n text) returns text language sql as $$ select t.u('T')::text || '/' || t.id('src', v)::text || '/' || n $$;
+create function t.sj(v text, n text, sha text) returns jsonb language sql as $$
+  select jsonb_build_array(jsonb_build_object('path', t.sp(v, n), 'mime', 'image/png', 'sha256', sha)) $$;
+grant execute on function t.sp(text, text), t.sj(text, text, text) to anon, authenticated;
+select t.ok(public.chord_source_key('[]') = '' and public.chord_source_key(null) = ''
+  and public.chord_source_key(jsonb_build_array(jsonb_build_object('sha256', 'b'), jsonb_build_object('sha256', 'a'))) = 'a,b',
+  'V1.1: chord_source_key = sha256 đã sắp xếp (thứ tự file không làm khác khoá); rỗng/null → ''''');
+insert into storage.objects (bucket_id, name, owner) values
+  ('chord-sheet-sources', t.sp('v1', '0.png'), t.u('T')), ('chord-sheet-sources', t.sp('v2', '0.png'), t.u('T')),
+  ('chord-sheet-sources', t.sp('v3', '0.png'), t.u('T')), ('chord-sheet-sources', t.sp('v4', '0.png'), t.u('T'));
+select t.as_user('T');
+select t.put('s1', public.chord_sheet_contribute(p_text => 'nguồn [C] một', p_title => 'Bài có nguồn V1.1', p_version_id => t.id('src', 'v1'),
+  p_sources => t.sj('v1', '0.png', repeat('1', 64))));
+select t.put('s2', public.chord_sheet_contribute(p_text => 'nguồn [C] một', p_sheet_id => t.id('s1', 'sheet_id'), p_version_id => t.id('src', 'v2'),
+  p_sources => t.sj('v2', '0.png', repeat('2', 64))));
+select t.ok((select v ->> 'duplicate' = 'false' and v ->> 'version_number' = '2' from t.kv where k = 's2'),
+  'V1.1: cùng lời + nhịp + BPM nhưng KHÁC file nguồn → phiên bản mới (trước đây bị coi là trùng)');
+select t.put('s3', public.chord_sheet_contribute(p_text => 'nguồn [C] một', p_sheet_id => t.id('s1', 'sheet_id'), p_version_id => t.id('src', 'v3'),
+  p_sources => t.sj('v3', '0.png', repeat('2', 64))));
+select t.ok((select v ->> 'duplicate' = 'true' and v ->> 'version_id' = t.id('s2')::text from t.kv where k = 's3'),
+  'V1.1: cùng lời + nhịp + BPM + CÙNG sha256 nguồn (khác đường dẫn) → trùng, trả bản đã có');
+select t.fails(format($q$select public.chord_sheet_contribute(p_text => 'nguồn [C] một', p_sheet_id => %L, p_version_id => %L)$q$, t.id('s1', 'sheet_id'), t.id('src', 'v4')),
+  'V1.1: thư mục phiên bản còn file chưa khai → đóng góp không kèm nguồn bị chặn (không để file mồ côi)', 'chưa được khai');
+select t.put('s5', public.chord_sheet_contribute(p_text => 'nguồn [C] một', p_sheet_id => t.id('s1', 'sheet_id')));
+select t.ok((select v ->> 'duplicate' = 'false' from t.kv where k = 's5'), 'V1.1: cùng lời + nhịp + BPM, KHÔNG nguồn (so với bản có nguồn) → phiên bản mới');
+select t.ok(public.chord_sheet_get(t.id('s2')) -> 'sources' -> 0 ->> 'sha256' = repeat('2', 64)
+  and public.chord_sheet_get(t.id('s1')) -> 'sources' -> 0 ->> 'sha256' = repeat('1', 64),
+  'V1.1: mỗi phiên bản giữ đúng bộ nguồn của nó (bất biến)');
+select t.reset();
+
 -- ── Xoá tài khoản: đóng góp ở lại, không còn tên ──────────────────────────────
 select t.reset();
 delete from public.app_users where id = t.u('N');
