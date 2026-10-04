@@ -580,6 +580,95 @@ select t.ok(public.chord_sheet_get(t.id('s2')) -> 'sources' -> 0 ->> 'sha256' = 
   'V1.1: mỗi phiên bản giữ đúng bộ nguồn của nó (bất biến)');
 select t.reset();
 
+-- ── V1.2) Vạch nhịp thủ công: chấp nhận → phiên bản MỚI (cùng nội dung + nguồn của cha), không ghi vào bản cũ ──
+select t.reset();
+select t.ok(public.chord_lyric_token_counts(E'1. Chiều [Am] nao, tiễn nhau [E7] đi\nĐK: [Dm] Hoàng hôn\n\n[C][G]\nti[Am]ễn\nhết câu [G]\nDạo: [C] la\n[C] 1. không phải nhãn')
+  = '{5,2,0,1,2,3,1,4}'::integer[],
+  'V1.2 tách chữ: bỏ nhãn "1." / "ĐK:" / "Dạo:"; [hợp âm] không phải chữ; hợp âm giữa chữ tách 2; hợp âm cuối dòng = 1 vị trí; dòng trống = 0; có hợp âm trước thì "1." là lời');
+select t.ok(public.chord_lyric_token_counts(E'a\u00a0b\u3000c  d') = '{4}' and public.chord_lyric_token_counts('') = '{0}', 'V1.2 tách chữ: NBSP / khoảng trắng Unicode là ranh giới chữ (như \s của JavaScript)');
+select t.put('anc', jsonb_build_object('text', E'1. Chiều [Am] nao, tiễn nhau [E7] đi\nKhi [C] bóng ngả [G] xế\nĐK: [Dm] Hoàng hôn [G] xuống'));
+-- bài + phiên bản 1 (có 1 file nguồn) do thầy T đóng góp
+select t.put('anc', (select v from t.kv where k = 'anc') || jsonb_build_object('v1', gen_random_uuid()));
+create function t.ap(n text) returns text language sql as $$ select t.u('T')::text || '/' || ((select v ->> 'v1' from t.kv where k = 'anc'))::text || '/' || n $$;
+grant execute on function t.ap(text) to anon, authenticated;
+insert into storage.objects (bucket_id, name, owner, metadata) values ('chord-sheet-sources', t.ap('0.png'), t.u('T'), '{"mimetype": "image/png", "size": 70}');
+select t.as_user('T');
+select t.put('a1', public.chord_sheet_contribute(p_text => (select v ->> 'text' from t.kv where k = 'anc'), p_title => 'Bài vạch nhịp', p_meter => '{"beats": 3, "beatType": 4}', p_suggested_bpm => 66,
+  p_version_id => ((select v ->> 'v1' from t.kv where k = 'anc'))::uuid,
+  p_sources => jsonb_build_array(jsonb_build_object('path', t.ap('0.png'), 'mime', 'image/png', 'sha256', repeat('9', 64), 'size_bytes', 70, 'page', 1))));
+select t.ok(public.chord_sheet_approve(t.id('a1')) ->> 'ok' = 'true', 'V1.2: phiên bản 1 (chưa có vạch nhịp) được duyệt làm bản đang dùng');
+select t.reset();
+create function t.acc(p jsonb) returns text language sql as $$ select format('select public.chord_sheet_accept_anchors(%L, %L)', t.id('a1'), p) $$;
+grant execute on function t.acc(jsonb) to anon, authenticated;
+-- quyền
+select t.as_user('A');
+select t.fails(t.acc('{"measures": [{"line": 0, "token": 1}]}'), 'V1.2: học viên KHÔNG chấp nhận vạch nhịp được', 'CHORDLIB_FORBIDDEN');
+select t.as_anon();
+select t.fails(t.acc('{"measures": [{"line": 0, "token": 1}]}'), 'V1.2: khách KHÔNG gọi được', 'permission denied');
+select t.as_user('T');
+-- dữ liệu sai → không tạo phiên bản
+select t.fails(t.acc('[]'), 'V1.2: không phải object → chặn', 'vạch nhịp phải là một object');
+select t.fails(t.acc('{"measures": []}'), 'V1.2: measures rỗng → chặn', 'chưa có vạch nhịp nào');
+select t.fails(t.acc('{"measures": [{"line": 0, "token": 1}], "x": 1}'), 'V1.2: khoá lạ ở gốc → chặn', 'chỉ gồm pickup và measures');
+select t.fails(t.acc('{"measures": [{"line": 0, "token": 1, "px": 30}]}'), 'V1.2: khoá lạ trong ô (pixel…) → chặn', 'phải là {line, token}');
+select t.fails(t.acc('{"measures": [{"line": 0}]}'), 'V1.2: thiếu token → chặn', 'phải là {line, token}');
+select t.fails(t.acc('{"measures": [{"line": "0", "token": 1}]}'), 'V1.2: line là chuỗi → chặn', 'số nguyên ≥ 0');
+select t.fails(t.acc('{"measures": [{"line": 0, "token": 1.5}]}'), 'V1.2: token không nguyên → chặn', 'số nguyên ≥ 0');
+select t.fails(t.acc('{"measures": [{"line": 0, "token": -1}]}'), 'V1.2: token âm → chặn', 'số nguyên ≥ 0');
+select t.fails(t.acc('{"measures": [{"line": 3, "token": 0}]}'), 'V1.2: dòng ngoài phạm vi → chặn', 'không có trong lời');
+select t.fails(t.acc('{"measures": [{"line": 0, "token": 6}]}'), 'V1.2: token vượt số chữ của dòng (dòng 1 có 5 chữ, nhãn "1." không tính) → chặn', 'chỉ có 5 chữ');
+select t.fails(t.acc('{"measures": [{"line": 0, "token": 5}, {"line": 0, "token": 6}]}'), 'V1.2: token = số chữ (vạch cuối dòng) hợp lệ, vượt 1 thì chặn', 'chỉ có 5 chữ');
+select t.fails(t.acc('{"measures": [{"line": null, "token": 0}]}'), 'V1.2: ô không lời mà token khác null → chặn', 'token cũng phải null');
+select t.fails(t.acc('{"pickup": {"line": null, "token": null}, "measures": [{"line": 0, "token": 1}]}'), 'V1.2: nhịp lấy đà không lời → chặn', 'nhịp lấy đà phải nằm trên một chữ');
+select t.fails(t.acc(jsonb_build_object('measures', (select jsonb_agg(jsonb_build_object('line', 0, 'token', 0)) from generate_series(1, 2001)))), 'V1.2: hơn 2000 ô → chặn', 'tối đa 2000');
+select t.fails(format('select public.chord_sheet_accept_anchors(%L, %L, %L)', t.id('a1'), '{"measures": [{"line": 0, "token": 1}]}', '{"mode": "manual", "reviewedBy": "giả"}'),
+  'V1.2: client không tự khai người duyệt / giờ duyệt', 'anchor_review chỉ nhận');
+select t.fails(format('select public.chord_sheet_accept_anchors(%L, %L)', gen_random_uuid(), '{"measures": [{"line": 0, "token": 1}]}'), 'V1.2: phiên bản nguồn không tồn tại → NOT_FOUND', 'CHORDLIB_NOT_FOUND');
+select t.reset();
+select t.ok((select count(*) = 1 from public.chord_sheet_versions where sheet_id = t.id('a1', 'sheet_id')), 'V1.2: mọi lượt bị chặn không tạo phiên bản nào');
+-- hợp lệ: nhịp lấy đà "Chiều", ô 1 ở "nao,", ô ngân, ô không lời (gian tấu), điệp khúc QUAY LẠI dòng 1
+select t.put('anchors', '{"pickup": {"line": 0, "token": 0}, "measures": [{"line": 0, "token": 1}, {"line": 0, "token": 3}, {"line": 0, "token": 3},
+  {"line": 1, "token": 0}, {"line": 1, "token": 2}, {"line": 2, "token": 0}, {"line": 2, "token": 2}, {"line": null, "token": null}, {"line": 2, "token": 0}, {"line": 2, "token": 3}]}');
+select t.as_user('T');
+select t.put('a2', public.chord_sheet_accept_anchors(t.id('a1'), (select v from t.kv where k = 'anchors'), '{"mode": "manual"}'));
+select t.ok((select v ->> 'duplicate' = 'false' and v ->> 'version_number' = '2' and v ->> 'review_status' = 'private' and v ->> 'anchors_status' = 'ready' from t.kv where k = 'a2'),
+  'V1.2: chấp nhận → phiên bản 2 MỚI, private (KHÔNG tự duyệt), anchors_status = ready');
+select t.put('g2', public.chord_sheet_get(t.id('a2')));
+select t.put('g1', public.chord_sheet_get(t.id('a1')));
+select t.ok((select g2.v -> 'anchors' = (select v from t.kv where k = 'anchors')
+  and g2.v ->> 'text' = g1.v ->> 'text' and g2.v ->> 'text_hash' = g1.v ->> 'text_hash' and g2.v -> 'meter' = g1.v -> 'meter' and g2.v ->> 'suggested_bpm' = g1.v ->> 'suggested_bpm'
+  and g2.v -> 'sources' = g1.v -> 'sources' and g2.v ->> 'parent_version_id' = t.id('a1')::text and g2.v ->> 'is_canonical' = 'false'
+  from t.kv g1, t.kv g2 where g1.k = 'g1' and g2.k = 'g2'),
+  'V1.2: phiên bản 2 = cùng lời / hash / nhịp / BPM, TRỎ LẠI đúng file nguồn của phiên bản 1, cha = 1, chưa là bản đang dùng; vạch nhịp lưu đúng thứ tự dòng thời gian (gồm ô ngân, ô không lời, quay lại dòng cũ)');
+select t.ok((select g1.v -> 'anchors' = 'null' and g1.v ->> 'anchors_status' = 'none' and g1.v ->> 'is_canonical' = 'true' from t.kv g1 where g1.k = 'g1'),
+  'V1.2: phiên bản 1 bất biến — vẫn không có vạch nhịp, vẫn là bản đang dùng (bản chuẩn cũ không tự đổi)');
+select t.ok((select g2.v -> 'anchor_review' ->> 'mode' = 'manual' and g2.v -> 'anchor_review' ->> 'reviewedBy' = t.u('T')::text
+  and (g2.v -> 'anchor_review' ->> 'measureCount')::int = 10 and (g2.v -> 'anchor_review' ->> 'hasPickup')::boolean from t.kv g2 where g2.k = 'g2'),
+  'V1.2: anchor_review do MÁY CHỦ dựng (người duyệt = người gọi, số ô, có lấy đà)');
+-- trùng: chấp nhận lại đúng bộ vạch (kể cả từ phiên bản 2) → trả bản đã có
+select t.ok(public.chord_sheet_accept_anchors(t.id('a1'), (select v from t.kv where k = 'anchors')) ->> 'version_id' = t.id('a2')::text
+  and public.chord_sheet_accept_anchors(t.id('a2'), (select v from t.kv where k = 'anchors')) ->> 'duplicate' = 'true', 'V1.2: chấp nhận lại đúng bộ vạch → trả phiên bản 2, không tạo bản rác');
+select t.put('a3', public.chord_sheet_accept_anchors(t.id('a2'), '{"measures": [{"line": 0, "token": 1}, {"line": 1, "token": 0}]}'));
+select t.ok((select v ->> 'version_number' = '3' from t.kv where k = 'a3') and public.chord_sheet_get(t.id('a3')) ->> 'parent_version_id' = t.id('a2')::text
+  and public.chord_sheet_get(t.id('a2')) -> 'anchors' = (select v from t.kv where k = 'anchors'),
+  'V1.2: sửa vạch rồi chấp nhận → phiên bản 3 (cha = 2); phiên bản 2 giữ nguyên bộ vạch cũ');
+select t.ok(public.chord_sheet_approve(t.id('a2')) ->> 'canonical_version_id' = t.id('a2')::text, 'V1.2: duyệt phiên bản 2 → bản đang dùng có vạch nhịp');
+-- tham chiếu file nguồn sang thư mục cha: thư mục phiên bản 1 vẫn đóng băng
+select t.reset();
+select t.fails(format($q$insert into storage.objects (bucket_id, name, owner) values ('chord-sheet-sources', %L, %L)$q$, t.ap('1.png'), t.u('T')),
+  'V1.2: thư mục file của phiên bản 1 (đang được phiên bản 2/3 trỏ tới) vẫn không thêm được', 'phiên bản đã ghi');
+select t.as_user('T');
+select t.fails(format($q$select public.chord_sheet_contribute(p_text => 'x', p_sheet_id => %L, p_sources => %L)$q$, t.id('a1', 'sheet_id'),
+  jsonb_build_array(jsonb_build_object('path', t.ap('0.png'), 'mime', 'image/png', 'sha256', repeat('9', 64)))),
+  'V1.2: client KHÔNG tự tạo tham chiếu file sang thư mục phiên bản khác qua contribute', 'file nguồn không hợp lệ');
+select t.reset();
+select t.ok((select count(*) = 1 from storage.objects where name like t.u('T')::text || '/' || ((select v ->> 'v1' from t.kv where k = 'anc'))::text || '/%'), 'V1.2: không chép file — vẫn đúng 1 object');
+select t.fails(format('update public.chord_sheet_versions set anchors = null, anchors_status = %L where id = %L', 'none', t.id('a2')), 'V1.2: vạch nhịp của phiên bản đã ghi không sửa được (trigger)', 'CHORDLIB_VERSION_IMMUTABLE');
+select t.as_user('T');
+select t.fails(format('select public.chord_sheet_reject(%L, %L)', t.id('a3'), 'x') || '; select public.chord_sheet_accept_anchors(' || quote_literal(t.id('a3')) || ', ''{"measures": [{"line": 0, "token": 2}]}'')',
+  'V1.2: không gắn vạch nhịp vào bản đã bỏ', 'không gắn vạch nhịp vào bản đã bỏ');
+select t.reset();
+
 -- ── Xoá tài khoản: đóng góp ở lại, không còn tên ──────────────────────────────
 select t.reset();
 delete from public.app_users where id = t.u('N');
@@ -594,8 +683,11 @@ select t.ok((select count(*) = 0 from public.chord_sheets s
                 select 1 from public.chord_sheet_versions v
                  where v.id = s.canonical_version_id and v.sheet_id = s.id and v.review_status = 'approved')),
   'mọi con trỏ canonical đều trỏ tới phiên bản APPROVED của chính bài đó');
-select t.ok((select count(*) = 0 from public.chord_sheet_versions where anchors is not null or anchors_status <> 'none'),
-  'Lát 1: không phiên bản nào có neo — anchors_status = none toàn bộ');
+select t.ok((select count(*) = 0 from public.chord_sheet_versions v
+              where (v.anchors is not null) and (v.anchors_status <> 'ready'
+                     or public.chord_anchors_problem(v.anchors, public.chord_lyric_token_counts(v.text)) is not null
+                     or v.anchor_review ->> 'mode' is distinct from 'manual')),
+  'mọi phiên bản có vạch nhịp: trạng thái ready, vạch hợp lệ với CHÍNH lời của nó, anchor_review do máy chủ ghi');
 select t.ok((select count(*) = 0 from pg_policies where schemaname = 'public' and tablename in ('chord_sheets', 'chord_sheet_versions')),
   '2 bảng: RLS bật, 0 policy');
 

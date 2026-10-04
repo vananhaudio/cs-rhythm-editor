@@ -9,6 +9,7 @@ export type PsqlTarget = { psql: string; host: string; port: string; db: string 
 const ARG_TYPES: Record<string, string> = {
   p_text: 'text', p_title: 'text', p_composer: 'text', p_meter: 'jsonb', p_suggested_bpm: 'integer', p_sources: 'jsonb',
   p_version_id: 'uuid', p_sheet_id: 'uuid', p_parent_version_id: 'uuid', p_query: 'text', p_limit: 'integer', p_reason: 'text',
+  p_from_version_id: 'uuid', p_anchors: 'jsonb', p_anchor_review: 'jsonb',
 }
 
 export function targetFromEnv(): PsqlTarget | null {
