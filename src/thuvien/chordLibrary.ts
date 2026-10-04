@@ -68,7 +68,10 @@ type MockSheet = { sheetId: string; title: string; composer: string | null; curr
 export const MOCK_STORAGE_KEY = 'tv-chordlib-mock-v2'
 
 // Lời TỰ ĐẶT để thử giao diện — không phải bài hát thật, không có bản quyền của ai.
-const SEED: MockSheet[] = [
+// Bản build production không bao giờ dùng mock (chooseChordBackend → disabled), nên bộ mẫu bị bỏ khỏi bundle:
+// Vite thay `import.meta.env.PROD` bằng hằng `true`, minifier xoá nhánh chết. Ngoài Vite (test node) → giữ bộ mẫu.
+const IS_PROD_BUILD = typeof import.meta.env !== 'undefined' && import.meta.env.PROD === true
+const SEED: MockSheet[] = IS_PROD_BUILD ? [] : [
   {
     sheetId: 'mock-sheet-01', title: 'Bài thử 01', composer: 'Dữ liệu mẫu', currentVersionId: 'mock-version-01',
     versions: [{
