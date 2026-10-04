@@ -140,6 +140,14 @@ export const SOLO01_BUOI04: LessonDoc = {
       title: 'Điều quan trọng nhất của buổi hôm nay',
       text: 'Kết quả của buổi học KHÔNG phải là bạn xếp ngón giống Thầy — mà là bạn tự biện luận được cách xếp ngón của mình. Không có một đáp án duy nhất: hai người có thể xếp ngón khác nhau, miễn là mỗi người giải thích được tại sao mình chọn như vậy.',
     },
+    // ── NHỊP HỌC: điểm ngắt do Owner chốt (04/10/2026) — 3 nhịp, 3 bài trả bắt buộc:
+    //    BIẾT CĂN CỨ (4.1 trắc nghiệm) → BIẾT XỬ LÝ (4.2 trắc nghiệm) → TỰ QUYẾT ĐỊNH (4.3 video + chữ, Thầy chấm — video DUY NHẤT).
+    //    Trắc nghiệm kiểm TƯ DUY chọn, không kiểm một cách xếp ngón cụ thể. Đáp án KHÔNG nằm ở đây (server). id 4.1/4.2/4.3 KHÔNG đổi.
+    {
+      kind: 'note',
+      title: 'Nhịp 1 · Tự xếp ngón có căn cứ',
+      text: '4 câu hỏi trước khi xếp ngón, tự xếp câu Diễm Xưa ô 11–12, rồi xem hai cách người chơi hay chọn. Kết thúc nhịp: Bài trả 4.1 (trắc nghiệm).',
+    },
     {
       kind: 'recap',
       title: 'Phần 1 — 4 câu hỏi trước khi xếp ngón',
@@ -175,6 +183,29 @@ export const SOLO01_BUOI04: LessonDoc = {
         { label: 'Cách 2', what: 'Nhìn trước: cả câu nằm quanh La ngăn 5, nên đặt tay ở thế V ngay từ đầu — Mi dây 2 ngăn 5, Fa ngăn 6. Tay đứng yên suốt hai ô; La là ngón 1 lăn sang dây bên, cùng ngăn.', tex: PA_2 },
       ],
       note: 'Soi bằng 4 câu hỏi: Cách 2 mạnh ở câu 3 (câu sắp đi đâu) — tay không phải đổi thế giữa chùm ba nhanh. Nhưng Cách 1 mạnh ở câu 4: Mi dây 1 buông để tay trái rảnh, sau này thêm hợp âm ở thế I sẽ dễ hơn. Bạn chọn cách nào cũng được — hãy nói vì sao.',
+    },
+    {
+      kind: 'checkpoint',
+      id: '4.1',
+      title: 'Bài trả 4.1 — Căn cứ để xếp ngón',
+      required: true,
+      accepts: ['quiz'],
+      quiz: {
+        mode: 'single',
+        question: 'Khi tự xếp ngón cho một câu Melody, cách suy nghĩ nào đúng nhất?',
+        options: [
+          { id: 'a', text: 'Tìm cách giống ngón Thầy nhất.' },
+          { id: 'b', text: 'Chọn cách ít phải bấm nhất.' },
+          { id: 'c', text: 'Nhìn cả câu, thử cách chơi rồi chọn phương án thuận và liền tiếng, đồng thời giải thích được vì sao.' },
+          { id: 'd', text: 'Mỗi nốt cứ chọn vị trí gần nhất.' },
+        ],
+        hint: 'Đừng tìm một đáp án duy nhất. Hãy nhìn cả câu, đàn thử và dùng các căn cứ để lựa chọn.',
+      },
+    },
+    {
+      kind: 'note',
+      title: 'Nhịp 2 · Tự xử lý câu Melody trên đàn',
+      text: 'Tay phải chọn i, m, a theo câu; gặp ♯/♭ thì tìm từ nốt đã biết. Kết thúc nhịp: Bài trả 4.2 (trắc nghiệm).',
     },
     {
       kind: 'note',
@@ -224,6 +255,29 @@ export const SOLO01_BUOI04: LessonDoc = {
         'Đọc tên nốt thành tiếng trong lúc bấm: "Sol… Sol thăng".',
         'Nghe cho ra nửa cung — nốt biến hoá sát rạt nốt gốc, không phải một nốt xa lạ.',
       ],
+    },
+    {
+      kind: 'checkpoint',
+      id: '4.2',
+      title: 'Bài trả 4.2 — Tìm nốt ngoài âm giai',
+      required: true,
+      accepts: ['quiz'],
+      quiz: {
+        mode: 'single',
+        question: 'Bạn đã biết vị trí nốt Sol. Muốn tìm Sol♯ trên cùng dây, bạn làm thế nào?',
+        options: [
+          { id: 'a', text: 'Dịch lên 1 ngăn.' },
+          { id: 'b', text: 'Dịch xuống 1 ngăn.' },
+          { id: 'c', text: 'Dịch lên 2 ngăn.' },
+          { id: 'd', text: 'Bắt buộc đổi sang dây khác.' },
+        ],
+        hint: 'Dấu ♯ nâng nốt lên nửa cung. Trên cùng một dây guitar, nửa cung tương ứng một ngăn.',
+      },
+    },
+    {
+      kind: 'note',
+      title: 'Nhịp 3 · Tự làm và giải thích',
+      text: 'Áp dụng vào Diễm Xưa và Thành Phố Buồn: tự xếp ngón, đàn liền mạch, viết “Tôi chọn cách này vì…”. Kết thúc nhịp: Bài trả 4.3 (video + giải thích).',
     },
     {
       kind: 'repertoire',
@@ -279,6 +333,14 @@ export const SOLO01_BUOI04: LessonDoc = {
         { label: 'Bài 4.', text: 'Tìm ít nhất 2 vị trí cho một đoạn ngắn, đàn thử cả hai, chọn một và giải thích.' },
       ],
       message: 'Thầy không chấm bạn có xếp giống Thầy hay không. Thầy chỉ hỏi một câu: "Tại sao bạn xếp như vậy?" — hãy mang câu trả lời của bạn đến lớp.',
+    },
+    {
+      kind: 'checkpoint',
+      id: '4.3',
+      title: 'Bài trả 4.3 — Tôi chọn cách này vì…',
+      prompt: 'Chọn một câu ngắn trong Thành Phố Buồn hoặc đoạn Diễm Xưa đang học. Tự xếp ngón tay trái và tay phải rồi chơi câu đó. Sau đó viết ngắn: ‘Tôi chọn cách này vì…’ và nêu ít nhất một căn cứ khiến bạn chọn cách xếp đó.',
+      required: true,
+      accepts: ['video_link', 'text'],
     },
     {
       kind: 'checklist',

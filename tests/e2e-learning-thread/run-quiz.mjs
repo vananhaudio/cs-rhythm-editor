@@ -95,7 +95,7 @@ try {
   await noHorizontalOverflow(page, `Trang Buổi ${NN} có trắc nghiệm 390px`)
 
   // ── 2. Từng trắc nghiệm: sai → "Chưa đúng — thử lại" + gợi ý → Thử lại (bỏ chọn) → (multiple: thiếu/thừa sai) → đúng → ✓ Đạt ──
-  for (const id of QUIZ) {
+  for (const [qi, id] of QUIZ.entries()) {
     const opts = await optionIds(page, id)
     const right = ANSWERS[id], wrongOne = opts.find(x => !right.includes(x))
     if (modes[id] === 'single') {
@@ -118,7 +118,8 @@ try {
     await choose(page, id, right)
     assert.equal(await check(page, id), 'right')
     assert.equal((await page.$$(`${cp(id)} .cs-quiz-opt input`)).length, 0, 'Đạt → không còn lựa chọn')
-    ok(`${id} chọn đúng → ✓ Đạt ngay`)
+    await page.waitForFunction(re => new RegExp(re).test(document.querySelector('.cs-learn-status')?.textContent ?? ''), { timeout: 15000 }, `${qi + 1}/${TOTAL} bài trả bắt buộc đã Đạt`)
+    ok(`${id} chọn đúng → ✓ Đạt ngay · trạng thái buổi ${qi + 1}/${TOTAL}`)
   }
   await page.waitForFunction(re => new RegExp(re).test(document.querySelector('.cs-learn-status')?.textContent ?? ''), { timeout: 15000 }, `${QUIZ.length}/${TOTAL} bài trả bắt buộc đã Đạt`)
   ok(`Trạng thái buổi: ${QUIZ.length}/${TOTAL} bài trả bắt buộc đã Đạt (chờ ${SPEC.video})`)
