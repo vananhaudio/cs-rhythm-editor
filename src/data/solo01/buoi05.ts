@@ -104,6 +104,14 @@ export const SOLO01_BUOI05: LessonDoc = {
         '⭐ QUAN TRỌNG NHẤT — Tự chọn bass và cách nối cho câu của mình, rồi nói được vì sao.',
       ],
     },
+    // ── NHỊP HỌC: điểm ngắt do Owner chốt (04/10/2026) — 3 nhịp, 3 bài trả bắt buộc:
+    //    CHỌN BASS (5.1 trắc nghiệm) → CHỌN CÁCH NỐI (5.2 trắc nghiệm) → TỰ DỰNG & GIẢI THÍCH (5.3 video + chữ, Thầy chấm — video DUY NHẤT).
+    //    5.3 KHÔNG bắt buộc phải luyến: gảy lại / trượt / luyến đều được nếu giải thích được. Đáp án trắc nghiệm KHÔNG ở đây (server).
+    {
+      kind: 'note',
+      title: 'Nhịp 1 · Tự chọn Bass theo hợp âm',
+      text: 'Hợp âm nào thì bass nào, nốt Bass ở thế I, rồi luyện Bass luân phiên gốc ↔ quãng 5. Kết thúc nhịp: Bài trả 5.1 (trắc nghiệm).',
+    },
     {
       kind: 'recap',
       title: 'Phần 1 — Hợp âm nào thì bass nào',
@@ -140,6 +148,29 @@ export const SOLO01_BUOI05: LessonDoc = {
       ],
     },
     {
+      kind: 'checkpoint',
+      id: '5.1',
+      title: 'Bài trả 5.1 — Bass theo hợp âm',
+      required: true,
+      accepts: ['quiz'],
+      quiz: {
+        mode: 'single',
+        question: 'Khi bắt đầu chọn Bass cho một hợp âm, nốt đầu tiên nên nghĩ tới là nốt nào?',
+        options: [
+          { id: 'a', text: 'Nốt cao nhất của hợp âm' },
+          { id: 'b', text: 'Nốt cùng tên với hợp âm' },
+          { id: 'c', text: 'Bất kỳ dây buông nào' },
+          { id: 'd', text: 'Luôn là dây 6' },
+        ],
+        hint: 'Bắt đầu từ nốt gốc: tên hợp âm cho bạn biết nốt Bass đầu tiên cần tìm.',
+      },
+    },
+    {
+      kind: 'note',
+      title: 'Nhịp 2 · Luyến và ba cách nối',
+      text: 'Luyến khác trượt chỗ nào, luyện luyến lên và luyến xuống, rồi đàn cùng một chỗ bằng ba cách nối. Kết thúc nhịp: Bài trả 5.2 (trắc nghiệm).',
+    },
+    {
       kind: 'note',
       title: 'Phần 2 — Luyến khác trượt chỗ nào',
       text: 'Luyến lên (hammer-on): gảy nốt đầu rồi GÕ mạnh ngón kia xuống nốt sau. Luyến xuống (pull-off): gảy nốt đầu rồi MÓC ngón ra cho nốt sau vang. Cả hai đều chỉ gảy một lần, đều đi trên một dây — nhưng dùng HAI NGÓN KHÁC NHAU, khác với trượt vốn giữ nguyên một ngón đi dọc dây.',
@@ -172,6 +203,29 @@ export const SOLO01_BUOI05: LessonDoc = {
         { label: 'Cách 3', what: 'Luyến lên — mới hôm nay. Hai nốt dính liền, nốt sau mềm hơn; hai ngón khác nhau.', tex: NOI_3, current: true },
       ],
       note: 'Cả ba đều đúng. Câu này bạn chọn cách nào? Nghe thử ba lần rồi ghi lại: "Tôi chọn cách này vì…" — Thầy không chấm bạn chọn giống Thầy.',
+    },
+    {
+      kind: 'checkpoint',
+      id: '5.2',
+      title: 'Bài trả 5.2 — Luyến',
+      required: true,
+      accepts: ['quiz'],
+      quiz: {
+        mode: 'single',
+        question: 'Điểm nào phân biệt Luyến với Slide rõ nhất trong kỹ thuật đang học?',
+        options: [
+          { id: 'a', text: 'Luyến luôn phải đổi dây.' },
+          { id: 'b', text: 'Luyến dùng hai ngón khác nhau; Slide giữ một ngón trượt dọc cùng dây.' },
+          { id: 'c', text: 'Slide chỉ dùng cho dây Bass.' },
+          { id: 'd', text: 'Luyến phải gảy lại nốt thứ hai.' },
+        ],
+        hint: 'Hãy nhìn tay trái: Slide giữ một ngón để trượt; Luyến tạo nốt sau bằng một ngón khác.',
+      },
+    },
+    {
+      kind: 'note',
+      title: 'Nhịp 3 · Tự dựng Bass và cách nối',
+      text: 'Tự điền bass cho 8 ô đầu Diễm Xưa, tự chọn cách nối, rồi viết “Tôi chọn bass / cách nối này vì…”. Kết thúc nhịp: Bài trả 5.3 (video + giải thích).',
     },
     {
       kind: 'repertoire',
@@ -219,6 +273,14 @@ export const SOLO01_BUOI05: LessonDoc = {
         { label: 'Bài 5.', text: 'Tìm thêm ít nhất một chỗ trong bài có thể luyến, đánh dấu và giải thích.' },
       ],
       message: 'Bass của bạn có thể khác bass của bạn bên cạnh. Mang lý do đến lớp, ta nghe từng phương án một.',
+    },
+    {
+      kind: 'checkpoint',
+      id: '5.3',
+      title: 'Bài trả 5.3 — Bass và cách nối của tôi',
+      prompt: 'Chơi một đoạn ngắn trong 8 ô đầu Diễm Xưa sau khi bạn đã tự thêm Bass và chọn cách nối phù hợp. Không cần cả đoạn hoàn hảo. Sau đó viết ngắn: ‘Tôi chọn Bass / cách nối này vì…’.',
+      required: true,
+      accepts: ['video_link', 'text'],
     },
     {
       kind: 'checklist',

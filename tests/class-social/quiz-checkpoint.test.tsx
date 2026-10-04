@@ -21,6 +21,7 @@ import { SOLO01_BUOI01 } from "../../src/data/solo01/buoi01";
 import { SOLO01_BUOI02 } from "../../src/data/solo01/buoi02";
 import { SOLO01_BUOI03 } from "../../src/data/solo01/buoi03";
 import { SOLO01_BUOI04 } from "../../src/data/solo01/buoi04";
+import { SOLO01_BUOI05 } from "../../src/data/solo01/buoi05";
 void React;
 
 const src = (f: string) => readFileSync(new URL(`../../src/${f}`, import.meta.url), "utf8");
@@ -161,6 +162,22 @@ test("Buổi 04: 3 nhịp — BIẾT CĂN CỨ (4.1) → BIẾT XỬ LÝ (4.2) �
   assert.deepEqual(seq, ["recap", "objectives", "note", "nhịp:Nhịp 1 · Tự xếp ngón có căn cứ", "recap", "score", "layers", "cp:4.1",
     "nhịp:Nhịp 2 · Tự xử lý câu Melody trên đàn", "note", "layers", "note", "fretboard", "score", "cp:4.2",
     "nhịp:Nhịp 3 · Tự làm và giải thích", "repertoire", "assignment", "cp:4.3", "checklist", "studentNotes"]);
+});
+
+test("Buổi 05: 3 nhịp — CHỌN BASS (5.1) → CHỌN CÁCH NỐI (5.2) → TỰ DỰNG & GIẢI THÍCH (5.3 video duy nhất, không bắt buộc luyến)", () => {
+  assert.deepEqual(solo01DocProblems(SOLO01_BUOI05), []);
+  const cps = SOLO01_BUOI05.sections.filter((s): s is CheckpointSection => s.kind === "checkpoint");
+  assert.deepEqual(cps.map(c => [c.id, c.required, (c.accepts ?? []).join("+"), c.quiz?.mode ?? "-", c.quiz?.options.length ?? 0]),
+    [["5.1", true, "quiz", "single", 4], ["5.2", true, "quiz", "single", 4], ["5.3", true, "video_link+text", "-", 0]]);
+  assert.equal(cps[0].quiz!.question, "Khi bắt đầu chọn Bass cho một hợp âm, nốt đầu tiên nên nghĩ tới là nốt nào?");
+  assert.equal(cps[1].quiz!.question, "Điểm nào phân biệt Luyến với Slide rõ nhất trong kỹ thuật đang học?");
+  assert.doesNotMatch(JSON.stringify(cps[1].quiz), /ký hiệu|gảy lại nốt đích/i, "5.2 không hỏi quy chuẩn ký hiệu slide / gảy lại nốt đích");
+  assert.match(cps[2].prompt ?? "", /Tôi chọn Bass \/ cách nối này vì…/);
+  assert.doesNotMatch(cps[2].prompt ?? "", /phải (dùng )?luyến/i, "5.3 không bắt buộc luyến");
+  const seq = SOLO01_BUOI05.sections.map(s => s.kind === "checkpoint" ? `cp:${s.id}` : s.kind === "note" && /^Nhịp/.test(s.title ?? "") ? `nhịp:${s.title}` : `${s.kind}`);
+  assert.deepEqual(seq, ["recap", "objectives", "nhịp:Nhịp 1 · Tự chọn Bass theo hợp âm", "recap", "fretboard", "score", "cp:5.1",
+    "nhịp:Nhịp 2 · Luyến và ba cách nối", "note", "score", "layers", "cp:5.2",
+    "nhịp:Nhịp 3 · Tự dựng Bass và cách nối", "repertoire", "assignment", "cp:5.3", "checklist", "studentNotes"]);
 });
 
 test("ĐÁP ÁN không bao giờ ở frontend: không có trong giáo trình TS, không trong bundle nguồn", () => {
