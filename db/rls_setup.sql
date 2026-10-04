@@ -75,6 +75,9 @@ DECLARE
     -- Band — Tuyển thành viên V1 (db/band_recruit_v1_setup.sql): RLS bật, KHÔNG policy; khách/học viên
     -- chỉ đi qua RPC band_* (SECURITY DEFINER). Áp policy rộng = mọi tài khoản đọc SĐT ứng viên.
     'bands', 'band_recruitments', 'band_rule_versions', 'band_applications', 'band_members', 'band_member_roles',
+    -- Thư viện hợp âm chuẩn hoá V1 (db/chord_library_v1_setup.sql): RLS bật, KHÔNG policy; mọi thứ đi qua
+    -- RPC chord_sheet_* (SECURITY DEFINER). Áp policy rộng = học viên đọc bản private của nhau.
+    'chord_sheets', 'chord_sheet_versions',
     -- Preset công cụ Nhịp Phách (db/nhipphach_presets_setup.sql): dữ liệu THEO
     -- TÀI KHOẢN, policy hẹp `user_id = auth.uid() AND is_teacher()`. ĐỪNG áp
     -- policy rộng lên hai bảng này — làm thế là mọi người đọc preset của nhau.
