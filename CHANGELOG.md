@@ -4,6 +4,10 @@ Ghi lại thay đổi đáng chú ý. Định dạng ngày: dd/mm/yyyy.
 
 ## 05/10/2026
 
+- **Class Social — Thầy/admin thấy tất cả lớp (Teacher All Classes V1)**
+  - `/me/classes` của Thầy/admin = "Tất cả lớp học": mọi lớp (kể cả lớp đã kết thúc), mở lớp/buổi/nhịp học bằng quyền Thầy hiện có — không thêm Thầy vào lớp, không tạo tiến độ. Học sinh y nguyên.
+  - DB additive: RPC `social_all_classes()` (chỉ `is_teacher()`). Chi tiết: `docs/TEACHER-ALL-CLASSES-V1.md`.
+
 - **Class Social — Friends UX V2 (mô hình Facebook)**
   - `/me/friends` = trung tâm bạn bè: Lời mời kết bạn [Xác nhận][Xóa] · **Lời mời đã gửi** [Huỷ lời mời] (mới — trước đây lời mời mình gửi không hiện ở đâu) · Tất cả bạn bè (⋯ → Huỷ kết bạn).
   - Trang cá nhân: một nút cho mỗi trạng thái — Kết bạn · Đã gửi lời mời ▾ · Phản hồi lời mời ▾ · Bạn bè ▾; câu báo sau hành động ("Đã gửi lời mời — chờ người kia chấp nhận."); mobile dùng action sheet.

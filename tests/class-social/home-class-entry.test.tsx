@@ -69,8 +69,8 @@ test("cùng nguồn: sidebar = tab Lớp = phần chính /me/classes (tập + th
   // Home không tự suy membership: chỉ nhận classes (useSocialClasses) từ ClassSocialPage
   const home = src("class-social/classes/HomeClasses.tsx");
   assert.doesNotMatch(home, /fetch|rpc\(|supabase|ht_member|programCode|group_id/);
-  assert.match(src("class-social/ClassSocialPage.tsx"), /const classes = useSocialClasses\(\)/);
-  assert.equal((src("class-social/ClassSocialPage.tsx").match(/useSocialClasses\(\)/g) || []).length, 1, "MỘT lần tải cho cả 3 nơi");
+  assert.match(src("class-social/ClassSocialPage.tsx"), /const classes = useSocialClasses\(me\.isTeacher\)/);
+  assert.equal((src("class-social/ClassSocialPage.tsx").match(/useSocialClasses\(/g) || []).length, 1, "MỘT lần tải cho cả 3 nơi");
 });
 
 test("Home: tab Lớp = Lớp của tôi → 'Hoạt động từ các lớp' → feed (một cột); Dành cho bạn/Bạn bè không đổi; tab vẫn tên 'Lớp'", () => {

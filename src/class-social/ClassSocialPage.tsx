@@ -175,14 +175,14 @@ function SignedInShell({ base, view, onSection, onOpenProfile, onOpenThread, onO
   // Lời mời kết bạn đến mình: MỘT nguồn cho badge menu + khối Home + trang Bạn bè
   const requests = useFriendRequests()
   // Lớp của tôi: MỘT nguồn cho sidebar, trang Lớp của tôi (/me/classes) và tab hoạt động "Lớp" trên Home
-  const classes = useSocialClasses()
+  const classes = useSocialClasses(me.isTeacher)   // Thầy/admin: + MỌI lớp cho /me/classes (quyền server)
   const activeClassId = view.kind === 'class' || view.kind === 'session' || view.kind === 'classSpace' ? view.classId : null
 
   return (
     <ClassSocialLayout me={me} section={section} onSection={onSection} onOpenMyProfile={() => onOpenProfile(me.userId)}
       badges={{ friends: requests.count }}
       classNav={({ collapsed, onNavigate }) => (
-        <ClassNav mine={classes.mine} loaded={classes.loaded} activeClassId={activeClassId}
+        <ClassNav mine={classes.mine} loaded={classes.loaded} activeClassId={activeClassId} allClasses={classes.all != null}
           classesActive={view.kind === 'classes'} collapsed={collapsed}
           onOpenClass={id => { onOpenClass(id); onNavigate() }} onOpenClasses={() => { onOpenClasses(); onNavigate() }} />
       )}

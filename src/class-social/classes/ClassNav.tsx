@@ -6,7 +6,7 @@ import { classFullTitle, classShortName, currentClasses, type ClassCard } from '
 
 const MY_CLASSES_IN_NAV = 5
 
-export default function ClassNav({ mine, activeClassId, classesActive, collapsed, onOpenClass, onOpenClasses }: {
+export default function ClassNav({ mine, activeClassId, classesActive, collapsed, onOpenClass, onOpenClasses, allClasses = false }: {
   mine: ClassCard[]
   /** (giữ trong hợp đồng props; danh sách rỗng khi chưa tải) */
   loaded: boolean
@@ -16,7 +16,10 @@ export default function ClassNav({ mine, activeClassId, classesActive, collapsed
   onOpenClass: (id: string) => void
   /** /me/classes — Lớp của tôi */
   onOpenClasses: () => void
+  /** Thầy/admin: /me/classes là "Tất cả lớp học" */
+  allClasses?: boolean
 }) {
+  const classesLabel = allClasses ? 'Tất cả lớp học' : 'Lớp của tôi'
   const shown = currentClasses(mine).slice(0, MY_CLASSES_IN_NAV)   // cùng tập + thứ tự với tab "Lớp" và /me/classes
   return (
     <nav className="cs-nav-group" aria-label="Lớp học">
@@ -32,9 +35,9 @@ export default function ClassNav({ mine, activeClassId, classesActive, collapsed
         )
       })}
             <button type="button" className={'cs-nav-item' + (classesActive ? ' is-active' : '')} aria-current={classesActive ? 'page' : undefined}
-        title={collapsed ? 'Lớp của tôi' : undefined} onClick={onOpenClasses}>
+        title={collapsed ? classesLabel : undefined} onClick={onOpenClasses}>
         <GraduationCap size={21} strokeWidth={classesActive ? 2.2 : 1.9} />
-        <span className="cs-nav-text">Lớp của tôi</span>
+        <span className="cs-nav-text">{classesLabel}</span>
       </button>
     </nav>
   )

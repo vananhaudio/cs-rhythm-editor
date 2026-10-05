@@ -2,6 +2,8 @@
 // Nhìn là nhận ra "lớp của mình đây": TÊN LỚP chính là lối vào lớp (không nút "Vào lớp"/"Tiếp tục học").
 // Thứ tự cố định: lớp đang tham gia → "+ Nhập mã lớp" (hành động thật) → Lớp trước đây (nhẹ) → Các lớp khác (nhẹ).
 // Không nhãn "Đang học" trên từng lớp; trạng thái chỉ còn nơi nó thật sự phân biệt (lớp đã kết thúc ở vùng riêng).
+// Thầy/admin (classes.all có giá trị): "Tất cả lớp học" — MỌI lớp theo quyền server (social_all_classes), cùng dòng lớp,
+// cùng lối vào; không "Nhập mã lớp" (Thầy không tự thành học viên), không "Các lớp khác".
 import { useState } from 'react'
 import { Plus } from 'lucide-react'
 import { classMetaLine, currentClasses, filterClasses, PAST_CLASS_STATUSES, type ClassCard } from './classModel'
@@ -34,6 +36,7 @@ export default function ClassesPage({ classes, onOpenClass, onJoined }: {
 }) {
   const [q, setQ] = useState('')
   const [joining, setJoining] = useState(false)
+  if (classes.all != null) return <AllClasses classes={classes} all={classes.all} onOpenClass={onOpenClass} />
   const current = currentClasses(classes.mine)
   const past = classes.mine.filter(c => PAST_CLASS_STATUSES.has(c.status ?? ''))
   const others = filterClasses(classes.discover, q)
@@ -72,6 +75,34 @@ export default function ClassesPage({ classes, onOpenClass, onJoined }: {
             : <p className="cs-section-hint">Không tìm thấy lớp phù hợp.</p>}
         </section>
       )}
+    </div>
+  )
+}
+
+/** Thầy/admin: mọi lớp. Lớp đang chạy/sắp mở ở trên, lớp đã kết thúc ở "Lớp đã kết thúc"; nhiều lớp thì có ô tìm. */
+function AllClasses({ classes, all, onOpenClass }: { classes: SocialClasses; all: ClassCard[]; onOpenClass: (id: string) => void }) {
+  const [q, setQ] = useState('')
+  const shown = filterClasses(all, q)
+  const current = currentClasses(shown)
+  const past = shown.filter(c => PAST_CLASS_STATUSES.has(c.status ?? ''))
+  return (
+    <div className="cs-col cs-home cs-myclasses-page cs-allclasses-page">
+      <h1 className="cs-page-title">Tất cả lớp học</h1>
+      {!classes.loaded && <p className="cs-loading" role="status">Đang tải lớp học…</p>}
+      {classes.loaded && classes.error && <p className="cs-form-error" role="alert">{classes.error}</p>}
+      {classes.loaded && !classes.error && <p className="cs-section-hint">{all.length} lớp · Thầy xem được mọi lớp, không cần tham gia.</p>}
+      {all.length >= SEARCH_MIN && (
+        <input className="cs-input cs-classes-search" type="search" placeholder="Tìm lớp theo tên hoặc mã" value={q}
+          onChange={e => setQ(e.target.value)} aria-label="Tìm lớp" />
+      )}
+      {current.length > 0 && <ul className="cs-classrows" aria-label="Lớp đang chạy và sắp mở">{current.map(c => <ClassRow key={c.id} c={c} onOpen={onOpenClass} />)}</ul>}
+      {past.length > 0 && (
+        <section className="cs-classes-past" aria-labelledby="cs-past-title">
+          <h2 id="cs-past-title" className="cs-subtle-title">Lớp đã kết thúc</h2>
+          <ul className="cs-classrows">{past.map(c => <ClassRow key={c.id} c={c} onOpen={onOpenClass} quiet />)}</ul>
+        </section>
+      )}
+      {classes.loaded && shown.length === 0 && <p className="cs-section-hint">{q ? 'Không tìm thấy lớp phù hợp.' : 'Chưa có lớp nào.'}</p>}
     </div>
   )
 }

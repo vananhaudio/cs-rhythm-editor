@@ -19,6 +19,15 @@ export async function fetchMyClasses(): Promise<Result<ClassCard[]>> {
   } catch (e) { return { ok: false, message: scErrorText((e as Error).message) } }
 }
 
+/** Thầy/admin: MỌI lớp (bỏ huỷ/gộp/nháp) — quyền is_teacher() ở server; học sinh gọi → 42501. Không phải membership. */
+export async function fetchAllClasses(): Promise<Result<ClassCard[]>> {
+  try {
+    const { data, error } = await (await db()).rpc('social_all_classes')
+    if (error) { warn('all_classes', error); return { ok: false, message: scErrorText(error.message) } }
+    return { ok: true, value: toClassCards(data) }
+  } catch (e) { return { ok: false, message: scErrorText((e as Error).message) } }
+}
+
 export async function fetchDiscoverClasses(limit = 50): Promise<Result<ClassCard[]>> {
   try {
     const { data, error } = await (await db()).rpc('social_discover_classes', { p_limit: limit })
