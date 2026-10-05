@@ -416,9 +416,13 @@ export default function ClassLandingPage() {
             <button className="story-cta" onClick={() => { window.location.href = '/story' }} aria-label="1001 Câu chuyện cùng Guitar">
               📖 <span className="story-cta-full">1001 Câu chuyện</span><span className="story-cta-short">1001</span>
             </button>
+            {/* Menu chữ (có "Đăng nhập") bị ẩn ≤1120px → khách trên mobile mất lối đăng nhập.
+                Nút này chỉ hiện ở cỡ đó, mở đúng modal đăng nhập hiện có. ≤660px không đủ chỗ cả hai
+                (đo thật: khách cần ~650px): "Đăng nhập" thành nút chính, thay chỗ "Bắt đầu học". */}
+            {!me && <button className="nav-login" onClick={() => setShowLogin(true)}>Đăng nhập</button>}
             {me
               ? <button className="btn btn-primary nav-cta" onClick={() => { window.location.href = '/me' }}>🎸 Hành trình của tôi</button>
-              : <button className="btn btn-primary nav-cta" onClick={() => goto('cuavao')}>Bắt đầu học</button>}
+              : <button className="btn btn-primary nav-cta nav-cta-guest" onClick={() => goto('cuavao')}>Bắt đầu học</button>}
           </div>
         </div>
       </nav>
@@ -892,6 +896,7 @@ const CSS = `
 .tva-class .story-cta{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:999px;border:1.5px solid var(--indigo);background:var(--surface);color:var(--indigo);font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;line-height:1;}
 .tva-class .story-cta:hover{background:var(--indigo-tint);}
 .tva-class .story-cta-short{display:none;}
+.tva-class .nav-login{display:none;padding:8px 4px;border:none;background:none;color:var(--indigo);font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;line-height:1;}
 /* Máy nhỏ: giấu CHỮ thương hiệu (giữ logo) để đủ chỗ cho nút Shop — trước đây chữ
    này cũng đã bị xuống 2 dòng, giấu đi lại gọn hơn. */
 @media(max-width:520px){.tva-class .brand{font-size:0;gap:0;}}
@@ -904,12 +909,16 @@ const CSS = `
 /* Ngưỡng ẩn menu chữ nâng 860 → 1120px: hàng nav có thêm nút Shop nên hẹp hơn mức
    này là không đủ chỗ cho cả menu chữ lẫn 3 nút (đo thật: cần ~1045px). */
 @media(max-width:1120px){.tva-class .nav-links{display:none;}
+.tva-class .nav-login{display:inline-flex;align-items:center;}
 /* Máy rất hẹp (≤360px): nút Shop rút còn mỗi biểu tượng, không thì header tràn */
 @media(max-width:360px){.tva-class .shop-cta-full{display:none;}.tva-class .shop-cta{padding:8px 10px;}}
 .tva-class .nav-right{gap:8px;}
 .tva-class .story-cta{padding:7px 11px;font-size:13px;}
 .tva-class .story-cta-full{display:none;}
 .tva-class .story-cta-short{display:inline;}}
+@media(max-width:660px){.tva-class .nav-cta-guest{display:none;}
+.tva-class .nav-login{background:var(--indigo);color:#fff;font-size:14px;font-weight:600;padding:9px 16px;border-radius:12px;}
+.tva-class .nav-login:hover{background:var(--indigo-dark);}}
 .tva-class .hero{padding:56px 0 44px;}
 .tva-class .hero-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:48px;align-items:center;}
 .tva-class .hero h1{font-size:40px;font-weight:800;line-height:1.12;letter-spacing:-1px;}
