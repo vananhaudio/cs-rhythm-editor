@@ -2,7 +2,9 @@
 # Trước đây không có file này (Netlify tự nhận Vite).
 
 [build]
-  command = "npm run build"
+  # GATE: thẻ chia sẻ (Universal OG) + phủ route chạy TRƯỚC build. test:og FAIL → build FAIL → không deploy.
+  # Chỉ ở Netlify; build ở máy (npm run build) không đổi.
+  command = "npm run test:og && npm run build"
   publish = "dist"
 
 # Universal OG: MỘT Edge Function cho mọi trang — netlify/edge-functions/og.ts (path + excludedPath khai

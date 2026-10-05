@@ -41,7 +41,7 @@
     "test:tuner": "tsx --tsconfig tsconfig.app.json --test tests/tuner/*.test.tsx",
     "test:band": "tsx --tsconfig tsconfig.app.json --test tests/band/*.test.tsx",
     "test:class-lead": "tsc -p tests/class-lead/tsconfig.json && node --experimental-strip-types --test tests/class-lead/lead.test.ts",
-    "test:og": "tsc -p tests/og/tsconfig.json && node --experimental-strip-types --test tests/og/*.test.ts"
+    "test:og": "tsc -p tests/og/tsconfig.json && tsx --test tests/og/*.test.ts"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.0",
