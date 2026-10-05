@@ -2,13 +2,13 @@
 // Golden thật (ảnh + lời có bản quyền, NGOÀI git) chỉ chạy khi có MEASURE_GOLDEN_DIR.
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { after, test } from 'node:test'
 import { fileURLToPath } from 'node:url'
 import { analysisLineCounts, createHttpMeasureAnalyzer, parseAnalysisResult } from '../../src/thuvien/measureAnalysis.ts'
-import { runAnalyzer } from './harness.ts'
+import { runAnalyzer, runAnalyzerRaw } from './harness.ts'
 
 const SYNTH = fileURLToPath(new URL('../../tools/measure-analyzer/synth.py', import.meta.url))
 const dir = mkdtempSync(join(tmpdir(), 'measure-synth-'))
@@ -98,6 +98,39 @@ test('lệch số chữ chỉ ảnh hưởng CỤC BỘ: lời chuẩn thiếu m
   assert.deepEqual(b.anchors.measures.slice(-2), [A(1, 2), A(1, 5)], 'dòng sau chỗ thiếu không bị dồn lệch')
   assert.match(b.review.notes.join(' '), /không khớp lời chuẩn/)
 })
+
+test('PDF VECTOR nhiều trang: mỗi trang render RIÊNG (-f n -l n), ≤ 2 lần/trang — chống tái phát lỗi O(n²) render lại cả tài liệu', async () => {
+  const pdf = sheet([['w', '|', 'w', 'w', '|', 'w', 's', 'w'], ['w', 'w', '|', '|', 'w', 'w']], { pages: 4 }, 'vector.pdf')
+  const shim = mkdtempSync(join(tmpdir(), 'poppler-shim-'))
+  const log = join(shim, 'calls.log')
+  const real = execFileSync('sh', ['-c', 'command -v pdftoppm']).toString().trim()
+  writeFileSync(join(shim, 'pdftoppm'), `#!/bin/sh\necho "$@" >> "${log}"\nexec "${real}" "$@"\n`, { mode: 0o755 })
+  try {
+    const raw = await runAnalyzerRaw({ sources: [{ path: pdf, mime: 'application/pdf' }], lineTokenCounts: [5, 4, 5, 4, 5, 4, 5, 4] }, { ...process.env, PATH: `${shim}:${process.env.PATH}` }) as { ok: boolean; diagnostics: { pages: number } }
+    assert.equal(raw.ok, true)
+    assert.equal(raw.diagnostics.pages, 4)
+    const calls = readFileSync(log, 'utf8').trim().split('\n')
+    assert.ok(calls.length <= 2 * 4, `${calls.length} lần render cho 4 trang`)
+    for (const call of calls) assert.match(call, /-f (\d+) -l \1 /, 'mỗi lệnh render đúng MỘT trang')
+  } finally { rmSync(shim, { recursive: true, force: true }) }
+})
+
+test('giới hạn tài nguyên: PDF > 10 trang / ảnh > 40 MP / PDF hỏng → lỗi có mã, không treo, không lộ đường dẫn', async () => {
+  const many = sheet([['w', '|', 'w']], { pages: 11 }, 'vector.pdf')
+  assert.deepEqual(pick(await runAnalyzerRaw({ sources: [{ path: many, mime: 'application/pdf' }], lineTokenCounts: [2] })), { ok: false, code: 'too_large' })
+  const bomb = join(dir, 'bomb.png')
+  execFileSync('python3', ['-c', `from PIL import Image; Image.new('L', (7000, 7000), 255).save(${JSON.stringify(bomb)})`])
+  const big = await runAnalyzerRaw({ sources: [{ path: bomb, mime: 'image/png' }], lineTokenCounts: [2] }) as { error: { message: string } }
+  assert.deepEqual(pick(big), { ok: false, code: 'too_large' })
+  assert.doesNotMatch(big.error.message, /\//, 'thông báo không chứa đường dẫn')
+  const broken = join(dir, 'broken.pdf')
+  writeFileSync(broken, '%PDF-1.4 rác không phải PDF')
+  assert.deepEqual(pick(await runAnalyzerRaw({ sources: [{ path: broken, mime: 'application/pdf' }], lineTokenCounts: [2] })), { ok: false, code: 'bad_pdf' })
+  const raw = await runAnalyzerRaw({ sources: [{ path: bomb.replace('bomb', 'khong-co'), mime: 'image/png' }], lineTokenCounts: [2] }) as { diagnostics: { generator: string } }
+  assert.deepEqual(pick(raw), { ok: false, code: 'unsupported' })
+  assert.equal(raw.diagnostics.generator, 'measure-analyzer/0.2.0', 'lỗi cũng mang phiên bản analyzer')
+})
+const pick = (raw: unknown) => { const r = raw as { ok: boolean; error?: { code: string } }; return { ok: r.ok, code: r.error?.code } }
 
 test('thất bại có cấu trúc: trang trắng → ok:false (không đoán)', async () => {
   const blank = join(dir, 'blank.png')

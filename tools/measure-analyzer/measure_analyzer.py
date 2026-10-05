@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Phân tích vạch nhịp từ ảnh/PDF sheet — POC LOCAL (Slice 5B). Chỉ numpy + Pillow; PDF qua `pdftoppm` nếu có.
+"""Phân tích vạch nhịp từ ảnh/PDF sheet (Slice 5B; hardening 5C). Chỉ numpy + Pillow; PDF qua `pdftoppm` nếu có.
 
 Vào (stdin, JSON):
   { "sources": [{"path": "...", "mime": "image/png"|"image/jpeg"|"image/webp"|"application/pdf"}],
@@ -34,49 +34,110 @@ DEFAULTS = {
     "barColumnFill": 0.72,     # cột phủ ≥ tỉ lệ này chiều cao khuông = ứng viên vạch
     "noteheadFill": 0.55,      # mực sát bên nét dọc > mức này = đầu nốt → nét là đuôi nốt, không phải vạch
     "barSpaceFill": 1.0,       # ứng viên phải lấp kín cả 4 khe (1.0 = kín hoàn toàn ở ít nhất một cột)
-    "pdfDpi": 150,
+    "pdfProbeSide": 1600,      # PDF vector: lượt đo render cạnh dài = số px này
     "pdfStaffGap": 10.0,       # PDF vector: render lại ở DPI cho khoảng cách dòng kẻ ≈ giá trị này
-    "pickupRatio": 0.75,
-    "letterGapRatio": 0.3,
+    "pickupRatio": 0.75,       # ô đầu ngắn hơn tỉ lệ này × độ rộng ô trung vị → nhịp lấy đà
+    "letterGapRatio": 0.3,     # khe ≤ tỉ lệ này × chiều cao dải chữ = cùng một từ
     "gapCost": 1.0,            # căn chỉnh: giá bỏ qua một cụm chữ / một token
     "maxMatchCost": 2.0,       # căn chỉnh: trần chi phí khớp một cặp
     "maxSkewDegrees": 2.0,     # xoay thẳng ảnh nghiêng tối đa ± độ (0 = tắt)
     "normalize": "off",        # "off" = phân tích ở cỡ gốc (ngưỡng đã tỉ lệ theo khoảng cách dòng kẻ); "on" = đổi cỡ về targetStaffGap
-    "targetStaffGap": 6.0,     # chuẩn hoá: khoảng cách dòng kẻ sau khi đổi cỡ (px)     # khe ≤ tỉ lệ này × chiều cao dải chữ = cùng một từ       # ô đầu ngắn hơn tỉ lệ này × độ rộng ô trung vị → nhịp lấy đà
+    "targetStaffGap": 6.0,     # chuẩn hoá: khoảng cách dòng kẻ sau khi đổi cỡ (px)
+    # ── giới hạn tài nguyên (hardening 5C) ──
+    "maxPdfPages": 10,         # tổng số trang PDF mỗi lần phân tích
+    "maxPagePixels": 40_000_000,   # mỗi ảnh / trang render ≤ 40 MP
+    "popplerTimeout": 20,      # giây cho mỗi lệnh poppler
 }
 
 
+class AnalyzerError(Exception):
+    """Lỗi có mã — trả về {ok:false, error:{code, message}}; không lộ đường dẫn/stack."""
+    def __init__(self, code, message):
+        super().__init__(message)
+        self.code, self.message = code, message
+
+
+def poppler(args, opts, text=False):
+    exe = shutil.which(args[0])
+    if not exe:
+        raise AnalyzerError("unsupported", "Máy phân tích chưa có bộ đọc PDF.")
+    try:
+        done = subprocess.run([exe, *args[1:]], capture_output=True, text=text, timeout=opts["popplerTimeout"])
+    except subprocess.TimeoutExpired:
+        raise AnalyzerError("timeout", "Đọc PDF quá lâu.")
+    if done.returncode != 0:
+        raise AnalyzerError("bad_pdf", "Không đọc được file PDF.")
+    return done.stdout
+
+
+def pdf_pages(path, opts):
+    """Số trang + kích thước (pt) từng trang — đọc MỘT lần bằng pdfinfo."""
+    out = poppler(["pdfinfo", "-f", "1", "-l", str(opts["maxPdfPages"] + 1), path], opts, text=True)
+    count, sizes = 0, {}
+    for line in out.splitlines():
+        if line.startswith("Pages:"):
+            count = int(line.split()[1])
+        elif line.startswith("Page") and "size:" in line:
+            head, tail = line.split("size:", 1)
+            parts = tail.split()
+            sizes[int(head.split()[1])] = (float(parts[0]), float(parts[2]))
+    if count <= 0:
+        raise AnalyzerError("bad_pdf", "PDF không có trang nào.")
+    return count, sizes
+
+
+def open_gray(path, opts):
+    """Mở ảnh xám; ảnh quá lớn (ảnh "bom") → lỗi rõ, KHÔNG giải nén."""
+    try:
+        with Image.open(path) as img:
+            if img.width * img.height > opts["maxPagePixels"]:
+                raise AnalyzerError("too_large", f"Ảnh quá lớn ({img.width}×{img.height}) — tối đa {opts['maxPagePixels'] // 1_000_000} MP.")
+            return np.asarray(img.convert("L")).astype(np.int16)
+    except AnalyzerError:
+        raise
+    except (OSError, ValueError, Image.DecompressionBombError):
+        raise AnalyzerError("unsupported", "Không đọc được ảnh.")
+
+
 def load_pages(sources, work, opts):
-    pages, warnings = [], []
+    """Mọi trang ảnh, theo thứ tự nguồn. PDF: đúng O(số trang) — mỗi trang render RIÊNG (-f/-l), không bao giờ
+    render lại cả tài liệu cho từng trang (lỗi O(n²) của bản 5B: PDF 5 trang mất 15,7 s / 706 MB)."""
+    pages, warnings, pdf_total = [], [], 0
     for si, src in enumerate(sources):
         path, mime = src["path"], src.get("mime", "")
         if mime == "application/pdf" or path.lower().endswith(".pdf"):
-            exe = shutil.which("pdftoppm")
-            if not exe:
-                warnings.append({"code": "pdf_renderer_missing", "source": si, "message": "Chưa có pdftoppm — bỏ qua PDF, dùng ảnh."})
-                continue
-            scanned = extract_scanned(path, work, si)
+            count, sizes = pdf_pages(path, opts)
+            pdf_total += count
+            if pdf_total > opts["maxPdfPages"]:
+                raise AnalyzerError("too_large", f"PDF quá nhiều trang — tối đa {opts['maxPdfPages']} trang mỗi lần phân tích.")
+            scanned = extract_scanned(path, work, si, opts)
             if scanned:
                 pages.extend((si, page) for page in scanned)
                 continue
-            # lượt 1: render thấp để đo khoảng cách dòng kẻ; lượt 2: render ĐÚNG DPI cho cỡ chuẩn — không phải đổi cỡ ảnh
-            def render(dpi, tag):
-                prefix = os.path.join(work, f"src{si}{tag}")
-                subprocess.run([exe, "-r", str(dpi), "-gray", "-png", path, prefix], check=True, capture_output=True)
-                return [np.asarray(Image.open(os.path.join(work, n)).convert("L")).astype(np.int16)
-                        for n in sorted(f for f in os.listdir(work) if f.startswith(f"src{si}{tag}-") and f.endswith(".png"))]
-            first = render(opts["pdfDpi"], "a")
-            for page_index, page in enumerate(first):
+            for number in range(1, count + 1):
+                w_pt, h_pt = sizes.get(number, (612.0, 792.0))
+                aspect = max(w_pt, h_pt) / max(1.0, min(w_pt, h_pt))
+                # cạnh dài tối đa để trang ≤ maxPagePixels (khổ trang PDF có thể khai bất thường — không tin DPI)
+                cap = int(math.sqrt(opts["maxPagePixels"] * aspect))
+                def render(scale_args, tag):
+                    prefix = os.path.join(work, f"s{si}p{number}{tag}")
+                    poppler(["pdftoppm", *scale_args, "-f", str(number), "-l", str(number), "-gray", "-png", "-singlefile", path, prefix], opts)
+                    page = open_gray(prefix + ".png", opts)
+                    os.remove(prefix + ".png")
+                    return page
+                # lượt 1: render nhỏ (cạnh dài cố định) để đo khoảng cách dòng kẻ; lượt 2: render ĐÚNG trang đó ở cỡ chuẩn
+                probe_dpi = 72.0 * opts["pdfProbeSide"] / max(w_pt, h_pt)
+                page = render(["-scale-to", str(min(opts["pdfProbeSide"], cap))], "a")
                 found = find_systems(page, opts)[1]
                 if found:
                     gap = float(np.median([x["gap"] for x in found]))
-                    dpi = max(36, int(round(opts["pdfDpi"] * opts["pdfStaffGap"] / gap)))
-                    again = render(dpi, f"b{page_index}_") if abs(dpi - opts["pdfDpi"]) > 3 else [page]
-                    pages.append((si, again[page_index] if len(again) > page_index else page))
-                else:
-                    pages.append((si, page))
+                    # DPI cuối: khoảng cách dòng kẻ ≈ pdfStaffGap px (cùng công thức bản 5B), trần theo số pixel
+                    dpi = max(36, int(round(probe_dpi * opts["pdfStaffGap"] / gap)))
+                    dpi = min(dpi, int(72 * cap / max(w_pt, h_pt)))
+                    page = render(["-r", str(dpi)], "b")
+                pages.append((si, page))
         else:
-            pages.append((si, np.asarray(Image.open(path).convert("L")).astype(np.int16)))
+            pages.append((si, open_gray(path, opts)))
     return pages, warnings
 
 
@@ -93,15 +154,21 @@ def runs(mask):
     return out
 
 
-def extract_scanned(path, work, si):
+def extract_scanned(path, work, si, opts):
     """PDF scan (mỗi trang đúng MỘT ảnh): lấy nguyên ảnh nhúng — render lại sẽ nội suy làm nhoè vạch mảnh."""
     exe = shutil.which("pdfimages")
     if not exe:
         return None
-    listing = subprocess.run([exe, "-list", path], capture_output=True, text=True)
+    try:
+        listing = subprocess.run([exe, "-list", path], capture_output=True, text=True, timeout=opts["popplerTimeout"])
+    except subprocess.TimeoutExpired:
+        raise AnalyzerError("timeout", "Đọc PDF quá lâu.")
     if listing.returncode != 0:
         return None
     rows = [line.split() for line in listing.stdout.splitlines()[2:] if line.strip()]
+    for row in rows:
+        if len(row) > 4 and row[2] == "image" and row[3].isdigit() and row[4].isdigit() and int(row[3]) * int(row[4]) > opts["maxPagePixels"]:
+            raise AnalyzerError("too_large", f"Ảnh trong PDF quá lớn — tối đa {opts['maxPagePixels'] // 1_000_000} MP.")
     per_page = {}
     for row in rows:
         if len(row) > 2 and row[2] == "image":
@@ -109,9 +176,14 @@ def extract_scanned(path, work, si):
     if not per_page or any(n != 1 for n in per_page.values()):
         return None
     prefix = os.path.join(work, f"scan{si}")
-    subprocess.run([exe, "-all", path, prefix], check=True, capture_output=True)
+    try:
+        subprocess.run([exe, "-all", path, prefix], check=True, capture_output=True, timeout=opts["popplerTimeout"])
+    except subprocess.TimeoutExpired:
+        raise AnalyzerError("timeout", "Đọc PDF quá lâu.")
+    except subprocess.CalledProcessError:
+        raise AnalyzerError("bad_pdf", "Không đọc được ảnh trong PDF.")
     names = sorted(f for f in os.listdir(work) if f.startswith(f"scan{si}-"))
-    return [np.asarray(Image.open(os.path.join(work, n)).convert("L")).astype(np.int16) for n in names]
+    return [open_gray(os.path.join(work, n), opts) for n in names]
 
 
 def find_systems(gray, opts):
@@ -495,7 +567,7 @@ def analyze(payload):
         "review": {"needsReview": bool(review) or not count_match or reordered or any(b["repeat"] for b in boundaries),
                    "measures": review, "notes": notes},
         "diagnostics": {
-            "engine": "numpy-pillow-v2-align",
+            "engine": "numpy-pillow-v2-align", "generator": GENERATOR,
             "pages": len(pages), "scales": scales, "deskewDegrees": angles,
             "systems": [{"page": g["page"], "index": g["index"], "staffGap": round(g["gap"], 2), "y": [g["y1"], g["y5"]], "lyricBand": g["lyrics"]["band"] if g["lyrics"] else None,
                          "bars": [round(b["x"], 1) for b in g["bars"]],
@@ -560,8 +632,20 @@ def fail(code, message, warnings):
     return {"ok": False, "error": {"code": code, "message": message}, "diagnostics": {"warnings": warnings}}
 
 
+GENERATOR = "measure-analyzer/0.2.0"
+
+
 if __name__ == "__main__":
+    # Ảnh "bom": Pillow cảnh báo → coi là lỗi (trần riêng ở open_gray chặn trước)
+    import warnings as _warnings
+    _warnings.simplefilter("error", Image.DecompressionBombWarning)
     try:
-        print(json.dumps(analyze(json.load(sys.stdin)), ensure_ascii=False))
-    except Exception as error:  # noqa: BLE001 — trả lỗi có cấu trúc, không làm sập cầu
-        print(json.dumps(fail("analyzer_crash", f"{type(error).__name__}: {error}", []), ensure_ascii=False))
+        result = analyze(json.load(sys.stdin))
+    except AnalyzerError as error:
+        result = fail(error.code, error.message, [])
+    except MemoryError:
+        result = fail("too_large", "Không đủ bộ nhớ để phân tích file này.", [])
+    except Exception as error:  # noqa: BLE001 — trả lỗi có cấu trúc, KHÔNG lộ stack/đường dẫn
+        result = fail("analysis_failed", f"Phân tích lỗi ({type(error).__name__}).", [])
+    result.setdefault("diagnostics", {})["generator"] = GENERATOR
+    print(json.dumps(result, ensure_ascii=False))
