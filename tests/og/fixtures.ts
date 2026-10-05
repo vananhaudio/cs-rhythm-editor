@@ -14,18 +14,21 @@ export const CLASS_ID = '11111111-1111-4111-8111-111111111111'
 export const CANCELLED_ID = '22222222-2222-4222-8222-222222222222'
 export const NOSESSION_ID = '33333333-3333-4333-8333-333333333333'
 export const DH1_ID = '44444444-4444-4444-8444-444444444444'
+export const OPEN_ID = '55555555-5555-4555-8555-555555555555'
 
 export type Db = { tables: Record<string, Record<string, unknown>[]>; rpc?: Record<string, (b: Record<string, unknown>) => unknown> }
 
 export const DB: Db = {
   tables: {
     class_schedule: [
-      { id: CLASS_ID, name: 'Khởi đầu đam mê khoá 17 - KD17', cover_url: null, main_course_id: DH1_ID, status: 'upcoming', is_active: true },
+      { id: CLASS_ID, name: 'Khởi đầu đam mê khoá 17 - KD17', cover_url: null, main_course_id: DH1_ID, status: 'upcoming', is_active: true, total_sessions: 8 },
+      { id: OPEN_ID, name: 'Lớp mở hàng tuần', cover_url: null, main_course_id: null, status: 'active', is_active: true, total_sessions: 0 },
       { id: CANCELLED_ID, name: 'Lớp đã huỷ KD19', cover_url: null, main_course_id: DH1_ID, status: 'cancelled', is_active: true },
       { id: NOSESSION_ID, name: 'Lớp nháp', cover_url: null, main_course_id: null, status: 'draft', is_active: true },
       { id: 'ht', name: 'Hành trình 2027 — 40 buổi thực hành', cover_url: null, main_course_id: null, status: 'scheduled', is_active: true, program_code: 'HT2027' },
     ],
-    class_sessions: [{ class_id: CLASS_ID, session_number: 3 }, { class_id: CANCELLED_ID, session_number: 3 }],
+    // RLS thật: khách KHÔNG đọc được buổi của lớp thường (KD17) — chỉ lớp chương trình/thực hành
+    class_sessions: [{ class_id: OPEN_ID, session_number: 12 }, { class_id: CANCELLED_ID, session_number: 3 }],
     edu_courses: [
       { id: DH1_ID, code: 'DH1', name: 'Đệm hát 1', image_url: DH1_LOGO, thumbnail_url: null, status: 'on', visibility: 'visible' },
       { id: 'solo', code: 'SOLO', name: 'Solo Guitar Căn Bản', description: null, showcase_desc: null, outcome: null,

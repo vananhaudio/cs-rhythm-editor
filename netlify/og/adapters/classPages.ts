@@ -1,5 +1,6 @@
 // /me/classes/<id>(/space) và /me/classes/<id>/sessions/<n>.
-// Buổi chỉ công khai khi buổi CÓ THẬT (class_sessions) và lớp công khai.
+// Buổi chỉ công khai khi buổi CÓ THẬT và lớp công khai. "Có thật" = 1 ≤ n ≤ class_schedule.total_sessions, hoặc có dòng
+// class_sessions khách đọc được (RLS chỉ cho khách đọc buổi của lớp chương trình / thực hành — lớp mở không giới hạn buổi).
 import { defineAdapter, first, UUID_RE } from '../adapter.ts'
 import { hidden, publicMeta, SITE } from '../contract.ts'
 import { canonicalUrl } from '../render.ts'
@@ -20,7 +21,7 @@ export const sessionAdapter = defineAdapter<{ classId: string; sessionNo: number
       loadClass(ctx, `id=eq.${classId}`),
       first(ctx, `/rest/v1/class_sessions?select=session_number&class_id=eq.${classId}&session_number=eq.${sessionNo}&limit=1`),
     ])
-    if (!cls || !ses) return null
+    if (!cls || (sessionNo > cls.totalSessions && !ses)) return null
     if (!cls.isPublic) return hidden('private', url)
     return publicMeta({
       title: `${classTitle(cls.name, sessionNo)} · ${SITE}`, description: classDescription(cls.name, sessionNo),

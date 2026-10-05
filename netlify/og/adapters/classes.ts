@@ -7,13 +7,13 @@ import { courseImageCandidates, pad2, resolveOgImage, str } from '../contract.ts
 
 export const PRIVATE_CLASS_STATUSES = new Set(['draft', 'cancelled', 'merged'])
 
-export type ClassRow = { name?: unknown; cover_url?: unknown; main_course_id?: unknown; status?: unknown; is_active?: unknown }
-export type ClassRecord = { name: string; isPublic: boolean; image: string | null }
+export type ClassRow = { name?: unknown; cover_url?: unknown; main_course_id?: unknown; status?: unknown; is_active?: unknown; total_sessions?: unknown }
+export type ClassRecord = { name: string; isPublic: boolean; image: string | null; totalSessions: number }
 
 export const classIsPublic = (c: ClassRow) =>
   c.is_active !== false && !PRIVATE_CLASS_STATUSES.has(str(c.status))
 
-const CLASS_COLS = 'select=name,cover_url,main_course_id,status,is_active'
+const CLASS_COLS = 'select=name,cover_url,main_course_id,status,is_active,total_sessions'
 
 /** filter: `id=eq.<uuid>` hoặc `program_code=eq.X&…`. Không có dòng → null. */
 export async function loadClass(ctx: Ctx, filter: string): Promise<ClassRecord | null> {
@@ -25,7 +25,8 @@ export async function loadClass(ctx: Ctx, filter: string): Promise<ClassRecord |
   if (isPublic && !c.cover_url && typeof c.main_course_id === 'string' && UUID_RE.test(c.main_course_id)) {
     course = await first(ctx, `/rest/v1/edu_courses?select=image_url,thumbnail_url&id=eq.${c.main_course_id}&limit=1`)
   }
-  return { name: str(c.name), isPublic, image: resolveOgImage([c.cover_url, ...courseImageCandidates(course)]) }
+  const totalSessions = typeof c.total_sessions === 'number' && c.total_sessions > 0 ? c.total_sessions : 0
+  return { name: str(c.name), isPublic, image: resolveOgImage([c.cover_url, ...courseImageCandidates(course)]), totalSessions }
 }
 
 /** Lớp mới nhất đang công khai của một chương trình (class_schedule.program_code). */

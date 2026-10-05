@@ -5,7 +5,7 @@ import { resolveShare } from '../../netlify/og/registry.ts'
 import { renderShareMeta } from '../../netlify/og/render.ts'
 import { publicMeta, resolveOgImage, safeImage } from '../../netlify/og/contract.ts'
 import {
-  BAND_COVER, CANCELLED_ID, CLASS_ID, DB, DH1_LOGO, INDEX, mockCtx, NOSESSION_ID, ORIGIN, SOLO_LOGO, STORY_PHOTO, tag, title,
+  BAND_COVER, CANCELLED_ID, CLASS_ID, DB, DH1_LOGO, INDEX, mockCtx, NOSESSION_ID, OPEN_ID, ORIGIN, SOLO_LOGO, STORY_PHOTO, tag, title,
 } from './fixtures.ts'
 
 const DEFAULT_TITLE = title(INDEX)
@@ -143,10 +143,13 @@ test('PRIVACY: lớp đã huỷ / nháp → mặc định, không lộ tên lớ
   }
 })
 
-test('PRIVACY: buổi KHÔNG tồn tại → mặc định (không còn "Buổi 99")', async () => {
+test('PRIVACY: buổi KHÔNG tồn tại → mặc định (không còn "Buổi 99"); buổi có thật nhận theo total_sessions hoặc class_sessions', async () => {
   const o = await share(`/me/classes/${CLASS_ID}/sessions/99`)
   assert.ok(isDefault(o))
   assert.equal(o.r.note, 'session:not_found')
+  assert.equal((await share(`/me/classes/${CLASS_ID}/sessions/8`)).r.note, 'session:public')   // 8 ≤ total_sessions, dù khách không đọc được class_sessions
+  assert.equal((await share(`/me/classes/${OPEN_ID}/sessions/12`)).r.note, 'session:public')   // lớp mở: có dòng class_sessions
+  assert.equal((await share(`/me/classes/${OPEN_ID}/sessions/13`)).r.note, 'session:not_found')
 })
 
 test('PRIVACY: trang cá nhân luôn private, KHÔNG đọc DB', async () => {
