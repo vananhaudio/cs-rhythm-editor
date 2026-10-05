@@ -18,6 +18,11 @@
 .cs-band-tagline { margin: 0 0 16px; font-size: 15.5px; line-height: 1.55; opacity: 0.95; }
 .cs-band-hero-cta { background: #fff; color: var(--cs-p-strong); height: 44px; padding: 0 22px; }
 .cs-band-hero-cta:hover { background: var(--cs-p-softer); }
+/* Ảnh bìa Band (bands.cover_url) — cùng ảnh thẻ chia sẻ; tỉ lệ 1200×630 */
+.cs-band-hero.has-cover { padding-top: 0; overflow: hidden; }
+.cs-band-cover { display: block; width: calc(100% + 40px); margin: 0 -20px 18px; aspect-ratio: 1200 / 630; object-fit: cover; background: rgba(255, 255, 255, 0.12); }
+.cs-band-mhead-cover { flex: 1 1 100%; }
+.cs-band-mhead-cover-img { flex: 1 1 100%; width: 100%; max-width: 360px; aspect-ratio: 1200 / 630; object-fit: cover; border-radius: 10px; }
 
 .cs-band-card { padding: 18px 16px; }
 .cs-band-facts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
@@ -129,6 +134,8 @@
 @media (min-width: 640px) {
   .cs-band-main { padding-top: 28px; }
   .cs-band-hero { padding: 34px 32px 28px; }
+  .cs-band-hero.has-cover { padding-top: 0; }
+  .cs-band-cover { width: calc(100% + 64px); margin: 0 -32px 22px; }
   .cs-root .cs-band-name { font-size: 36px; }
   .cs-band-card { padding: 22px 24px; }
   .cs-band-choices.cs-band-choices { grid-template-columns: repeat(2, 1fr); }
@@ -208,7 +215,7 @@
 .cs-band-link { border: 0; background: none; padding: 0; color: var(--cs-p-strong); font-weight: 700; text-decoration: underline; cursor: pointer; font-size: inherit; }
 
 @media (min-width: 640px) {
-  .cs-band-mhead { flex-direction: row; align-items: center; justify-content: space-between; }
+  .cs-band-mhead { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; }
   .cs-band-mhead-stats { flex: 0 0 240px; }
   .cs-band-org { display: grid; grid-template-columns: repeat(2, 1fr); }
 }

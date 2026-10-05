@@ -30,6 +30,8 @@ export type BandProfile = {
   referenceSongs: BandSong[]
   highlights: BandFact[]
   description: string | null
+  /** Ảnh bìa Band (bands.cover_url) — landing + thẻ chia sẻ cùng dùng */
+  coverUrl: string | null
 }
 export type BandRecruitment = {
   id: string
@@ -50,6 +52,8 @@ type Json = Record<string, unknown>
 const isObj = (x: unknown): x is Json => !!x && typeof x === 'object' && !Array.isArray(x)
 const str = (x: unknown): string | null => (typeof x === 'string' && x.trim() ? x : null)
 const arr = (x: unknown): unknown[] => (Array.isArray(x) ? x : [])
+/** Chỉ nhận URL https (ảnh bìa) — sai/thiếu → null. */
+const httpsUrl = (x: unknown): string | null => (typeof x === 'string' && /^https:\/\/\S+$/.test(x.trim()) ? x.trim() : null)
 
 export function parseOptions(x: unknown): BandOption[] {
   return arr(x).flatMap(o => (isObj(o) && str(o.value) && str(o.label) ? [{ value: o.value as string, label: o.label as string }] : []))
@@ -77,7 +81,7 @@ export function parseBandPublic(x: unknown): BandPublic | null {
     leaderName: str(b.leader_name), tagline: str(b.tagline), musicStyle: str(b.music_style), scheduleText: str(b.schedule_text),
     referenceSongs: arr(b.reference_songs).flatMap(s => (isObj(s) && str(s.title) ? [{ title: s.title as string, artist: str(s.artist), url: str(s.url) }] : [])),
     highlights: arr(b.highlights).flatMap(h => (isObj(h) && str(h.label) && str(h.value) ? [{ label: h.label as string, value: h.value as string }] : [])),
-    description: str(b.description),
+    description: str(b.description), coverUrl: httpsUrl(b.cover_url),
   }
   let recruitment: BandRecruitment | null = null
   let rules: BandRules | null = null
@@ -300,7 +304,12 @@ export type BandMember = {
   roles: string[]
 }
 export type BandOverview = {
-  band: { id: string; slug: string; name: string; leaderName: string | null; scheduleText: string | null; musicStyle: string | null; status: string }
+  band: {
+    id: string; slug: string; name: string; leaderName: string | null; scheduleText: string | null; musicStyle: string | null; status: string
+    coverUrl: string | null
+    /** Server quyết (is_teacher): chỉ Thầy/admin đổi ảnh bìa; Leader chỉ xem */
+    canEditCover: boolean
+  }
   positionCatalog: BandPosition[]
   roleCatalog: BandRole[]
   members: BandMember[]
@@ -324,6 +333,7 @@ export function parseOverview(x: unknown): BandOverview | null {
     band: {
       id: b.id as string, slug: str(b.slug) ?? '', name: str(b.name) ?? '', leaderName: str(b.leader_name),
       scheduleText: str(b.schedule_text), musicStyle: str(b.music_style), status: str(b.status) ?? 'active',
+      coverUrl: httpsUrl(b.cover_url), canEditCover: b.can_edit_cover === true,
     },
     positionCatalog: parsePositions(x.position_catalog),
     roleCatalog: parseRoles(x.role_catalog),

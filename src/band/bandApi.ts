@@ -107,3 +107,7 @@ export const updateMember = (memberId: string, patch: MemberPatch) => {
 
 export const setMemberRole = (memberId: string, roleKey: string, on: boolean) =>
   manageCall('band_admin_set_role', { p_member_id: memberId, p_role_key: roleKey, p_on: on })
+
+/** Ảnh bìa Band (Thầy/admin). url null = gỡ. */
+export const setBandCover = (bandId: string, url: string | null) =>
+  manageCall('band_admin_set_cover', { p_band_id: bandId, p_url: url })

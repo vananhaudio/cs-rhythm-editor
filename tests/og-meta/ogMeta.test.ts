@@ -2,7 +2,10 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { applyMeta, bandMeta, canonicalUrl, classMeta, ogRouteFromPath, PROFILE_META, safeImage, STATIC_META, staticMeta } from '../../netlify/og/ogMeta.ts'
+import {
+  applyMeta, bandMeta, canonicalUrl, classMeta, courseImageCandidates, ogRouteFromPath, PROFILE_META, resolveOgImage, safeImage,
+  showcaseMeta, STATIC_META, staticMeta,
+} from '../../netlify/og/ogMeta.ts'
 
 const ID = '9431adee-d0d3-4f48-9156-5228533bd9c2'
 const INDEX = readFileSync(new URL('../../index.html', import.meta.url), 'utf8')
@@ -57,10 +60,10 @@ test('band meta: tên + tagline; thiếu tên → null', () => {
 
 test('class meta: tên lớp + ảnh khoá; buổi = Buổi NN · tên lớp', () => {
   const img = 'https://x.supabase.co/storage/v1/object/public/course-logos/a.png'
-  const c = classMeta({ name: 'Solo Guitar', image: img })!
+  const c = classMeta({ name: 'Solo Guitar', course_image: img })!
   assert.match(c.title, /^Solo Guitar · /)
   assert.equal(c.image, img)
-  const s = classMeta({ name: 'Solo Guitar', image: null }, 3)!
+  const s = classMeta({ name: 'Solo Guitar', course_image: null }, 3)!
   assert.match(s.title, /^Buổi 03 · Solo Guitar · /)
   assert.equal(s.image, null)
   assert.equal(classMeta(null), null)
@@ -121,12 +124,65 @@ test('profile chung không chứa dữ liệu người dùng', () => {
 
 test('landing tĩnh: ảnh khoá từ DB nếu https, không thì mặc định; không lộ courseCode', () => {
   const img = 'https://x.supabase.co/storage/v1/object/public/course-logos/solo.png'
-  const m = staticMeta('solo01', img)
+  const m = staticMeta('solo01', [img])
   assert.equal(m.image, img)
   assert.ok(!('courseCode' in m))
-  assert.equal(staticMeta('solo01', null).image, null)
-  assert.equal(staticMeta('solo01', 'http://x/a.png').image, null)
-  assert.equal(staticMeta('nhipphach', img).image, img)
+  assert.equal(staticMeta('solo01', [null]).image, null)
+  assert.equal(staticMeta('solo01').image, null)
+  assert.equal(staticMeta('solo01', ['http://x/a.png']).image, null)
+  assert.equal(staticMeta('nhipphach', [img]).image, img)
   assert.equal(STATIC_META.solo01.courseCode, 'SOLO')
   assert.equal(STATIC_META.nhipphach.courseCode, undefined)
+})
+
+// ── V1.1: ảnh theo entity ──
+const A = 'https://x.supabase.co/storage/v1/object/public/course-logos/a.png'
+const B = 'https://x.supabase.co/storage/v1/object/public/course-logos/b.png'
+const C = 'https://x.supabase.co/storage/v1/object/public/course-logos/c.png'
+
+test('resolveOgImage: ảnh https đầu tiên theo thứ tự, bỏ qua trống/sai; không có → null (mặc định)', () => {
+  assert.equal(resolveOgImage([null, '', 'http://x/a.png', '/rel.png', A, B]), A)
+  assert.equal(resolveOgImage([B, A]), B)
+  assert.equal(resolveOgImage([]), null)
+  assert.equal(resolveOgImage([undefined, 42, {}]), null)
+})
+
+test('Band: cover_url → mặc định', () => {
+  assert.equal(bandMeta({ name: 'Lá Mùa Thu', cover_url: A })!.image, A)
+  assert.equal(bandMeta({ name: 'Lá Mùa Thu', cover_url: null })!.image, null)
+  assert.equal(bandMeta({ name: 'Lá Mùa Thu', cover_url: 'http://x/a.png' })!.image, null)
+})
+
+test('Lớp: ảnh lớp → ảnh khoá → thumbnail khoá → mặc định; Buổi dùng chuỗi của Lớp', () => {
+  assert.equal(classMeta({ name: 'L', cover_url: A, course_image: B, course_thumbnail: C })!.image, A)
+  assert.equal(classMeta({ name: 'L', cover_url: null, course_image: B, course_thumbnail: C })!.image, B)
+  assert.equal(classMeta({ name: 'L', course_thumbnail: C })!.image, C)
+  assert.equal(classMeta({ name: 'L' })!.image, null)
+  assert.equal(classMeta({ name: 'L', cover_url: A, course_image: B }, 7)!.image, A)
+  assert.equal(classMeta({ name: 'L', course_image: B }, 7)!.image, B)
+})
+
+test('Khoá: image_url → thumbnail_url', () => {
+  assert.equal(resolveOgImage(courseImageCandidates({ image_url: A, thumbnail_url: B })), A)
+  assert.equal(resolveOgImage(courseImageCandidates({ image_url: null, thumbnail_url: B })), B)
+  assert.equal(resolveOgImage(courseImageCandidates(null)), null)
+})
+
+test('landing tĩnh khai entity: solo01 = khoá, hanhtrinh2027 = lớp chương trình, nhipphach = tool, thuvien = mặc định', () => {
+  assert.equal(STATIC_META.solo01.courseCode, 'SOLO')
+  assert.equal(STATIC_META.hanhtrinh2027.programCode, 'HT2027')
+  assert.equal(STATIC_META.nhipphach.toolRoute, '/nhipphach')
+  const t = STATIC_META.thuvien
+  assert.ok(!t.courseCode && !t.programCode && !t.toolRoute)
+  assert.equal(staticMeta('thuvien').image, null)
+})
+
+test('Showcase: route + SEO title/desc + cover_image → mặc định', () => {
+  assert.deepEqual(ogRouteFromPath('/showcase/ai-lam-ra-cay-dan/'), { kind: 'showcase', slug: 'ai-lam-ra-cay-dan' })
+  assert.deepEqual(ogRouteFromPath('/showcase/'), { kind: 'fallback' })
+  assert.deepEqual(ogRouteFromPath('/showcase/a/b'), { kind: 'fallback' })
+  const m = showcaseMeta({ title: 'T', seo_title: 'SEO T', seo_description: 'SEO D', summary: 'S', cover_image: A })!
+  assert.deepEqual(m, { title: 'SEO T', description: 'SEO D', image: A })
+  assert.deepEqual(showcaseMeta({ title: 'T', summary: 'S' }), { title: 'T', description: 'S', image: null })
+  assert.equal(showcaseMeta(null), null)
 })

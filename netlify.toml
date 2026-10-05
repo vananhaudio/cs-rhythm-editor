@@ -11,7 +11,7 @@
   function = "og-tags"
   path = "/story/*"
 
-# Dynamic OG V1 — thẻ chia sẻ riêng cho Band / Lớp / Buổi / Profile (chung) / landing công khai.
+# Dynamic OG V1.1 — thẻ chia sẻ riêng cho Band / Lớp / Buổi / Showcase / Profile (chung) / landing công khai.
 # Luật route ở netlify/og/ogMeta.ts. Route không khai ở đây giữ thẻ mặc định của index.html.
 [[edge_functions]]
   function = "og-meta"
@@ -20,6 +20,10 @@
 [[edge_functions]]
   function = "og-meta"
   path = "/me/*"
+
+[[edge_functions]]
+  function = "og-meta"
+  path = "/showcase/*"
 
 [[edge_functions]]
   function = "og-meta"
