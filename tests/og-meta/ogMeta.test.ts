@@ -2,7 +2,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { applyMeta, bandMeta, canonicalUrl, classMeta, ogRouteFromPath, PROFILE_META, safeImage, STATIC_META } from '../../netlify/og/ogMeta.ts'
+import { applyMeta, bandMeta, canonicalUrl, classMeta, ogRouteFromPath, PROFILE_META, safeImage, STATIC_META, staticMeta } from '../../netlify/og/ogMeta.ts'
 
 const ID = '9431adee-d0d3-4f48-9156-5228533bd9c2'
 const INDEX = readFileSync(new URL('../../index.html', import.meta.url), 'utf8')
@@ -117,4 +117,16 @@ test('applyMeta escape HTML + không bị $-pattern của replace', () => {
 test('profile chung không chứa dữ liệu người dùng', () => {
   assert.ok(!/@|\d{6,}/.test(PROFILE_META.title + PROFILE_META.description))
   assert.equal(PROFILE_META.image, null)
+})
+
+test('landing tĩnh: ảnh khoá từ DB nếu https, không thì mặc định; không lộ courseCode', () => {
+  const img = 'https://x.supabase.co/storage/v1/object/public/course-logos/solo.png'
+  const m = staticMeta('solo01', img)
+  assert.equal(m.image, img)
+  assert.ok(!('courseCode' in m))
+  assert.equal(staticMeta('solo01', null).image, null)
+  assert.equal(staticMeta('solo01', 'http://x/a.png').image, null)
+  assert.equal(staticMeta('nhipphach', img).image, img)
+  assert.equal(STATIC_META.solo01.courseCode, 'SOLO')
+  assert.equal(STATIC_META.nhipphach.courseCode, undefined)
 })

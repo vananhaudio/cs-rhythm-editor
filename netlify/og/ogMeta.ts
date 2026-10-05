@@ -24,12 +24,17 @@ export type StaticKey = 'solo01' | 'hanhtrinh2027' | 'nhipphach' | 'thuvien'
 
 export type Meta = { title: string; description: string; image: string | null }
 
-// Metadata tĩnh của các landing công khai. image null = giữ ảnh mặc định.
-export const STATIC_META: Record<StaticKey, Meta> = {
+/** Landing tĩnh: chữ cố định; ảnh lấy từ DB theo mã khoá (edu_courses.code) nếu có — không viết cứng URL ảnh. */
+export type StaticMeta = Meta & { courseCode?: string }
+
+// Metadata tĩnh của các landing công khai. image null + không courseCode = ảnh mặc định
+// (05/10: Hành trình 2027 / Nhịp & Phách / Thư viện chưa có ảnh phù hợp trong hệ thống).
+export const STATIC_META: Record<StaticKey, StaticMeta> = {
   solo01: {
     title: 'Solo Guitar Căn Bản | Thầy Văn Anh Guitar',
     description: 'Khóa Solo Guitar Căn Bản 24 buổi – từ giai điệu, bass, hòa âm, kỹ thuật đến tự dựng bài hát yêu thích thành Solo Guitar.',
     image: null,
+    courseCode: 'SOLO',   // logo khoá Solo Guitar Căn Bản
   },
   hanhtrinh2027: {
     title: '40 Buổi Thực Hành · Hành Trình 2027 | Thầy Văn Anh Guitar',
@@ -81,6 +86,12 @@ export function ogRouteFromPath(pathname: string): OgRoute {
   if (prof && UUID_RE.test(prof[1])) return { kind: 'profile' }
 
   return { kind: 'fallback' }
+}
+
+/** Landing tĩnh + ảnh khoá (nếu đọc được). */
+export function staticMeta(key: StaticKey, courseImage: unknown): Meta {
+  const m = STATIC_META[key]
+  return { title: m.title, description: m.description, image: safeImage(courseImage) ?? m.image }
 }
 
 /** Cắt mô tả gọn cho thẻ share. */

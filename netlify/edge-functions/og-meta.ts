@@ -7,7 +7,7 @@
 // Lỗi / không tìm thấy dữ liệu → giữ thẻ mặc định, chỉ sửa og:url về đúng URL được chia sẻ.
 // Header chẩn đoán: x-og-fn.
 
-import { applyMeta, bandMeta, classMeta, ogRouteFromPath, PROFILE_META, safeImage, STATIC_META } from '../og/ogMeta.ts'
+import { applyMeta, bandMeta, classMeta, ogRouteFromPath, PROFILE_META, safeImage, STATIC_META, staticMeta } from '../og/ogMeta.ts'
 import type { Meta, OgRoute } from '../og/ogMeta.ts'
 
 const SUPA = 'https://wojmdilyflffvdtpovmq.supabase.co'
@@ -41,9 +41,21 @@ async function loadClass(classId: string) {
   return { name: c.name, image }
 }
 
+/** Ảnh khoá theo mã (landing tĩnh). Lỗi → null, landing vẫn có chữ riêng. */
+async function loadCourseImage(code: string | undefined): Promise<string | null> {
+  if (!code) return null
+  try {
+    const cs = await getJson(`/rest/v1/edu_courses?select=image_url,thumbnail_url&code=eq.${encodeURIComponent(code)}&limit=1`) as
+      { image_url?: unknown; thumbnail_url?: unknown }[]
+    return safeImage(cs?.[0]?.image_url) ?? safeImage(cs?.[0]?.thumbnail_url)
+  } catch {
+    return null
+  }
+}
+
 async function metaFor(route: OgRoute): Promise<Meta | null> {
   switch (route.kind) {
-    case 'static': return STATIC_META[route.key]
+    case 'static': return staticMeta(route.key, await loadCourseImage(STATIC_META[route.key].courseCode))
     case 'profile': return PROFILE_META
     case 'band': return bandMeta(await loadBand(route.slug))
     case 'class': return classMeta(await loadClass(route.classId))
