@@ -233,7 +233,9 @@ export function createWorker(config: WorkerConfig): Server {
     try {
       if (req.method === 'OPTIONS') {
         if (!allowed) throw new HttpError(403, 'origin', 'Nguồn gọi không được phép.')
-        res.writeHead(204, { 'access-control-allow-methods': 'GET, POST, OPTIONS', 'access-control-allow-headers': 'authorization, content-type', 'access-control-max-age': '600' })
+        // Chrome Private/Local Network Access: máy trong tailnet phân giải tên ra IP riêng 100.x → preflight có cờ này
+        const privateNetwork = req.headers['access-control-request-private-network'] === 'true' ? { 'access-control-allow-private-network': 'true' } : {}
+        res.writeHead(204, { 'access-control-allow-methods': 'GET, POST, OPTIONS', 'access-control-allow-headers': 'authorization, content-type', 'access-control-max-age': '600', ...privateNetwork })
         return res.end()
       }
       if (req.method === 'GET' && path === '/health') return send(200, { ok: true, version: VERSION, ...(await health()) })
