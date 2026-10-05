@@ -412,10 +412,6 @@ export default function ClassLandingPage() {
               </svg>
               <span className="shop-cta-full">Shop</span>
             </a>
-            {/* CTA 1001 Câu chuyện — pill nổi hơn menu, nhẹ hơn nút chính; mobile rút gọn "📖 1001" */}
-            <button className="story-cta" onClick={() => { window.location.href = '/story' }} aria-label="1001 Câu chuyện cùng Guitar">
-              📖 <span className="story-cta-full">1001 Câu chuyện</span><span className="story-cta-short">1001</span>
-            </button>
             {/* Menu chữ (có "Đăng nhập") bị ẩn ≤1120px → khách trên mobile mất lối đăng nhập.
                 Nút này chỉ hiện ở cỡ đó, mở đúng modal đăng nhập hiện có. ≤660px không đủ chỗ cả hai
                 (đo thật: khách cần ~650px): "Đăng nhập" thành nút chính, thay chỗ "Bắt đầu học". */}
