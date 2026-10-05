@@ -421,7 +421,7 @@ export default function ClassLandingPage() {
                 (đo thật: khách cần ~650px): "Đăng nhập" thành nút chính, thay chỗ "Bắt đầu học". */}
             {!me && <button className="nav-login" onClick={() => setShowLogin(true)}>Đăng nhập</button>}
             {me
-              ? <button className="btn btn-primary nav-cta" onClick={() => { window.location.href = '/me' }}>🎸 Hành trình của tôi</button>
+              ? <button className="btn btn-primary nav-cta" onClick={() => { window.location.href = '/me' }}>Hành trình của tôi</button>
               : <button className="btn btn-primary nav-cta nav-cta-guest" onClick={() => goto('cuavao')}>Bắt đầu học</button>}
           </div>
         </div>

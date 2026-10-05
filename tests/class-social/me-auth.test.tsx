@@ -90,5 +90,5 @@ test("Router: trang Class (/) vẫn là ClassLandingPage và nút 'Hành trình 
   const router = read("AppRouter.tsx");
   assert.match(router, /onClass && \(path === '\/' \|\| path === '\/class' \|\| path\.startsWith\('\/class'\)\)\) \{\s*return <ClassLandingPage \/>/);
   const landing = read("ClassLandingPage.tsx");
-  assert.match(landing, /window\.location\.href = '\/me' \}\}>🎸 Hành trình của tôi/);
+  assert.match(landing, /window\.location\.href = '\/me' \}\}>Hành trình của tôi/);
 });
