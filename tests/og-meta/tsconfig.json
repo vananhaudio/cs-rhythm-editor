@@ -1,0 +1,5 @@
+{
+  "extends": "../musicxml-beats/tsconfig.json",
+  "compilerOptions": { "lib": ["ES2023", "DOM"] },
+  "include": ["../../netlify/og/*.ts", "./*.test.ts"]
+}
