@@ -1,58 +1,9 @@
 # Netlify — cấu hình build & Edge Function
-# Trước đây không có file này (Netlify tự nhận Vite). Thêm vào để khai báo
-# Edge Function chèn thẻ chia sẻ cho từng câu chuyện.
+# Trước đây không có file này (Netlify tự nhận Vite).
 
 [build]
   command = "npm run build"
   publish = "dist"
 
-# Thẻ chia sẻ riêng cho /story/<slug> — xem netlify/edge-functions/og-tags.ts
-[[edge_functions]]
-  function = "og-tags"
-  path = "/story/*"
-
-# Dynamic OG V1.1 — thẻ chia sẻ riêng cho Band / Lớp / Buổi / Showcase / Profile (chung) / landing công khai.
-# Luật route ở netlify/og/ogMeta.ts. Route không khai ở đây giữ thẻ mặc định của index.html.
-[[edge_functions]]
-  function = "og-meta"
-  path = "/band/*"
-
-[[edge_functions]]
-  function = "og-meta"
-  path = "/me/*"
-
-[[edge_functions]]
-  function = "og-meta"
-  path = "/showcase/*"
-
-[[edge_functions]]
-  function = "og-meta"
-  path = "/solo01"
-
-[[edge_functions]]
-  function = "og-meta"
-  path = "/solo01/*"
-
-[[edge_functions]]
-  function = "og-meta"
-  path = "/hanhtrinh2027"
-
-[[edge_functions]]
-  function = "og-meta"
-  path = "/hanhtrinh2027/*"
-
-[[edge_functions]]
-  function = "og-meta"
-  path = "/nhipphach"
-
-[[edge_functions]]
-  function = "og-meta"
-  path = "/nhipphach/"
-
-[[edge_functions]]
-  function = "og-meta"
-  path = "/thuvien"
-
-[[edge_functions]]
-  function = "og-meta"
-  path = "/thuvien/"
+# Universal OG: MỘT Edge Function cho mọi trang — netlify/edge-functions/og.ts (path + excludedPath khai
+# ngay trong file, export config). Không còn danh sách route OG ở đây.
