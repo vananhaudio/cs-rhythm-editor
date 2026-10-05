@@ -11,14 +11,18 @@ import { ANCHORS_STATUS_LABEL, buildMeasureDisplay } from './chordAnchors.ts'
 import MeasureSheet from './MeasureSheet.tsx'
 import type { ChordAnchors } from './chordAnchors.ts'
 import AnchorEditor from './AnchorEditor.tsx'
+import type { MeasureAnalysisResult, MeasureAnalyzer } from './measureAnalysis.ts'
 
 // Mục "Hợp âm chuẩn hóa" của /thuvien — bàn làm việc của thầy: tìm, thêm, sửa lời + hợp âm.
 // Mọi đọc/ghi đi qua `library` (src/thuvien/chordLibrary.ts); component không biết Supabase.
 // CSS: ./ChordLibrary.css, nạp ở ThuVienPage.
 
-type Props = { tabs?: ReactNode; library?: ChordLibrary }
+type Props = { tabs?: ReactNode; library?: ChordLibrary; analyzer?: MeasureAnalyzer; readSource?: SourceReader }
+/** Đọc byte một file nguồn để đưa cho analyzer (mặc định: link xem có hạn → fetch). */
+type SourceReader = (library: ChordLibrary, path: string) => Promise<Blob>
+const readViaViewUrl: SourceReader = async (library, path) => (await fetch(await library.sources.viewUrl(path))).blob()
 
-export default function ChordLibraryPage({ tabs, library = getChordLibrary() }: Props) {
+export default function ChordLibraryPage({ tabs, library = getChordLibrary(), analyzer, readSource = readViaViewUrl }: Props) {
   const [open, setOpen] = useState<string | null>(() => chordSheetFromSearch(window.location.search))
   const [notice, setNotice] = useState('')
 
@@ -46,7 +50,7 @@ export default function ChordLibraryPage({ tabs, library = getChordLibrary() }: 
 
   return <main className="tv-chords">
     {open
-      ? <ChordEditor key={open} library={library} versionId={open === NEW_CHORD_SHEET ? null : open}
+      ? <ChordEditor key={open} library={library} analyzer={analyzer} readSource={readSource} versionId={open === NEW_CHORD_SHEET ? null : open}
           onOpenVersion={id => go(id)}
           onClose={message => { setNotice(message ?? ''); go(null) }}
           // Lưu xong chỉ đổi địa chỉ (để tải lại trang vẫn mở đúng bài) — KHÔNG dựng lại editor, kẻo mất thông báo "Đã lưu".
@@ -133,8 +137,10 @@ const draftOf = (form: Form): ChordDraft => ({
   title: form.title, composer: form.composer, meter: parseMeter(form.meter), suggestedBpm: parseBpm(form.bpm), text: form.text,
 })
 
-function ChordEditor({ library, versionId, onClose, onSaved, onOpenVersion }: {
+function ChordEditor({ library, analyzer, readSource, versionId, onClose, onSaved, onOpenVersion }: {
   library: ChordLibrary
+  analyzer: MeasureAnalyzer | undefined
+  readSource: SourceReader
   versionId: string | null
   onClose: (message?: string) => void
   onSaved: (detail: ChordSheetDetail) => void
@@ -157,6 +163,16 @@ function ChordEditor({ library, versionId, onClose, onSaved, onOpenVersion }: {
   const [sourceError, setSourceError] = useState('')
   const [anchorEditing, setAnchorEditing] = useState(false)
   const [liveAnchors, setLiveAnchors] = useState<ChordAnchors | null>(null)
+  // Phân tích tự động (5B): analyzer chỉ có ở dev/trang thử. Đề xuất nạp VÀO trình sửa 5A — không tự lưu, không tự duyệt.
+  const [analyzerReady, setAnalyzerReady] = useState(false)
+  const [analysis, setAnalysis] = useState<{ state: 'idle' | 'running' | 'choose' | 'failed'; result?: Extract<MeasureAnalysisResult, { ok: true }>; message?: string }>({ state: 'idle' })
+  const [seed, setSeed] = useState<{ anchors: ChordAnchors | null; flagged: number[]; notes: string[]; key: number }>({ anchors: null, flagged: [], notes: [], key: 0 })
+
+  useEffect(() => {
+    let active = true
+    if (analyzer) analyzer.available().then(ok => { if (active) setAnalyzerReady(ok) }, () => { if (active) setAnalyzerReady(false) })
+    return () => { active = false }
+  }, [analyzer])
 
   useEffect(() => {
     if (!versionId) return
@@ -353,6 +369,28 @@ function ChordEditor({ library, versionId, onClose, onSaved, onOpenVersion }: {
     } finally { setBusy(false) }
   }
 
+  function adoptProposal(result: Extract<MeasureAnalysisResult, { ok: true }>) {
+    setSeed(current => ({ anchors: result.anchors, flagged: result.review.measures, notes: result.review.notes, key: current.key + 1 }))
+    setAnchorEditing(true); setAnalysis({ state: 'idle' })
+    setMessage(`Máy đã điền ${result.anchors.measures.length} ô${result.anchors.pickup ? ' + nhịp lấy đà' : ''} — xem bản bên phải, sửa nếu sai rồi bấm “Chấp nhận vạch nhịp”.`)
+  }
+
+  async function analyze() {
+    if (!analyzer || !detail || busy || analysis.state === 'running') return
+    setAnalysis({ state: 'running' }); setMessage(''); setFailed('')
+    try {
+      const files = await Promise.all(detail.sources.map(async source => ({ name: source.path.split('/').pop()!, mime: source.mime, data: await readSource(library, source.path) })))
+      const result = await analyzer.analyze({ files, text: detail.text, meter: detail.meter, traceId: detail.versionId })
+      if (!result.ok) { setAnalysis({ state: 'failed', message: result.error.message }); return }
+      // Đang có vạch (đang sửa dở hoặc đã lưu) → KHÔNG ghi đè: hỏi thầy dùng đề xuất hay giữ vạch hiện tại.
+      const current = anchorEditing ? liveAnchors : detail.anchors
+      if (current && current.measures.length) setAnalysis({ state: 'choose', result })
+      else adoptProposal(result)
+    } catch (cause) {
+      setAnalysis({ state: 'failed', message: cause instanceof Error ? cause.message : 'Phân tích không thành công.' })
+    }
+  }
+
   async function approve() {
     if (busy || !detail) return
     setBusy(true); setMessage(''); setFailed('')
@@ -447,7 +485,16 @@ function ChordEditor({ library, versionId, onClose, onSaved, onOpenVersion }: {
 
         <AnchorSection detail={detail} willReset={anchorsWillReset} sourceCount={plan.length} sourcesSaved={!sourcesChanged}
           editing={anchorEditing} dirty={dirty} onLive={setLiveAnchors} busy={busy || sourceBusy}
-          onEdit={() => { setMessage(''); setFailed(''); setAnchorEditing(true) }} onCancel={() => setAnchorEditing(false)} onAccept={anchors => void acceptAnchors(anchors)} />
+          onEdit={() => { setMessage(''); setFailed(''); setSeed(current => ({ anchors: null, flagged: [], notes: [], key: current.key + 1 })); setAnchorEditing(true) }}
+          onCancel={() => { setAnchorEditing(false); setSeed(current => ({ ...current, anchors: null, flagged: [], notes: [] })) }} onAccept={anchors => void acceptAnchors(anchors)}
+          analyzer={!analyzer ? { enabled: false, reason: 'Chưa bật ở bản này.' }
+            : !analyzerReady ? { enabled: false, reason: 'Bộ phân tích cục bộ chưa chạy.' }
+            : !detail?.sources.length ? { enabled: false, reason: 'Cần sheet nguồn (đã lưu) để phân tích.' }
+            : dirty ? { enabled: false, reason: 'Lưu các thay đổi trước, rồi mới phân tích.' }
+            : !hasText ? { enabled: false, reason: 'Cần lời + hợp âm.' }
+            : { enabled: true, reason: '' }}
+          analysis={analysis} seed={seed} onAnalyze={() => void analyze()}
+          onUseProposal={() => analysis.result && adoptProposal(analysis.result)} onKeepCurrent={() => setAnalysis({ state: 'idle' })} />
 
         <section className="cl-card" aria-label="Nguồn sheet">
           <h2>Nguồn sheet</h2>
@@ -503,10 +550,14 @@ const planOf = (detail: ChordSheetDetail): PlanItem[] =>
   detail.sources.map(source => ({ key: source.path, kind: 'attached', name: `sheet-${String(source.page).padStart(2, '0')}.${source.path.split('.').pop()}`, source }))
 
 /** Vạch nhịp — trạng thái, nút Phân tích (CHƯA bật), trình sửa thủ công, xem lại vạch nhịp đã có. */
-function AnchorSection({ detail, willReset, sourceCount, sourcesSaved, editing, dirty, busy, onEdit, onCancel, onAccept, onLive }: {
+function AnchorSection({ detail, willReset, sourceCount, sourcesSaved, editing, dirty, busy, onEdit, onCancel, onAccept, onLive, analyzer, analysis, seed, onAnalyze, onUseProposal, onKeepCurrent }: {
   detail: ChordSheetDetail | null; willReset: boolean; sourceCount: number; sourcesSaved: boolean
   editing: boolean; dirty: boolean; busy: boolean; onEdit: () => void; onCancel: () => void; onAccept: (anchors: ChordAnchors) => void
   onLive: (anchors: ChordAnchors | null) => void
+  analyzer: { enabled: boolean; reason: string }
+  analysis: { state: 'idle' | 'running' | 'choose' | 'failed'; result?: Extract<MeasureAnalysisResult, { ok: true }>; message?: string }
+  seed: { anchors: ChordAnchors | null; flagged: number[]; notes: string[]; key: number }
+  onAnalyze: () => void; onUseProposal: () => void; onKeepCurrent: () => void
 }) {
   const status = willReset || !detail ? 'none' : detail.anchorsStatus
   const anchors = willReset ? null : detail?.anchors ?? null
@@ -517,14 +568,28 @@ function AnchorSection({ detail, willReset, sourceCount, sourcesSaved, editing, 
     <Status label="Trạng thái" on={status === 'ready'} yes={ANCHORS_STATUS_LABEL.ready} no={ANCHORS_STATUS_LABEL[status]} />
     <p className="cl-help cl-anchor-src">Nguồn: {sourceCount ? `${sourceCount} file sheet${sourcesSaved ? '' : ' (chưa lưu)'}` : 'chưa có file sheet'}</p>
     <div className="cl-anchor-entry">
-      <button type="button" className="cl-secondary cl-analyze" disabled title="Sẽ có ở bước tiếp theo">Phân tích vạch nhịp</button>
+      <button type="button" className="cl-secondary cl-analyze" disabled={!analyzer.enabled || busy || analysis.state === 'running' || analysis.state === 'choose'}
+        title={analyzer.reason || 'Máy đọc vạch nhịp trên sheet nguồn và điền sẵn vào trình sửa'} onClick={onAnalyze}>
+        {analysis.state === 'running' ? 'Đang phân tích…' : 'Phân tích vạch nhịp'}
+      </button>
       {!editing && <button type="button" className="cl-secondary" disabled={!canEdit || busy} onClick={onEdit}>Sửa vạch nhịp thủ công</button>}
     </div>
     {!editing && !detail && <p className="cl-placeholder">Lưu bài trước, rồi mới đặt vạch nhịp.</p>}
     {!editing && detail && dirty && <p className="cl-placeholder">Lưu các thay đổi trước, rồi mới sửa vạch nhịp.</p>}
-    <p className="cl-help">Tính năng phân tích sẽ đọc các vạch nhịp trên bản nhạc và ghép chúng với lời + hợp âm.</p>
+    <p className="cl-help">{analyzer.enabled ? 'Phân tích: máy đọc vạch nhịp trên sheet nguồn, ghép với lời + hợp âm và điền sẵn vào trình sửa — thầy xem bản bên phải, sửa nếu sai rồi mới Chấp nhận.' : `Tính năng phân tích sẽ đọc các vạch nhịp trên bản nhạc và ghép chúng với lời + hợp âm.${analyzer.reason ? ` (${analyzer.reason})` : ''}`}</p>
+    {analysis.state === 'failed' && <p className="cl-error" role="alert">Phân tích không thành công: {analysis.message} — vẫn đặt vạch thủ công được như bình thường.</p>}
+    {analysis.state === 'choose' && analysis.result && <div className="cl-analysis-choice" role="group" aria-label="Kết quả phân tích">
+      <p className="cl-warn" role="note"><strong>{analysis.result.review.needsReview ? 'Phân tích cần kiểm tra' : 'Đã có đề xuất mới'}</strong> — máy đề xuất {analysis.result.anchors.measures.length} ô{analysis.result.anchors.pickup ? ' + nhịp lấy đà' : ''}.
+        {analysis.result.review.measures.length > 0 && ` Cần kiểm: ô ${analysis.result.review.measures.join(', ')}.`} Vạch hiện tại chưa bị thay đổi.</p>
+      {analysis.result.review.notes.map(note => <p key={note} className="cl-help">{note}</p>)}
+      <div className="cl-anchor-buttons">
+        <button type="button" className="cl-secondary cl-approve" onClick={onUseProposal}>Dùng đề xuất</button>
+        <button type="button" className="cl-secondary" onClick={onKeepCurrent}>Giữ vạch hiện tại</button>
+      </div>
+    </div>}
     {editing && detail
-      ? <AnchorEditor text={detail.text} initial={detail.anchors} busy={busy} onAccept={onAccept} onCancel={onCancel} onChange={onLive} />
+      ? <AnchorEditor key={seed.key} text={detail.text} initial={seed.anchors ?? detail.anchors} flagged={seed.anchors ? seed.flagged : []} notes={seed.anchors ? seed.notes : []}
+          busy={busy} onAccept={onAccept} onCancel={onCancel} onChange={onLive} />
       : <div className="cl-anchor-view" aria-label="Xem vạch nhịp">
         {lines.length
           ? <MeasureSheet rows={lines} label="Vạch nhịp theo ô" />

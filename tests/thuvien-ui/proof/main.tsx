@@ -4,12 +4,15 @@ import '../../../src/index.css'
 import ThuVienPage from '../../../src/thuvien/ThuVienPage.tsx'
 import { createRpcChordLibrary } from '../../../src/thuvien/chordLibrary.ts'
 import { createBridgeSourceStore } from './bridgeStore.ts'
+import { createHttpMeasureAnalyzer } from '../../../src/thuvien/measureAnalysis.ts'
 
 // Trang thử — CHỈ chạy với dev server, bỏ qua cổng admin của AppRouter.
 //   (mặc định)       → dữ liệu thử trong trình duyệt (mock), có băng cảnh báo.
 //   ?db=local        → RPC THẬT trên Postgres TẠM qua scripts/chord-library-local-db.sh (cầu 127.0.0.1:54399);
 //                      file nguồn đi qua mô phỏng Storage API (policy + trigger N1 thật), byte lưu ở /tmp/chord-library-localdb/files.
 //   ?db=local&as=student → cùng DB, đóng vai học viên (để thấy quyền bị chặn).
+//   Phân tích vạch nhịp (5B): gọi cầu analyzer CỤC BỘ 127.0.0.1:54398 (tests/thuvien-analyzer/bridge.ts); ?analyzer=off để tắt.
+//   Bản production KHÔNG truyền analyzer → nút Phân tích luôn khoá.
 const params = new URLSearchParams(location.search)
 const as = params.get('as') ?? 'admin'
 const local = params.get('db') === 'local'
@@ -20,9 +23,11 @@ const local = params.get('db') === 'local'
     }, createBridgeSourceStore('http://127.0.0.1:54399', as))
   : undefined
 
+const analyzer = params.get('analyzer') === 'off' ? undefined : createHttpMeasureAnalyzer('http://127.0.0.1:54398')
+
 createRoot(document.getElementById('root')!).render(<StrictMode>
   {local && <div style={{ position: 'fixed', right: 8, bottom: 8, zIndex: 9, padding: '4px 10px', borderRadius: 6, background: '#1f4a33', color: '#fff', font: '600 12px system-ui' }}>
     DB TẠM (local) · vai: {as} · không phải production
   </div>}
-  <ThuVienPage chordLibrary={local} />
+  <ThuVienPage chordLibrary={local} measureAnalyzer={analyzer} />
 </StrictMode>)
