@@ -17,9 +17,12 @@ type Props = {
   onCancel: () => void
   /** Bộ vạch hiện tại mỗi lần đổi — để bản bên phải đánh số lại NGAY. */
   onChange?: (anchors: ChordAnchors | null) => void
+  /** Ô máy phân tích chưa chắc (số ô theo đề xuất ban đầu) — đánh dấu nhẹ ⚠ trong dòng thời gian, KHÔNG đụng bản bên phải. */
+  flagged?: number[]
+  notes?: string[]
 }
 
-export default function AnchorEditor({ text, initial, busy, onAccept, onCancel, onChange }: Props) {
+export default function AnchorEditor({ text, initial, busy, onAccept, onCancel, onChange, flagged = [], notes = [] }: Props) {
   const lines = useMemo(() => anchorLines(text), [text])
   const [measures, setMeasures] = useState<MeasureAnchor[]>(() => initial?.measures.map(anchor => ({ ...anchor })) ?? [])
   const [pickup, setPickup] = useState<MeasureAnchor | null>(() => initial?.pickup ?? null)
@@ -71,6 +74,11 @@ export default function AnchorEditor({ text, initial, busy, onAccept, onCancel, 
         </p>)}
     </div>
 
+    {(flagged.length > 0 || notes.length > 0) && <div className="cl-anchor-flags" role="note" aria-label="Máy chưa chắc">
+      {flagged.length > 0 && <p><strong>⚠ Cần kiểm: ô {flagged.join(', ')}</strong> — máy chưa chắc ở các ô này (theo đề xuất ban đầu).</p>}
+      {notes.map(note => <p key={note}>{note}</p>)}
+    </div>}
+
     <div className="cl-anchor-timeline">
       <div className="cl-anchor-timeline-head">
         <h3>Dòng thời gian · {measures.length} ô{pickup ? ' + nhịp lấy đà' : ''}</h3>
@@ -83,7 +91,7 @@ export default function AnchorEditor({ text, initial, busy, onAccept, onCancel, 
         : <ol className="cl-anchor-list" aria-label="Các ô nhịp theo thứ tự hát">
           {measures.map((anchor, index) => <li key={index} data-selected={selected === index} data-silent={anchor.line === null}>
             <button type="button" className="cl-anchor-pick" onClick={() => at(index)} aria-pressed={selected === index}>
-              <strong>Ô {index + 1}</strong> → {anchorWord(text, anchor)}
+              {flagged.includes(index + 1) && <span className="cl-anchor-flag" title="Máy chưa chắc ô này">⚠ </span>}<strong>Ô {index + 1}</strong> → {anchorWord(text, anchor)}
               {index > 0 && anchor.line !== null && measures[index - 1].line === anchor.line && measures[index - 1].token === anchor.token && <em> (ngân)</em>}
             </button>
             <span className="cl-anchor-actions">

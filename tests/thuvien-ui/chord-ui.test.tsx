@@ -747,3 +747,125 @@ test('mục MusicXML: vẫn là mặc định, vẫn gọi đúng các hàm cũ;
   const master = readFileSync(new URL('../../src/thuvien/masterLibrary.ts', import.meta.url), 'utf8')
   assert.ok(!master.includes('chord'), 'masterLibrary không biết gì về hợp âm')
 })
+
+// ── 5B: Phân tích vạch nhịp tự động → nạp vào trình sửa 5A ──
+type AnalyzerT = import('../../src/thuvien/measureAnalysis').MeasureAnalyzer
+type ResultT = import('../../src/thuvien/measureAnalysis').MeasureAnalysisResult
+const { MOCK_OWNER_ID } = await import('../../src/thuvien/chordLibrary')
+const { sha256Hex, sourcePath } = await import('../../src/thuvien/chordSources')
+const AUTO_TEXT = 'Sáng [Am] nay, mình cùng [E7] đi qua bao con phố [Am] dài\nNắng [Dm] vàng rơi trên vai'
+const proposal = (measures: { line: number | null; token: number | null }[], review: number[] = [], pickup = true): ResultT => ({
+  ok: true, anchors: { ...(pickup ? { pickup: { line: 0, token: 0 } } : {}), measures },
+  confidence: { overall: review.length ? 'LOW' : 'HIGH', measures: [] },
+  review: { needsReview: review.length > 0, measures: review, notes: review.length ? ['Sheet có 16 chữ, lời chuẩn có 15 token.'] : [] },
+  diagnostics: { engine: 'fake', pages: 1, systems: [], boundaries: [], sheetTokens: 15, canonicalTokens: 15, pickupDetected: pickup, warnings: [] },
+})
+function fakeAnalyzer(result: ResultT | (() => ResultT), ready = true) {
+  const calls: Parameters<AnalyzerT['analyze']>[0][] = []
+  const analyzer: AnalyzerT = { available: async () => ready, analyze: async input => { calls.push(input); return typeof result === 'function' ? result() : result } }
+  return { analyzer, calls }
+}
+async function autoSong(withSource = true, anchors: { line: number | null; token: number | null }[] | null = null) {
+  const library = createMockChordLibrary({ storage: memoryStorage() })
+  const versionId = library.newVersionId()
+  const sources = []
+  if (withSource) {
+    const path = sourcePath(MOCK_OWNER_ID, versionId, 0, 'image/png')
+    const file = new Blob(['sheet-bytes'], { type: 'image/png' })
+    await library.sources.upload(path, file, 'image/png')
+    sources.push({ path, mime: 'image/png' as const, sha256: await sha256Hex(await file.arrayBuffer()), sizeBytes: file.size, page: 1 })
+  }
+  let created = await library.createChordSheet({ title: 'Bài tự soạn phân tích', composer: '', meter: { beats: 4, beatType: 4 }, suggestedBpm: 80, text: AUTO_TEXT }, { versionId, sources })
+  if (anchors) created = await library.acceptAnchors(created.versionId, { measures: anchors })
+  await library.approveChordSheetVersion(created.versionId)
+  return { library, versionId: created.versionId }
+}
+async function openAuto(library: ReturnType<typeof createMockChordLibrary>, analyzer?: AnalyzerT) {
+  goto('?muc=hopam')
+  const view = render(<ChordLibraryPage library={library} analyzer={analyzer} readSource={async () => new Blob(['sheet-bytes'])} />)
+  await settle()
+  fireEvent.click(view.getByRole('button', { name: 'Mở bài Bài tự soạn phân tích' }))
+  await settle(60)
+  return view
+}
+const analyzeButton = (view: ReturnType<typeof render>) => view.getByRole('button', { name: /Phân tích vạch nhịp|Đang phân tích/ }) as HTMLButtonElement
+
+test('5B: không có analyzer (bản production) → nút Phân tích KHOÁ; analyzer chưa chạy / chưa có sheet nguồn → khoá kèm lý do', async () => {
+  const { library } = await autoSong()
+  const none = await openAuto(library)
+  assert.equal(analyzeButton(none).disabled, true)
+  assert.equal(analyzeButton(none).title, 'Chưa bật ở bản này.')
+  cleanup()
+  const down = await openAuto(library, fakeAnalyzer(proposal([]), false).analyzer)
+  assert.equal(analyzeButton(down).title, 'Bộ phân tích cục bộ chưa chạy.')
+  cleanup()
+  const bare = await autoSong(false)
+  const noSource = await openAuto(bare.library, fakeAnalyzer(proposal([])).analyzer)
+  assert.equal(analyzeButton(noSource).disabled, true)
+  assert.equal(analyzeButton(noSource).title, 'Cần sheet nguồn (đã lưu) để phân tích.')
+})
+
+test('5B: Phân tích → máy ĐIỀN vạch vào trình sửa 5A; bản bên phải hiện |¹ |² ngay; ô chưa chắc có ⚠; thầy sửa rồi Chấp nhận → phiên bản mới', async () => {
+  const { library } = await autoSong()
+  const fake = fakeAnalyzer(proposal([{ line: 0, token: 1 }, { line: 0, token: 4 }, { line: 0, token: 9 }, { line: 1, token: 0 }], [3]))
+  const view = await openAuto(library, fake.analyzer)
+  assert.equal(analyzeButton(view).disabled, false)
+  fireEvent.click(analyzeButton(view))
+  await settle(60)
+  assert.equal(fake.calls.length, 1)
+  assert.deepEqual([fake.calls[0].text, fake.calls[0].files.length, fake.calls[0].files[0].mime, fake.calls[0].meter], [AUTO_TEXT, 1, 'image/png', { beats: 4, beatType: 4 }])
+  assert.ok(view.getByRole('group', { name: 'Trình sửa vạch nhịp' }), 'đề xuất nạp vào chính trình sửa 5A')
+  assert.match(view.getByRole('status').textContent ?? '', /Máy đã điền 4 ô \+ nhịp lấy đà/)
+  assert.equal(sheetText(view.getByLabelText('Bản hợp âm có số ô'))[0], '(lấy đà) Sáng |¹ [Am] nay, mình cùng |² [E7] đi qua bao con phố |³ [Am] dài')
+  assert.match(view.getByLabelText('Máy chưa chắc').textContent ?? '', /⚠ Cần kiểm: ô 3/)
+  assert.equal(view.container.querySelectorAll('.cl-anchor-list .cl-anchor-flag').length, 1, 'chỉ ô 3 có ⚠ trong dòng thời gian')
+  assert.equal(view.getByLabelText('Bản hợp âm có số ô').textContent?.includes('⚠'), false, 'bản thật bên phải KHÔNG bị rối bởi cờ')
+  fireEvent.click(view.getByRole('button', { name: 'Xoá ô 3' }))
+  assert.equal(sheetText(view.getByLabelText('Bản hợp âm có số ô'))[0], '(lấy đà) Sáng |¹ [Am] nay, mình cùng |² [E7] đi qua bao con phố [Am] dài', 'sửa tay → số đổi ngay')
+  fireEvent.click(view.getByRole('button', { name: 'Chấp nhận vạch nhịp' }))
+  await settle(60)
+  assert.match(view.getByRole('status').textContent ?? '', /Đã lưu vạch nhịp thành phiên bản 2 \(bản nháp\)/)
+  const [item] = await library.searchChordSheets('tu soan phan tich')
+  const v2 = await library.getChordSheet(item.draftVersionId!)
+  assert.deepEqual(v2.anchors, { pickup: { line: 0, token: 0 }, measures: [{ line: 0, token: 1 }, { line: 0, token: 4 }, { line: 1, token: 0 }] })
+  assert.equal(Object.keys(v2.anchors!.measures[0]).join(), 'line,token', 'không có confidence trong anchors')
+  assert.ok(view.getByRole('button', { name: 'Duyệt bản này' }), 'không tự duyệt')
+})
+
+test('5B: đã có vạch → KHÔNG ghi đè: "Phân tích cần kiểm tra" + [Dùng đề xuất] / [Giữ vạch hiện tại]; đang sửa tay cũng vậy', async () => {
+  const { library } = await autoSong(true, [{ line: 0, token: 2 }, { line: 1, token: 0 }])
+  const view = await openAuto(library, fakeAnalyzer(proposal([{ line: 0, token: 1 }, { line: 0, token: 4 }, { line: 1, token: 0 }], [2])).analyzer)
+  const before = sheetText(view.getByLabelText('Bản hợp âm có số ô'))
+  fireEvent.click(analyzeButton(view))
+  await settle(60)
+  const choice = view.getByRole('group', { name: 'Kết quả phân tích' })
+  assert.match(choice.textContent ?? '', /Phân tích cần kiểm tra.*3 ô \+ nhịp lấy đà.*Cần kiểm: ô 2.*Vạch hiện tại chưa bị thay đổi/)
+  assert.deepEqual(sheetText(view.getByLabelText('Bản hợp âm có số ô')), before, 'chưa chọn → bản bên phải giữ nguyên')
+  fireEvent.click(view.getByRole('button', { name: 'Giữ vạch hiện tại' }))
+  assert.equal(view.queryByRole('group', { name: 'Kết quả phân tích' }), null)
+  assert.deepEqual(sheetText(view.getByLabelText('Bản hợp âm có số ô')), before)
+  // đang sửa tay dở → phân tích cũng không ghi đè
+  fireEvent.click(view.getByRole('button', { name: 'Sửa vạch nhịp thủ công' }))
+  await settle()
+  fireEvent.click(view.getByRole('button', { name: /^Khe trước “phố” — dòng 1/ }))
+  const manual = sheetText(view.getByLabelText('Bản hợp âm có số ô'))
+  fireEvent.click(analyzeButton(view))
+  await settle(60)
+  assert.deepEqual(sheetText(view.getByLabelText('Bản hợp âm có số ô')), manual, 'vạch đang sửa dở không bị ghi đè')
+  fireEvent.click(view.getByRole('button', { name: 'Dùng đề xuất' }))
+  await settle()
+  assert.equal(sheetText(view.getByLabelText('Bản hợp âm có số ô'))[0], '(lấy đà) Sáng |¹ [Am] nay, mình cùng |² [E7] đi qua bao con phố [Am] dài', 'chọn Dùng đề xuất → nạp vào trình sửa')
+})
+
+test('5B: analyzer lỗi → báo rõ, KHÔNG đổi vạch; trình sửa thủ công vẫn dùng bình thường', async () => {
+  const { library } = await autoSong()
+  const view = await openAuto(library, fakeAnalyzer({ ok: false, error: { code: 'no_staff', message: 'Không tìm thấy khuông nhạc nào.' } }).analyzer)
+  fireEvent.click(analyzeButton(view))
+  await settle(60)
+  assert.match(view.getByRole('alert').textContent ?? '', /Phân tích không thành công: Không tìm thấy khuông nhạc nào\. — vẫn đặt vạch thủ công được/)
+  assert.equal(view.queryByRole('group', { name: 'Trình sửa vạch nhịp' }), null)
+  fireEvent.click(view.getByRole('button', { name: 'Sửa vạch nhịp thủ công' }))
+  await settle()
+  fireEvent.click(view.getByRole('button', { name: /^Khe trước “nay,” — dòng 1/ }))
+  assert.equal((view.getByRole('button', { name: 'Chấp nhận vạch nhịp' }) as HTMLButtonElement).disabled, false)
+})

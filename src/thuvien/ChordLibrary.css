@@ -168,3 +168,9 @@
 .tv-chords .cl-seg[data-pickup] .cl-lyric { color: #526456; }
 .tv-chords .cl-mlabel .cl-lyric { font-weight: 700; margin-right: 6px; }
 .tv-chords .cl-anchor-review .cl-msheet { font-size: 15px; }
+
+/* Phân tích tự động (5B) */
+.tv-chords .cl-analysis-choice { margin: 10px 0; }
+.tv-chords .cl-anchor-flags { margin: 8px 0; padding: 8px 10px; border-radius: 8px; background: #fff7e6; color: #6b4a00; font-size: 13px; }
+.tv-chords .cl-anchor-flags p { margin: 2px 0; }
+.tv-chords .cl-anchor-flag { color: #b26a00; }

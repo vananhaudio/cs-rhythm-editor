@@ -6,6 +6,7 @@ import { scoreIdFromSearch } from './viewScore.ts'
 import { sectionFromSearch, sectionUrl } from './sections.ts'
 import type { ThuVienSection } from './sections.ts'
 import type { ChordLibrary } from './chordLibrary.ts'
+import type { MeasureAnalyzer } from './measureAnalysis.ts'
 import ThuVienTabs from './ThuVienTabs.tsx'
 import './ThuVienPage.css'
 import './ChordLibrary.css'
@@ -17,7 +18,7 @@ const ChordLibraryPage = lazy(() => import('./ChordLibraryPage.tsx'))
 type Prepared = ReturnType<typeof prepareMusicXml>
 
 /** /thuvien có hai mục; mỗi mục tự lo phần của mình. Mục MusicXML giữ nguyên hành vi cũ. */
-export default function ThuVienPage({ chordLibrary }: { chordLibrary?: ChordLibrary } = {}) {
+export default function ThuVienPage({ chordLibrary, measureAnalyzer }: { chordLibrary?: ChordLibrary; measureAnalyzer?: MeasureAnalyzer } = {}) {
   const [section, setSection] = useState<ThuVienSection>(() => sectionFromSearch(window.location.search))
 
   useEffect(() => {
@@ -34,7 +35,7 @@ export default function ThuVienPage({ chordLibrary }: { chordLibrary?: ChordLibr
 
   const tabs = <ThuVienTabs section={section} onChange={change} />
   if (section === 'chords') {
-    return <Suspense fallback={<main className="tv-chords"><p className="cl-empty">Đang mở Hợp âm chuẩn hóa…</p></main>}><ChordLibraryPage tabs={tabs} library={chordLibrary} /></Suspense>
+    return <Suspense fallback={<main className="tv-chords"><p className="cl-empty">Đang mở Hợp âm chuẩn hóa…</p></main>}><ChordLibraryPage tabs={tabs} library={chordLibrary} analyzer={measureAnalyzer} /></Suspense>
   }
   return <MusicXmlLibrary tabs={tabs} />
 }
