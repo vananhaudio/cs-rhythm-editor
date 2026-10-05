@@ -9,6 +9,7 @@
 //   • pickup = nhịp lấy đà: chữ hát trước vạch nhịp đầu tiên.
 // Dữ liệu sai hình dạng → coi như KHÔNG đọc được (hiện thông báo), không làm sập trang.
 import { canonicalChordText, parseChordLine } from './chordText.ts'
+import { foldVi } from '../class-social/comments/khoAdapter.ts'
 
 export type MeasureAnchor = { line: number | null; token: number | null }
 export type ChordAnchors = { pickup?: MeasureAnchor; measures: MeasureAnchor[] }
@@ -18,8 +19,10 @@ export const ANCHORS_STATUS_LABEL: Record<AnchorsStatus, string> = {
   none: 'Chưa phân tích', processing: 'Đang phân tích', needs_review: 'Chờ duyệt vạch nhịp', ready: 'Đã có', failed: 'Phân tích lỗi',
 }
 
-/** Nhãn đầu dòng — KHÔNG tính là chữ hát. */
-const LABEL = /^(?:\d{1,2}\.|đk:?|dk:?|điệp khúc:?|coda:?|intro:?|dạo:?)$/i
+/** Nhãn đầu dòng — KHÔNG tính là chữ hát. So trên dạng bỏ dấu + thường hoá; CÙNG danh sách với
+ *  chord_lyric_token_counts ở máy chủ (có test đối chiếu). */
+const LABEL = /^(?:\d{1,2}\.|dk:?|coda:?|intro:?|dao:?|verse:?|chorus:?|bridge:?)$/
+const isLabel = (word: string) => LABEL.test(foldVi(word))
 
 /** Chữ hát của một dòng, theo thứ tự; mỗi chữ mang hợp âm đặt ngay trước nó (nếu có). Nhãn đứng riêng. */
 export function lyricTokens(line: string): { label: string | null; tokens: { chord: string | null; word: string }[] } {
@@ -29,7 +32,7 @@ export function lyricTokens(line: string): { label: string | null; tokens: { cho
   for (const segment of parseChordLine(line)) {
     if (segment.chord) pending = segment.chord
     for (const word of segment.text.split(/\s+/).filter(Boolean)) {
-      if (!tokens.length && label === null && pending === null && LABEL.test(word)) { label = word; continue }
+      if (!tokens.length && label === null && pending === null && isLabel(word)) { label = word; continue }
       tokens.push({ chord: pending, word })
       pending = null
     }
@@ -97,4 +100,153 @@ export function renderAnchors(text: string, anchors: ChordAnchors): AnchorLine[]
     silent(lineIndex)
   })
   return out
+}
+
+// ── Trình sửa vạch nhịp thủ công: mô hình thuần (khe + dòng thời gian) ─────────────────────────
+// Thầy không thao tác line/token: thầy bấm vào KHE giữa hai chữ. Khe k của một dòng = trước chữ k
+// (k = số chữ → khe cuối dòng). Hợp âm và nhãn không tạo khe (chúng không phải chữ).
+// `measures` là DÒNG THỜI GIAN biểu diễn: thứ tự trong mảng = thứ tự hát, KHÔNG sắp theo vị trí trong lời,
+// nên điệp khúc quay lại dòng cũ được (thêm vị trí ở chế độ "thêm vào cuối").
+
+export type AnchorLineView = { label: string | null; tokens: { chord: string | null; word: string }[] }
+
+export const anchorLines = (text: string): AnchorLineView[] => canonicalChordText(text).split('\n').map(lyricTokens)
+
+const sameAnchor = (a: MeasureAnchor, b: MeasureAnchor) => a.line === b.line && a.token === b.token
+
+/** a trước b trong thứ tự đọc lời. Ô không lời không so được. */
+const before = (a: MeasureAnchor, b: MeasureAnchor) =>
+  a.line !== null && b.line !== null && (a.line < b.line || (a.line === b.line && (a.token as number) < (b.token as number)))
+
+/**
+ * Bấm vào một khe.
+ *   order  — khe chưa có vạch → chèn theo thứ tự đọc (sau vị trí đứng trước nó cùng các ô không lời đi liền sau);
+ *            khe đã có vạch → bỏ lần xuất hiện CUỐI cùng.
+ *   append — luôn thêm vào CUỐI dòng thời gian (dùng khi hát lại điệp khúc: quay về dòng cũ).
+ */
+export function toggleGap(measures: MeasureAnchor[], at: MeasureAnchor, mode: 'order' | 'append'): MeasureAnchor[] {
+  if (mode === 'append') return [...measures, at]
+  const last = measures.map((anchor, index) => (sameAnchor(anchor, at) ? index : -1)).filter(index => index >= 0).pop()
+  if (last !== undefined) return measures.filter((_, index) => index !== last)
+  let insert = 0
+  measures.forEach((anchor, index) => { if (anchor.line !== null && before(anchor, at)) insert = index + 1 })
+  while (insert < measures.length && measures[insert].line === null) insert += 1
+  return [...measures.slice(0, insert), at, ...measures.slice(insert)]
+}
+
+/** Ô ngân: thêm một ô CÙNG vị trí ngay sau ô `index` (không chữ mới, vẫn tính một ô nhịp). */
+export const addSustain = (measures: MeasureAnchor[], index: number) => [...measures.slice(0, index + 1), { ...measures[index] }, ...measures.slice(index + 1)]
+/** Ô không lời (dạo, gian tấu): chèn sau ô `afterIndex`; -1 = đầu bài; vượt cuối = cuối bài. */
+export const addSilent = (measures: MeasureAnchor[], afterIndex: number) => {
+  const at = Math.max(0, Math.min(afterIndex + 1, measures.length))
+  return [...measures.slice(0, at), { line: null, token: null }, ...measures.slice(at)]
+}
+export const removeMeasure = (measures: MeasureAnchor[], index: number) => measures.filter((_, at) => at !== index)
+export function moveMeasure(measures: MeasureAnchor[], index: number, delta: -1 | 1): MeasureAnchor[] {
+  const to = index + delta
+  if (to < 0 || to >= measures.length) return measures
+  const next = [...measures]
+  ;[next[index], next[to]] = [next[to], next[index]]
+  return next
+}
+
+/** Vị trí chữ hát đầu tiên của bài — chỗ mặc định của nhịp lấy đà. */
+export function firstLyricAnchor(text: string): MeasureAnchor | null {
+  const line = anchorLines(text).findIndex(view => view.tokens.length > 0)
+  return line < 0 ? null : { line, token: 0 }
+}
+
+/** Chữ hát đầu ô — để thầy đọc dòng thời gian ("Ô 3 → đi"). */
+export function anchorWord(text: string, anchor: MeasureAnchor): string {
+  if (anchor.line === null) return '(ô không lời)'
+  const view = anchorLines(text)[anchor.line]
+  if (!view) return '?'
+  if ((anchor.token as number) >= view.tokens.length) return `(cuối dòng ${anchor.line + 1})`
+  const token = view.tokens[anchor.token as number]
+  return token.word || `[${token.chord}]`
+}
+
+/** Bộ vạch gửi máy chủ: đúng 2 khoá; nhịp lấy đà chỉ khi có. */
+export const anchorsPayload = (measures: MeasureAnchor[], pickup: MeasureAnchor | null): ChordAnchors =>
+  ({ ...(pickup ? { pickup: { line: pickup.line, token: pickup.token } } : {}), measures: measures.map(anchor => ({ line: anchor.line, token: anchor.token })) })
+
+// ── Số ô nhịp: MỘT mô hình hiển thị dùng chung cho bản bên phải + khung "Xem lại" ────────────────
+// Quy ước ký âm phổ biến (MuseScore/Dorico): nhịp lấy đà KHÔNG mang số; ô đầy đủ đầu tiên = 1; số đặt ở vạch MỞ ô.
+// Số = vị trí trong DÒNG THỜI GIAN (measures[i] → i + 1), suy ra lúc hiển thị, KHÔNG lưu DB.
+//   • quay lại dòng cũ (điệp khúc) → mở hàng mới, số vẫn tăng tiếp;
+//   • ô không lời (line null) → vạch + "♪", vẫn chiếm số;
+//   • ô ngân (trùng vị trí ô liền trước) → vạch + "(ngân)" ngay sau phần lời của ô trước, vẫn chiếm số;
+//   • không lấy đà mà ô 1 mở ngay đầu bài → chỉ hiện số 1, không vẽ vạch giả trước chữ đầu.
+
+export type MeasureItem =
+  | { kind: 'bar'; number: number; start: boolean; mark: 'silent' | 'sustain' | null }
+  | { kind: 'word'; chord: string | null; word: string; pickup: boolean }
+  | { kind: 'pickup' }
+export type MeasureRow = { label: string | null; items: MeasureItem[]; gap?: true }
+
+export function buildMeasureDisplay(text: string, anchors: ChordAnchors | null): MeasureRow[] {
+  const lines = anchorLines(text)
+  const rows: MeasureRow[] = []
+  let row: MeasureRow | null = null
+  let rowLine = -1
+  let lastRow: MeasureRow | null = null
+  let jumped = false
+  let cursor = { line: 0, token: 0 }
+  const cmp = (a: { line: number; token: number }, b: { line: number; token: number }) => a.line - b.line || a.token - b.token
+  const open = (line: number, token: number, fresh = false) => {
+    if (!row || rowLine !== line || fresh) { row = { label: token === 0 ? lines[line]?.label ?? null : null, items: [] }; rows.push(row); rowLine = line; lastRow = row }
+    return row
+  }
+  // Vạch ngân / không lời bám vào cuối hàng lời gần nhất (không mở hàng mới chỉ vì vừa qua dòng trống).
+  const here = (): MeasureRow => lastRow ?? open(cursor.line, cursor.token)
+  // Chép lời từ cursor tới `to` (không gồm `to`).
+  const emit = (to: { line: number; token: number }, pickup: boolean) => {
+    while (cmp(cursor, to) < 0 && cursor.line < lines.length) {
+      const line = lines[cursor.line]
+      if (cursor.token < line.tokens.length) {
+        const token = line.tokens[cursor.token]
+        open(cursor.line, cursor.token).items.push({ kind: 'word', chord: token.chord, word: token.word, pickup })
+        cursor = { line: cursor.line, token: cursor.token + 1 }
+      } else {
+        cursor = { line: cursor.line + 1, token: 0 }
+        if (cursor.line < lines.length && lines[cursor.line].tokens.length === 0 && !lines[cursor.line].label) { rows.push({ label: null, items: [], gap: true }); row = null; rowLine = -1 }
+      }
+    }
+  }
+  const END = { line: lines.length, token: 0 }
+  const measures = anchors?.measures ?? []
+  const at = (anchor: MeasureAnchor) => ({ line: anchor.line as number, token: anchor.token as number })
+  const firstLyric = measures.find(anchor => anchor.line !== null)
+  if (anchors?.pickup) {
+    emit(at(anchors.pickup), false)
+    open(cursor.line, cursor.token).items.push({ kind: 'pickup' })
+    emit(firstLyric ? at(firstLyric) : END, true)
+  }
+  measures.forEach((anchor, index) => {
+    const number = index + 1
+    if (anchor.line === null) { here().items.push({ kind: 'bar', number, start: false, mark: 'silent' }); return }
+    const previous = measures[index - 1]
+    if (previous && previous.line !== null && sameAnchor(previous, anchor)) { here().items.push({ kind: 'bar', number, start: false, mark: 'sustain' }); return }
+    const pos = at(anchor)
+    if (cmp(pos, cursor) < 0) { jumped = true; cursor = pos; open(pos.line, pos.token, true) } else emit(pos, false)
+    const start = number === 1 && !anchors?.pickup && rows.every(r => r.items.length === 0)
+    open(pos.line, pos.token).items.push({ kind: 'bar', number, start, mark: null })
+    const next = measures.slice(index + 1).find(other => other.line !== null && !sameAnchor(other, anchor))
+    // Ô cuối: tới hết bài; nhưng nếu đã quay lại (điệp khúc) thì chỉ tới hết dòng — không chép lại phần lời phía sau.
+    const lineEnd = { line: pos.line, token: lines[pos.line].tokens.length }
+    const stop = !next ? (jumped ? lineEnd : END) : cmp(at(next), pos) >= 0 ? at(next) : lineEnd
+    emit(stop, false)
+  })
+  if (!measures.length) emit(END, false)
+  return rows
+}
+
+/** Dạng chữ của mô hình — để kiểm thử và đọc nhanh: "Chiều |¹ [Am] nao, tiễn nhau |² [E7] đi". */
+const SUP = '⁰¹²³⁴⁵⁶⁷⁸⁹'
+export const measureNumberText = (n: number) => String(n).split('').map(d => SUP[Number(d)]).join('')
+export function measureDisplayText(rows: MeasureRow[]): string[] {
+  return rows.map(row => [row.label, ...row.items.map(item => item.kind === 'pickup' ? '(lấy đà)'
+    : item.kind === 'word' ? (item.chord ? `[${item.chord}]${item.word ? ' ' + item.word : ''}` : item.word)
+      : `${item.start ? '' : '|'}${measureNumberText(item.number)}${item.mark === 'silent' ? ' ♪' : item.mark === 'sustain' ? ' (ngân)' : ''}`)]
+    .filter(Boolean).join(' '))
 }

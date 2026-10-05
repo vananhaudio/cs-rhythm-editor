@@ -7,7 +7,10 @@ import type { ChordDraft, ChordDraftErrors } from './chordText.ts'
 import { NEW_CHORD_SHEET, chordSheetFromSearch, sectionUrl } from './sections.ts'
 import { MAX_SOURCE_FILES, SOURCE_ACCEPT, formatBytes, nextFreeIndex, parseSourcePath, sha256Hex, sourceErrorMessage, sourceFileProblem, sourceKindLabel, sourceMimeOf, sourcePath } from './chordSources.ts'
 import type { ChordSource } from './chordSources.ts'
-import { ANCHORS_STATUS_LABEL, renderAnchors } from './chordAnchors.ts'
+import { ANCHORS_STATUS_LABEL, buildMeasureDisplay } from './chordAnchors.ts'
+import MeasureSheet from './MeasureSheet.tsx'
+import type { ChordAnchors } from './chordAnchors.ts'
+import AnchorEditor from './AnchorEditor.tsx'
 
 // Mục "Hợp âm chuẩn hóa" của /thuvien — bàn làm việc của thầy: tìm, thêm, sửa lời + hợp âm.
 // Mọi đọc/ghi đi qua `library` (src/thuvien/chordLibrary.ts); component không biết Supabase.
@@ -152,6 +155,8 @@ function ChordEditor({ library, versionId, onClose, onSaved, onOpenVersion }: {
   const [draftId, setDraftId] = useState(() => library.newVersionId())
   const [sourceBusy, setSourceBusy] = useState(false)
   const [sourceError, setSourceError] = useState('')
+  const [anchorEditing, setAnchorEditing] = useState(false)
+  const [liveAnchors, setLiveAnchors] = useState<ChordAnchors | null>(null)
 
   useEffect(() => {
     if (!versionId) return
@@ -179,6 +184,9 @@ function ChordEditor({ library, versionId, onClose, onSaved, onOpenVersion }: {
   const hasText = canonicalChordText(form.text).trim().length > 0
   // Sửa lời là neo vạch nhịp cũ hết hiệu lực — báo trước khi lưu, không để mất trong im lặng.
   const anchorsWillReset = !!detail?.hasAnchors && canonicalChordText(form.text) !== canonicalChordText(saved.text)
+  // Bản bên phải: khi đang sửa → bộ vạch đang soạn (đánh số lại ngay); không thì vạch đã lưu, nếu lời chưa đổi.
+  const shownAnchors = anchorEditing ? liveAnchors : anchorsWillReset ? null : detail?.anchors ?? null
+  const measureRows = useMemo(() => (shownAnchors && detail ? buildMeasureDisplay(detail.text, shownAnchors) : null), [shownAnchors, detail])
   const mock = library.mode === 'mock'
 
   /** Rời bài: còn thay đổi → hỏi; file đã nạp mà chưa lưu → xoá luôn (không để file mồ côi chiếm hạn mức). */
@@ -329,6 +337,22 @@ function ChordEditor({ library, versionId, onClose, onSaved, onOpenVersion }: {
     }
   }
 
+  /** Chấp nhận vạch nhịp → máy chủ tạo PHIÊN BẢN MỚI (cùng nội dung + nguồn). Mở phiên bản đó, không tự duyệt. */
+  async function acceptAnchors(anchors: ChordAnchors) {
+    if (busy || !detail) return
+    setBusy(true); setMessage(''); setFailed('')
+    try {
+      const next = await library.acceptAnchors(detail.versionId, anchors)
+      const fresh = next.versionNumber > detail.versionNumber && next.versionId !== detail.versionId
+      adopt(next); onSaved(next); setAnchorEditing(false)
+      setMessage((fresh
+        ? `Đã lưu vạch nhịp thành phiên bản ${next.versionNumber} (bản nháp) — phiên bản ${detail.versionNumber} giữ nguyên. Bấm “Duyệt bản này” để dùng bản mới.`
+        : `Bộ vạch nhịp này đã có ở phiên bản ${next.versionNumber} — đã mở phiên bản đó, không tạo thêm.`) + suffix)
+    } catch (cause) {
+      setFailed(cause instanceof Error ? cause.message.replace(/^CHORDLIB_INVALID: /, '') : 'Không lưu được vạch nhịp.')
+    } finally { setBusy(false) }
+  }
+
   async function approve() {
     if (busy || !detail) return
     setBusy(true); setMessage(''); setFailed('')
@@ -421,7 +445,9 @@ function ChordEditor({ library, versionId, onClose, onSaved, onOpenVersion }: {
           {anchorsWillReset && <p className="cl-warn" role="note">Bài này đã có vạch nhịp theo lời cũ. Lưu lời mới thì vạch nhịp phải làm lại.</p>}
         </section>
 
-        <AnchorSection detail={detail} willReset={anchorsWillReset} sourceCount={plan.length} sourcesSaved={!sourcesChanged} />
+        <AnchorSection detail={detail} willReset={anchorsWillReset} sourceCount={plan.length} sourcesSaved={!sourcesChanged}
+          editing={anchorEditing} dirty={dirty} onLive={setLiveAnchors} busy={busy || sourceBusy}
+          onEdit={() => { setMessage(''); setFailed(''); setAnchorEditing(true) }} onCancel={() => setAnchorEditing(false)} onAccept={anchors => void acceptAnchors(anchors)} />
 
         <section className="cl-card" aria-label="Nguồn sheet">
           <h2>Nguồn sheet</h2>
@@ -459,12 +485,12 @@ function ChordEditor({ library, versionId, onClose, onSaved, onOpenVersion }: {
         {hasText
           ? <>
             {chords.length > 0 && <p className="cl-chordset">Hợp âm trong bài: {chords.map(chord => <span key={chord}>{chord}</span>)}</p>}
-            <div className="cl-sheet">
+            {measureRows ? <MeasureSheet rows={measureRows} label="Bản hợp âm có số ô" /> : <div className="cl-sheet">
               {lines.map((line, index) => line.length
                 ? <p key={index} className="cl-line" data-chords={line.some(segment => segment.chord !== null)}>{line.map((segment, at) =>
                     <span key={at} className="cl-seg"><span className="cl-chord">{segment.chord ?? '\u00a0'}</span><span className="cl-lyric">{segment.text || '\u00a0'}</span></span>)}</p>
                 : <p key={index} className="cl-line cl-line-gap" aria-hidden="true" />)}
-            </div>
+            </div>}
           </>
           : <p className="cl-placeholder">Nhập lời + hợp âm để xem thử.</p>}
       </section>
@@ -476,21 +502,33 @@ type PlanItem = { key: string; kind: 'attached' | 'pending'; name: string; sourc
 const planOf = (detail: ChordSheetDetail): PlanItem[] =>
   detail.sources.map(source => ({ key: source.path, kind: 'attached', name: `sheet-${String(source.page).padStart(2, '0')}.${source.path.split('.').pop()}`, source }))
 
-/** Vạch nhịp — khung cho lát phân tích sau: trạng thái, nguồn, nút Phân tích (chưa bật), xem lại vạch nhịp đã có. */
-function AnchorSection({ detail, willReset, sourceCount, sourcesSaved }: { detail: ChordSheetDetail | null; willReset: boolean; sourceCount: number; sourcesSaved: boolean }) {
+/** Vạch nhịp — trạng thái, nút Phân tích (CHƯA bật), trình sửa thủ công, xem lại vạch nhịp đã có. */
+function AnchorSection({ detail, willReset, sourceCount, sourcesSaved, editing, dirty, busy, onEdit, onCancel, onAccept, onLive }: {
+  detail: ChordSheetDetail | null; willReset: boolean; sourceCount: number; sourcesSaved: boolean
+  editing: boolean; dirty: boolean; busy: boolean; onEdit: () => void; onCancel: () => void; onAccept: (anchors: ChordAnchors) => void
+  onLive: (anchors: ChordAnchors | null) => void
+}) {
   const status = willReset || !detail ? 'none' : detail.anchorsStatus
   const anchors = willReset ? null : detail?.anchors ?? null
-  const lines = anchors && detail ? renderAnchors(detail.text, anchors) : []
+  const lines = anchors && detail ? buildMeasureDisplay(detail.text, anchors) : []
+  const canEdit = !!detail && !dirty && detail.status !== 'discarded'
   return <section className="cl-card" aria-label="Vạch nhịp">
     <h2>Vạch nhịp</h2>
     <Status label="Trạng thái" on={status === 'ready'} yes={ANCHORS_STATUS_LABEL.ready} no={ANCHORS_STATUS_LABEL[status]} />
     <p className="cl-help cl-anchor-src">Nguồn: {sourceCount ? `${sourceCount} file sheet${sourcesSaved ? '' : ' (chưa lưu)'}` : 'chưa có file sheet'}</p>
-    <button type="button" className="cl-secondary cl-analyze" disabled title="Sẽ có ở bước tiếp theo">Phân tích vạch nhịp</button>
-    <p className="cl-help">Tính năng phân tích sẽ đọc các vạch nhịp trên bản nhạc và ghép chúng với lời + hợp âm.</p>
-    <div className="cl-anchor-view" aria-label="Xem vạch nhịp">
-      {lines.length
-        ? lines.map((line, at) => <p key={at} className="cl-anchor-line">{line.label && <span className="cl-anchor-label">{line.label}</span>}{line.text}</p>)
-        : <p className="cl-placeholder">{willReset ? 'Lời đã đổi — vạch nhịp cũ không còn khớp, cần phân tích lại sau khi lưu.' : detail?.hasAnchors && !anchors ? 'Dữ liệu vạch nhịp không đọc được theo lời hiện tại.' : 'Chưa có dữ liệu vạch nhịp.'}</p>}
+    <div className="cl-anchor-entry">
+      <button type="button" className="cl-secondary cl-analyze" disabled title="Sẽ có ở bước tiếp theo">Phân tích vạch nhịp</button>
+      {!editing && <button type="button" className="cl-secondary" disabled={!canEdit || busy} onClick={onEdit}>Sửa vạch nhịp thủ công</button>}
     </div>
+    {!editing && !detail && <p className="cl-placeholder">Lưu bài trước, rồi mới đặt vạch nhịp.</p>}
+    {!editing && detail && dirty && <p className="cl-placeholder">Lưu các thay đổi trước, rồi mới sửa vạch nhịp.</p>}
+    <p className="cl-help">Tính năng phân tích sẽ đọc các vạch nhịp trên bản nhạc và ghép chúng với lời + hợp âm.</p>
+    {editing && detail
+      ? <AnchorEditor text={detail.text} initial={detail.anchors} busy={busy} onAccept={onAccept} onCancel={onCancel} onChange={onLive} />
+      : <div className="cl-anchor-view" aria-label="Xem vạch nhịp">
+        {lines.length
+          ? <MeasureSheet rows={lines} label="Vạch nhịp theo ô" />
+          : <p className="cl-placeholder">{willReset ? 'Lời đã đổi — vạch nhịp cũ không còn khớp, cần đặt lại sau khi lưu.' : detail?.hasAnchors && !anchors ? 'Dữ liệu vạch nhịp không đọc được theo lời hiện tại.' : 'Chưa có dữ liệu vạch nhịp.'}</p>}
+      </div>}
   </section>
 }

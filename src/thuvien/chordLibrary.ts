@@ -70,6 +70,11 @@ export interface ChordLibrary {
   approveChordSheetVersion(versionId: string): Promise<ChordSheetDetail>
   /** Bỏ một bản nháp (không xoá — chỉ thôi coi là bản chờ duyệt). */
   discardChordSheetVersion(versionId: string): Promise<void>
+  /**
+   * Chấp nhận vạch nhịp = PHIÊN BẢN MỚI (cùng lời, nhịp, BPM, file nguồn của `fromVersionId`; cha = nó;
+   * dạng bản nháp — vẫn phải Duyệt). Máy chủ tự kiểm vạch với đúng lời. Trùng bộ vạch → trả bản đã có.
+   */
+  acceptAnchors(fromVersionId: string, anchors: ChordAnchors): Promise<ChordSheetDetail>
   /** Chỉ có ở mock: xoá dữ liệu thử, trả về bộ mẫu ban đầu. */
   resetMock?(): void
 }
@@ -251,6 +256,24 @@ export function createMockChordLibrary(options: MockOptions = {}): ChordLibrary 
       persist()
       return detail(sheet, version)
     },
+    async acceptAnchors(fromVersionId, anchors) {
+      const { sheet, version } = findVersion(fromVersionId)
+      if (version.review === 'rejected') throw new Error('không gắn vạch nhịp vào bản đã bỏ')
+      const clean = parseAnchors(anchors, version.text)
+      if (!clean) throw new Error('vạch nhịp không hợp lệ với lời của phiên bản này')
+      const same = sheet.versions.find(entry => entry.review !== 'rejected' && !!entry.anchors && entry.text === version.text
+        && sameMeter(entry.meter, version.meter) && entry.suggestedBpm === version.suggestedBpm && sourceKey(entry.sources) === sourceKey(version.sources)
+        && JSON.stringify(entry.anchors) === JSON.stringify(clean))
+      if (same) return detail(sheet, same)
+      const next: MockVersion = {
+        versionId: newId(), versionNumber: Math.max(...sheet.versions.map(entry => entry.versionNumber)) + 1,
+        text: version.text, meter: version.meter, suggestedBpm: version.suggestedBpm, sources: version.sources ?? [],
+        hasAnchors: true, anchors: clean, createdAt: now(), review: 'private',
+      }
+      sheet.versions.push(next)
+      persist()
+      return detail(sheet, next)
+    },
     async discardChordSheetVersion(versionId) {
       const { sheet, version } = findVersion(versionId)
       if (version.review === 'approved') throw new Error('Bản đã duyệt không bỏ được — muốn thay thì duyệt bản khác.')
@@ -366,6 +389,14 @@ export function createRpcChordLibrary(rpc: RpcCall, sourceStore: ChordSourceStor
     async discardChordSheetVersion(versionId) {
       await call('chord_sheet_reject', { p_version_id: versionId, p_reason: 'Bỏ bản nháp (bàn biên tập).' })
     },
+    async acceptAnchors(fromVersionId, anchors) {
+      const result = await call('chord_sheet_accept_anchors', {
+        p_from_version_id: fromVersionId,
+        p_anchors: { ...(anchors.pickup ? { pickup: anchors.pickup } : {}), measures: anchors.measures },
+        p_anchor_review: { mode: 'manual' },
+      }) as Row
+      return get(String(result.version_id))
+    },
   }
 }
 
@@ -379,7 +410,7 @@ export function createDisabledChordLibrary(): ChordLibrary {
     sources: createRefusingSourceStore(DISABLED_MESSAGE),
     newVersionId: () => crypto.randomUUID(),
     searchChordSheets: refuse, getChordSheet: refuse, createChordSheet: refuse, createChordSheetVersion: refuse,
-    updateChordSheetInfo: refuse, approveChordSheetVersion: refuse, discardChordSheetVersion: refuse,
+    updateChordSheetInfo: refuse, approveChordSheetVersion: refuse, discardChordSheetVersion: refuse, acceptAnchors: refuse,
   }
 }
 

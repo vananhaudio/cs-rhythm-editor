@@ -172,7 +172,9 @@ test('sửa bài đang dùng: lưu → bản nháp v2, bản đang dùng chưa �
   await settle()
   assert.match(view.getByRole('group', { name: 'Trạng thái phiên bản' }).textContent ?? '', /Bản đang dùng · phiên bản 1/)
   assert.match(view.getByRole('region', { name: 'Vạch nhịp' }).textContent ?? '', /✓ Đã có/)
-  assert.match(view.getByLabelText('Xem vạch nhịp').textContent ?? '', /^1\.\| \[C\] Một câu hát mẫu cho \| \[Am\] buổi chiều/, 'vạch nhịp đã có được hiện lại dạng đọc được')
+  assert.deepEqual(sheetText(view.getByLabelText('Vạch nhịp theo ô')).slice(0, 2), ['1. ¹ [C] Một câu hát mẫu cho |² [Am] buổi chiều', '|³ [F] Dòng tiếp theo đi |⁴ [G] thật chậm'],
+    'vạch nhịp đã có được hiện lại kèm số ô; ô 1 mở đầu bài chỉ có số, không vạch giả')
+  assert.deepEqual(sheetText(view.getByLabelText('Bản hợp âm có số ô')), sheetText(view.getByLabelText('Vạch nhịp theo ô')), 'bản bên phải dùng cùng mô hình')
   const text = view.getByLabelText('Ô soạn lời và hợp âm') as HTMLTextAreaElement
   type(text, text.value + '\n[C] Thêm một dòng')
   assert.match(view.container.textContent ?? '', /Lưu lời mới thì vạch nhịp phải làm lại/)
@@ -417,6 +419,144 @@ test('đủ 10 file → nút nạp khoá; file > 20 MB bị từ chối trước
   await pick(again, [big])
   assert.deepEqual(rows(again), [])
   assert.match(again.getByRole('region', { name: 'Nguồn sheet' }).querySelector('[role=alert]')?.textContent ?? '', /lớn hơn 20 MB/)
+})
+
+// Đọc lại bản có số ô từ DOM thành chữ: "Chiều |¹ [Am] nao" (số trên vạch → chỉ số trên).
+const SUP = '⁰¹²³⁴⁵⁶⁷⁸⁹'
+const sup = (n: string) => n.split('').map(d => SUP[Number(d)]).join('')
+function sheetText(root: Element): string[] {
+  return [...root.querySelectorAll('.cl-line:not(.cl-line-gap)')].map(line => [...line.querySelectorAll('.cl-mbar, .cl-seg, .cl-mpickup')].map(node => {
+    if (node.classList.contains('cl-mpickup')) return '(lấy đà)'
+    if (node.classList.contains('cl-mbar')) {
+      const n = sup(node.querySelector('.cl-mnum')!.textContent!)
+      const mark = (node as HTMLElement).dataset.mark
+      return `${(node as HTMLElement).dataset.start ? '' : '|'}${n}${mark === 'silent' ? ' ♪' : mark === 'sustain' ? ' (ngân)' : ''}`
+    }
+    const chord = node.querySelector('.cl-chord')!.textContent!.trim()
+    const word = node.querySelector('.cl-lyric')!.textContent!.trim()
+    return chord ? `[${chord}]${word ? ' ' + word : ''}` : word
+  }).filter(Boolean).join(' '))
+}
+
+// ── Vạch nhịp thủ công ──
+const gap = (view: ReturnType<typeof render>, label: string) => view.getByRole('button', { name: new RegExp(`^${label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`) })
+const timeline = (view: ReturnType<typeof render>) => [...view.container.querySelectorAll('.cl-anchor-list li .cl-anchor-pick')].map(node => node.textContent)
+
+test('sửa vạch nhịp thủ công: bấm khe → dòng thời gian; lấy đà; ô không lời; ô ngân; xem lại; Chấp nhận → PHIÊN BẢN MỚI (nháp); bản cũ nguyên; Phân tích vẫn khoá', async () => {
+  const view = await openList()
+  fireEvent.click(view.getByRole('button', { name: 'Mở bài Tình khúc mẫu' }))
+  await settle()
+  assert.equal((view.getByRole('button', { name: 'Phân tích vạch nhịp' }) as HTMLButtonElement).disabled, true)
+  fireEvent.click(view.getByRole('button', { name: 'Sửa vạch nhịp thủ công' }))
+  await settle()
+  const editor = view.getByRole('group', { name: 'Trình sửa vạch nhịp' })
+  assert.ok(editor)
+  assert.equal(view.queryByRole('button', { name: 'Sửa vạch nhịp thủ công' }), null, 'đang sửa thì ẩn nút mở')
+  assert.equal((view.getByRole('button', { name: 'Chấp nhận vạch nhịp' }) as HTMLButtonElement).disabled, true, 'chưa có vạch → chưa chấp nhận được')
+  // khe: dòng 1 "[Am] Dòng một của tình khúc [Dm] mẫu" = 6 chữ → 7 khe; hợp âm hiển thị trên chữ
+  assert.equal(editor.querySelectorAll('.cl-anchor-row')[0].querySelectorAll('.cl-gap').length, 7)
+  assert.deepEqual([...editor.querySelectorAll('.cl-anchor-row')[0].querySelectorAll('.cl-chord')].map(node => node.textContent?.trim()).filter(Boolean), ['Am', 'Dm'])
+  fireEvent.click(gap(view, 'Khe trước “một” — dòng 1'))
+  fireEvent.click(gap(view, 'Khe trước “Dòng” — dòng 2'))
+  fireEvent.click(gap(view, 'Khe trước “mẫu” — dòng 1'))
+  assert.deepEqual(timeline(view), ['Ô 1 → một', 'Ô 2 → mẫu', 'Ô 3 → Dòng'], 'bấm lộn xộn vẫn ra đúng thứ tự đọc')
+  assert.equal(gap(view, 'Khe trước “mẫu” — dòng 1').getAttribute('aria-pressed'), 'true')
+  fireEvent.click(gap(view, 'Khe trước “mẫu” — dòng 1'))
+  assert.deepEqual(timeline(view), ['Ô 1 → một', 'Ô 2 → Dòng'], 'bấm lại → bỏ vạch')
+  fireEvent.click(view.getByRole('checkbox', { name: /nhịp lấy đà/ }))
+  assert.equal(gap(view, 'Khe trước “Dòng” — dòng 1').getAttribute('data-pickup'), 'true', 'lấy đà từ chữ đầu bài')
+  fireEvent.click(view.getByRole('button', { name: /^\+ Ô không lời/ }))
+  fireEvent.click(view.getAllByRole('button', { name: '+ Ô ngân' })[0])
+  fireEvent.click(gap(view, 'Khe cuối dòng 3'))
+  assert.deepEqual(timeline(view), ['Ô 1 → một', 'Ô 2 → một (ngân)', 'Ô 3 → Dòng', 'Ô 4 → (ô không lời)', 'Ô 5 → (cuối dòng 3)'])
+  assert.deepEqual(sheetText(view.getByLabelText('Bản xem lại có số ô')), ['(lấy đà) [Am] Dòng |¹ một của tình khúc [Dm] mẫu |² (ngân)', '|³ [G] Dòng hai nối [C] theo', '[F] Dòng ba ngân [E7] dài rồi [Am] nghỉ |⁴ ♪ |⁵'])
+  assert.deepEqual(sheetText(view.getByLabelText('Bản hợp âm có số ô')), sheetText(view.getByLabelText('Bản xem lại có số ô')), 'bên phải = xem lại, đánh số ngay khi đang sửa')
+  fireEvent.click(view.getByRole('button', { name: 'Chấp nhận vạch nhịp' }))
+  await settle(60)
+  assert.match(view.getByRole('status').textContent ?? '', /Đã lưu vạch nhịp thành phiên bản 2 \(bản nháp\) — phiên bản 1 giữ nguyên/)
+  assert.equal(view.queryByRole('group', { name: 'Trình sửa vạch nhịp' }), null)
+  assert.match(view.getByRole('group', { name: 'Trạng thái phiên bản' }).textContent ?? '', /Bản nháp · phiên bản 2/)
+  assert.ok(view.getByRole('button', { name: 'Duyệt bản này' }), 'KHÔNG tự duyệt — vẫn phải bấm Duyệt')
+  assert.match(view.getByRole('region', { name: 'Vạch nhịp' }).textContent ?? '', /✓ Đã có/)
+  assert.match(sheetText(view.getByLabelText('Bản hợp âm có số ô'))[0], /^\(lấy đà\) \[Am\] Dòng \|¹ một/, 'sau khi chấp nhận, bên phải hiện số ô của phiên bản mới')
+  const [item] = await view.library.searchChordSheets('tinh khuc mau')
+  const old = await view.library.getChordSheet(item.versionId)
+  assert.deepEqual([old.versionNumber, old.status, old.anchors], [1, 'current', null], 'bản cũ nguyên, vẫn là bản đang dùng')
+  const fresh = await view.library.getChordSheet(item.draftVersionId!)
+  assert.deepEqual([fresh.text, fresh.meter, fresh.suggestedBpm], [old.text, old.meter, old.suggestedBpm])
+  assert.deepEqual(fresh.anchors, { pickup: { line: 0, token: 0 }, measures: [{ line: 0, token: 1 }, { line: 0, token: 1 }, { line: 1, token: 0 }, { line: null, token: null }, { line: 2, token: 6 }] })
+  assert.equal((view.getByRole('button', { name: 'Phân tích vạch nhịp' }) as HTMLButtonElement).disabled, true)
+})
+
+test('vạch nhịp có sẵn được nạp vào trình sửa; chế độ "thêm vào cuối" cho điệp khúc quay lại; sửa rồi chấp nhận → bản mới, bản cũ không đổi', async () => {
+  const view = await openList()
+  fireEvent.click(view.getByRole('button', { name: 'Mở bài Bài thử 01' }))
+  await settle()
+  fireEvent.click(view.getByRole('button', { name: 'Sửa vạch nhịp thủ công' }))
+  await settle()
+  assert.equal(timeline(view).length, 11, 'nạp đủ 11 ô đã có')
+  fireEvent.click(view.getByRole('radio', { name: /Thêm vào cuối/ }))
+  fireEvent.click(gap(view, 'Khe trước “Hát” — dòng 3'))
+  fireEvent.click(gap(view, 'Khe trước “vui,” — dòng 3'))
+  assert.deepEqual(timeline(view).slice(-2), ['Ô 12 → Hát', 'Ô 13 → vui,'], 'điệp khúc hát lại: thêm vào cuối dù dòng 3 đã có vạch')
+  fireEvent.click(view.getByRole('button', { name: 'Chấp nhận vạch nhịp' }))
+  await settle(60)
+  const [item] = await view.library.searchChordSheets('bai thu 01')
+  const v1 = await view.library.getChordSheet(item.versionId)
+  const v2 = await view.library.getChordSheet(item.draftVersionId!)
+  assert.equal(v1.anchors?.measures.length, 11, 'bản cũ không đổi')
+  assert.deepEqual(v2.anchors?.measures.slice(-2), [{ line: 2, token: 0 }, { line: 2, token: 3 }])
+})
+
+test('5A.1: sửa bên trái (thêm / ↑ ↓ / xoá / ngân / không lời) → số ô bên phải đánh lại NGAY, liền mạch; lấy đà không mang số', async () => {
+  const view = await openList()
+  fireEvent.click(view.getByRole('button', { name: 'Mở bài Tình khúc mẫu' }))
+  await settle()
+  fireEvent.click(view.getByRole('button', { name: 'Sửa vạch nhịp thủ công' }))
+  await settle()
+  const right = () => sheetText(view.getByLabelText('Bản hợp âm có số ô'))
+  fireEvent.click(gap(view, 'Khe trước “Dòng” — dòng 1'))
+  fireEvent.click(gap(view, 'Khe trước “Dòng” — dòng 2'))
+  assert.equal(right()[0], '¹ [Am] Dòng một của tình khúc [Dm] mẫu', 'không lấy đà: ô 1 ở đầu bài, chỉ số')
+  fireEvent.click(view.getByRole('button', { name: /^\+ Ô không lời/ }))
+  assert.match(right().at(-1)!, / \[Am\] nghỉ \|³ ♪$/, 'ô không lời thêm vào cuối vẫn có số')
+  fireEvent.click(view.getByRole('button', { name: 'Đưa ô 3 lên' }))
+  assert.deepEqual(right().slice(0, 2), ['¹ [Am] Dòng một của tình khúc [Dm] mẫu |² ♪', '|³ [G] Dòng hai nối [C] theo'], '↑ → đánh số lại ngay')
+  fireEvent.click(view.getByRole('button', { name: 'Xoá ô 2' }))
+  assert.equal(right()[1], '|² [G] Dòng hai nối [C] theo', 'xoá → ô sau lùi số')
+  fireEvent.click(view.getAllByRole('button', { name: '+ Ô ngân' })[0])
+  assert.deepEqual(right().slice(0, 2), ['¹ [Am] Dòng một của tình khúc [Dm] mẫu |² (ngân)', '|³ [G] Dòng hai nối [C] theo'])
+  fireEvent.click(gap(view, 'Khe trước “một” — dòng 1'))
+  fireEvent.click(view.getByRole('checkbox', { name: /nhịp lấy đà/ }))
+  fireEvent.click(gap(view, 'Khe trước “Dòng” — dòng 1: vạch ô 1, 2'))
+  fireEvent.click(gap(view, 'Khe trước “Dòng” — dòng 1: vạch ô 1'))
+  assert.equal(right()[0], '(lấy đà) [Am] Dòng |¹ một của tình khúc [Dm] mẫu', 'lấy đà: không số; ô 1 ở vạch đầu tiên sau lấy đà')
+  assert.equal(view.container.querySelectorAll('.cl-gap[data-on=true]').length, 2, 'chỉ khe đã chọn mới có số')
+})
+
+test('còn thay đổi chưa lưu → chưa sửa vạch nhịp được; Huỷ không lưu gì', async () => {
+  const view = await openList()
+  fireEvent.click(view.getByRole('button', { name: 'Mở bài Đêm Thử Nghiệm' }))
+  await settle()
+  type(view.getByLabelText(/BPM gợi ý/), '70')
+  assert.equal((view.getByRole('button', { name: 'Sửa vạch nhịp thủ công' }) as HTMLButtonElement).disabled, true)
+  assert.match(view.getByRole('region', { name: 'Vạch nhịp' }).textContent ?? '', /Lưu các thay đổi trước/)
+  type(view.getByLabelText(/BPM gợi ý/), '')
+  fireEvent.click(view.getByRole('button', { name: 'Sửa vạch nhịp thủ công' }))
+  await settle()
+  fireEvent.click(gap(view, 'Khe trước “nay” — dòng 1'))
+  fireEvent.click(view.getByRole('button', { name: 'Huỷ' }))
+  await settle()
+  const [item] = await view.library.searchChordSheets('dem thu nghiem')
+  assert.deepEqual([item.draftVersionId, (await view.library.getChordSheet(item.versionId)).anchors], [null, null])
+})
+
+test('bài MỚI chưa lưu: nút Sửa vạch nhịp khoá, có lời nhắc lưu trước', async () => {
+  const view = await openList()
+  fireEvent.click(view.getByRole('button', { name: '+ Thêm bài' }))
+  await settle()
+  assert.equal((view.getByRole('button', { name: 'Sửa vạch nhịp thủ công' }) as HTMLButtonElement).disabled, true)
+  assert.match(view.getByRole('region', { name: 'Vạch nhịp' }).textContent ?? '', /Lưu bài trước/)
 })
 
 // ── Backend thật qua adapter RPC — máy chủ giả có trạng thái, cùng hợp đồng với db/chord_library_v1_setup.sql ──

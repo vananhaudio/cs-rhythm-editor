@@ -103,8 +103,8 @@ echo "── Quyền bảng + EXECUTE"
 [ "$(q tva_chord "select count(*) from pg_proc p where (p.proname like 'chord%' or p.proname = 'my_chordlib_caps') and has_function_privilege('anon', p.oid, 'execute')")" = "0" ] \
   && ok "anon: 0 hàm chord_* gọi được" || fail "anon gọi được hàm"
 [ "$(q tva_chord "select string_agg(p.proname, ',' order by p.proname) from pg_proc p where (p.proname like 'chord%' or p.proname = 'my_chordlib_caps') and has_function_privilege('authenticated', p.oid, 'execute')")" \
-  = "chord_fold_vi,chord_sheet_approve,chord_sheet_contribute,chord_sheet_get,chord_sheet_reject,chord_sheet_search,chord_sheet_update_info,chord_source_can_write,chordlib_can,my_chordlib_caps" ] \
-  && ok "authenticated: đúng 10 hàm (6 RPC + caps + 3 hàm phụ)" || fail "danh sách EXECUTE của authenticated lệch"
+  = "chord_fold_vi,chord_sheet_accept_anchors,chord_sheet_approve,chord_sheet_contribute,chord_sheet_get,chord_sheet_reject,chord_sheet_search,chord_sheet_update_info,chord_source_can_write,chordlib_can,my_chordlib_caps" ] \
+  && ok "authenticated: đúng 11 hàm (7 RPC + caps + 3 hàm phụ)" || fail "danh sách EXECUTE của authenticated lệch"
 [ "$(q tva_chord "select count(*) from pg_proc p join pg_namespace s on s.oid = p.pronamespace where s.nspname = 'public' and (p.proname like 'chord%' or p.proname = 'my_chordlib_caps') and coalesce(obj_description(p.oid, 'pg_proc'), '') not like 'chord_library_v1:%'")" = "0" ] \
   && ok "mọi hàm đều mang nhãn chord_library_v1 (cổng drift nhận ra)" || fail "hàm thiếu nhãn"
 
@@ -288,6 +288,65 @@ MS_SAME=$(python3 -c "import time; print(int((time.time() - $T0) * 1000))"); wai
   || fail "N1: khoá sai phạm vi (khác người ${MS_OTHER} ms, cùng người ${MS_SAME} ms)"
 # <<< N1
 
+# >>> V1.2 — vạch nhịp: đồng thời · tách chữ TS ↔ SQL · tương thích prototype Rhythm Scroll
+echo "── V1.2: hai lượt Chấp nhận đồng thời · tách chữ TS = SQL · hợp đồng RhythmScrollAnchoredData"
+AC=$(sess -c "$(as $UT) select public.chord_sheet_contribute(p_text => E'Một [C] hai ba\nbốn [G] năm', p_title => 'Bài đua vạch nhịp') ->> 'version_id';" | tail -1)
+ANC='{"measures": [{"line": 0, "token": 0}, {"line": 0, "token": 2}, {"line": 1, "token": 1}]}'
+( sess -c "$(as $UT) begin; select public.chord_sheet_accept_anchors('$AC', '$ANC'); select pg_sleep(1.2); commit;" > "$TMP/acc1" ) &
+sleep 0.3
+sess -c "$(as $UT) select public.chord_sheet_accept_anchors('$AC', '$ANC') ->> 'duplicate';" > "$TMP/acc2"; wait
+[ "$(q tva_chord "select count(*) from chord_sheet_versions where parent_version_id = '$AC' and anchors_status = 'ready'")" = "1" ] && grep -q true "$TMP/acc2" \
+  && ok "V1.2: 2 lượt Chấp nhận cùng bộ vạch ĐỒNG THỜI → đúng 1 phiên bản mới; lượt sau nhận duplicate" \
+  || { cat "$TMP/acc1" "$TMP/acc2"; fail "V1.2: chấp nhận đồng thời tạo bản trùng"; }
+
+node --experimental-strip-types --no-warnings - "$SRC/src/thuvien/chordAnchors.ts" "$SRC/src/thuvien/chordText.ts" > "$TMP/tok.sql" <<'NODE'
+const { lyricTokens } = await import(process.argv[2])
+const { canonicalChordText } = await import(process.argv[3])
+const cases = [
+  '1. Chiều [Am] nao, tiễn nhau [E7] đi', 'ĐK: [Dm] Hoàng hôn', '', '[C][G]', 'ti[Am]ễn', 'hết câu [G]', 'Dạo: [C] la', '[C] 1. không phải nhãn',
+  'Đk Hát lên', 'đk: hát', 'DK: x', 'Coda: [C] hết', 'Intro [Am]', 'Verse: [G] một hai', 'Chorus: ba', 'Bridge bốn', '12. Câu mười hai', '123. không phải nhãn',
+  '2.[C]liền', '   1.   cách   xa  [G]  ', 'a b　c d', '[Am]', '[Am] ', 'chữ [] rỗng', 'lỡ [Am quên', '[Am][E7] hết', 'x [G] y [C] ',
+  'Dòng một\nDòng hai [C]\n\nĐK: Dòng bốn', '1. A\n2. B [G] C\n3.', 'Lời có số 1. ở giữa', 'ĐIỆP KHÚC: hai chữ nhãn', 'Dạo:', 'Dao: không dấu',
+  '\t[C]\tTab đầu dòng', 'hết dòng có NBSP [C] ', 'a [VeryLongChordName1234] b', 'a [Too-Long-Chord-Name-17] b',
+]
+const lit = t => { let tag = 'q'; while (t.includes('$' + tag + '$')) tag += 'q'; return '$' + tag + '$' + t + '$' + tag + '$' }
+for (const c of cases) {
+  const ts = canonicalChordText(c).split('\n').map(line => lyricTokens(line).tokens.length)
+  console.log(`select case when public.chord_lyric_token_counts(${lit(c)}) = '{${ts.join(',')}}'::integer[] then 'ok' else 'LECH: ' || ${lit(JSON.stringify(c))} || ' sql=' || public.chord_lyric_token_counts(${lit(c)})::text || ' ts={${ts.join(',')}}' end;`)
+}
+NODE
+TOK="$(psqld tva_chord -tA -f "$TMP/tok.sql")"; NTOK=$(grep -c '^select' "$TMP/tok.sql")
+[ "$NTOK" -ge 35 ] && [ "$(echo "$TOK" | grep -c '^ok$')" = "$NTOK" ] && ok "V1.2: tách chữ SQL (chord_lyric_token_counts) = TS (lyricTokens) trên $NTOK ca: nhãn, hợp âm giữa chữ / cuối dòng / liền nhau, NBSP, tab, hợp âm quá dài, nhiều dòng" \
+  || { echo "$TOK" | grep -v '^ok$'; fail "tách chữ SQL lệch TS"; }
+
+if git -C "$ROOT" cat-file -e origin/feat/rhythm-scroll-v1-core:src/rhythm-scroll-viewer/anchored.ts 2>/dev/null; then
+  git -C "$ROOT" show origin/feat/rhythm-scroll-v1-core:src/rhythm-scroll-viewer/anchored.ts > "$TMP/anchored.ts"
+  q tva_chord "select coalesce(json_agg(json_build_object('id', id, 'text', text, 'anchors', anchors, 'meter', meter, 'hash', text_hash)), '[]') from chord_sheet_versions where anchors is not null" > "$TMP/accepted.json"
+  node --experimental-strip-types --no-warnings - "$TMP/anchored.ts" "$SRC/src/thuvien/chordAnchors.ts" "$SRC/src/thuvien/chordText.ts" "$TMP/accepted.json" > "$TMP/contract.log" 2>&1 <<'NODE' || { cat "$TMP/contract.log"; fail "hợp đồng Rhythm Scroll"; }
+const { createAnchoredScroll, anchorTextIssues } = await import(process.argv[2])
+const { lyricTokens } = await import(process.argv[3])
+const { canonicalChordText } = await import(process.argv[4])
+const rows = JSON.parse((await import('node:fs')).readFileSync(process.argv[5], 'utf8'))
+if (!rows.length) throw new Error('không có phiên bản nào có vạch nhịp để thử')
+for (const row of rows) {
+  // Adapter đơn giản: anchors của Thư viện → RhythmScrollAnchoredData (prototype).
+  const data = { version: 2, prototype: true, songId: row.id, lyricsHash: row.hash, meter: row.meter ?? { beats: 4, beatType: 4 },
+    ...(row.anchors.pickup ? { pickup: row.anchors.pickup } : {}), measures: row.anchors.measures,
+    provenance: { sourceType: 'manual', sourceHash: row.hash, generator: 'chord-library', generatedAt: new Date().toISOString() } }
+  const scroll = createAnchoredScroll(data)
+  const words = canonicalChordText(row.text).split('\n').map(line => lyricTokens(line).tokens.length)
+  const issues = anchorTextIssues(data, words)
+  if (issues.length) throw new Error(`${row.id}: ${issues.join('; ')}`)
+  if (scroll.totalMeasures !== row.anchors.measures.length + (row.anchors.pickup ? 1 : 0)) throw new Error('số ô sai')
+  const mid = scroll.locate(scroll.totalMeasures / 2)
+  if (mid.state !== 'active' || !mid.current || !mid.next) throw new Error('locate sai')
+}
+console.log(`ok ${rows.length}`)
+NODE
+  ok "V1.2: mọi bộ vạch nhịp đã chấp nhận ($(sed -n 's/^ok //p' "$TMP/contract.log") phiên bản) chạy được trong prototype createAnchoredScroll + anchorTextIssues (nhánh feat/rhythm-scroll-v1-core), qua adapter đơn giản"
+fi
+# <<< V1.2
+
 echo "── End-to-end: adapter RPC thật (src/thuvien/chordLibrary.ts) ↔ SQL thật"
 CHORD_PSQL="$PGBIN/psql" CHORD_PGHOST="$TMP" CHORD_PGPORT="$PORT" CHORD_PGDATABASE=tva_chord \
   node --experimental-strip-types --no-warnings --test "$SRC/tests/thuvien-db/e2e.test.ts" "$SRC/tests/thuvien-db/sources-e2e.test.ts" > "$TMP/e2e.log" 2>&1 || { cat "$TMP/e2e.log"; fail "end-to-end adapter ↔ DB"; }
@@ -311,19 +370,27 @@ mig tva_rb "$ROLLBACK" >/dev/null || fail "rollback lần 2"; ok "rollback lần
 [ "$(mxl tva_rb)" = "$MXL1" ] && [ "$(others tva_rb)" = "$OTH1" ] && ok "sau rollback: MusicXML Library + mọi object sẵn có nguyên vẹn" || fail "rollback đụng object khác"
 mig tva_rb "$SETUP" >/dev/null && [ "$(q tva_rb "select count(*) from pg_class where relname in ('chord_sheets', 'chord_sheet_versions')")" = "2" ] && ok "cài lại sau rollback" || fail "cài lại"
 
-echo "── V1.1 delta (production đã có V1): cài V1 cũ + delta == cài bản mới; chạy lại; rollback về NGUYÊN VĂN V1"
+echo "── Delta: V1 (59de4cd) → +V1.1 → +V1.2 = cài mới; rollback V1.2 → đúng V1.1 (a26f172); rollback V1.1 → đúng V1"
 DELTA="$SRC/db/chord_library_v1_1_sources_setup.sql"; DELTA_RB="$SRC/db/chord_library_v1_1_sources_rollback.sql"
-if [ -f "$DELTA" ] && git -C "$ROOT" cat-file -e 59de4cd:db/chord_library_v1_setup.sql 2>/dev/null; then
+D12="$SRC/db/chord_library_v1_2_anchors_setup.sql"; D12_RB="$SRC/db/chord_library_v1_2_anchors_rollback.sql"
+if [ -f "$DELTA" ] && [ -f "$D12" ] && git -C "$ROOT" cat-file -e a26f172:db/chord_library_v1_setup.sql 2>/dev/null; then
   git -C "$ROOT" show 59de4cd:db/chord_library_v1_setup.sql > "$TMP/v1_setup.sql"
+  git -C "$ROOT" show a26f172:db/chord_library_v1_setup.sql > "$TMP/v11_setup.sql"
   fnsig() { q "$1" "select md5(string_agg(p.oid::regprocedure::text || md5(p.prosrc) || coalesce(p.proacl::text, '') || coalesce(obj_description(p.oid, 'pg_proc'), ''), '|' order by p.oid::regprocedure::text)) from pg_proc p where p.pronamespace = 'public'::regnamespace and (p.proname like 'chord%' or p.proname = 'my_chordlib_caps')"; }
-  baseline tva_v11a; mig tva_v11a "$SETUP" >/dev/null; NEW=$(fnsig tva_v11a)
-  baseline tva_v11b; mig tva_v11b "$TMP/v1_setup.sql" >/dev/null; OLD=$(fnsig tva_v11b); MX0=$(mxl tva_v11b); OT0=$(others tva_v11b)
-  mig tva_v11b "$DELTA" >/dev/null || fail "delta V1.1 lần 1"
-  [ "$(fnsig tva_v11b)" = "$NEW" ] && ok "V1 cũ + delta V1.1 = cài bản mới (thân hàm, quyền, nhãn: md5 khớp)" || fail "delta V1.1 lệch bản cài mới"
-  mig tva_v11b "$DELTA" >/dev/null && [ "$(fnsig tva_v11b)" = "$NEW" ] && ok "delta V1.1 chạy lại: không đổi gì (idempotent)" || fail "delta V1.1 chạy lại"
-  [ "$(mxl tva_v11b)" = "$MX0" ] && [ "$(others tva_v11b)" = "$OT0" ] && ok "delta V1.1 không đụng MusicXML Library, không đổi object ngoài chord_*" || fail "delta đụng object ngoài phạm vi"
-  mig tva_v11b "$DELTA_RB" >/dev/null && [ "$(fnsig tva_v11b)" = "$OLD" ] && ok "rollback V1.1 → hàm về NGUYÊN VĂN V1 (md5 khớp)" || fail "rollback V1.1 lệch V1"
-  baseline tva_v11c; if mig tva_v11c "$DELTA" >/dev/null 2>&1; then fail "delta lẽ ra phải dừng khi chưa có V1"; fi; ok "delta V1.1 DỪNG khi DB chưa có Thư viện hợp âm V1"
+  baseline tva_dnew; mig tva_dnew "$SETUP" >/dev/null; NEW=$(fnsig tva_dnew)
+  baseline tva_d11; mig tva_d11 "$TMP/v11_setup.sql" >/dev/null; V11=$(fnsig tva_d11)
+  baseline tva_d1; mig tva_d1 "$TMP/v1_setup.sql" >/dev/null; V1SIG=$(fnsig tva_d1); MX0=$(mxl tva_d1); OT0=$(others tva_d1)
+  mig tva_d1 "$DELTA" >/dev/null || fail "delta V1.1"
+  [ "$(fnsig tva_d1)" = "$V11" ] && ok "V1 + delta V1.1 = cài V1.1 (a26f172) — md5 thân hàm, quyền, nhãn khớp" || fail "V1 + V1.1 lệch a26f172"
+  mig tva_d1 "$DELTA" >/dev/null && [ "$(fnsig tva_d1)" = "$V11" ] && ok "delta V1.1 chạy lại: không đổi gì" || fail "delta V1.1 chạy lại"
+  mig tva_d1 "$D12" >/dev/null || fail "delta V1.2"
+  [ "$(fnsig tva_d1)" = "$NEW" ] && ok "V1 + V1.1 + delta V1.2 = cài mới (production hiện tại + V1.2 = fresh install)" || fail "chuỗi delta lệch bản cài mới"
+  mig tva_d1 "$D12" >/dev/null && [ "$(fnsig tva_d1)" = "$NEW" ] && ok "delta V1.2 chạy lại: không đổi gì (idempotent)" || fail "delta V1.2 chạy lại"
+  [ "$(mxl tva_d1)" = "$MX0" ] && [ "$(others tva_d1)" = "$OT0" ] && ok "delta V1.1 + V1.2 không đụng MusicXML Library, không đổi object ngoài chord_*" || fail "delta đụng object ngoài phạm vi"
+  mig tva_d1 "$D12_RB" >/dev/null && [ "$(fnsig tva_d1)" = "$V11" ] && ok "rollback V1.2 → đúng V1.1 (a26f172, md5 khớp)" || fail "rollback V1.2 lệch V1.1"
+  mig tva_d1 "$DELTA_RB" >/dev/null && [ "$(fnsig tva_d1)" = "$V1SIG" ] && ok "rollback V1.1 → hàm về NGUYÊN VĂN V1 (md5 khớp)" || fail "rollback V1.1 lệch V1"
+  baseline tva_dx; if mig tva_dx "$DELTA" >/dev/null 2>&1; then fail "delta V1.1 lẽ ra phải dừng khi chưa có V1"; fi; ok "delta V1.1 DỪNG khi DB chưa có Thư viện hợp âm V1"
+  mig tva_dx "$TMP/v1_setup.sql" >/dev/null; if mig tva_dx "$D12" >/dev/null 2>&1; then fail "delta V1.2 lẽ ra phải dừng khi chưa có V1.1"; fi; ok "delta V1.2 DỪNG khi DB chưa có V1.1"
 fi
 
 echo "── Cổng drift"
