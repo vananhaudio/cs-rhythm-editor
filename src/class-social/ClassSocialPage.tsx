@@ -190,7 +190,7 @@ function SignedInShell({ base, view, onSection, onOpenProfile, onOpenThread, onO
       {view.kind === 'profile' && (
         <ProfilePage key={view.userId} me={me} userId={view.userId} identityRev={identityRev} canEditAvatar={editor.canEditAvatar}
           onEditMedia={editor.pick} onBack={() => onBack(HOME)} onOpenProfile={onOpenProfile} onOpenThread={onOpenThread}
-          onEditProfile={me.studentId ? () => setEditingProfile(true) : undefined} />
+          onEditProfile={me.studentId ? () => setEditingProfile(true) : undefined} onFriendsChanged={() => void requests.refresh()} />
       )}
       {view.kind === 'thread' && (
         <ThreadPage key={view.threadId} threadId={view.threadId} isTeacher={me.isTeacher} onBack={() => onBack(HOME)}

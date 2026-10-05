@@ -42,13 +42,13 @@ test("/me/u/<uuid> ↔ trang cá nhân; id lạ không phải trang cá nhân", 
 });
 
 // ── Model quan hệ ────────────────────────────────────────────────────────────
-test("Nút theo quan hệ kiểu Facebook", () => {
-  assert.deepEqual(relationshipUi("none").actions.map(a => a.label), ["Kết bạn"]);
-  assert.equal(relationshipUi("outgoing").status, "Đã gửi lời mời");
-  assert.deepEqual(relationshipUi("incoming").actions.map(a => a.label), ["Chấp nhận", "Từ chối"]);
-  assert.equal(relationshipUi("friends").status, "Bạn bè");
-  assert.deepEqual(relationshipUi("friends").actions.map(a => a.label), ["Huỷ kết bạn"]);
-  assert.deepEqual(relationshipUi("self").actions, []);
+test("Nút theo quan hệ kiểu Facebook (chi tiết V2: tests/class-social/friends-ux-v2.test.tsx)", () => {
+  assert.equal(relationshipUi("none")?.direct, "send");
+  assert.equal(relationshipUi("outgoing")?.label, "Đã gửi lời mời");
+  assert.deepEqual(relationshipUi("incoming")?.menu.map(a => a.label), ["Xác nhận", "Xóa lời mời"]);
+  assert.equal(relationshipUi("friends")?.label, "Bạn bè");
+  assert.deepEqual(relationshipUi("friends")?.menu.map(a => a.label), ["Huỷ kết bạn"]);
+  assert.equal(relationshipUi("self"), null);
   assert.equal(toRelationship("declined"), "none");   // giá trị lạ → không suy ra quan hệ
   assert.match(lockedWallText("outgoing", "Bình"), /Khi Bình chấp nhận/);
   assert.match(lockedWallText("none", "Bình"), /Kết bạn với Bình/);
@@ -110,7 +110,7 @@ test("PersonLink: không có onOpen → chữ thường (không nút)", () => {
 // ── Chốt chặn nguồn: quyền ở DB, client không tự mở ──────────────────────────
 test("Client: bạn bè/tường CHỈ qua RPC; không đọc thẳng friendships / edu_students của người khác", () => {
   const api = code("src/class-social/friends/friendsApi.ts");
-  for (const fn of ["my_friends", "incoming_friend_requests", "get_user_profile", "get_user_wall", "send_friend_request", "respond_friend_request", "unfriend"]) {
+  for (const fn of ["my_friends", "incoming_friend_requests", "outgoing_friend_requests", "get_user_profile", "get_user_wall", "send_friend_request", "respond_friend_request", "unfriend"]) {
     assert.ok(api.includes(`'${fn}'`), fn);
   }
   for (const f of ["src/class-social/friends/friendsApi.ts", "src/class-social/sections/ProfilePage.tsx", "src/class-social/sections/Friends.tsx", "src/class-social/sections/WallComposer.tsx"]) {
@@ -161,12 +161,12 @@ test("Badge 'Bạn bè' = số lời mời đến; 0 → không hiện; hiện c
   assert.match(shell({ friends: 120 }), />99\+</);
 });
 
-test("Danh sách lời mời: avatar + tên (mở trang cá nhân) + Chấp nhận / Từ chối; đang xử lý → khoá nút", () => {
+test("Danh sách lời mời: avatar + tên (mở trang cá nhân) + Xác nhận / Xóa; đang xử lý → khoá nút", () => {
   const items = [{ userId: ID, name: "An", avatarUrl: null, isTeacher: false }];
   const html = renderToStaticMarkup(<FriendRequestList items={items} busyId={null} onRespond={() => {}} onOpenProfile={() => {}} />);
   assert.match(html, /aria-label="Trang cá nhân của An"/);
-  assert.match(html, />Chấp nhận<\/button>/);
-  assert.match(html, />Từ chối<\/button>/);
+  assert.match(html, />Xác nhận<\/button>/);
+  assert.match(html, />Xóa<\/button>/);
   const busy = renderToStaticMarkup(<FriendRequestList items={items} busyId={ID} onRespond={() => {}} onOpenProfile={() => {}} />);
   assert.equal((busy.match(/disabled=""/g) ?? []).length, 2);
 });

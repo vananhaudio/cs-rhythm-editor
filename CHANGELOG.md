@@ -2,6 +2,14 @@
 
 Ghi lại thay đổi đáng chú ý. Định dạng ngày: dd/mm/yyyy.
 
+## 05/10/2026
+
+- **Class Social — Friends UX V2 (mô hình Facebook)**
+  - `/me/friends` = trung tâm bạn bè: Lời mời kết bạn [Xác nhận][Xóa] · **Lời mời đã gửi** [Huỷ lời mời] (mới — trước đây lời mời mình gửi không hiện ở đâu) · Tất cả bạn bè (⋯ → Huỷ kết bạn).
+  - Trang cá nhân: một nút cho mỗi trạng thái — Kết bạn · Đã gửi lời mời ▾ · Phản hồi lời mời ▾ · Bạn bè ▾; câu báo sau hành động ("Đã gửi lời mời — chờ người kia chấp nhận."); mobile dùng action sheet.
+  - Huỷ kết bạn luôn hỏi lại "Huỷ kết bạn với [Tên]?"; RPC chỉ chạy khi xác nhận.
+  - DB (additive): RPC `outgoing_friend_requests()`; "Xóa" lời mời = xoá lời mời ở cả hai phía (trước: giữ `declined`, người gửi thấy "Đã gửi" mãi). Không sửa hàng friendship nào. Chi tiết: `docs/FRIENDS-UX-V2.md`.
+
 ## 01/10/2026
 
 - **Class Social — Nhịp & Phách Artifact Share V1**

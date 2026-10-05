@@ -11,11 +11,12 @@ import { usePostsFeed } from '../posts/useCommunityFeed'
 import { isPostEntry, type FeedPost } from '../posts/postModel'
 import { useFeedComments } from '../comments/useFeedComments'
 import { loadCommentsApi } from '../comments/lazyApi'
+import { fetchProfile, fetchWallMixedPage, runFriendAction } from '../friends/friendsApi'
 import {
-  fetchProfile, fetchWallMixedPage, respondFriendRequest, sendFriendRequest, unfriend,
-} from '../friends/friendsApi'
-import { lockedWallText, relationshipUi, type FriendAction, type PublicProfile } from '../friends/friendModel'
-import { Avatar, EmptyState } from '../ui'
+  actionNotice, lockedWallText, needsConfirm, unfriendConfirm, type FriendAction, type PublicProfile,
+} from '../friends/friendModel'
+import { Avatar, ConfirmDialog, EmptyState } from '../ui'
+import RelationshipButton from './RelationshipButton'
 import { useHistoryTab } from '../useHistoryTab'
 import IdentityHeader from './IdentityHeader'
 import WallComposer from './WallComposer'
@@ -28,7 +29,7 @@ const PROFILE_TABS = ['wall', 'journey'] as const
 
 type Load = { status: 'loading' } | { status: 'error'; message: string } | { status: 'missing' } | { status: 'ready'; profile: PublicProfile }
 
-export default function ProfilePage({ me, userId, identityRev = 0, canEditAvatar, onEditMedia, onBack, onOpenProfile, onOpenThread, onEditProfile }: {
+export default function ProfilePage({ me, userId, identityRev = 0, canEditAvatar, onEditMedia, onBack, onOpenProfile, onOpenThread, onEditProfile, onFriendsChanged }: {
   me: ClassIdentity
   userId: string
   identityRev?: number
@@ -41,6 +42,8 @@ export default function ProfilePage({ me, userId, identityRev = 0, canEditAvatar
   onOpenThread?: (threadId: string) => void
   /** Chỉ trang của CHÍNH MÌNH (có hồ sơ học sinh): "Chỉnh sửa trang cá nhân" */
   onEditProfile?: () => void
+  /** Quan hệ bạn bè vừa đổi (DB đã xác nhận) → shell nạp lại badge lời mời */
+  onFriendsChanged?: () => void
 }) {
   const isSelf = userId === me.userId
   const [load, setLoad] = useState<Load>({ status: 'loading' })
@@ -48,12 +51,16 @@ export default function ProfilePage({ me, userId, identityRev = 0, canEditAvatar
   // Tab trang cá nhân: Tường (bài + câu chuyện học tập) | Hành trình (timeline Learning Thread theo chặng)
   const [tab, setTab] = useHistoryTab<'wall' | 'journey'>('csProfileTab', 'wall', PROFILE_TABS)
   const [actionError, setActionError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
+  const [confirming, setConfirming] = useState(false)
 
   const [prevUser, setPrevUser] = useState(userId)
   if (prevUser !== userId) {   // sang trang người khác: về trạng thái đang tải ngay
     setPrevUser(userId)
     setLoad({ status: 'loading' })
     setActionError(null)
+    setNotice(null)
+    setConfirming(false)
   }
 
   const refresh = useCallback(async () => {
@@ -75,18 +82,24 @@ export default function ProfilePage({ me, userId, identityRev = 0, canEditAvatar
     if (name) document.title = `${name} · Thầy Văn Anh Guitar`
   }, [name])
 
-  const act = async (action: FriendAction) => {
+  const run = async (action: FriendAction) => {
     if (busy) return
     setBusy(true)
     setActionError(null)
-    const r = action === 'send' ? await sendFriendRequest(userId)
-      : action === 'accept' ? await respondFriendRequest(userId, true)
-      : action === 'decline' ? await respondFriendRequest(userId, false)
-      : await unfriend(userId)
-    if (!r.ok) setActionError(r.message)
-    await refresh()   // quyền xem tường lấy lại từ DB, không tự suy ở client
+    setNotice(null)
+    const r = await runFriendAction(action, userId)
+    if (r.ok) {
+      // Nút đổi NGAY theo trạng thái DB vừa trả về; quyền xem tường lấy lại từ DB ở refresh() bên dưới
+      setLoad(l => l.status === 'ready' ? { status: 'ready', profile: { ...l.profile, relationship: r.value } } : l)
+      setNotice(actionNotice(action, r.value, name ?? '') || null)
+      onFriendsChanged?.()
+    } else setActionError(r.message)
+    await refresh()
+    setConfirming(false)
     setBusy(false)
   }
+  // Huỷ kết bạn: CHỈ hỏi lại — RPC chỉ chạy khi bấm xác nhận trong hộp thoại
+  const act = (action: FriendAction) => { if (needsConfirm(action)) setConfirming(true); else void run(action) }
 
   const back = (
     <button type="button" className="cs-btn cs-btn-ghost cs-btn-sm cs-profile-back" onClick={onBack}>
@@ -116,15 +129,20 @@ export default function ProfilePage({ me, userId, identityRev = 0, canEditAvatar
   }
 
   const p = load.profile
-  const ui = relationshipUi(p.relationship)
+  const confirm = unfriendConfirm(p.name)
   const moderatorView = !isSelf && p.canViewWall && p.relationship !== 'friends'
   return (
     <div className="cs-col cs-home cs-profile-page">
       {back}
       {isSelf
         ? <IdentityHeader me={me} canEditAvatar={canEditAvatar} onEdit={onEditMedia} onEditProfile={onEditProfile} />
-        : <OtherHeader profile={p} status={ui.status} actions={ui.actions} busy={busy} onAct={a => void act(a)} />}
+        : <OtherHeader profile={p} busy={busy} onAct={act} />}
+      {notice && <p className="cs-rel-notice" role="status">{notice}</p>}
       {actionError && <p className="cs-form-error" role="alert">{actionError}</p>}
+      {confirming && (
+        <ConfirmDialog title={confirm.title} confirmLabel={confirm.confirm} cancelLabel={confirm.cancel} danger busy={busy}
+          onConfirm={() => void run('unfriend')} onCancel={() => setConfirming(false)}>{confirm.body}</ConfirmDialog>
+      )}
       <LearningIdentitySection userId={userId} />
       {moderatorView && (
         <p className="cs-profile-note"><ShieldCheck size={15} aria-hidden="true" />Bạn đang xem với quyền Thầy.</p>
@@ -147,10 +165,8 @@ export default function ProfilePage({ me, userId, identityRev = 0, canEditAvatar
   )
 }
 
-function OtherHeader({ profile, status, actions, busy, onAct }: {
+function OtherHeader({ profile, busy, onAct }: {
   profile: PublicProfile
-  status: string | null
-  actions: ReturnType<typeof relationshipUi>['actions']
   busy: boolean
   onAct: (a: FriendAction) => void
 }) {
@@ -169,17 +185,8 @@ function OtherHeader({ profile, status, actions, busy, onAct }: {
         <div className="cs-identity-text">
           <h1 className="cs-identity-name">{profile.name}</h1>
           {profile.isTeacher && <div className="cs-identity-facts"><span className="cs-badge">Giáo viên</span></div>}
-          {status && <div className="cs-rel-status">{status}</div>}
-          {actions.length > 0 && (
-            <div className="cs-rel-actions">
-              {actions.map(a => (
-                <button key={a.id} type="button" disabled={busy} onClick={() => onAct(a.id)}
-                  className={'cs-btn cs-btn-sm ' + (a.tone === 'primary' ? 'cs-btn-primary' : a.tone === 'danger' ? 'cs-btn-ghost is-danger' : 'cs-btn-ghost')}>
-                  {a.label}
-                </button>
-              ))}
-            </div>
-          )}
+          {profile.relationship === 'incoming' && <div className="cs-rel-status">{profile.name} đã gửi cho bạn lời mời kết bạn</div>}
+          <RelationshipButton relationship={profile.relationship} name={profile.name} busy={busy} onAct={onAct} />
         </div>
       </div>
     </section>

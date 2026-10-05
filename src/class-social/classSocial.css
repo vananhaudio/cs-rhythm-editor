@@ -1365,3 +1365,34 @@ button.cs-subs-title:hover { color: var(--cs-accent); }
 .cs-quiz.is-passed { flex-direction: row; align-items: center; flex-wrap: wrap; gap: 10px; }
 .cs-quiz .lt-chip svg { vertical-align: -3px; }
 .cs-quiz-note { font-size: 14px; color: var(--cs-muted); }
+
+/* ── Friends UX V2: trung tâm bạn bè + nút quan hệ kiểu Facebook ─────────────── */
+.cs-person .cs-avatar { flex-shrink: 0; }                 /* tên dài không bóp méo avatar */
+.cs-person-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cs-person-sub { font-size: 13px; color: var(--cs-muted); font-weight: 500; }
+.cs-person-friend { flex-wrap: nowrap; }                  /* hàng bạn bè: ⋯ luôn cùng dòng với tên */
+.cs-person-more .cs-more-btn { width: 40px; height: 40px; }
+.cs-rel-notice {
+  margin: 0; padding: 10px 12px; border-radius: 10px;
+  background: var(--cs-ok-soft); color: var(--cs-ok); font-size: 14px; font-weight: 600;
+}
+.cs-rel-btn { min-width: 0; }
+.cs-rel-chev { margin-left: -2px; }
+.cs-rel-menu { position: fixed; z-index: 70; right: auto; min-width: 220px; }   /* top/left theo nút (inline) */
+.cs-rel-menu .cs-more-item { padding: 11px 12px; font-size: 15px; }
+.cs-rel-sheet-backdrop, .cs-rel-sheet-title { display: none; }
+.cs-btn-danger { background: #b42318; color: #fff; }
+.cs-btn-danger:hover:not(:disabled) { background: #912018; }
+.cs-confirm h2 { overflow-wrap: anywhere; }
+.cs-confirm-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (max-width: 1023px) {
+  .cs-person-actions .cs-btn, .cs-rel-actions .cs-btn { height: 40px; font-size: 14px; }   /* vùng chạm đủ lớn */
+  /* Action sheet đáy màn hình (như Facebook): mục to, dễ chạm */
+  .cs-rel-sheet-backdrop { display: block; position: fixed; inset: 0; z-index: 69; background: rgba(28, 24, 48, 0.42); }
+  .cs-rel-menu {
+    top: auto !important; left: 0 !important; right: 0; bottom: 0; min-width: 0;
+    border-radius: 18px 18px 0 0; padding: 8px 10px calc(10px + env(safe-area-inset-bottom, 0px));
+  }
+  .cs-rel-sheet-title { display: block; padding: 10px 12px 6px; font-size: 13px; font-weight: 700; color: var(--cs-muted); overflow-wrap: anywhere; }
+  .cs-rel-menu .cs-more-item { padding: 14px 12px; font-size: 16px; }
+}

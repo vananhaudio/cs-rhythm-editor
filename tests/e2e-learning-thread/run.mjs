@@ -539,7 +539,7 @@ try {
     await c.goto(ME + '/u/aaaaaaaa-0000-4000-8000-00000000000a', { waitUntil: 'networkidle0' })
     await clickText(c, 'Kết bạn'); await waitText(c, /Đã gửi lời mời/)
     await a.goto(ME + '/friends', { waitUntil: 'networkidle0' })
-    await clickText(a, 'Chấp nhận'); await waitText(a, /Tất cả bạn bè/)
+    await clickText(a, 'Xác nhận'); await waitText(a, /Tất cả bạn bè/)
     await c.goto(ME + '?feed=friends', { waitUntil: 'networkidle0' }); await c.waitForSelector('.cs-feed-tabs'); await settleFeed(c)
     assert.equal(await pressedFeed(c), 'Bạn bè')
     await c.waitForSelector('.cs-feed .cs-post-author', { timeout: 15000 })
@@ -551,7 +551,9 @@ try {
     ok('Feed V1: C–A thành bạn → tab Bạn bè của C có bài + câu chuyện của A; không có người không phải bạn / thread "Chỉ Thầy"')
     // Huỷ kết bạn → biến mất khỏi tab Bạn bè
     await c.goto(ME + '/u/aaaaaaaa-0000-4000-8000-00000000000a', { waitUntil: 'networkidle0' })
-    await clickText(c, 'Huỷ kết bạn'); await waitText(c, /Kết bạn/)
+    // Friends UX V2: [Bạn bè ▾] → Huỷ kết bạn → hộp xác nhận → Huỷ kết bạn
+    await clickText(c, 'Bạn bè', '.cs-rel-btn'); await clickText(c, 'Huỷ kết bạn', '.cs-rel-menu button')
+    await clickText(c, 'Huỷ kết bạn', '.cs-confirm button'); await waitText(c, /Đã huỷ kết bạn với/)
     await c.goto(ME + '?feed=friends', { waitUntil: 'networkidle0' }); await c.waitForSelector('.cs-feed-tabs'); await settleFeed(c)
     await waitText(c, /Chưa có hoạt động mới từ bạn bè\./)
     ok('Feed V1: huỷ kết bạn → tab Bạn bè không còn hoạt động của người đó')

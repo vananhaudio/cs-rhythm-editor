@@ -1,5 +1,5 @@
 // Mảnh giao diện dùng chung trong Class Social.
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import { ArrowLeft } from 'lucide-react'
 import { safeImageUrl } from './media/safeImageUrl'
@@ -93,5 +93,40 @@ export function MoreMenu({ label, items, trigger, className }: {
         </div>
       )}
     </div>
+  )
+}
+
+/** Hộp hỏi lại trước hành động khó hoàn tác (vd. Huỷ kết bạn). Esc / bấm nền = Huỷ; nút Huỷ nhận focus đầu. */
+export function ConfirmDialog({ title, children, confirmLabel, cancelLabel = 'Huỷ', danger = false, busy = false, onConfirm, onCancel }: {
+  title: string
+  children: ReactNode
+  confirmLabel: string
+  cancelLabel?: string
+  danger?: boolean
+  busy?: boolean
+  onConfirm: () => void
+  onCancel: () => void
+}) {
+  const id = useId()
+  const cancelRef = useRef<HTMLButtonElement>(null)
+  useEffect(() => { cancelRef.current?.focus() }, [])
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && !busy) onCancel() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [busy, onCancel])
+  return (
+    <>
+      <div className="cs-dialog-backdrop" onClick={() => { if (!busy) onCancel() }} />
+      <div className="cs-dialog cs-confirm" role="alertdialog" aria-modal="true" aria-labelledby={id + 't'} aria-describedby={id + 'd'}>
+        <h2 id={id + 't'}>{title}</h2>
+        <p id={id + 'd'}>{children}</p>
+        <div className="cs-confirm-actions">
+          <button ref={cancelRef} type="button" className="cs-btn cs-btn-ghost" onClick={onCancel} disabled={busy}>{cancelLabel}</button>
+          <button type="button" className={'cs-btn ' + (danger ? 'cs-btn-danger' : 'cs-btn-primary')} onClick={onConfirm}
+            disabled={busy} aria-busy={busy}>{busy ? 'Đang xử lý…' : confirmLabel}</button>
+        </div>
+      </div>
+    </>
   )
 }

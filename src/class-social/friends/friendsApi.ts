@@ -5,7 +5,7 @@ import { friendlyError, toFeedEntries, toFeedPosts, type FeedEntry, type FeedPos
 import { FEED_PAGE, type Result } from '../posts/postsApi'
 import {
   toPeople, toProfile, toRelationship,
-  type FriendRow, type PersonCard, type ProfileRow, type PublicProfile, type RequestRow, type Relationship,
+  type FriendAction, type FriendRow, type PersonCard, type ProfileRow, type PublicProfile, type RequestRow, type Relationship,
 } from './friendModel'
 
 const online = () => (typeof navigator === 'undefined' ? true : navigator.onLine !== false)
@@ -46,6 +46,12 @@ export async function fetchIncomingRequests(): Promise<Result<PersonCard[]>> {
   return r.ok ? { ok: true, value: toPeople(r.value) } : r
 }
 
+/** Lời mời MÌNH đã gửi, chưa được chấp nhận (Friends UX V2) */
+export async function fetchOutgoingRequests(): Promise<Result<PersonCard[]>> {
+  const r = await rpc<RequestRow[]>('outgoing_friend_requests', {}, 'load')
+  return r.ok ? { ok: true, value: toPeople(r.value) } : r
+}
+
 /** null = không có thành viên này (hoặc mình không phải thành viên Class) */
 export async function fetchProfile(userId: string): Promise<Result<PublicProfile | null>> {
   const r = await rpc<ProfileRow[]>('get_user_profile', { p_user: userId }, 'load')
@@ -81,8 +87,19 @@ const relResult = (r: Result<unknown>): Result<Relationship> => (r.ok ? { ok: tr
 
 export const sendFriendRequest = async (userId: string) =>
   relResult(await rpc('send_friend_request', { p_user: userId }, 'action'))
+/** accept=false = "Xóa" lời mời: DB xoá lời mời ở cả hai phía (như Facebook) */
 export const respondFriendRequest = async (userId: string, accept: boolean) =>
   relResult(await rpc('respond_friend_request', { p_user: userId, p_accept: accept }, 'action'))
-/** Huỷ kết bạn, hoặc rút lại lời mời mình đã gửi */
+/** Huỷ kết bạn, hoặc rút lại lời mời mình đã gửi (cùng RPC unfriend) */
 export const unfriend = async (userId: string) =>
   relResult(await rpc('unfriend', { p_user: userId }, 'action'))
+
+/** Một hành động quan hệ → đúng RPC. Trả quan hệ MỚI do DB báo. */
+export function runFriendAction(action: FriendAction, userId: string): Promise<Result<Relationship>> {
+  switch (action) {
+    case 'send': return sendFriendRequest(userId)
+    case 'accept': return respondFriendRequest(userId, true)
+    case 'decline': return respondFriendRequest(userId, false)
+    case 'cancel': case 'unfriend': return unfriend(userId)
+  }
+}

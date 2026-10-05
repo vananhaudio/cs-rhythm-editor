@@ -77,6 +77,8 @@ if [ -n "${E2E_CHECKPOINTS:-}" ]; then
   psqld -c "begin;" -f "$ROOT/db/quiz_checkpoint_v1_setup.sql" -c "commit;" >/dev/null
   echo "── + Lớp của tôi V1 (checkpoint + tiến độ buổi) + Quiz Checkpoint V1"
 fi
+# Tuỳ chọn: E2E_PRE_SQL = migration tính năng mới, chạy TRƯỚC mọi kịch bản (một transaction như prod-db) → kịch bản cũ là hồi quy
+if [ -n "${E2E_PRE_SQL:-}" ]; then psqld -1 -f "$E2E_PRE_SQL" >/dev/null; echo "── + $(basename "$E2E_PRE_SQL")"; fi
 echo "── DB local sẵn sàng (migration P1 + P2 + Lớp học V1 + Feed V1 + Danh tính học tập V1 + 2 bài đã cấu hình)"
 
 SECRET="e2e-local-secret-e2e-local-secret-0000000"
