@@ -6,6 +6,7 @@ import { scoreIdFromSearch } from './viewScore.ts'
 import { sectionFromSearch, sectionUrl } from './sections.ts'
 import type { ThuVienSection } from './sections.ts'
 import type { ChordLibrary } from './chordLibrary.ts'
+import { productionMeasureAnalyzer } from './measureAnalysis.ts'
 import type { MeasureAnalyzer } from './measureAnalysis.ts'
 import ThuVienTabs from './ThuVienTabs.tsx'
 import './ThuVienPage.css'
@@ -18,7 +19,11 @@ const ChordLibraryPage = lazy(() => import('./ChordLibraryPage.tsx'))
 type Prepared = ReturnType<typeof prepareMusicXml>
 
 /** /thuvien có hai mục; mỗi mục tự lo phần của mình. Mục MusicXML giữ nguyên hành vi cũ. */
-export default function ThuVienPage({ chordLibrary, measureAnalyzer }: { chordLibrary?: ChordLibrary; measureAnalyzer?: MeasureAnalyzer } = {}) {
+// Worker phân tích vạch nhịp production: chỉ khi build có VITE_MEASURE_ANALYZER_URL (https). Token = phiên Supabase hiện tại.
+const PRODUCTION_ANALYZER = productionMeasureAnalyzer(import.meta.env.VITE_MEASURE_ANALYZER_URL,
+  async () => (await (await import('../supabase.ts')).supabase.auth.getSession()).data.session?.access_token ?? null)
+
+export default function ThuVienPage({ chordLibrary, measureAnalyzer = PRODUCTION_ANALYZER }: { chordLibrary?: ChordLibrary; measureAnalyzer?: MeasureAnalyzer } = {}) {
   const [section, setSection] = useState<ThuVienSection>(() => sectionFromSearch(window.location.search))
 
   useEffect(() => {

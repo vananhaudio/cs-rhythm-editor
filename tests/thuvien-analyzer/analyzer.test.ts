@@ -2,13 +2,13 @@
 // Golden thật (ảnh + lời có bản quyền, NGOÀI git) chỉ chạy khi có MEASURE_GOLDEN_DIR.
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { after, test } from 'node:test'
 import { fileURLToPath } from 'node:url'
-import { analysisLineCounts, createHttpMeasureAnalyzer, parseAnalysisResult } from '../../src/thuvien/measureAnalysis.ts'
-import { runAnalyzer } from './harness.ts'
+import { analysisLineCounts, createHttpMeasureAnalyzer, createWorkerMeasureAnalyzer, parseAnalysisResult, productionMeasureAnalyzer } from '../../src/thuvien/measureAnalysis.ts'
+import { runAnalyzer, runAnalyzerRaw } from './harness.ts'
 
 const SYNTH = fileURLToPath(new URL('../../tools/measure-analyzer/synth.py', import.meta.url))
 const dir = mkdtempSync(join(tmpdir(), 'measure-synth-'))
@@ -99,6 +99,39 @@ test('lệch số chữ chỉ ảnh hưởng CỤC BỘ: lời chuẩn thiếu m
   assert.match(b.review.notes.join(' '), /không khớp lời chuẩn/)
 })
 
+test('PDF VECTOR nhiều trang: mỗi trang render RIÊNG (-f n -l n), ≤ 2 lần/trang — chống tái phát lỗi O(n²) render lại cả tài liệu', async () => {
+  const pdf = sheet([['w', '|', 'w', 'w', '|', 'w', 's', 'w'], ['w', 'w', '|', '|', 'w', 'w']], { pages: 4 }, 'vector.pdf')
+  const shim = mkdtempSync(join(tmpdir(), 'poppler-shim-'))
+  const log = join(shim, 'calls.log')
+  const real = execFileSync('sh', ['-c', 'command -v pdftoppm']).toString().trim()
+  writeFileSync(join(shim, 'pdftoppm'), `#!/bin/sh\necho "$@" >> "${log}"\nexec "${real}" "$@"\n`, { mode: 0o755 })
+  try {
+    const raw = await runAnalyzerRaw({ sources: [{ path: pdf, mime: 'application/pdf' }], lineTokenCounts: [5, 4, 5, 4, 5, 4, 5, 4] }, { ...process.env, PATH: `${shim}:${process.env.PATH}` }) as { ok: boolean; diagnostics: { pages: number } }
+    assert.equal(raw.ok, true)
+    assert.equal(raw.diagnostics.pages, 4)
+    const calls = readFileSync(log, 'utf8').trim().split('\n')
+    assert.ok(calls.length <= 2 * 4, `${calls.length} lần render cho 4 trang`)
+    for (const call of calls) assert.match(call, /-f (\d+) -l \1 /, 'mỗi lệnh render đúng MỘT trang')
+  } finally { rmSync(shim, { recursive: true, force: true }) }
+})
+
+test('giới hạn tài nguyên: PDF > 10 trang / ảnh > 40 MP / PDF hỏng → lỗi có mã, không treo, không lộ đường dẫn', async () => {
+  const many = sheet([['w', '|', 'w']], { pages: 11 }, 'vector.pdf')
+  assert.deepEqual(pick(await runAnalyzerRaw({ sources: [{ path: many, mime: 'application/pdf' }], lineTokenCounts: [2] })), { ok: false, code: 'too_large' })
+  const bomb = join(dir, 'bomb.png')
+  execFileSync('python3', ['-c', `from PIL import Image; Image.new('L', (7000, 7000), 255).save(${JSON.stringify(bomb)})`])
+  const big = await runAnalyzerRaw({ sources: [{ path: bomb, mime: 'image/png' }], lineTokenCounts: [2] }) as { error: { message: string } }
+  assert.deepEqual(pick(big), { ok: false, code: 'too_large' })
+  assert.doesNotMatch(big.error.message, /\//, 'thông báo không chứa đường dẫn')
+  const broken = join(dir, 'broken.pdf')
+  writeFileSync(broken, '%PDF-1.4 rác không phải PDF')
+  assert.deepEqual(pick(await runAnalyzerRaw({ sources: [{ path: broken, mime: 'application/pdf' }], lineTokenCounts: [2] })), { ok: false, code: 'bad_pdf' })
+  const raw = await runAnalyzerRaw({ sources: [{ path: bomb.replace('bomb', 'khong-co'), mime: 'image/png' }], lineTokenCounts: [2] }) as { diagnostics: { generator: string } }
+  assert.deepEqual(pick(raw), { ok: false, code: 'unsupported' })
+  assert.equal(raw.diagnostics.generator, 'measure-analyzer/0.2.0', 'lỗi cũng mang phiên bản analyzer')
+})
+const pick = (raw: unknown) => { const r = raw as { ok: boolean; error?: { code: string } }; return { ok: r.ok, code: r.error?.code } }
+
 test('thất bại có cấu trúc: trang trắng → ok:false (không đoán)', async () => {
   const blank = join(dir, 'blank.png')
   execFileSync('python3', ['-c', `from PIL import Image; Image.new('L', (600, 800), 250).save(${JSON.stringify(blank)})`])
@@ -125,12 +158,40 @@ test('adapter HTTP: health + POST /analyze (base64, số chữ mỗi dòng); m�
   }) as typeof fetch
   const analyzer = createHttpMeasureAnalyzer('http://x', fetcher)
   assert.equal(await analyzer.available(), true)
-  const r = await analyzer.analyze({ files: [{ name: 'a.png', mime: 'image/png', data: new Blob(['abc']) }], text: TEXT_5_4, meter: null })
+  const r = await analyzer.analyze({ versionId: 'v', loadFiles: async () => [{ name: 'a.png', mime: 'image/png', data: new Blob(['abc']) }], text: TEXT_5_4, meter: null })
   assert.ok(r.ok)
   assert.deepEqual(calls[1].body, { files: [{ mime: 'image/png', base64: 'YWJj' }], lineTokenCounts: [5, 4], lineTokenLengths: [[3, 3, 2, 3, 3], [3, 3, 3, 4]], meter: null, traceId: null })
   const down = createHttpMeasureAnalyzer('http://x', (async () => { throw new Error('ECONNREFUSED') }) as typeof fetch)
   assert.equal(await down.available(), false)
-  assert.equal((await down.analyze({ files: [], text: TEXT_5_4, meter: null })).ok, false)
+  assert.equal((await down.analyze({ versionId: 'v', loadFiles: async () => [], text: TEXT_5_4, meter: null })).ok, false)
+})
+
+test('adapter PRODUCTION: chỉ gửi { versionId } + Bearer JWT phiên hiện tại; không https / không có URL → không có analyzer (nút khoá, không rơi về localhost)', async () => {
+  const calls: { url: string; init?: RequestInit }[] = []
+  const fetcher = (async (url: string, init?: RequestInit) => {
+    calls.push({ url, init })
+    if (url.endsWith('/health')) return new Response(JSON.stringify({ ok: true, version: 'measure-analyzer/0.2.0' }))
+    return new Response(JSON.stringify({ ok: true, anchors: { measures: [A(0, 1)] }, confidence: { overall: 'HIGH', measures: [] }, review: { needsReview: false, measures: [], notes: [] }, diagnostics: {} }))
+  }) as typeof fetch
+  const analyzer = createWorkerMeasureAnalyzer('https://worker.example/', async () => 'jwt-cua-phien', fetcher)
+  assert.equal(await analyzer.available(), true)
+  let loaded = false
+  const r = await analyzer.analyze({ versionId: '11111111-1111-4111-8111-111111111111', text: TEXT_5_4, meter: null, loadFiles: async () => { loaded = true; return [] } })
+  assert.ok(r.ok)
+  assert.equal(calls[1].url, 'https://worker.example/analyze-measures')
+  assert.equal(calls[1].init!.body, JSON.stringify({ versionId: '11111111-1111-4111-8111-111111111111' }), 'không gửi lời / file / đường dẫn / uid')
+  assert.equal((calls[1].init!.headers as Record<string, string>).authorization, 'Bearer jwt-cua-phien')
+  assert.equal(loaded, false, 'không đọc byte file trong browser')
+  const noSession = createWorkerMeasureAnalyzer('https://worker.example', async () => null, fetcher)
+  assert.deepEqual(await noSession.analyze({ versionId: 'v', text: TEXT_5_4, meter: null, loadFiles: async () => [] }), { ok: false, error: { code: 'unauthorized', message: 'Cần đăng nhập lại để phân tích.' } })
+  const token = async () => 'x'
+  assert.equal(productionMeasureAnalyzer(undefined, token), undefined)
+  assert.equal(productionMeasureAnalyzer('', token), undefined)
+  assert.equal(productionMeasureAnalyzer('http://127.0.0.1:54398', token), undefined, 'không bao giờ dùng cầu dev')
+  assert.ok(productionMeasureAnalyzer('https://mac-mini.example.ts.net', token))
+  const offline = createWorkerMeasureAnalyzer('https://worker.example', token, (async () => { throw new Error('offline') }) as typeof fetch)
+  assert.equal(await offline.available(), false)
+  assert.equal((await offline.analyze({ versionId: 'v', text: TEXT_5_4, meter: null, loadFiles: async () => [] })).ok, false)
 })
 
 const goldDir = process.env.MEASURE_GOLDEN_DIR

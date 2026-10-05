@@ -9,8 +9,10 @@ import type { ChordAnchors } from './chordAnchors.ts'
 export type AnalysisConfidence = 'HIGH' | 'MEDIUM' | 'LOW'
 
 export type MeasureAnalysisInput = {
-  /** File sheet nguồn: PNG/JPEG/WebP; PDF nếu analyzer rasterize được. */
-  files: { name: string; mime: string; data: Blob }[]
+  /** Phiên bản cần phân tích — worker production CHỈ nhận trường này, tự lấy lời + nguồn từ DB bằng JWT người gọi. */
+  versionId: string
+  /** Tải file sheet nguồn (PNG/JPEG/WebP/PDF) — chỉ adapter dev/cục bộ gọi; production không gửi byte file từ browser. */
+  loadFiles: () => Promise<{ name: string; mime: string; data: Blob }[]>
   /** Lời + hợp âm CHUẨN của phiên bản — token hoá bằng tokenizer của app (analysisLineCounts), không tách lại nơi khác. */
   text: string
   meter: { beats: number; beatType: number } | null
@@ -90,7 +92,7 @@ const toBase64 = async (blob: Blob) => {
   return btoa(text)
 }
 
-/** Analyzer qua HTTP (POST /analyze, GET /health). Dev: cầu cục bộ; sau này: worker/cloud — UI không đổi. */
+/** Analyzer DEV qua cầu cục bộ (POST /analyze kèm byte file + số chữ). CHỈ trang thử dùng — production dùng createWorkerMeasureAnalyzer. */
 export function createHttpMeasureAnalyzer(baseUrl: string, fetcher: typeof fetch = (...args) => fetch(...args)): MeasureAnalyzer {
   return {
     async available() {
@@ -108,7 +110,7 @@ export function createHttpMeasureAnalyzer(baseUrl: string, fetcher: typeof fetch
         const reply = await fetcher(`${baseUrl}/analyze`, {
           method: 'POST', headers: { 'content-type': 'application/json' },
           body: JSON.stringify({
-            files: await Promise.all(input.files.map(async file => ({ mime: file.mime, base64: await toBase64(file.data) }))),
+            files: await Promise.all((await input.loadFiles()).map(async file => ({ mime: file.mime, base64: await toBase64(file.data) }))),
             lineTokenCounts: analysisLineCounts(input.text), lineTokenLengths: analysisTokenLengths(input.text), meter: input.meter, traceId: input.traceId ?? null,
           }),
         })
@@ -119,4 +121,51 @@ export function createHttpMeasureAnalyzer(baseUrl: string, fetcher: typeof fetch
       return parseAnalysisResult(raw, input.text)
     },
   }
+}
+
+/**
+ * Analyzer PRODUCTION: worker riêng (Mac mini / sau này cloud) — POST /analyze-measures { versionId } kèm
+ * Authorization: Bearer <JWT phiên hiện tại>. Browser KHÔNG gửi lời, đường dẫn, byte file, uid hay vai trò:
+ * worker tự xác thực + kiểm quyền review + đọc phiên bản/nguồn private bằng chính JWT đó.
+ * Không phân tích được (offline, hết phiên, lỗi) → ok:false; trình sửa thủ công vẫn dùng bình thường.
+ */
+export function createWorkerMeasureAnalyzer(baseUrl: string, getToken: () => Promise<string | null>, fetcher: typeof fetch = (...args) => fetch(...args)): MeasureAnalyzer {
+  const base = baseUrl.replace(/\/$/, '')
+  return {
+    async available() {
+      try {
+        const controller = new AbortController()
+        const timer = setTimeout(() => controller.abort(), 3000)
+        const reply = await fetcher(`${base}/health`, { signal: controller.signal })
+        clearTimeout(timer)
+        return reply.ok && (await reply.json() as { ok?: boolean }).ok === true
+      } catch { return false }
+    },
+    async analyze(input) {
+      const token = await getToken().catch(() => null)
+      if (!token) return { ok: false, error: { code: 'unauthorized', message: 'Cần đăng nhập lại để phân tích.' } }
+      let raw: unknown
+      try {
+        const controller = new AbortController()
+        const timer = setTimeout(() => controller.abort(), 40_000)
+        const reply = await fetcher(`${base}/analyze-measures`, {
+          method: 'POST', signal: controller.signal,
+          headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+          body: JSON.stringify({ versionId: input.versionId }),
+        })
+        clearTimeout(timer)
+        raw = await reply.json().catch(() => ({ ok: false, error: { code: 'upstream', message: `Máy phân tích trả ${reply.status}.` } }))
+      } catch {
+        return { ok: false, error: { code: 'unreachable', message: 'Không gọi được máy phân tích — vẫn đặt vạch thủ công được.' } }
+      }
+      return parseAnalysisResult(raw, input.text)
+    },
+  }
+}
+
+/** Analyzer cho bản build: CHỈ khi có VITE_MEASURE_ANALYZER_URL dạng https — không có thì undefined (nút Phân tích khoá).
+ *  Không bao giờ rơi về localhost / cầu dev. */
+export function productionMeasureAnalyzer(url: string | undefined, getToken: () => Promise<string | null>): MeasureAnalyzer | undefined {
+  if (!url || !/^https:\/\/[^/\s]+/.test(url)) return undefined
+  return createWorkerMeasureAnalyzer(url, getToken)
 }

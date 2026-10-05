@@ -52,3 +52,4 @@ docs/musicxml-beats-mvp/output/*
 __pycache__/
 *.py[cod]
 tests/class-mail/.fixture.json
+build/

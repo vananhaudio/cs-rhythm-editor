@@ -42,7 +42,9 @@
     "test:band": "tsx --tsconfig tsconfig.app.json --test tests/band/*.test.tsx",
     "test:class-lead": "tsc -p tests/class-lead/tsconfig.json && node --experimental-strip-types --test tests/class-lead/lead.test.ts",
     "test:og": "tsc -p tests/og/tsconfig.json && tsx --test tests/og/*.test.ts",
-    "test:analyzer": "node --experimental-strip-types --no-warnings --test tests/thuvien-analyzer/*.test.ts"
+    "test:analyzer": "node --experimental-strip-types --no-warnings --test tests/thuvien-analyzer/*.test.ts",
+    "test:worker": "tsc -p services/measure-analyzer/tsconfig.json && node --experimental-strip-types --no-warnings --test tests/measure-worker/*.test.ts",
+    "build:worker": "node services/measure-analyzer/build.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.0",
