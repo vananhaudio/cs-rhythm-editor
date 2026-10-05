@@ -40,6 +40,15 @@ test("ngoài phạm vi: native, timming., localhost → null (giữ routing cũ:
   assert.equal(r("timming.vananhaudio.com", "/me"), null);
   assert.equal(r("localhost", "/me"), null);
   assert.equal(r("class2-site.netlify.app", "/me"), null);
+  assert.equal(r("reliable-genie-43d4dc.netlify.app", "/me"), null);       // tên site trần ≠ draft
+  assert.equal(r("main--x.netlify.app", "/me"), null);                      // branch deploy không phải draft id
+});
+
+test("draft Netlify (<deploy id>--site.netlify.app) = Class Social như class.* → /me/bands/<slug> mở được để nghiệm thu", () => {
+  const h = "6ac33b4108ef3644873c08df--reliable-genie-43d4dc.netlify.app";
+  assert.deepEqual(r(h, "/me"), { kind: "social", section: "home" });
+  assert.notEqual(r(h, "/me/bands/la-mua-thu"), null);
+  assert.equal(r(h, "/me", "", true), null);
 });
 
 test("class.* nhưng không phải /me → null (không cướp route khác)", () => {

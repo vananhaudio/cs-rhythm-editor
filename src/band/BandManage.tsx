@@ -5,9 +5,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ArrowLeft, ExternalLink, Phone, Plus, UserPlus, Users, X } from 'lucide-react'
 import { EmptyState } from '../class-social/ui'
+import EntityImageField from '../EntityImageField'
 import { BandApplicationsView } from './BandAdmin'
 import {
-  acceptApplication, addMember, fetchAdminBandDetail, fetchBandOverview, setApplicationStatus, setMemberRole, updateMember,
+  acceptApplication, addMember, fetchAdminBandDetail, fetchBandOverview, setApplicationStatus, setBandCover, setMemberRole, updateMember,
   type MemberPatch, type NewMember, type Result,
 } from './bandApi'
 import {
@@ -19,9 +20,18 @@ export type BandTab = 'applications' | 'members' | 'org'
 type Load<T> = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; value: T }
 
 // ── Đầu trang ────────────────────────────────────────────────────────────────
-export function BandManageHeader({ o }: { o: BandOverview }) {
+export function BandManageHeader({ o, onCover }: { o: BandOverview; onCover?: (url: string | null) => Promise<string | null> }) {
   return (
     <section className="cs-card cs-band-mhead" aria-label="Thông tin Band">
+      {o.band.canEditCover && onCover ? (
+        <div className="cs-band-mhead-cover">
+          <EntityImageField value={o.band.coverUrl} prefix={`band-${o.band.id}`} label="Ảnh bìa Band"
+            hint="Hiện ở trang tuyển và khi chia sẻ link Band (Zalo, Facebook…). JPG/PNG, nên ngang 1200×630."
+            onChange={onCover} />
+        </div>
+      ) : o.band.coverUrl ? (
+        <img className="cs-band-mhead-cover-img" src={o.band.coverUrl} alt="" />
+      ) : null}
       <dl className="cs-band-mhead-facts">
         <div><dt>Leader</dt><dd>{o.band.leaderName ?? 'Chưa có'}</dd></div>
         <div><dt>Lịch cố định</dt><dd>{o.band.scheduleText ?? 'Chưa có lịch'}</dd></div>
@@ -360,7 +370,7 @@ export default function BandManagePage({ slug, onBack }: { slug: string; onBack:
       {ov.status === 'error' && <p className="cs-form-error" role="alert">{ov.message}</p>}
       {o && (
         <>
-          <BandManageHeader o={o} />
+          <BandManageHeader o={o} onCover={async url => { const r = await after(await setBandCover(o.band.id, url)); return r.ok ? null : r.message }} />
           <BandTabs tab={tab} onTab={setTab} o={o} />
           <div role="tabpanel" className="cs-band-tabpanel">
             {tab === 'applications' && (

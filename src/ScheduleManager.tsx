@@ -8,6 +8,7 @@ import { buildClassCode, dangLop, soFromClassCode } from './hanhtrinh'
 import { generateSessions, isOpenEnded, realEndDate, realStartDate, scheduleRangeText, scheduleText, fmtDMY, progressInfo, WEEKDAYS, STATUS, statusInfo, type SessionRow } from './journey/sessions'
 import { planSessionSync, type StoredSession } from './journey/sessionSync'
 import CalendarWeek from './journey/CalendarWeek'
+import EntityImageField from './EntityImageField'
 import ScheduleDashboard from './journey/ScheduleDashboard'
 import JourneyMap from './journey/JourneyMap'
 import DemandsBoard from './journey/DemandsBoard'
@@ -49,6 +50,8 @@ interface Cls {
   show_on_practice_schedule: boolean; stage: string | null; practice_type: string | null; metadata: Record<string, unknown>
   // ── Tuyển sinh public (09/2026): cohort thuộc sản phẩm nào + đang tuyển không ──
   public_product: PublicProductKey | null; public_enroll: boolean
+  // ── Ảnh bìa lớp (entity_cover_v1): trống → ảnh khoá chính; thẻ chia sẻ cùng đọc ──
+  cover_url: string | null
 }
 interface Course { id: string; name: string; code: string | null }
 interface Grp { id: string; name: string; code: string | null; group_type: string; zalo_url: string | null; is_active?: boolean }
@@ -64,6 +67,7 @@ const blank = (): Cls => ({
   stage: null, practice_type: null, metadata: {},
   show_on_practice_schedule: false,
   public_product: null, public_enroll: false,
+  cover_url: null,
 })
 
 export default function ScheduleManager() {
@@ -194,6 +198,7 @@ export default function ScheduleManager() {
       // Tuyển sinh public: không có sản phẩm thì không thể đang tuyển
       public_product: form.public_product || null,
       public_enroll: !!form.public_product && !!form.public_enroll,
+      cover_url: form.cover_url || null,
     }
     let classId = form.id
     if (form.id) {
@@ -347,6 +352,11 @@ export default function ScheduleManager() {
               <div style={{ gridColumn: '1 / 3' }}><label style={lbl}>Tên lớp *</label><input style={inp} value={form.name} onChange={e => set({ name: e.target.value })} placeholder="Khởi đầu đam mê – Đệm hát TĐ1" /></div>
               <div><label style={lbl}>Học phí</label><input style={inp} value={form.price ?? ''} onChange={e => set({ price: e.target.value })} placeholder="990k / Combo" /></div>
               <div><label style={lbl}>Link Zoom (tuỳ chọn)</label><input style={inp} value={form.zoom_url ?? ''} onChange={e => set({ zoom_url: e.target.value })} placeholder="https://zoom.us/j/..." /></div>
+              <div style={{ gridColumn: '1 / 3' }}>
+                <EntityImageField value={form.cover_url ?? null} prefix={`class-${form.id || 'new'}`} label="Ảnh lớp (tuỳ chọn)"
+                  hint="Trống = dùng ảnh khoá chính. Dùng khi chia sẻ link lớp/buổi. Bấm Lưu để áp dụng."
+                  onChange={url => set({ cover_url: url })} />
+              </div>
 
               {/* ── TUYỂN SINH PUBLIC (class.vananhaudio.com) — tách khỏi lịch vận hành ── */}
               <div style={{ gridColumn: '1 / 3', border: `1px solid ${S.border}`, borderRadius: 10, padding: 12, background: '#F5F3FF' }}>

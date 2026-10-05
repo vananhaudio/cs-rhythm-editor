@@ -45,7 +45,8 @@ export function BandRecruitView({ data, submit, onReload, submitted, onSubmitted
 
   return (
     <div className="cs-band-page">
-      <section className="cs-band-hero">
+      <section className={'cs-band-hero' + (band.coverUrl ? ' has-cover' : '')}>
+        {band.coverUrl && <img className="cs-band-cover" src={band.coverUrl} alt={`Ảnh bìa ${band.name}`} />}
         <div className="cs-band-kicker">Ban nhạc · Tuyển thành viên</div>
         <h1 className="cs-band-name">{band.name}</h1>
         {band.tagline && <p className="cs-band-tagline">{band.tagline}</p>}

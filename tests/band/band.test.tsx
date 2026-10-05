@@ -408,3 +408,31 @@ test('REUSABILITY Quản lý: Band 2 có Saxophone/Violin/Cajon + vai trò riên
   for (const s of ['Bình', '9:00 Chủ Nhật', 'Saxophone', 'Violin', 'Trưởng nhóm', 'Âm thanh', 'tối đa 2', '1/2']) assert.ok(h.includes(s), 'Band 2 có: ' + s)
   for (const s of ['Lá Mùa Thu', 'Thứ Tư', 'Guitar đệm', 'Music Leader', 'Membership']) assert.ok(!h.includes(s), 'Band 2 KHÔNG có: ' + s)
 })
+
+// ── Entity Cover V1: ảnh bìa Band (bands.cover_url) — landing + thẻ chia sẻ cùng một nguồn ──
+const COVER = 'https://wojmdilyflffvdtpovmq.supabase.co/storage/v1/object/public/course-logos/band-b1-1.jpg'
+
+test('Ảnh bìa: parse chỉ nhận https; landing hiện ảnh khi có, không có thì không có thẻ ảnh', () => {
+  const withCover = model.parseBandPublic({ ...LMT_SERVER, band: { ...LMT_SERVER.band, cover_url: COVER } })!
+  assert.equal(withCover.band.coverUrl, COVER)
+  assert.equal(LMT.band.coverUrl, null)
+  assert.equal(model.parseBandPublic({ ...LMT_SERVER, band: { ...LMT_SERVER.band, cover_url: 'http://x/a.jpg' } })!.band.coverUrl, null)
+  const h = renderToStaticMarkup(<BandRecruitView data={withCover} submit={noSubmit} submitted={null} onSubmitted={() => {}} />)
+  assert.ok(h.includes(`src="${COVER}"`) && h.includes('has-cover'))
+  const plain = renderToStaticMarkup(<BandRecruitView data={LMT} submit={noSubmit} submitted={null} onSubmitted={() => {}} />)
+  assert.ok(!plain.includes('cs-band-cover'))
+})
+
+test('Ảnh bìa trong Quản lý: chỉ can_edit_cover (Thầy/admin) mới có nút tải; Leader chỉ xem ảnh', () => {
+  const admin = model.parseOverview({ ...OV_RAW, band: { ...OV_RAW.band, cover_url: COVER, can_edit_cover: true } })!
+  assert.equal(admin.band.coverUrl, COVER)
+  assert.equal(admin.band.canEditCover, true)
+  const ha = renderToStaticMarkup(<BandManageHeader o={admin} onCover={async () => null} />)
+  assert.ok(ha.includes('Ảnh bìa Band') && ha.includes('Đổi ảnh') && ha.includes('Gỡ ảnh'))
+  const leader = model.parseOverview({ ...OV_RAW, band: { ...OV_RAW.band, cover_url: COVER } })!
+  assert.equal(leader.band.canEditCover, false)
+  const hl = renderToStaticMarkup(<BandManageHeader o={leader} onCover={async () => null} />)
+  assert.ok(hl.includes(`src="${COVER}"`) && !hl.includes('Đổi ảnh'))
+  const none = renderToStaticMarkup(<BandManageHeader o={OV} onCover={async () => null} />)
+  assert.ok(!none.includes('Ảnh bìa Band') && !none.includes('<img'))
+})

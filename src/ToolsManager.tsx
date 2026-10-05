@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './supabase'
+import EntityImageField from './EntityImageField'
 
 const S = {
   bg: '#F4F4F5', surface: '#FFFFFF', surface2: '#FAFAFA',
@@ -27,6 +28,7 @@ const TOOL_STATUS_CFG: Record<ToolStatus, { label: string; color: string; bg: st
 interface Tool {
   id: string; icon: string; name: string; description: string | null
   category: string; route: string; tier: string; enabled: boolean; status: ToolStatus; order_index: number
+  image_url?: string | null   // ảnh công cụ (entity_cover_v1) — giao diện + thẻ chia sẻ cùng dùng
 }
 
 // Công cụ + bài luyện mặc định — tự upsert vào edu_tools nếu chưa có
@@ -75,6 +77,15 @@ export default function ToolsManager() {
     setTools(prev => prev.map(t => t.id === id ? { ...t, tier } : t))
     setChanged(prev => new Set([...prev, id]))
   }
+
+  // Ảnh công cụ lưu NGAY khi tải/gỡ (như logo khoá trong CourseEditor), không chờ nút Lưu
+  const setImage = async (id: string, image_url: string | null): Promise<string | null> => {
+    const { error } = await supabase.from('edu_tools').update({ image_url }).eq('id', id)
+    if (error) return 'Lưu ảnh lỗi: ' + error.message
+    setTools(prev => prev.map(t => t.id === id ? { ...t, image_url } : t))
+    return null
+  }
+  const [imageOpen, setImageOpen] = useState<string | null>(null)
 
   const handleSave = async () => {
     setSaving(true)
@@ -158,10 +169,12 @@ export default function ToolsManager() {
                   const tier = TIERS.find(t => t.id === tool.tier) ?? TIERS[0]
                   const isChanged = changed.has(tool.id)
                   return (
-                    <div key={tool.id} style={{ background: S.surface, border: `1px solid ${isChanged ? '#FCD34D' : S.border}`, borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14, opacity: tool.status === 'off' ? .5 : 1, boxShadow: S.shadow }}>
-                      <div style={{ width: 40, height: 40, borderRadius: 10, background: tool.status === 'on' ? S.accentLight : S.surface2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>
-                        {tool.icon}
-                      </div>
+                    <div key={tool.id}>
+                    <div style={{ background: S.surface, border: `1px solid ${isChanged ? '#FCD34D' : S.border}`, borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14, opacity: tool.status === 'off' ? .5 : 1, boxShadow: S.shadow }}>
+                      <button type="button" title="Ảnh công cụ" onClick={() => setImageOpen(imageOpen === tool.id ? null : tool.id)}
+                        style={{ width: 40, height: 40, borderRadius: 10, background: tool.status === 'on' ? S.accentLight : S.surface2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0, border: 'none', padding: 0, overflow: 'hidden', cursor: 'pointer' }}>
+                        {tool.image_url ? <img src={tool.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : tool.icon}
+                      </button>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontWeight: 600, fontSize: 15, color: tool.status !== 'off' ? S.text1 : S.text3, marginBottom: 2 }}>{tool.name}</div>
                         <div style={{ fontSize: 13, color: S.text3 }}>{tool.description}</div>
@@ -188,6 +201,14 @@ export default function ToolsManager() {
                           )
                         })}
                       </div>
+                    </div>
+                    {imageOpen === tool.id && (
+                      <div style={{ background: S.surface2, border: `1px solid ${S.border}`, borderTop: 'none', borderRadius: '0 0 12px 12px', padding: '12px 16px', marginTop: -6 }}>
+                        <EntityImageField value={tool.image_url ?? null} prefix={`tool-${tool.id}`} label="Ảnh công cụ"
+                          hint="Dùng khi chia sẻ link công cụ (Zalo, Facebook…). JPG/PNG, nên ngang 1200×630."
+                          onChange={url => setImage(tool.id, url)} />
+                      </div>
+                    )}
                     </div>
                   )
                 })}
