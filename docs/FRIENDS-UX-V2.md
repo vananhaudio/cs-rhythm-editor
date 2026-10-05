@@ -45,6 +45,7 @@ cũng sẽ FAIL vì md5 đã đổi) — đúng thứ tự là friends_wall → 
 - E2E: `PUPPETEER_DIR=… bash scripts/e2e-friends-v2.sh` (`E2E_FULL=1` chạy cả kịch bản cũ trên DB đã migrate).
   `scripts/e2e-learning-thread.sh` có thêm `E2E_PRE_SQL` (migration chạy trước mọi kịch bản).
 - Unit: `tests/class-social/friends-ux-v2.test.tsx`.
+- Smoke production (tự huỷ): `prod-db.py dryrun db/tests/friends_ux_v2_prod_smoke.sql` — 2 học sinh chọn động, luôn ROLLBACK.
 
 ## Deploy / rollback
 DB TRƯỚC frontend: `prod-db.py query preflight → dryrun setup → migrate setup → query postflight` (dấu vân tay
