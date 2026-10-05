@@ -379,8 +379,11 @@ function ChordEditor({ library, analyzer, readSource, versionId, onClose, onSave
     if (!analyzer || !detail || busy || analysis.state === 'running') return
     setAnalysis({ state: 'running' }); setMessage(''); setFailed('')
     try {
-      const files = await Promise.all(detail.sources.map(async source => ({ name: source.path.split('/').pop()!, mime: source.mime, data: await readSource(library, source.path) })))
-      const result = await analyzer.analyze({ files, text: detail.text, meter: detail.meter, traceId: detail.versionId })
+      const sources = detail.sources
+      const result = await analyzer.analyze({
+        versionId: detail.versionId, text: detail.text, meter: detail.meter, traceId: detail.versionId,
+        loadFiles: () => Promise.all(sources.map(async source => ({ name: source.path.split('/').pop()!, mime: source.mime, data: await readSource(library, source.path) }))),
+      })
       if (!result.ok) { setAnalysis({ state: 'failed', message: result.error.message }); return }
       // Đang có vạch (đang sửa dở hoặc đã lưu) → KHÔNG ghi đè: hỏi thầy dùng đề xuất hay giữ vạch hiện tại.
       const current = anchorEditing ? liveAnchors : detail.anchors

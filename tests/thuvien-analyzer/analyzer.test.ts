@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { after, test } from 'node:test'
 import { fileURLToPath } from 'node:url'
-import { analysisLineCounts, createHttpMeasureAnalyzer, parseAnalysisResult } from '../../src/thuvien/measureAnalysis.ts'
+import { analysisLineCounts, createHttpMeasureAnalyzer, createWorkerMeasureAnalyzer, parseAnalysisResult, productionMeasureAnalyzer } from '../../src/thuvien/measureAnalysis.ts'
 import { runAnalyzer, runAnalyzerRaw } from './harness.ts'
 
 const SYNTH = fileURLToPath(new URL('../../tools/measure-analyzer/synth.py', import.meta.url))
@@ -158,12 +158,40 @@ test('adapter HTTP: health + POST /analyze (base64, số chữ mỗi dòng); m�
   }) as typeof fetch
   const analyzer = createHttpMeasureAnalyzer('http://x', fetcher)
   assert.equal(await analyzer.available(), true)
-  const r = await analyzer.analyze({ files: [{ name: 'a.png', mime: 'image/png', data: new Blob(['abc']) }], text: TEXT_5_4, meter: null })
+  const r = await analyzer.analyze({ versionId: 'v', loadFiles: async () => [{ name: 'a.png', mime: 'image/png', data: new Blob(['abc']) }], text: TEXT_5_4, meter: null })
   assert.ok(r.ok)
   assert.deepEqual(calls[1].body, { files: [{ mime: 'image/png', base64: 'YWJj' }], lineTokenCounts: [5, 4], lineTokenLengths: [[3, 3, 2, 3, 3], [3, 3, 3, 4]], meter: null, traceId: null })
   const down = createHttpMeasureAnalyzer('http://x', (async () => { throw new Error('ECONNREFUSED') }) as typeof fetch)
   assert.equal(await down.available(), false)
-  assert.equal((await down.analyze({ files: [], text: TEXT_5_4, meter: null })).ok, false)
+  assert.equal((await down.analyze({ versionId: 'v', loadFiles: async () => [], text: TEXT_5_4, meter: null })).ok, false)
+})
+
+test('adapter PRODUCTION: chỉ gửi { versionId } + Bearer JWT phiên hiện tại; không https / không có URL → không có analyzer (nút khoá, không rơi về localhost)', async () => {
+  const calls: { url: string; init?: RequestInit }[] = []
+  const fetcher = (async (url: string, init?: RequestInit) => {
+    calls.push({ url, init })
+    if (url.endsWith('/health')) return new Response(JSON.stringify({ ok: true, version: 'measure-analyzer/0.2.0' }))
+    return new Response(JSON.stringify({ ok: true, anchors: { measures: [A(0, 1)] }, confidence: { overall: 'HIGH', measures: [] }, review: { needsReview: false, measures: [], notes: [] }, diagnostics: {} }))
+  }) as typeof fetch
+  const analyzer = createWorkerMeasureAnalyzer('https://worker.example/', async () => 'jwt-cua-phien', fetcher)
+  assert.equal(await analyzer.available(), true)
+  let loaded = false
+  const r = await analyzer.analyze({ versionId: '11111111-1111-4111-8111-111111111111', text: TEXT_5_4, meter: null, loadFiles: async () => { loaded = true; return [] } })
+  assert.ok(r.ok)
+  assert.equal(calls[1].url, 'https://worker.example/analyze-measures')
+  assert.equal(calls[1].init!.body, JSON.stringify({ versionId: '11111111-1111-4111-8111-111111111111' }), 'không gửi lời / file / đường dẫn / uid')
+  assert.equal((calls[1].init!.headers as Record<string, string>).authorization, 'Bearer jwt-cua-phien')
+  assert.equal(loaded, false, 'không đọc byte file trong browser')
+  const noSession = createWorkerMeasureAnalyzer('https://worker.example', async () => null, fetcher)
+  assert.deepEqual(await noSession.analyze({ versionId: 'v', text: TEXT_5_4, meter: null, loadFiles: async () => [] }), { ok: false, error: { code: 'unauthorized', message: 'Cần đăng nhập lại để phân tích.' } })
+  const token = async () => 'x'
+  assert.equal(productionMeasureAnalyzer(undefined, token), undefined)
+  assert.equal(productionMeasureAnalyzer('', token), undefined)
+  assert.equal(productionMeasureAnalyzer('http://127.0.0.1:54398', token), undefined, 'không bao giờ dùng cầu dev')
+  assert.ok(productionMeasureAnalyzer('https://mac-mini.example.ts.net', token))
+  const offline = createWorkerMeasureAnalyzer('https://worker.example', token, (async () => { throw new Error('offline') }) as typeof fetch)
+  assert.equal(await offline.available(), false)
+  assert.equal((await offline.analyze({ versionId: 'v', text: TEXT_5_4, meter: null, loadFiles: async () => [] })).ok, false)
 })
 
 const goldDir = process.env.MEASURE_GOLDEN_DIR

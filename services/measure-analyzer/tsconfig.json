@@ -1,0 +1,5 @@
+{
+  "extends": "../../tests/thuvien/tsconfig.json",
+  "compilerOptions": { "noEmit": true, "types": ["node", "vite/client"] },
+  "include": ["./*.ts", "../../tests/measure-worker/*.ts", "../../tests/thuvien-analyzer/*.ts", "../../src/thuvien/measureAnalysis.ts"]
+}
