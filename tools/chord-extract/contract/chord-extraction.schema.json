@@ -1,0 +1,596 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "chord-extraction/1",
+  "title": "Canonical extraction of a chord/lyric sheet (engine-neutral)",
+  "type": "object",
+  "required": [
+    "schema",
+    "extractionId",
+    "input",
+    "pipeline",
+    "pages",
+    "interpretation"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "chord-extraction/1"
+    },
+    "extractionId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "createdAt": {
+      "type": "string"
+    },
+    "input": {
+      "type": "object",
+      "required": [
+        "sha256",
+        "mime",
+        "bytes",
+        "pageCount"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "mime": {
+          "enum": [
+            "application/pdf",
+            "image/jpeg",
+            "image/png",
+            "image/webp"
+          ]
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "pageCount": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "pipeline": {
+      "type": "object",
+      "required": [
+        "engineVersion",
+        "stages",
+        "config",
+        "metrics",
+        "fallbackReasons",
+        "vision"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "engineVersion": {
+          "type": "string"
+        },
+        "stages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "stage",
+              "engine",
+              "version"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "stage": {
+                "enum": [
+                  "classify",
+                  "extract",
+                  "vision"
+                ]
+              },
+              "engine": {
+                "type": "string"
+              },
+              "version": {
+                "type": "string"
+              },
+              "model": {
+                "type": "string"
+              }
+            }
+          },
+          "description": "Tên/phiên bản engine, nhà cung cấp Vision và model CHỈ nằm ở đây. Chỉ ghi stage thực sự đã chạy."
+        },
+        "config": {
+          "type": "object",
+          "description": "Cấu hình hiệu lực (ngưỡng…) để hiệu chuẩn sau này"
+        },
+        "metrics": {
+          "type": "object",
+          "description": "Số đo trên kết quả local dùng để quyết định fallback"
+        },
+        "fallbackReasons": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "code",
+              "detail"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "code": {
+                "enum": [
+                  "LOW_OCR_CONFIDENCE",
+                  "HIGH_NOISE_RATIO",
+                  "STAFF_LYRIC_MISMATCH",
+                  "METADATA_MISSING",
+                  "USER_REQUESTED"
+                ]
+              },
+              "detail": {
+                "type": "string"
+              },
+              "metric": {
+                "type": "string"
+              },
+              "value": {},
+              "threshold": {}
+            }
+          }
+        },
+        "vision": {
+          "type": "object",
+          "required": [
+            "status"
+          ],
+          "properties": {
+            "status": {
+              "enum": [
+                "not_needed",
+                "skipped_no_provider",
+                "skipped_page_limit",
+                "skipped_no_pages",
+                "failed",
+                "ran"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "pages": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/page"
+      }
+    },
+    "interpretation": {
+      "$ref": "#/$defs/interpretation"
+    }
+  },
+  "$defs": {
+    "bbox": {
+      "type": "array",
+      "items": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1
+      },
+      "minItems": 4,
+      "maxItems": 4,
+      "description": "[x,y,w,h] chuẩn hoá theo trang, gốc trên-trái"
+    },
+    "page": {
+      "type": "object",
+      "required": [
+        "index",
+        "kind",
+        "method",
+        "kindEvidence",
+        "width",
+        "height",
+        "unit",
+        "regions",
+        "links"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "index": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "kind": {
+          "enum": [
+            "text",
+            "scan",
+            "mixed",
+            "blank"
+          ]
+        },
+        "kindEvidence": {
+          "type": "object"
+        },
+        "width": {
+          "type": "number"
+        },
+        "height": {
+          "type": "number"
+        },
+        "unit": {
+          "enum": [
+            "pt",
+            "px"
+          ]
+        },
+        "dpi": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "rotation": {
+          "enum": [
+            0,
+            90,
+            180,
+            270
+          ]
+        },
+        "regions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/region"
+          }
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/link"
+          }
+        },
+        "method": {
+          "enum": [
+            "text_layer",
+            "local_ocr",
+            "none"
+          ],
+          "description": "cách đã đọc trang này"
+        },
+        "printedPageNumber": {
+          "type": "string"
+        }
+      }
+    },
+    "region": {
+      "type": "object",
+      "required": [
+        "id",
+        "kind",
+        "bbox",
+        "lines"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "text_body",
+            "header",
+            "staff_system",
+            "lyric_block",
+            "footer",
+            "unknown"
+          ]
+        },
+        "bbox": {
+          "$ref": "#/$defs/bbox"
+        },
+        "systemIndex": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "staff": {
+          "type": "object",
+          "required": [
+            "lineY",
+            "barlineX"
+          ],
+          "properties": {
+            "lineY": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            },
+            "barlineX": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        "lines": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/line"
+          }
+        }
+      }
+    },
+    "line": {
+      "type": "object",
+      "required": [
+        "id",
+        "role",
+        "bbox",
+        "confidence",
+        "tokens"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "role": {
+          "enum": [
+            "lyric",
+            "chord",
+            "tab",
+            "direction",
+            "other"
+          ]
+        },
+        "bbox": {
+          "$ref": "#/$defs/bbox"
+        },
+        "confidence": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 1
+        },
+        "tokens": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/token"
+          }
+        }
+      }
+    },
+    "token": {
+      "type": "object",
+      "required": [
+        "id",
+        "text",
+        "bbox",
+        "confidence",
+        "kind",
+        "source"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1
+        },
+        "bbox": {
+          "$ref": "#/$defs/bbox"
+        },
+        "confidence": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 1,
+          "description": "null = engine không cung cấp (vision). text_layer = 1.0"
+        },
+        "kind": {
+          "enum": [
+            "word",
+            "chord",
+            "number",
+            "symbol"
+          ]
+        },
+        "source": {
+          "enum": [
+            "text_layer",
+            "local_ocr",
+            "vision"
+          ]
+        },
+        "bboxEstimated": {
+          "type": "boolean"
+        }
+      }
+    },
+    "link": {
+      "type": "object",
+      "required": [
+        "chordTokenId",
+        "lyricTokenId",
+        "relation",
+        "offset"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "chordTokenId": {
+          "type": "string"
+        },
+        "lyricTokenId": {
+          "type": "string"
+        },
+        "relation": {
+          "enum": [
+            "above",
+            "inline"
+          ]
+        },
+        "offset": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    },
+    "field": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "required": [
+        "value",
+        "evidence",
+        "source",
+        "confidence"
+      ],
+      "properties": {
+        "value": {},
+        "evidence": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "source": {
+          "enum": [
+            "text_layer",
+            "local_ocr",
+            "vision"
+          ]
+        },
+        "confidence": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "alt": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "value",
+              "source"
+            ],
+            "properties": {
+              "value": {},
+              "source": {
+                "enum": [
+                  "text_layer",
+                  "local_ocr",
+                  "vision"
+                ]
+              },
+              "confidence": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "interpretation": {
+      "type": "object",
+      "required": [
+        "metadata",
+        "chords",
+        "structure",
+        "draft"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "metadata": {
+          "type": "object",
+          "required": [
+            "key",
+            "timeSignature",
+            "bpm"
+          ],
+          "properties": {
+            "title": {
+              "$ref": "#/$defs/field"
+            },
+            "author": {
+              "$ref": "#/$defs/field"
+            },
+            "key": {
+              "$ref": "#/$defs/field"
+            },
+            "timeSignature": {
+              "$ref": "#/$defs/field"
+            },
+            "bpm": {
+              "$ref": "#/$defs/field"
+            },
+            "directions": {
+              "$ref": "#/$defs/field"
+            }
+          }
+        },
+        "chords": {
+          "type": "object",
+          "required": [
+            "status",
+            "count"
+          ],
+          "properties": {
+            "status": {
+              "enum": [
+                "DETECTED",
+                "NO_CHORDS_DETECTED",
+                "UNKNOWN"
+              ]
+            },
+            "count": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "structure": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "draft": {
+          "type": "object",
+          "required": [
+            "text",
+            "warnings",
+            "reviewRequired"
+          ],
+          "properties": {
+            "text": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "warnings": {
+              "type": "array"
+            },
+            "reviewRequired": {
+              "const": true
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,102 @@
+{
+ "_doc": "Manifest corpus hồi quy. File thật NẰM NGOÀI repo (bản nhạc/lời có bản quyền; repo công khai). Chỉ lưu sha256 + kỳ vọng dạng số. Đổi corpus = cập nhật manifest có chủ đích.",
+ "files": {
+  "tinh-ca.pdf": {
+   "sha256": "b2f287f28f77f7a700c61687ceba91f770aff0da1b3e9364904b3d7a3dfebacc"
+  },
+  "thu-ha-noi-text.pdf": {
+   "sha256": "c961b8e3547f8fab8550738944bae27ed4d8dc1334fe5495a20e091d0b20d9d4"
+  },
+  "ha-noi-mua-vang-text.pdf": {
+   "sha256": "fc2135faf65570a58084be711601a20cb68a5c0585f718d58c5f3a760608d126"
+  },
+  "cho-dong-text-longpage.pdf": {
+   "sha256": "8cd3bb1cf7f7b67fc7d7e7b78ca4f21701998b0b40ae9f54e0fb02066cd1a3a7"
+  },
+  "bai-nhieu-trang-synthetic.pdf": {
+   "sha256": "fba9c8aca0d852e9c51d2ae7436d670465f4d411eb4b83756ce78f9cc0f6406b"
+  },
+  "golden.pdf": {
+   "sha256": "66db0d43d5dd1585f49cdb60a774f955b0bde57437133988299d939c3d4b5839"
+  },
+  "gold/tinh-ca.gold.json": {
+   "sha256": "62ce788668f2c5a9d7b0db686fcc53b05e58f38388997447aa8c1ced03c89320"
+  },
+  "gold/chuyen-tau.canon.txt": {
+   "sha256": "5fcb0b005c93584b8a394cd3593acabdc13b19716c4d63759afc36080fc22342"
+  },
+  "vision/tinh-ca.vision.json": {
+   "sha256": "7e9d48c048022e9f802b75e4d651e4241ea804c1191c7375edfb167543c686ed"
+  }
+ },
+ "expect": {
+  "tinh-ca.pdf": {
+   "pageKinds": [
+    "scan",
+    "scan"
+   ],
+   "staffSystemsPerPage": [
+    6,
+    6
+   ],
+   "rowsPerSystem": 2,
+   "chords": "NO_CHORDS_DETECTED",
+   "goldRows": 24,
+   "baseline": {
+    "cerMax": 0.035,
+    "werMax": 0.11,
+    "rowsWithin10pctMin": 22
+   },
+   "hybrid": {
+    "cerMax": 0.005,
+    "title": "Tình ca",
+    "timeSignature": [
+     2,
+     4
+    ],
+    "keyFifths": -2
+   }
+  },
+  "thu-ha-noi-text.pdf": {
+   "pages": 2,
+   "chordsMin": 28,
+   "linksMin": 28,
+   "title": "Thu Hà Nội chờ em",
+   "bpm": 120
+  },
+  "ha-noi-mua-vang-text.pdf": {
+   "pages": 4,
+   "chordsMin": 45,
+   "linksMin": 25,
+   "title": "Hà Nội mùa vắng những cơn mưa",
+   "bpm": 75
+  },
+  "cho-dong-text-longpage.pdf": {
+   "pages": 1,
+   "chordsMin": 75,
+   "linksMin": 10,
+   "title": "Chờ đông",
+   "bpm": 60
+  },
+  "bai-nhieu-trang-synthetic.pdf": {
+   "pages": 2,
+   "chordsMin": 60,
+   "linksMin": 60,
+   "title": null
+  },
+  "golden.pdf": {
+   "pageKinds": [
+    "scan",
+    "scan"
+   ],
+   "staffSystemsPerPage": [
+    0,
+    6
+   ],
+   "baseline": {
+    "precisionMin": 0.75,
+    "recallMin": 0.83
+   }
+  }
+ }
+}
