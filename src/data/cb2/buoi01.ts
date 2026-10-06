@@ -7,7 +7,7 @@ import { PATTERNS, SECTION_LABEL, type StrumNotation } from '../../content/dieud
 import { BOLERO } from '../../content/dieudemhat/bolero.ts'
 import { DEFAULT_CUE, DEFAULT_TASK } from '../../dieudemhat/pacing'
 
-// Cách 3 — mẫu điệp khúc: trường độ theo XML của Owner (♩ = 70).
+// Cách 3 — mẫu điệp khúc: trường độ theo XML của Owner. Tempo bài học là ♩ = 65 (giáo trình Bolero), không lấy tempo trong XML.
 // phách 1 Bùm (đen) · phách 2 Chát (móc đơn chấm) + lên (móc kép) · phách 3 xuống (kép) lên (kép) xuống (đơn) · phách 4 Chát (đen).
 const CACH3_STRUM: StrumNotation = {
   beatsPerBar: 4,
@@ -41,7 +41,7 @@ const CACH: { no: number; name: string; strum: StrumNotation; note: string; how:
   { no: 2, name: kieu2.name, strum: kieu2.strum!, note: `${kieu2.legend}`, how: kieu2.howTo, task: DEFAULT_TASK(`Cách 2 (${kieu2.name})`) },
   {
     no: 3, name: 'Quạt điệp khúc', strum: CACH3_STRUM,
-    note: 'Viết gọn: Bùm – Chát – lên – xuống lên xuống – Chát · ♩ = 70',
+    note: 'Viết gọn: Bùm – Chát – lên – xuống lên xuống – Chát · ♩ = 65',
     how: 'Phách 1 là Bùm (như tiếng kick). Phách 2 và phách 4 là Chát (như tiếng snare). Giữa hai tiếng Chát là các tiếng quạt: lên – xuống lên xuống.',
     task: DEFAULT_TASK('Cách 3 (Quạt điệp khúc)'),
   },
