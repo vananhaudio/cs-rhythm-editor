@@ -98,12 +98,13 @@ export function classIdFromPath(pathname: string): string | null {
 }
 
 // ── Trang BUỔI (phòng học): /me/classes/<class id>/sessions/<số buổi> — URL riêng, reload/deep link được ──
+// Buổi 0 = NHẬP MÔN (db/class_session_zero_intro.sql) nên số buổi được phép là 0.
 // Trang lớp = BẢN ĐỒ (chọn buổi); trang buổi = nơi HỌC. Quyền xem giáo án vẫn do RLS + RPC quyết, không do URL.
 export function sessionPath(classId: string, sessionNo: number): string {
   return `${classPath(classId)}/sessions/${sessionNo}`
 }
 
-const SESSION_RE = /^\/me\/classes\/([0-9a-f-]{36})\/sessions\/([1-9][0-9]{0,3})$/i
+const SESSION_RE = /^\/me\/classes\/([0-9a-f-]{36})\/sessions\/(0|[1-9][0-9]{0,3})$/i
 export function sessionFromPath(pathname: string): { classId: string; sessionNo: number } | null {
   const m = SESSION_RE.exec(pathname.replace(/\/+$/, ''))
   return m && UUID_RE.test(m[1]) ? { classId: m[1].toLowerCase(), sessionNo: Number(m[2]) } : null

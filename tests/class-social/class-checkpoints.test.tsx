@@ -266,7 +266,8 @@ test("route Trang Buổi: phân tích · khứ hồi · giữ qua đăng nhập 
   assert.equal(sv(vfp(P), { kind: "class", classId: CLS }), false);
   assert.deepEqual(vfp(`/me/classes/${CLS}`), { kind: "class", classId: CLS });
   assert.ok(keepsPathForGuest(vfp(P)));
-  for (const bad of [`/me/classes/${CLS}/sessions/0`, `/me/classes/${CLS}/sessions/abc`, `/me/classes/${CLS}/sessions/-1`, `/me/classes/not-a-uuid/sessions/3`, `/me/classes/${CLS}/sessions/99999`]) {
+  assert.deepEqual(sessionFromPath(`/me/classes/${CLS}/sessions/0`), { classId: CLS, sessionNo: 0 });   // Buổi 00 · Nhập môn
+  for (const bad of [`/me/classes/${CLS}/sessions/00`, `/me/classes/${CLS}/sessions/abc`, `/me/classes/${CLS}/sessions/-1`, `/me/classes/not-a-uuid/sessions/3`, `/me/classes/${CLS}/sessions/99999`]) {
     assert.equal(sessionFromPath(bad), null, bad);
   }
 });
