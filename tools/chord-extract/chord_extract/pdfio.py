@@ -5,6 +5,7 @@ import xml.etree.ElementTree as ET
 
 from PIL import Image
 
+from .errors import ExtractError
 from .util import run
 
 
@@ -12,7 +13,7 @@ def pdf_pages(path):
     info = run(["pdfinfo", "-f", "1", "-l", "9999", path]).stdout
     m = re.search(r"Pages:\s+(\d+)", info)
     if not m:
-        raise ValueError("Không đọc được file PDF.")
+        raise ExtractError("bad_file", "Không đọc được file PDF.")
     n = int(m.group(1))
     sizes = {}
     for m in re.finditer(r"Page\s+(\d+) size:\s+([\d.]+) x ([\d.]+) pts", info):

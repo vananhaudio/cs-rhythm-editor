@@ -4,7 +4,10 @@ import unicodedata
 
 
 def run(cmd, **kw):
-    return subprocess.run(cmd, capture_output=True, text=kw.pop("text", True), **kw)
+    text = kw.pop("text", True)
+    if text:
+        kw.setdefault("errors", "replace")  # công cụ ngoài có thể in byte lạ ra stderr — không được làm engine sập
+    return subprocess.run(cmd, capture_output=True, text=text, **kw)
 
 
 def sha256_file(path):

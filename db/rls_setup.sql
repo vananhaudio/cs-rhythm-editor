@@ -78,6 +78,9 @@ DECLARE
     -- Thư viện hợp âm chuẩn hoá V1 (db/chord_library_v1_setup.sql): RLS bật, KHÔNG policy; mọi thứ đi qua
     -- RPC chord_sheet_* (SECURITY DEFINER). Áp policy rộng = học viên đọc bản private của nhau.
     'chord_sheets', 'chord_sheet_versions',
+    -- Extraction PDF → chord-extraction/1 (db/chord_library_v1_3_extractions_setup.sql): cùng khuôn — RLS bật, KHÔNG policy,
+    -- chỉ RPC chord_extraction_* (SECURITY DEFINER, quyền review). Áp policy rộng = mọi tài khoản đọc/ghi kết quả đọc nguồn.
+    'chord_sheet_extractions',
     -- Preset công cụ Nhịp Phách (db/nhipphach_presets_setup.sql): dữ liệu THEO
     -- TÀI KHOẢN, policy hẹp `user_id = auth.uid() AND is_teacher()`. ĐỪNG áp
     -- policy rộng lên hai bảng này — làm thế là mọi người đọc preset của nhau.

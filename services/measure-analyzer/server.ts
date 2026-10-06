@@ -16,6 +16,9 @@ import { createServer } from 'node:http'
 import type { IncomingMessage, Server } from 'node:http'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { HttpError, readBody, readCapped } from './shared.ts'
+import { createExtractor } from './extract.ts'
+import type { ExtractWorkerConfig } from './extract.ts'
 import { analysisLineCounts, analysisTokenLengths, parseAnalysisResult } from '../../src/thuvien/measureAnalysis.ts'
 
 export const VERSION = 'measure-analyzer/0.2.0'
@@ -38,18 +41,14 @@ export type WorkerConfig = {
   analyzer: string
   allowedOrigins: string[]
   logDir: string
+  /** Extraction PDF → chord-extraction/1 (Slice 2A). Vắng = /extract-content trả 503 'not_configured'. */
+  extract?: ExtractWorkerConfig
   /** PATH cho tiến trình con (để thấy pdftoppm/pdfinfo/pdfimages của Homebrew) */
   childPath?: string
   /** Thư mục gốc cho thư mục tạm mỗi request (test kiểm dọn dẹp) */
   tempRoot?: string
   limits?: Partial<typeof LIMITS>
   now?: () => number
-}
-
-class HttpError extends Error {
-  readonly status: number
-  readonly code: string
-  constructor(status: number, code: string, message: string) { super(message); this.status = status; this.code = code }
 }
 
 // mã lỗi của analyzer → HTTP
@@ -77,6 +76,7 @@ export function createWorker(config: WorkerConfig): Server {
   let running = 0
   const waiting: (() => void)[] = []
   let versions: Promise<{ python: string; poppler: string }> | null = null
+  const extractor = config.extract ? createExtractor({ config: config.extract, supabaseUrl: config.supabaseUrl, anonKey: config.anonKey, now, writeLog: entry => writeLog(entry) }) : null
 
   const health = () => versions ??= Promise.all([
     run(config.python, ['--version'], config.childPath).then(text => text.trim().split('\n')[0] || 'unknown', () => 'missing'),
@@ -238,7 +238,14 @@ export function createWorker(config: WorkerConfig): Server {
         res.writeHead(204, { 'access-control-allow-methods': 'GET, POST, OPTIONS', 'access-control-allow-headers': 'authorization, content-type', 'access-control-max-age': '600', ...privateNetwork })
         return res.end()
       }
-      if (req.method === 'GET' && path === '/health') return send(200, { ok: true, version: VERSION, ...(await health()) })
+      if (req.method === 'GET' && path === '/health') return send(200, { ok: true, version: VERSION, ...(await health()), ...(extractor ? { extract: await extractor.health() } : {}) })
+      if (req.method === 'POST' && path === '/extract-content') {
+        if (origin && !allowed) throw new HttpError(403, 'origin', 'Nguồn gọi không được phép.')
+        if (!extractor) throw new HttpError(503, 'not_configured', 'Tính năng đọc nội dung PDF chưa được bật.')
+        const result = await extractor.handle(req, log, controller.signal)
+        log.status = result.status
+        return send(result.status, { ...result.body, requestId })
+      }
       if (req.method === 'POST' && path === '/analyze-measures') {
         // origin lạ: không cấp CORS (trình duyệt chặn đọc) VÀ từ chối luôn — không tốn tài nguyên phân tích
         if (origin && !allowed) throw new HttpError(403, 'origin', 'Nguồn gọi không được phép.')
@@ -257,40 +264,6 @@ export function createWorker(config: WorkerConfig): Server {
       if (path !== '/health') void writeLog(log)
     }
   })
-}
-
-function readBody(req: IncomingMessage, max: number): Promise<string> {
-  return new Promise((resolve, reject) => {
-    let size = 0
-    const chunks: Buffer[] = []
-    req.on('data', (chunk: Buffer) => {
-      size += chunk.length
-      if (size > max) { reject(new HttpError(413, 'too_large', 'Yêu cầu quá lớn.')); req.resume() } else chunks.push(chunk)
-    })
-    req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')))
-    req.on('error', () => reject(new HttpError(400, 'bad_request', 'Yêu cầu không hợp lệ.')))
-  })
-}
-
-async function readCapped(reply: Response, max: number, signal: AbortSignal): Promise<Buffer> {
-  if (Number(reply.headers.get('content-length') ?? 0) > max) throw new HttpError(413, 'too_large', 'File nguồn lớn hơn 20 MB.')
-  const reader = reply.body!.getReader()
-  const parts: Uint8Array[] = []
-  let size = 0
-  try {
-    for (;;) {
-      const { done, value } = await reader.read()
-      if (done) break
-      size += value.length
-      if (size > max) { await reader.cancel().catch(() => {}); throw new HttpError(413, 'too_large', 'File nguồn lớn hơn 20 MB.') }
-      parts.push(value)
-    }
-  } catch (error) {
-    if (error instanceof HttpError) throw error
-    if (signal.aborted) throw new HttpError(504, 'timeout', 'Hết thời gian phân tích.')
-    throw new HttpError(502, 'upstream', 'Tải file nguồn bị ngắt.')
-  }
-  return Buffer.concat(parts)
 }
 
 function run(cmd: string, args: string[], path?: string): Promise<string> {
@@ -342,6 +315,11 @@ if (process.env.MA_RUN === '1') {
   const port = Number(env.MA_PORT ?? 7430)
   createWorker({
     supabaseUrl: env.SUPABASE_URL!.replace(/\/$/, ''), anonKey: env.SUPABASE_ANON_KEY!, python: env.MA_PYTHON!, analyzer: env.MA_ANALYZER!,
+    // Extraction (Slice 2A): chỉ bật khi có MA_EXTRACT_DIR (thư mục chứa gói chord_extract). Vision chỉ bật khi CÓ CẢ model + ANTHROPIC_API_KEY ở môi trường này.
+    extract: env.MA_EXTRACT_DIR ? {
+      python: env.MA_EXTRACT_PYTHON ?? env.MA_PYTHON!, packageDir: env.MA_EXTRACT_DIR, tessdataDir: env.MA_EXTRACT_TESSDATA, childPath: env.MA_CHILD_PATH,
+      ...(env.MA_EXTRACT_VISION_MODEL && env.ANTHROPIC_API_KEY ? { vision: { model: env.MA_EXTRACT_VISION_MODEL, apiKey: env.ANTHROPIC_API_KEY, baseUrl: env.MA_EXTRACT_VISION_BASE_URL } } : {}),
+    } : undefined,
     allowedOrigins: origins, logDir: env.MA_LOG_DIR ?? join(env.HOME ?? '.', 'Library/Logs/MeasureAnalyzer'), childPath: env.MA_CHILD_PATH,
   }).listen(port, '127.0.0.1', () => console.log(JSON.stringify({ event: 'listening', version: VERSION, host: '127.0.0.1', port, development, origins })))
 }

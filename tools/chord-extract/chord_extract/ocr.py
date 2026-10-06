@@ -5,11 +5,13 @@ import tempfile
 
 from PIL import Image
 
+from .errors import ExtractError
 from .staff import ink_rows
 
 
-class OcrUnavailable(RuntimeError):
-    pass
+class OcrUnavailable(ExtractError):
+    def __init__(self, message=""):
+        super().__init__("ocr_unavailable", message)
 
 
 def tessdata_dir(cfg):
@@ -52,7 +54,7 @@ def tess_tsv(img, cfg, psm, scale=1.0, tmp=None):
     env = dict(os.environ)
     if td:
         env["TESSDATA_PREFIX"] = td
-    r = subprocess.run(cmd, capture_output=True, text=True, env=env)
+    r = subprocess.run(cmd, capture_output=True, text=True, errors="replace", env=env)
     os.unlink(f.name)
     words = []
     for ln in r.stdout.splitlines()[1:]:

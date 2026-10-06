@@ -23,6 +23,7 @@ class ExtractConfig:
     upscale_below_px: int = 1100              # ảnh rộng < ngưỡng này (~72 dpi) phóng 2× trước khi dò khuông/OCR
     min_text_chars: int = 20                  # trang có text layer khi ≥ ngần này ký tự…
     min_text_quality: float = 0.85            # …và ≥ ngần này ký tự đọc được
+    max_pages: int = 20                       # hạ tầng: PDF nhiều trang hơn → too_large (không ảnh hưởng chất lượng đọc)
     force_ocr: bool = False                   # bỏ qua text layer (thử nghiệm/so sánh)
     max_vision_pages: int = 6
     vision_max_side_px: int = 2000

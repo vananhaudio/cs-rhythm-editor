@@ -13,6 +13,7 @@ from . import fallback as fb
 from . import ocr, pdfio, staff
 from .config import ExtractConfig
 from .contract import ENGINE_VERSION, SCHEMA_ID
+from .errors import ExtractError
 from .interpret import interpret
 from .roles import attach_chords, build_lines
 from .util import nb, sha256_file
@@ -104,7 +105,7 @@ def extract_document(path, cfg=None, provider=None):
     cfg = cfg or ExtractConfig()
     ext = path.rsplit(".", 1)[-1].lower()
     if ext not in MIMES:
-        raise ValueError("Chỉ nhận PDF, JPEG, PNG hoặc WebP.")
+        raise ExtractError("bad_file", "Chỉ nhận PDF, JPEG, PNG hoặc WebP.")
     st = Stages()
     tmp = tempfile.mkdtemp(prefix="chord-extract-")
     try:
@@ -113,6 +114,8 @@ def extract_document(path, cfg=None, provider=None):
         src = []
         if ext == "pdf":
             n, sizes = pdfio.pdf_pages(path)
+            if n > cfg.max_pages:
+                raise ExtractError("too_large", f"PDF có {n} trang, tối đa {cfg.max_pages}.")
             st.add("classify", "poppler-pdftotext+pdfimages", "poppler")
             for p in range(1, n + 1):
                 words, W, H = pdfio.pdf_words(path, p)
@@ -122,7 +125,11 @@ def extract_document(path, cfg=None, provider=None):
                     kind = "scan"
                 src.append(dict(p=p, W=W, H=H, kind=kind, ev=ev, words=words))
         else:
-            im = Image.open(path)
+            try:
+                im = Image.open(path)
+                im.load()
+            except Exception as e:
+                raise ExtractError("bad_file", "Không đọc được ảnh.") from e
             src.append(dict(p=1, W=im.width, H=im.height, kind="scan", ev=dict(imageCount=1, imageCoverage=1.0, textChars=0), words=[], img=im.convert("L")))
             n = 1
         doc["input"]["pageCount"] = n

@@ -1,7 +1,7 @@
 // Đóng gói worker production thành MỘT thư mục release: server.mjs (worker + tokenizer TS của app, bundle bằng esbuild)
 // + measure_analyzer.py + RELEASE.json. Không bundle gì của browser/UI. Ra: build/measure-analyzer/<version>-<commit>/
 import { execFileSync } from 'node:child_process'
-import { copyFileSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
+import { copyFileSync, cpSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { build } from 'esbuild'
 
 const commit = execFileSync('git', ['rev-parse', '--short', 'HEAD']).toString().trim()
@@ -12,5 +12,7 @@ rmSync(out, { recursive: true, force: true })
 mkdirSync(out, { recursive: true })
 await build({ entryPoints: ['services/measure-analyzer/server.ts'], bundle: true, platform: 'node', format: 'esm', target: 'node22', outfile: `${out}/server.mjs`, legalComments: 'none', logLevel: 'warning' })
 copyFileSync('tools/measure-analyzer/measure_analyzer.py', `${out}/measure_analyzer.py`)
+// Gói engine extraction (Python thuần, không __pycache__) — worker chạy nó bằng MA_EXTRACT_DIR=<release>/chord-extract
+cpSync('tools/chord-extract/chord_extract', `${out}/chord-extract/chord_extract`, { recursive: true, filter: src => !src.includes('__pycache__') })
 writeFileSync(`${out}/RELEASE.json`, JSON.stringify({ name: 'measure-analyzer', version, commit, dirty, builtAt: new Date().toISOString() }, null, 2) + '\n')
 console.log(out)
