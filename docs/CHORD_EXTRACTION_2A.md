@@ -17,3 +17,10 @@ việc chạy ở nền; trình duyệt đọc kết quả bằng RPC `chord_ext
 Cấu hình (env của service, KHÔNG trong repo): `MA_EXTRACT_DIR` (bật tính năng; = `<release>/chord-extract`), `MA_EXTRACT_PYTHON`, `MA_EXTRACT_TESSDATA` (gói `vie`),
 Vision (tuỳ chọn, mặc định TẮT): `MA_EXTRACT_VISION_MODEL` + `ANTHROPIC_API_KEY`.
 Mac mini cần thêm: `tesseract` + gói `vie` (chưa có ở đó — việc của giai đoạn triển khai, không phải Slice 2A).
+
+## Mô hình tin cậy của observation (V1 — Owner chấp nhận 06/10/2026)
+DB **không** tự chứng minh `observation/interpretation/pipeline` thật sự được sinh từ file nguồn: các cột này do worker gửi qua RPC bằng JWT người gọi.
+DB chỉ kiểm: người gọi là chủ lần chạy + có quyền review, khuôn tài liệu, kích thước ≤ 4 MB, `input_sha256` = sha256 khai ở phiên bản, `engine_version` khớp lúc begin.
+Không thêm bí mật worker ↔ DB (cơ chế xác thực thứ hai) vì: quyền ghi chỉ thầy/admin (vốn gõ được lời tuỳ ý), extraction chỉ là dữ liệu phân tích trung gian,
+không phải bản chuẩn, bản nháp vẫn cần người duyệt, và worker tự tải file, kiểm magic bytes + sha256.
+**XEM LẠI** nếu mở extraction cho học viên, cho worker bên ngoài, hoặc nếu extraction trở thành đầu vào tự động duyệt.
