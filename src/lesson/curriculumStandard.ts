@@ -7,7 +7,7 @@ import { checkpointAccepts, checkpointProblems, isCheckpoint } from './checkpoin
 
 /** Loại khối LessonDocument hiểu. Thêm loại mới = thêm CAPABILITY (renderer + app mới), không phải nội dung. */
 export const KNOWN_SECTION_KINDS: LessonSection['kind'][] = [
-  'objectives', 'recap', 'layers', 'note', 'fretboard', 'score', 'repertoire', 'assignment', 'checklist', 'studentNotes', 'study', 'checkpoint',
+  'objectives', 'recap', 'layers', 'note', 'strum', 'flow', 'fretboard', 'score', 'repertoire', 'assignment', 'checklist', 'studentNotes', 'study', 'checkpoint',
 ]
 
 /** Đuôi buổi của SOLO01 — luôn kết thúc: Bài tập về nhà → Checklist cuối bài → Ghi chú cho thầy. */

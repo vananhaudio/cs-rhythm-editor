@@ -3,6 +3,8 @@
 // chỉ cần KHÔNG khai báo section đó trong mảng `sections`.
 // Nội dung nhạc lưu ở dạng CÓ CẤU TRÚC (alphaTex) → alphaTab render khuông + TAB.
 
+import type { Stroke, StrokeAct } from '../elearn/strumPatterns'
+
 export interface LessonMeta {
   programCode: string        // 'SOLO01'
   programName: string        // 'SOLO GUITAR CĂN BẢN'
@@ -36,6 +38,12 @@ export interface FretZone {
   hidden?: boolean
 }
 
+/** Ký âm một ô nhịp (cùng format StrumScore của Điệu đệm hát). Mỗi phần tử `beats` = các cú đánh trong 1 phách. */
+export interface StrumBar {
+  beatsPerBar: 2 | 3 | 4
+  beats: { frac: number; label?: string; act?: StrokeAct; dir?: Stroke; accent?: boolean }[][]
+}
+
 export type LessonSection =
   | { kind: 'objectives'; title?: string; items: string[] }
   /** Ôn lại: buổi trước đã có gì, buổi này chồng thêm gì */
@@ -54,6 +62,20 @@ export type LessonSection =
       note?: string
     }
   | { kind: 'note'; title?: string; text: string }
+  /** Một cách đệm có ký âm trực quan (dùng lại bộ vẽ của /dieudemhat) — thêm 10/2026 cho CB2.T3 Buổi 01. */
+  | {
+      kind: 'strum'
+      label?: string            // 'Cách 1'
+      name: string
+      tempo?: string            // '♩ = 65'
+      strum: StrumBar
+      guitar: string            // ký hiệu viết gọn
+      durations?: string
+      legend?: string
+      howTo: string
+    }
+  /** Sơ đồ dọc "Phần của bài ↓ cách đệm" (dùng lại ddh-flow của /dieudemhat). */
+  | { kind: 'flow'; title: string; lead?: string; steps: { label: string; value: string }[]; note?: string }
   | {
       kind: 'fretboard'
       title: string

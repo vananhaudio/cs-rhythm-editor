@@ -10,6 +10,7 @@ import { exportLessonPdf } from './lessonPdf'
 import FretboardMap from './FretboardMap'
 import ZoomFrame from './ZoomFrame'
 import LessonScore from './LessonScore'
+import { StrumSectionBlock, FlowSectionBlock } from './StrumSections'
 
 const P = {
   bg: '#F7F5FC', surface: '#FFFFFF', ink: '#1D1930', inkSoft: '#3E3952', inkFaint: '#6A6580',
@@ -84,6 +85,12 @@ function renderSection(s: LessonSection, i: number) {
           <p>{s.text}</p>
         </aside>
       )
+
+    case 'strum':
+      return <StrumSectionBlock key={i} s={s} />
+
+    case 'flow':
+      return <FlowSectionBlock key={i} s={s} />
 
     case 'fretboard':
       return (
