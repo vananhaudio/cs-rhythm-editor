@@ -17,8 +17,18 @@ const CACH3: StrumBar = {
   ],
 }
 
+// Cách 2: Bùm cuối cùng (phách 4) là "Bụm" — Owner chỉnh 06/10/2026; trang /dieudemhat chưa sửa theo.
+const lastBumToBum = (t: string) => t.replace(/Bùm(?!.*Bùm)/, 'Bụm')
+
 const fromPattern = (id: string, label: string): LessonSection => {
   const p = PATTERNS[id]
+  if (id === 'bolero-moc-2') {
+    const strum = JSON.parse(JSON.stringify(p.strum)) as StrumBar
+    const last = strum.beats[3][0]
+    if (last.label !== 'Bùm') throw new Error('Cách 2: không thấy Bùm cuối ở phách 4')
+    last.label = 'Bụm'
+    return { kind: 'strum', label, name: p.name, tempo: '♩ = 65', strum, guitar: lastBumToBum(p.guitar), durations: p.durations, legend: p.legend && lastBumToBum(p.legend), howTo: lastBumToBum(p.howTo) }
+  }
   return { kind: 'strum', label, name: p.name, tempo: '♩ = 65', strum: p.strum as StrumBar, guitar: p.guitar, durations: p.durations, legend: p.legend, howTo: p.howTo }
 }
 
@@ -79,7 +89,7 @@ export const CB2_BUOI01: LessonDoc = {
       tempo: '♩ = 65',
       strum: CACH3,
       guitar: 'Bùm – Chát – ↑ – ↓ ↑ ↓ – Chát',
-      durations: 'Đen – Đơn chấm – Kép – Kép – Kép – Đơn – Đen',
+      durations: 'Đen – Đơn chấm dôi – Kép – Kép – Kép – Đơn – Đen',
       legend: 'Bùm = như tiếng kick · Chát = như tiếng snare · ↑ lên · ↓ xuống',
       howTo: 'Phách 1 là Bùm. Phách 2 và phách 4 là Chát. Giữa hai tiếng Chát là các tiếng quạt: lên – xuống lên xuống.',
     },

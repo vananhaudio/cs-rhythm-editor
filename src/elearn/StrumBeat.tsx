@@ -29,11 +29,15 @@ export function StrumBeat({ strokes, lit, detail = false }: { strokes: FigureStr
       {/* dầm thứ hai: nối các móc kép liền nhau (chỉ ở chế độ giáo trình) */}
       {detail && M >= 2 && strokes.map((s, i) => i < M - 1 && isSixteenth(s) && isSixteenth(strokes[i + 1])
         ? <rect key={`b2${i}`} x={xs[i]} y={top + 7} width={xs[i + 1] - xs[i]} height={4} rx={1} fill={c} /> : null)}
+      {/* móc kép đứng lẻ (liền sau móc đơn chấm dôi): nhánh dầm thứ hai ngắn quay về nốt trước. Chỉ ở chế độ giáo trình; chưa mẫu nào của /dieudemhat có hình này. */}
+      {detail && M >= 2 && strokes.map((s, i) => isSixteenth(s) && i > 0 && !isSixteenth(strokes[i - 1]) && !(i < M - 1 && isSixteenth(strokes[i + 1]))
+        ? <rect key={`st${i}`} x={xs[i] - 8} y={top + 7} width={8} height={4} rx={1} fill={c} /> : null)}
       {isTriplet && <text x={(xs[0] + xs[2]) / 2} y={top - 1} fontSize={9} textAnchor="middle" fontWeight={800} fill={ac}>3</text>}
       {xs.map((x, i) => (
         <g key={i}>
           <line x1={x} y1={M >= 2 ? top + 2 : 8} x2={x} y2={stemBot} stroke={c} strokeWidth={3} />
           <line x1={x - 9.5} y1={base + 7} x2={x + 1} y2={base - 3} stroke={c} strokeWidth={4.6} strokeLinecap="round" />
+          {detail && Math.abs(strokes[i].frac - 0.75) < 1e-6 && <circle cx={x + 7} cy={base + 3} r={2.2} fill={c} />}
           {detail && strokes[i].accent && <text x={x} y={accentY} fontSize={12} textAnchor="middle" fontWeight={900} fill={ac}>&gt;</text>}
           {detail && strokes[i].label
             ? <text x={x - 4} y={64} fontSize={12} textAnchor="middle" fontWeight={800} fill={ac}>{strokes[i].label}</text>
