@@ -6,6 +6,7 @@ import { DIEUDEMHAT_CSS } from '../dieudemhat/styles'
 const LOCAL_CSS = `
 .ddh.ddh-in-lsn{max-width:none;padding:0;font-size:inherit;}
 .ddh-in-lsn .ddh-pattern-h{margin-bottom:12px;}
+.ddh-in-lsn .ddh-bar{max-width:440px;width:100%;margin:0 auto;box-sizing:border-box;}
 .ddh-in-lsn .ddh-howto{font-size:16px;}
 .ddh-in-lsn .ddh-flow-box{grid-template-columns:96px 1fr;}
 .ddh-in-lsn .ddh-flow-arrow{margin:2px 0;}
