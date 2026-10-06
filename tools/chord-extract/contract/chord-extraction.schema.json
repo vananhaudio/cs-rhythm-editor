@@ -125,7 +125,8 @@
                   "HIGH_NOISE_RATIO",
                   "STAFF_LYRIC_MISMATCH",
                   "METADATA_MISSING",
-                  "USER_REQUESTED"
+                  "USER_REQUESTED",
+                  "NO_TEXT_RECOGNIZED"
                 ]
               },
               "detail": {

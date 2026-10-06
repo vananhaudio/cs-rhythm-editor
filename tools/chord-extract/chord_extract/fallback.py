@@ -9,7 +9,8 @@ HIGH_NOISE_RATIO = "HIGH_NOISE_RATIO"
 STAFF_LYRIC_MISMATCH = "STAFF_LYRIC_MISMATCH"
 METADATA_MISSING = "METADATA_MISSING"
 USER_REQUESTED = "USER_REQUESTED"
-CODES = (LOW_OCR_CONFIDENCE, HIGH_NOISE_RATIO, STAFF_LYRIC_MISMATCH, METADATA_MISSING, USER_REQUESTED)
+NO_TEXT_RECOGNIZED = "NO_TEXT_RECOGNIZED"
+CODES = (LOW_OCR_CONFIDENCE, HIGH_NOISE_RATIO, STAFF_LYRIC_MISMATCH, METADATA_MISSING, USER_REQUESTED, NO_TEXT_RECOGNIZED)
 
 
 def _title_ok(field, min_conf):
@@ -24,6 +25,7 @@ def _title_ok(field, min_conf):
 def measure(doc, cfg):
     """Số đo trên kết quả LOCAL — chỉ tính trang OCR (trang text layer chính xác tuyệt đối, không cần Vision)."""
     ocr_pages = [p for p in doc["pages"] if p["method"] == "local_ocr"]
+    ocr_tokens = sum(len(ln["tokens"]) for p in ocr_pages for r in p["regions"] for ln in r["lines"])
     lyric_conf, noise, total, staves, rows_per_system = [], 0, 0, 0, []
     for p in ocr_pages:
         staves += sum(1 for r in p["regions"] if r["kind"] == "staff_system")
@@ -43,7 +45,7 @@ def measure(doc, cfg):
     modal = Counter(rows_per_system).most_common(1)[0][0] if rows_per_system else 0
     meta = doc["interpretation"]["metadata"]
     return dict(
-        ocrPages=len(ocr_pages), staffSystems=staves,
+        ocrPages=len(ocr_pages), ocrTokens=ocr_tokens, staffSystems=staves,
         meanLyricConfidence=round(sum(lyric_conf) / len(lyric_conf), 3) if lyric_conf else None,
         noiseRatio=round(noise / total, 3) if total else None,
         lyricRowsPerSystem=rows_per_system, modalRows=modal,
@@ -59,6 +61,8 @@ def decide(doc, cfg):
     reasons = []
     if cfg.force_vision:
         reasons.append(dict(code=USER_REQUESTED, detail="Người dùng yêu cầu phân tích chính xác hơn."))
+    if m["ocrPages"] and m["ocrTokens"] == 0:
+        reasons.append(dict(code=NO_TEXT_RECOGNIZED, detail="OCR không nhận ra chữ nào trên các trang scan.", metric="ocrTokens", value=0, threshold=1))
     if m["ocrPages"]:
         if m["meanLyricConfidence"] is not None and m["meanLyricConfidence"] < cfg.min_mean_lyric_confidence:
             reasons.append(dict(code=LOW_OCR_CONFIDENCE, detail="Độ tin cậy trung bình của dòng lời OCR thấp.",

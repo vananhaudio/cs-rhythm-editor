@@ -46,16 +46,20 @@ def tess_tsv(img, cfg, psm, scale=1.0, tmp=None):
     im = img if scale == 1.0 else img.resize((int(img.width * scale), int(img.height * scale)), Image.LANCZOS)
     f = tempfile.NamedTemporaryFile(suffix=".png", delete=False, dir=tmp)
     im.save(f.name); f.close()
-    cmd = ["tesseract", f.name, "stdout", "-l", cfg.lang, "--psm", str(psm)]
+    # TSV bằng tham số tường minh, KHÔNG dùng tên cấu hình "tsv": tên đó đòi file configs/tsv nằm trong thư mục tessdata — thư mục chỉ có
+    # *.traineddata (như trên Mac mini) sẽ khiến tesseract in chữ thường, thoát mã 0, và engine tưởng "không có chữ nào".
+    cmd = ["tesseract", f.name, "stdout", "-l", cfg.lang, "--psm", str(psm), "-c", "tessedit_create_tsv=1"]
     td = tessdata_dir(cfg)
     if td:
         cmd += ["--tessdata-dir", td]
-    cmd += ["tsv"]
     env = dict(os.environ)
     if td:
         env["TESSDATA_PREFIX"] = td
     r = subprocess.run(cmd, capture_output=True, text=True, errors="replace", env=env)
     os.unlink(f.name)
+    # Không bao giờ nuốt lỗi OCR: thất bại hoặc đầu ra không phải TSV → lỗi có mã, KHÔNG trả "không có chữ".
+    if r.returncode != 0 or not r.stdout.startswith("level\tpage_num\t"):
+        raise ExtractError("engine_failed", "tesseract không trả TSV hợp lệ")
     words = []
     for ln in r.stdout.splitlines()[1:]:
         p = ln.split("\t")
