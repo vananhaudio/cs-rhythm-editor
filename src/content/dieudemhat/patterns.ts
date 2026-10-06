@@ -14,7 +14,7 @@ const ev = (frac: number, label: string, act: StrokeAct, extra: Partial<FigureSt
   ({ frac, label, act, ...extra })
 
 // Nhãn guitar → hành động. Chỉ các nhãn Owner đã định nghĩa.
-const ACT: Record<string, StrokeAct> = { B: 'bass', C: 'chord', x: 'strum', Chát: 'chat', Bùm: 'bum' }
+const ACT: Record<string, StrokeAct> = { B: 'bass', C: 'chord', x: 'strum', Chát: 'chat', Bùm: 'bum', Bụm: 'bum' }
 const act = (label: string): StrokeAct => ACT[label] ?? 'pick'          // số dây / (21) = móc dây
 const lab = (frac: number, label: string) => ev(frac, label, act(label), label === 'x' ? { dir: 'D' } : {})
 
@@ -100,12 +100,12 @@ export const PATTERNS: Record<string, Pattern> = {
     id: 'bolero-moc-2',
     name: 'Bolero Móc Kiểu 2',
     // Chát / Bùm là EVENT móc đơn, cùng khung trường độ với Kiểu 1.
-    strum: boleroBar(['B', '3', '2', '1', 'Chát', 'Bùm', 'Chát', 'Bùm', 'Chát']),
-    guitar: 'B 32 | 1 Chát | Bùm Chát | Bùm Chát',
-    legend: 'Viết gọn: B321 – Chát – Bùm – Chát – Bùm – Chát',
+    strum: boleroBar(['B', '3', '2', '1', 'Chát', 'Bùm', 'Chát', 'Bụm', 'Chát']),
+    guitar: 'B 32 | 1 Chát | Bùm Chát | Bụm Chát',
+    legend: 'Viết gọn: B321 – Chát – Bùm – Chát – Bụm – Chát',
     durations: 'Đơn – Kép – Kép – Đơn – Đơn – Đơn – Đơn – Đơn – Đơn',
     length: 'Đủ một ô nhịp.',
-    howTo: 'Giữ nguyên nhịp của Kiểu 1; từ nửa sau phách 2, thay tiếng móc bằng Chát – Bùm – Chát – Bùm – Chát.',
+    howTo: 'Giữ nguyên nhịp của Kiểu 1; từ nửa sau phách 2, thay tiếng móc bằng Chát – Bùm – Chát – Bụm – Chát.',
   }),
   // Owner: điệp khúc Bolero dùng một mẫu thuộc họ Quạt Ballad (không có "Quạt Bolero").
   // CHƯA có trường độ, CHƯA định nghĩa I/X/x → không ký âm (xem bolero.ts editorial).

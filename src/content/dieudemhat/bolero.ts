@@ -6,7 +6,7 @@ export const BOLERO: RhythmStyle = {
   meter: '4/4',
   beatDivision: 'Phách 1 chia thành một móc đơn và hai móc kép; ba phách còn lại mỗi phách hai móc đơn.',
   traits: [
-    'Hai kiểu móc Bolero dùng cùng một khung trường độ; Kiểu 2 thay các tiếng móc từ nửa sau phách 2 bằng Chát – Bùm.',
+    'Hai kiểu móc Bolero dùng cùng một khung trường độ; Kiểu 2 thay các tiếng móc từ nửa sau phách 2 bằng Chát – Bùm – Chát – Bụm – Chát.',
     'Điệp khúc Bolero dùng Quạt Ballad, không có kiểu quạt Bolero riêng.',
   ],
   sections: [
@@ -23,7 +23,7 @@ export const BOLERO: RhythmStyle = {
   exercise: 'Chọn một bài Bolero 4/4 bạn đã biết hợp âm và ghép đủ Lời 1 → Lời 2 → Điệp khúc → Lời 3.',
   editorial: {
     sources: [
-      'Bolero Móc Kiểu 1 (B32123123) và Kiểu 2 (B321 – Chát – Bùm – Chát – Bùm – Chát), trường độ Đơn – Kép – Kép – Đơn × 6: Owner chốt 28/09/2026.',
+      'Bolero Móc Kiểu 1 (B32123123) và Kiểu 2 (B321 – Chát – Bùm – Chát – Bụm – Chát), trường độ Đơn – Kép – Kép – Đơn × 6: Owner chốt 28/09/2026.',
       'Điệp khúc: Owner xác nhận là một mẫu Quạt Ballad, nguồn “Buổi học 04 - Đệm cho điệp khúc — Lớp Bolero Mini thầy Văn Anh”, ♩ = 65. Không tạo “Quạt Bolero”.',
       'Mục tiêu/cường độ từng phần: bảng công thức Bolero Owner chốt (commit 7ca38e0).',
       'Bài tập: theo ví dụ Owner đưa ngày 29/09/2026.',
