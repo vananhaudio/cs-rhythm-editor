@@ -188,7 +188,71 @@ def extract_scanned(path, work, si, opts):
     return [open_gray(os.path.join(work, n), opts) for n in names]
 
 
+def _engine_staff():
+    """Bộ tìm khuông THÍCH NGHI của chord-extract (staff.find_staves) — dùng lại, không viết lại. Trong release nằm ở
+    <release>/chord-extract/; trong repo ở tools/chord-extract/. Không có → None (rơi về bộ cũ)."""
+    here = os.path.dirname(os.path.abspath(__file__))
+    for base in (os.path.join(here, "chord-extract"), os.path.join(here, "..", "chord-extract")):
+        if os.path.isdir(os.path.join(base, "chord_extract")):
+            if base not in sys.path:
+                sys.path.insert(0, base)
+            try:
+                from chord_extract import staff
+                return staff
+            except Exception:
+                return None
+    return None
+
+
+def _line_extent(fill, center):
+    """Khoảng hàng (a, b) của một dòng kẻ quanh tâm `center`: mở rộng khi mật độ mực còn ≥ nửa mật độ ở tâm."""
+    c = int(round(center))
+    peak = fill[c]
+    a = b = c
+    while a > 0 and fill[a - 1] >= 0.5 * peak:
+        a -= 1
+    while b < len(fill) - 1 and fill[b + 1] >= 0.5 * peak:
+        b += 1
+    return (a, b)
+
+
 def find_systems(gray, opts):
+    """Khuông nhạc: ứng viên từ staff.find_staves của chord-extract (ngưỡng thích nghi theo nền giấy — scan 1-bit/ố/nhạt)
+    VÀ từ bộ cũ (ngưỡng cố định — ảnh JPEG độ phân giải thấp, khoảng cách dòng kẻ ≈ 6 px mà engine chưa chỉnh cho).
+    Lấy bộ nào thấy NHIỀU khuông hơn trên trang này (hoà → engine). Đổi về cấu trúc cũ {"lines": 5 × (hàng đầu, hàng cuối), "gap"}.
+    Khuông TAB 6 dây vẫn bị bỏ qua. Không có engine → chỉ bộ cũ."""
+    dark, legacy = _find_systems_legacy(gray, opts)
+    staff = _engine_staff()
+    if staff is None:
+        return dark, legacy
+    try:
+        found = staff.find_staves(Image.fromarray(np.clip(gray, 0, 255).astype(np.uint8)))
+    except Exception:
+        return dark, legacy
+    fill = dark.sum(1) / max(1, dark.shape[1])
+
+    def at(y):
+        return float(fill[min(max(int(round(y)), 0), len(fill) - 1)])
+
+    def thin_line_at(y, ref):
+        """Dòng kẻ THẬT: đỉnh mảnh — mật độ mực ≈ các dòng kẻ của khuông và tụt hẳn cách ≥ 3 hàng hai bên
+        (chữ lời / thân nốt là dải dày, không có đỉnh mảnh như vậy)."""
+        peak = max(at(y + k) for k in (-1, 0, 1))
+        return peak >= 0.9 * ref and at(y - 3) <= 0.6 * peak and at(y + 3) <= 0.6 * peak
+
+    systems = []
+    for st in found:
+        centers = [float(c) for c in st["lines"]]
+        gap = float(np.median(np.diff(centers)))
+        ref = float(np.median([at(c) for c in centers]))
+        # dòng thứ 6 cách đều ngay dưới/trên → khuông TAB guitar (6 dây): bỏ qua
+        if thin_line_at(centers[-1] + gap, ref) or thin_line_at(centers[0] - gap, ref):
+            continue
+        systems.append({"lines": [_line_extent(fill, c) for c in centers], "gap": gap})
+    return (dark, systems) if len(systems) >= len(legacy) else (dark, legacy)
+
+
+def _find_systems_legacy(gray, opts):
     dark = gray < opts["darkThreshold"]
     H, W = dark.shape
     rows = runs(dark.sum(1) > W * opts["staffRowFill"])
