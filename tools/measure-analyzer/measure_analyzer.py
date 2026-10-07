@@ -177,12 +177,14 @@ def extract_scanned(path, work, si, opts):
         return None
     prefix = os.path.join(work, f"scan{si}")
     try:
-        subprocess.run([exe, "-all", path, prefix], check=True, capture_output=True, timeout=opts["popplerTimeout"])
+        # `-png` (không phải `-all`): poppler tự giải mã mọi mã hoá nhúng (CCITT/JBIG2/JPEG2000…) thành PNG. Với `-all`,
+        # ảnh CCITT ra file thô `.ccitt` + `.params` mà Pillow không mở được → 422 "unsupported" (scan 1-bit như Tình ca).
+        subprocess.run([exe, "-png", path, prefix], check=True, capture_output=True, timeout=opts["popplerTimeout"])
     except subprocess.TimeoutExpired:
         raise AnalyzerError("timeout", "Đọc PDF quá lâu.")
     except subprocess.CalledProcessError:
         raise AnalyzerError("bad_pdf", "Không đọc được ảnh trong PDF.")
-    names = sorted(f for f in os.listdir(work) if f.startswith(f"scan{si}-"))
+    names = sorted(f for f in os.listdir(work) if f.startswith(f"scan{si}-") and f.endswith(".png"))
     return [open_gray(os.path.join(work, n), opts) for n in names]
 
 

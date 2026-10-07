@@ -74,6 +74,20 @@ test('PDF (một ảnh mỗi trang) → lấy nguyên ảnh nhúng, cùng kết 
   assert.deepEqual(r.anchors, { pickup: A(0, 0), measures: [A(0, 1), A(0, 3), A(1, 0), A(1, 2), A(1, 2)] })
 })
 
+const hasTiff2pdf = (() => { try { execFileSync('sh', ['-c', 'command -v tiff2pdf']); return true } catch { return false } })()
+test('PDF SCAN 1-bit CCITT (Tình ca): trước đây 422 unsupported (pdfimages -all ra .ccitt/.params) → nay đọc được, cùng vạch như ảnh', { skip: !hasTiff2pdf && 'máy không có tiff2pdf' }, async () => {
+  const items = [['w', '|', 'w', 'w', '|', 'w', 's', 'w'], ['w', 'w', '|', '|', 'w', 'w']]
+  const base = sheet(items)
+  const tif = join(dir, 'ccitt.tif')
+  const pdf = join(dir, 'ccitt.pdf')
+  execFileSync('python3', ['-c', `from PIL import Image; Image.open(${JSON.stringify(base)}).convert('L').point(lambda v: 255 if v > 160 else 0).convert('1').save(${JSON.stringify(tif)}, compression='group4')`])
+  execFileSync('tiff2pdf', ['-o', pdf, tif])
+  assert.match(execFileSync('pdfimages', ['-list', pdf]).toString(), /ccitt/, 'fixture thật sự là CCITT')
+  const r = await runAnalyzer(TEXT_5_4, [{ path: pdf, mime: 'application/pdf' }])
+  assert.ok(r.ok, JSON.stringify(!r.ok && r.error))
+  assert.deepEqual(r.anchors, { pickup: A(0, 0), measures: [A(0, 1), A(0, 3), A(1, 0), A(1, 2), A(1, 2)] })
+})
+
 test('thứ tự trang: file trang 2 nạp trước trang 1 → máy xếp lại theo nội dung (căn chỉnh), kết quả như đúng thứ tự + báo cần kiểm', async () => {
   const p1 = png(sheet([['w1', '|', 'w2', 'w2', '|', 'w1', 'w2', 'w4']]))
   const p2 = png(sheet([['w5', 'w5', 'w5', 'w5', '|', 'w5', '|', 'w5', 'w5']]))
