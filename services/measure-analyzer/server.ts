@@ -186,7 +186,7 @@ export function createWorker(config: WorkerConfig): Server {
         // OCR lời gần đúng (chord-extract) chỉ để ĐỊNH VỊ vạch → chữ chuẩn; chỉ bật khi worker có engine extraction
         ...(config.extract ? { lineWords: analysisLineWords(text), ocr: { tessdataDir: config.extract.tessdataDir ?? null } } : {}),
         meter: detail.meter ?? null, traceId: versionId,
-      }, signal) as { ok?: unknown; error?: { code?: unknown }; diagnostics?: { generator?: unknown } }
+      }, signal, dir) as { ok?: unknown; error?: { code?: unknown }; diagnostics?: { generator?: unknown } }
       if (raw.ok !== true) throw analyzerError(String(raw.error?.code ?? 'analysis_failed'))
       const result = parseAnalysisResult(raw, text)
       if (!result.ok) throw analyzerError(result.error.code)
@@ -278,16 +278,18 @@ function run(cmd: string, args: string[], path?: string): Promise<string> {
 }
 
 /** Python con: hết hạn / client bỏ đi → SIGKILL (504); RSS vượt trần → SIGKILL (413). Không bao giờ treo worker. */
-function runAnalyzer(config: WorkerConfig, limits: typeof LIMITS, payload: unknown, signal: AbortSignal): Promise<unknown> {
+function runAnalyzer(config: WorkerConfig, limits: typeof LIMITS, payload: unknown, signal: AbortSignal, tmp?: string): Promise<unknown> {
   return new Promise((resolve, reject) => {
     if (signal.aborted) return reject(new HttpError(504, 'timeout', 'Hết thời gian phân tích.'))
+    // detached: analyzer có thể sinh tiến trình con (OCR/tesseract) → khi hết giờ/quá RAM phải giết CẢ nhóm tiến trình, không để mồ côi.
+    // TMPDIR riêng của lần chạy (xoá cùng nó): tesseract của Homebrew không đọc được ảnh tạm ở /tmp → OCR sẽ hỏng nếu để mặc định.
     const child = spawn(config.python, [config.analyzer], {
-      stdio: ['pipe', 'pipe', 'ignore'],
-      env: { PATH: config.childPath ?? process.env.PATH ?? '', HOME: process.env.HOME ?? '', LANG: 'en_US.UTF-8', PYTHONDONTWRITEBYTECODE: '1' },
+      stdio: ['pipe', 'pipe', 'ignore'], detached: true,
+      env: { PATH: config.childPath ?? process.env.PATH ?? '', HOME: process.env.HOME ?? '', LANG: 'en_US.UTF-8', PYTHONDONTWRITEBYTECODE: '1', ...(tmp ? { TMPDIR: tmp } : {}) },
     })
     let out = ''
     let killed: HttpError | null = null
-    const kill = (error: HttpError) => { if (!killed) { killed = error; child.kill('SIGKILL') } }
+    const kill = (error: HttpError) => { if (!killed) { killed = error; try { process.kill(-child.pid!, 'SIGKILL') } catch { child.kill('SIGKILL') } } }
     const onAbort = () => kill(new HttpError(504, 'timeout', 'Hết thời gian phân tích.'))
     signal.addEventListener('abort', onAbort, { once: true })
     const watch = setInterval(() => {
