@@ -15,7 +15,8 @@ import {
 } from './logic/songDraftStorage'
 import type { SongDraft, DraftSummary } from './logic/songDraftStorage'
 import { songShareBlocker, type BmsShareApi } from './bms/bmsArtifact'
-import BmsShareSheet from './bms/BmsShareSheet'
+import ShareSheet from './share/ShareSheet'
+import { artifactRef } from './share/shareRef'
 
 /* =========================================================================
    SONG BUILDER V1 — biến bài YouTube thành dữ liệu luyện nhịp.
@@ -637,10 +638,10 @@ export default function SongBuilderPage({ onClose, embedded = false, initial, on
         </div>
       )}
       {share.open && bmsShare && (
-        <BmsShareSheet title={(buildDraft().title || '').trim() || 'Bài hát chưa đặt tên'} artifactId={share.artifactId} canPublish={!share.published}
-          ensureArtifact={async () => { const r = await bmsShare.save(buildDraft()); if (r.ok) setShare(s => ({ ...s, artifactId: r.artifactId })); return r }}
-          publish={bmsShare.publish}
-          onPublished={id => setShare(s => ({ ...s, artifactId: id, published: true }))}
+        <ShareSheet title={(buildDraft().title || '').trim() || 'Bài hát chưa đặt tên'} target={share.artifactId ? artifactRef(share.artifactId) : null} canPublish={!share.published}
+          ensureTarget={async () => { const r = await bmsShare.save(buildDraft()); if (!r.ok) return r; setShare(s => ({ ...s, artifactId: r.artifactId })); return { ok: true, target: artifactRef(r.artifactId) } }}
+          publish={t => bmsShare.publish(t.key)}
+          onPublished={t => setShare(s => ({ ...s, artifactId: t.key, published: true }))}
           onClose={() => setShare(s => ({ ...s, open: false }))} />
       )}
 

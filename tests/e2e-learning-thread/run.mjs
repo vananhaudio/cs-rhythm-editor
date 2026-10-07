@@ -805,7 +805,7 @@ try {
     const SB = `http://class.localhost:${V}/song-builder`
     const serverCalls = []
     const { c: ca, pg: a } = await loginAt('a@test.local', 390)
-    a.on('request', r => { if (/tool_artifacts|social_share_tool_result|social_delete_tool_artifact|bms_save_for_share|social_publish_tool_artifact/.test(r.url())) serverCalls.push(r.url()) })
+    a.on('request', r => { if (/tool_artifacts|social_share_tool_result|social_delete_tool_artifact|bms_save_for_share|social_publish_tool_artifact|tool_artifact_save_for_share/.test(r.url())) serverCalls.push(r.url()) })
     // Nháp BMS hoàn chỉnh CHỈ trong máy (localStorage) — như người dùng vừa dựng xong
     await a.evaluate(() => {
       const anchor = (w, word, b) => ({ id: `anchor_${String(w).padStart(3, '0')}_b${b}`, wordIndex: w, word, beatIndex: b, tick: b * 480, source: 'anchor' })

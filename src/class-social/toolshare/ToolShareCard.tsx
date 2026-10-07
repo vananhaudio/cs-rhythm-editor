@@ -4,7 +4,7 @@ import { lazy, Suspense, useState } from 'react'
 import { describeToolShare, type ToolShareView } from './registry'
 import { useToolSharePayload } from './toolShareApi'
 
-const ShareToFriendSheet = lazy(() => import('../chat/ShareToFriendSheet'))
+const ShareToFriendSheet = lazy(() => import('../../share/ShareToFriendSheet'))
 
 export function ToolShareBodyView({ view, onShareToFriend }: { view: ToolShareView | null; onShareToFriend?: (ref: NonNullable<ToolShareView['shareRef']>, title: string) => void }) {
   if (!view) return <p className="cs-tool-share-missing">Kết quả này không còn hiển thị được.</p>
@@ -27,12 +27,12 @@ export function ToolShareBodyView({ view, onShareToFriend }: { view: ToolShareVi
 
 export default function ToolShareBody({ postId }: { postId: string }) {
   const raw = useToolSharePayload(postId)
-  const [sheet, setSheet] = useState<{ key: string; title: string } | null>(null)
+  const [sheet, setSheet] = useState<{ target: NonNullable<ToolShareView['shareRef']>; title: string } | null>(null)
   if (raw === undefined) return <div className="cs-tool-share"><span className="cs-skeleton" style={{ width: '45%', height: 18 }} /></div>
   return (
     <>
-      <ToolShareBodyView view={describeToolShare(raw)} onShareToFriend={(ref, title) => setSheet({ key: ref.key, title })} />
-      {sheet && <Suspense fallback={null}><ShareToFriendSheet artifactId={sheet.key} title={sheet.title} onClose={() => setSheet(null)} /></Suspense>}
+      <ToolShareBodyView view={describeToolShare(raw)} onShareToFriend={(ref, title) => setSheet({ target: ref, title })} />
+      {sheet && <Suspense fallback={null}><ShareToFriendSheet target={sheet.target} title={sheet.title} onClose={() => setSheet(null)} /></Suspense>}
     </>
   )
 }

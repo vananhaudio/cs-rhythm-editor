@@ -2,7 +2,8 @@
 // không có URL thô, không JSON/id. Object không đọc được → "Nội dung này không còn khả dụng" (không link, không rò chi tiết).
 import { useEffect } from 'react'
 import type { ToolShareView } from '../toolshare/registry'
-import { UNAVAILABLE_TEXT, useSharedArtifactView } from './shareCards'
+import { UNAVAILABLE_TEXT, useSharedRefView } from '../../share/refCards'
+import type { ShareRef } from '../../share/shareRef'
 
 export function ShareCardView({ view }: { view: ToolShareView | null | undefined }) {
   if (view === undefined) return <div className="cs-share-card is-loading" aria-busy="true"><span className="cs-skeleton" style={{ width: '55%', height: 16 }} /></div>
@@ -23,8 +24,8 @@ export function ShareCardView({ view }: { view: ToolShareView | null | undefined
     : <div className="cs-share-card">{body}</div>
 }
 
-export default function ShareMessageCard({ refKey, onSettle }: { refKey: string; onSettle?: () => void }) {
-  const view = useSharedArtifactView(refKey)
+export default function ShareMessageCard({ shareRef, onSettle }: { shareRef: ShareRef; onSettle?: () => void }) {
+  const view = useSharedRefView(shareRef)
   // card đổi chiều cao khi tải xong → báo danh sách tin (giữ vị trí cuối nếu đang ở cuối)
   useEffect(() => { if (view !== undefined) onSettle?.() }, [view, onSettle])
   return <ShareCardView view={view} />

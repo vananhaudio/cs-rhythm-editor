@@ -9,7 +9,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { SHARE_FALLBACK_BODY, chatErrorText, mergeMessages, toMessages, toShareRef, type ChatMessage } from "../../src/class-social/chat/chatModel";
-import { UNAVAILABLE_TEXT, bmsCardView, type BmsArtifactCardRow } from "../../src/class-social/chat/shareCards";
+import { UNAVAILABLE_TEXT, bmsCardView, type BmsArtifactCardRow } from "../../src/share/refCards";
 import { ShareCardView } from "../../src/class-social/chat/ShareMessageCard";
 import MessageList from "../../src/class-social/chat/MessageList";
 import { ToolShareBodyView } from "../../src/class-social/toolshare/ToolShareCard";
@@ -110,22 +110,24 @@ test("chatErrorText: lỗi share dịu — 22023 theo ngữ cảnh share; 42501 
 test("Phạm vi V1b: chỉ THAM CHIẾU (không ghi chú, không snapshot), một RPC share, đọc object chỉ qua tool_artifacts (RLS)", () => {
   const api = code("src/class-social/chat/chatApi.ts");
   assert.match(api, /'dm_share'/);
-  assert.match(api, /\{ p_user: userId, p_ref_type: 'tool_artifact', p_ref_key: artifactId \}/, "dm_share chỉ nhận người + loại + khoá (KHÔNG body/ghi chú)");
-  const sheet = code("src/class-social/chat/ShareToFriendSheet.tsx");
+  assert.match(api, /\{ p_user: userId, p_ref_type: ref\.type, p_ref_key: ref\.key \}/, "dm_share chỉ nhận người + loại + khoá (KHÔNG body/ghi chú)");
+  const sheet = code("src/share/ShareToFriendSheet.tsx");
   assert.equal(/<textarea|placeholder="(Lời nhắn|Ghi chú)|note|caption/i.test(sheet), false, "Share Sheet không có ô ghi chú");
   assert.equal((sheet.match(/<input/g) ?? []).length, 1, "chỉ một ô nhập: tìm bạn bè");
   const files = readdirSync(new URL("../../src/class-social/chat/", import.meta.url)).map(f => `src/class-social/chat/${f}`);
-  const readers = files.filter(f => /from\(\s*['"`]tool_artifacts/.test(code(f)));
-  assert.deepEqual(readers, ["src/class-social/chat/shareCards.ts"], "chỉ shareCards.ts đọc tool_artifacts (qua RLS, không RPC)");
+  const readers = files.filter(f => /from\(\s*['"`](tool_artifacts|class_schedule|class_sessions)/.test(code(f)));
+  assert.deepEqual(readers, [], "code Chat không tự đọc bảng object — chỉ resolver chung src/share/refCards.ts (qua RLS của object)");
+  const rc = code("src/share/refCards.ts");
+  assert.equal(/\.rpc\(|\.insert\(|\.update\(|\.upsert\(|supabase[^\n]*\.delete\(/.test(rc), false, "resolver card CHỈ đọc (select), không RPC share / không ghi");
   const all = files.map(code).join("\n") + code("src/class-social/sections/Chat.tsx");
   assert.equal(/\.from\(\s*['"`]dm_/.test(all), false, "không truy cập thẳng bảng dm_*");
   assert.equal(/\.channel\(|postgres_changes|realtime/i.test(all), false, "không realtime");
   assert.equal(/type="file"|\.upload\(|getUserMedia|MediaRecorder|FileReader|sticker|class-ai|@Mira|sender_kind/i.test(all), false, "không media/Mira");
-  assert.equal(/ARTIFACT_CARD_SELECT[^\n]*lyrics/.test(code("src/class-social/chat/shareCards.ts")), false, "card không kéo lời bài hát");
+  assert.equal(/ARTIFACT_CARD_SELECT[^\n]*(lyrics|content)/.test(rc), false, "card không kéo lời bài hát / MusicXML");
 });
 
 test("Entry point V1b: BmsArtifactPage + card BMS trên Feed; quyền do server (không suy luận bạn bè ở client)", () => {
-  assert.match(code("src/bms/BmsArtifactPage.tsx"), /BmsShareSheet/);
+  assert.match(code("src/bms/BmsArtifactPage.tsx"), /<ShareSheet /);
   assert.match(code("src/class-social/toolshare/ToolShareCard.tsx"), /onShareToFriend/);
-  assert.equal(/friendship|relationship\s*===/.test(code("src/class-social/chat/ShareToFriendSheet.tsx")), false);
+  assert.equal(/friendship|relationship\s*===/.test(code("src/share/ShareToFriendSheet.tsx")), false);
 });

@@ -66,7 +66,7 @@ export default function MessageList({ messages, pending, hasMore, loadingOlder, 
             {label && <div className="cs-chat-divider">{label}</div>}
             <div className={'cs-msg-row ' + (m.mine ? 'is-mine' : 'is-theirs') + (cont ? ' is-cont' : '')}>
               {m.ref
-                ? <div className="cs-msg-share"><ShareMessageCard refKey={m.ref.key} onSettle={settle} /></div>
+                ? <div className="cs-msg-share"><ShareMessageCard shareRef={m.ref} onSettle={settle} /></div>
                 : <div className="cs-msg-bubble">{m.body}</div>}
             </div>
           </div>

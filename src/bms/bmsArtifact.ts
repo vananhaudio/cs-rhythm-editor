@@ -6,11 +6,11 @@ import { splitWords, makeAnchor } from '../logic/songBuilder'
 import type { SongChord } from '../logic/songBuilder'
 import type { SongDraft } from '../logic/songDraftStorage'
 import type { TempoFit } from '../logic/tempoFit'
-import { shareErrorText } from '../class-social/toolshare/toolShareApi'
+import { isArtifactId, publishArtifact, saveArtifactForShare, type ArtifactVisibility, type SaveResult } from '../share/artifactApi'
+export { isArtifactId }
 
 export const MAX_LYRICS = 8000
 const YT_ID_RE = /^[A-Za-z0-9_-]{11}$/
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 export type BmsSongPayload = {
   title: string; video_id: string; lyrics: string
@@ -80,66 +80,19 @@ export function draftFromArtifact(artifactId: string, data: unknown): SongDraft 
   }
 }
 
-export const isArtifactId = (s: string | null | undefined): s is string => !!s && UUID_RE.test(s)
 
-export type SaveSongResult = { ok: true; artifactId: string } | { ok: false; message: string }
-export type PublishResult = { ok: true } | { ok: false; message: string }
+export type { ArtifactVisibility, SaveResult as SaveSongResult, PublishResult, UnpublishResult } from '../share/artifactApi'
 
-function rpcMessage(error: { code?: string; message?: string } | null | undefined, online: boolean): string {
-  if (error?.code === '54000') return 'Bạn lưu quá nhiều bài trong thời gian ngắn. Hãy chờ một chút.'
-  if (error?.code === '42501' && !/TS_NOT_MEMBER/.test(error.message ?? '')) return 'Bạn không có quyền thực hiện thao tác này với bài này.'
-  return shareErrorText(error?.message, online)
-}
-
-/** Lưu RIÊNG bài (chưa đăng): lưu để có thể gửi cho bạn. Server idempotent theo nội dung → bấm đúp / mở lại vẫn MỘT bài.
- *  Lưu nội dung ≠ phân phối nội dung: KHÔNG tạo bài trên Feed. */
-export async function saveBmsForShare(d: SongDraft): Promise<SaveSongResult> {
+/** Lưu RIÊNG bài BMS (chưa đăng) — dùng vòng đời chung của artifact (src/share/artifactApi.ts). */
+export async function saveBmsForShare(d: SongDraft): Promise<SaveResult> {
   const song = songPayloadFromDraft(d)
   if (!song) return { ok: false, message: songShareBlocker(d) ?? 'Bài chưa đủ dữ liệu để chia sẻ.' }
-  const online = typeof navigator === 'undefined' ? true : navigator.onLine !== false
-  try {
-    const { supabase } = await import('../supabase')
-    const { data, error } = await supabase.rpc('bms_save_for_share', { p_song: song })
-    if (error || typeof data !== 'string' || !isArtifactId(data)) return { ok: false, message: rpcMessage(error, online) }
-    return { ok: true, artifactId: data.toLowerCase() }
-  } catch (e) {
-    return { ok: false, message: shareErrorText((e as Error)?.message, online) }
-  }
-}
-
-/** Đăng lên cộng đồng: PROMOTE chính bài đã lưu (riêng → cộng đồng) + một bài Feed. Idempotent; chỉ chủ bài. */
-export async function publishBmsArtifact(artifactId: string): Promise<PublishResult> {
-  const online = typeof navigator === 'undefined' ? true : navigator.onLine !== false
-  try {
-    const { supabase } = await import('../supabase')
-    const { data, error } = await supabase.rpc('social_publish_tool_artifact', { p_id: artifactId })
-    if (error || typeof data !== 'string') return { ok: false, message: rpcMessage(error, online) }
-    return { ok: true }
-  } catch (e) {
-    return { ok: false, message: shareErrorText((e as Error)?.message, online) }
-  }
-}
-
-export type UnpublishResult = { ok: true; result: 'private' | 'deleted' } | { ok: false; message: string }
-
-/** "Gỡ khỏi cộng đồng" ≠ xoá bài: gỡ bài Feed. Bài đã từng gửi cho bạn bè → còn (chỉ người đã nhận mở được); chưa từng gửi → xoá hẳn. */
-export async function unpublishBmsArtifact(artifactId: string): Promise<UnpublishResult> {
-  const online = typeof navigator === 'undefined' ? true : navigator.onLine !== false
-  try {
-    const { supabase } = await import('../supabase')
-    const { data, error } = await supabase.rpc('social_unpublish_tool_artifact', { p_id: artifactId })
-    if (error || (data !== 'private' && data !== 'deleted')) return { ok: false, message: rpcMessage(error, online) }
-    return { ok: true, result: data }
-  } catch (e) {
-    return { ok: false, message: shareErrorText((e as Error)?.message, online) }
-  }
+  return saveArtifactForShare('bms', song)
 }
 
 /** Cổng chia sẻ BMS cho SongBuilder (chỉ truyền ở route /song-builder khi đã đăng nhập). */
-export const bmsShareApi = { save: saveBmsForShare, publish: publishBmsArtifact }
+export const bmsShareApi = { save: saveBmsForShare, publish: publishArtifact }
 export type BmsShareApi = typeof bmsShareApi
-
-export type ArtifactVisibility = 'class' | 'shared'
 
 export type LoadedArtifact =
   | { status: 'ready'; draft: SongDraft; isMine: boolean; visibility: ArtifactVisibility }
@@ -160,11 +113,3 @@ export async function loadBmsArtifact(id: string): Promise<LoadedArtifact> {
   } catch { return { status: 'error' } }
 }
 
-/** Chủ bài XOÁ bài riêng (hành động chủ động, khác "Gỡ khỏi cộng đồng"): artifact xoá, tin Chat còn. */
-export async function deleteBmsArtifact(id: string): Promise<boolean> {
-  try {
-    const { supabase } = await import('../supabase')
-    const { data, error } = await supabase.rpc('social_delete_tool_artifact', { p_id: id })
-    return !error && data === true
-  } catch { return false }
-}

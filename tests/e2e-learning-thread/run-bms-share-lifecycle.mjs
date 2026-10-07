@@ -36,7 +36,7 @@ async function open(who, width = 390, height = 844) {
     if (m && r.method() !== 'OPTIONS') { let body = {}; try { body = JSON.parse(r.postData() ?? '{}') } catch { /* GET */ } page.rpcs.push({ fn: m[1], body }) }
   })
   page.on('response', async r => {
-    if (/\/rest\/v1\/rpc\/bms_save_for_share/.test(r.url()) && r.request().method() === 'POST') { try { page.saved.push(await r.json()) } catch { /* điều hướng */ } }
+    if (/\/rest\/v1\/rpc\/tool_artifact_save_for_share/.test(r.url()) && r.request().method() === 'POST') { try { page.saved.push(await r.json()) } catch { /* điều hướng */ } }
   })
   await page.goto(ME, { waitUntil: 'networkidle0' })
   await page.waitForSelector('#cs-login-email', { timeout: 15000 })
@@ -105,7 +105,7 @@ try {
   assert.ok(opts.some(t => t.startsWith('Gửi cho bạn bè') && t.includes('Gửi riêng qua Chat')) && opts.some(t => t.startsWith('Đăng lên cộng đồng') && t.includes('Chia sẻ để mọi người trong Class cùng xem')), JSON.stringify(opts))
   const uiText = (await bodyText(A))
   assert.equal(/artifact|shared|promote/i.test(await A.$eval('[role=dialog]', e => e.innerText)), false, 'sheet không lộ từ kỹ thuật')
-  assert.equal(calls(A, 'bms_save_for_share').length + calls(A, 'social_publish_tool_artifact').length + calls(A, 'dm_share').length, 0, 'mở sheet chưa gọi server')
+  assert.equal(calls(A, 'tool_artifact_save_for_share').length + calls(A, 'social_publish_tool_artifact').length + calls(A, 'dm_share').length, 0, 'mở sheet chưa gọi server')
   await A.screenshot({ path: `${SHOTS}/lifecycle-sheet-390.png` })
   ok('1 bản nháp local: MỘT nút "Chia sẻ" → sheet "Gửi cho bạn bè — Gửi riêng qua Chat" / "Đăng lên cộng đồng — Chia sẻ để mọi người trong Class cùng xem"; không lộ từ kỹ thuật; mở sheet chưa gọi server')
 
@@ -113,9 +113,9 @@ try {
   await A.evaluate(() => { const b = [...document.querySelectorAll('[role=dialog] button')].find(x => x.textContent.startsWith('Gửi cho bạn bè')); b.click(); b.click() })
   await waitFor(A, () => document.querySelectorAll('[role=dialog] [role=radio]').length > 0)
   assert.deepEqual((await friendsInSheet(A)).sort(), [NAME.B, NAME.C].sort())
-  assert.equal(calls(A, 'bms_save_for_share').length, 1, 'bấm đúp → MỘT lần lưu')
+  assert.equal(calls(A, 'tool_artifact_save_for_share').length, 1, 'bấm đúp → MỘT lần lưu')
   assert.equal(calls(A, 'social_publish_tool_artifact').length, 0, 'gửi bạn KHÔNG đăng cộng đồng')
-  assert.deepEqual(Object.keys(calls(A, 'bms_save_for_share')[0].body), ['p_song'])
+  assert.deepEqual(Object.keys(calls(A, 'tool_artifact_save_for_share')[0].body).sort(), ['p_payload', 'p_tool'])
   await pickAndSend(A, NAME.B)
   await sleep(300)
   const ART = A.saved[0]
@@ -194,7 +194,7 @@ try {
   await A2.evaluate(() => [...document.querySelectorAll('[role=dialog] button')].find(x => x.textContent.startsWith('Đăng lên cộng đồng')).click())
   await waitFor(A2, () => document.querySelector('[role=dialog] [role=status]')?.textContent === 'Đã đăng lên cộng đồng')
   assert.equal(calls(A2, 'social_publish_tool_artifact')[0].body.p_id, SH1, 'promote chính bài riêng có sẵn')
-  assert.equal(calls(A2, 'bms_save_for_share').length, 0, 'bài đã có sẵn → không lưu thêm')
+  assert.equal(calls(A2, 'tool_artifact_save_for_share').length, 0, 'bài đã có sẵn → không lưu thêm')
   await A2.evaluate(() => [...document.querySelectorAll('[role=dialog] button')].find(x => x.textContent.trim() === 'Xong').click())
   await waitFor(A2, () => /đang chia sẻ cho Class/.test(document.querySelector('.bms-artifact-banner').textContent))
   assert.match(await A2.$eval('.bms-artifact-banner', e => e.textContent), /Gỡ khỏi cộng đồng/)

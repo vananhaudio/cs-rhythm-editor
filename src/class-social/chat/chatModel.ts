@@ -1,6 +1,7 @@
 // Trò chuyện V1a — domain THUẦN (không mạng/DOM) để test được.
 // Quyền nhắn tin do DB quyết (dm_* RPC); ở đây chỉ dựng giao diện từ dữ liệu server trả.
 import { safeImageUrl } from '../media/safeImageUrl'
+import { toShareRef, type ShareRef } from '../../share/shareRef'
 
 /** Khớp CHECK của dm_messages.body (1..2000 ký tự) */
 export const MAX_BODY = 2000
@@ -25,8 +26,8 @@ export type ConversationItem = {
 /** Màn đang chọn trong /me/chat: chưa chọn · một hội thoại có sẵn · bắt đầu với một người (hội thoại tạo khi gửi tin đầu) */
 export type ChatSelection = { kind: 'none' } | { kind: 'conversation'; id: string } | { kind: 'with'; userId: string }
 
-/** Chia sẻ nội bộ (V1b): CHỈ tham chiếu tới object gốc — Chat không giữ bản sao nội dung */
-export type ChatShareRef = { type: 'tool_artifact'; key: string }
+/** Chia sẻ nội bộ: CHỈ tham chiếu tới object gốc — Chat không giữ bản sao nội dung (loại/validate ở src/share/shareRef.ts) */
+export type ChatShareRef = ShareRef
 /** body cố định của tin share (DB ghi) — client V1a cũ hiện đúng chuỗi này như text */
 export const SHARE_FALLBACK_BODY = 'Đã chia sẻ một nội dung'
 
@@ -45,13 +46,7 @@ export type MessageRow = {
   ref_type?: string | null; ref_key?: string | null
 }
 
-const REF_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
-
-/** Tham chiếu hợp lệ (loại biết + uuid) hoặc null. Loại lạ/khoá hỏng → null → tin hiện như text (body cố định), không lỗi */
-export function toShareRef(type: string | null | undefined, key: string | null | undefined): ChatShareRef | null {
-  const k = (key ?? '').toLowerCase()
-  return type === 'tool_artifact' && REF_UUID_RE.test(k) ? { type: 'tool_artifact', key: k } : null
-}
+export { toShareRef }
 
 export function toConversations(rows: ConversationRow[] | null | undefined): ConversationItem[] {
   return (rows ?? []).filter(r => !!r?.conversation_id && !!r.peer_id).map(r => ({

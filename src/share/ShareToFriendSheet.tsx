@@ -1,10 +1,11 @@
-// "Gửi bạn bè" (Chat V1b): chọn MỘT người bạn accepted → gửi THAM CHIẾU tới object (không ghi chú, không sao chép nội dung).
+// "Gửi cho bạn bè": chọn MỘT người bạn accepted → gửi THAM CHIẾU tới object (không ghi chú, không sao chép nội dung). Dùng chung mọi loại share.
 // Tự chứa style (nằm trên cả trang tối BMS lẫn Feed sáng). Quyền do DB quyết (dm_share): hết bạn / object không còn → báo lỗi dịu.
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { fetchFriends } from '../friends/friendsApi'
-import type { PersonCard } from '../friends/friendModel'
-import { shareToFriend } from './chatApi'
-import { chatConversationPath } from '../resolveMeRoute'
+import { fetchFriends } from '../class-social/friends/friendsApi'
+import type { PersonCard } from '../class-social/friends/friendModel'
+import { shareToFriend } from '../class-social/chat/chatApi'
+import { chatConversationPath } from '../class-social/resolveMeRoute'
+import type { ShareRef } from './shareRef'
 
 const FONT = `'Be Vietnam Pro',system-ui,sans-serif`
 const S = {
@@ -17,7 +18,7 @@ const S = {
 
 type Loaded = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; friends: PersonCard[] }
 
-export default function ShareToFriendSheet({ artifactId, title, onClose }: { artifactId: string; title: string; onClose: () => void }) {
+export default function ShareToFriendSheet({ target, title, onClose }: { target: ShareRef; title: string; onClose: () => void }) {
   const [state, setState] = useState<Loaded>({ status: 'loading' })
   const [picked, setPicked] = useState<PersonCard | null>(null)
   const [q, setQ] = useState('')
@@ -48,7 +49,7 @@ export default function ShareToFriendSheet({ artifactId, title, onClose }: { art
   const send = async () => {
     if (!picked || busyRef.current) return   // chống bấm đúp: MỘT lần gửi
     busyRef.current = true; setBusy(true); setError(null)
-    const r = await shareToFriend(picked.userId, artifactId)
+    const r = await shareToFriend(picked.userId, target)
     if (r.ok) setDone({ name: picked.name, conversationId: r.value.conversationId })
     else { setError(r.message); busyRef.current = false }
     setBusy(false)
