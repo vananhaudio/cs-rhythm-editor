@@ -805,7 +805,7 @@ try {
     const SB = `http://class.localhost:${V}/song-builder`
     const serverCalls = []
     const { c: ca, pg: a } = await loginAt('a@test.local', 390)
-    a.on('request', r => { if (/tool_artifacts|social_share_tool_result|social_delete_tool_artifact/.test(r.url())) serverCalls.push(r.url()) })
+    a.on('request', r => { if (/tool_artifacts|social_share_tool_result|social_delete_tool_artifact|bms_save_for_share|social_publish_tool_artifact/.test(r.url())) serverCalls.push(r.url()) })
     // Nháp BMS hoàn chỉnh CHỈ trong máy (localStorage) — như người dùng vừa dựng xong
     await a.evaluate(() => {
       const anchor = (w, word, b) => ({ id: `anchor_${String(w).padStart(3, '0')}_b${b}`, wordIndex: w, word, beatIndex: b, tick: b * 480, source: 'anchor' })
@@ -821,8 +821,8 @@ try {
     })
     await a.goto(SB, { waitUntil: 'domcontentloaded' })
     await clickText(a, '▶ Tiếp tục')
-    await waitText(a, /Chia sẻ lên cộng đồng/)
-    await waitText(a, /Nháp của bạn vẫn chỉ ở máy/)
+    await waitText(a, /Gửi riêng cho bạn bè hoặc đăng lên cộng đồng/)
+    await waitText(a, /Bản nháp của bạn vẫn lưu trên máy/)
     await clickText(a, '💾 Lưu vào Bài hát của tôi')   // lưu thư viện LOCAL — không lên server
     await new Promise(r => setTimeout(r, 600))
     assert.deepEqual(serverCalls, [], 'dựng / tiếp tục / lưu nháp KHÔNG gọi server: ' + serverCalls.join(' '))
@@ -830,8 +830,11 @@ try {
     await new Promise(r => setTimeout(r, 2400))   // toast "Đã lưu" tắt rồi mới chụp
     await a.screenshot({ path: `${SHOTS}/23-bms-share.png` })
     // Bấm đúp Chia sẻ → vẫn MỘT bài
-    await a.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => x.textContent.trim() === 'Chia sẻ lên cộng đồng'); b.click(); b.click() })
-    await waitText(a, /Đã chia sẻ lên cộng đồng/)
+    await clickText(a, 'Chia sẻ')
+    await a.waitForSelector('[role=dialog]', { timeout: 10000 })
+    await a.evaluate(() => { const b = [...document.querySelectorAll('[role=dialog] button')].find(x => x.textContent.includes('Đăng lên cộng đồng')); b.click(); b.click() })
+    await waitText(a, /Đã đăng lên cộng đồng/)
+    await a.evaluate(() => [...document.querySelectorAll('[role=dialog] button')].find(x => x.textContent.trim() === 'Xong').click())
     const artHref = await a.$eval('a[href^="/song-builder?artifact="]', e => e.getAttribute('href'))
     assert.match(artHref, /^\/song-builder\?artifact=[0-9a-f-]{36}$/)
     await a.goto(ME, { waitUntil: 'domcontentloaded' })
@@ -855,7 +858,7 @@ try {
       assert.match(t, /Có Chàng Trai Viết Lên Cây/); assert.match(t, /76·4\/4/)
       assert.match(t, /chàng[\s\S]*yêu[\s\S]*thương/, 'lời karaoke đúng bài')
       assert.match(t, /\bAm\b[\s\S]*\bG\b/, 'hợp âm đúng bài')
-      assert.equal(/Gỡ chia sẻ|Lưu vào Bài hát|Chia sẻ lên cộng đồng/.test(t), false, 'người xem không lưu/sửa/gỡ')
+      assert.equal(/Gỡ chia sẻ|Gỡ khỏi cộng đồng|Gỡ bài|Lưu vào Bài hát|Chia sẻ lên cộng đồng/.test(t), false, 'người xem không lưu/sửa/gỡ')
     }
     await checkPractice()
     await noHorizontalOverflow(b, 'BMS chỉ luyện (390px)')
@@ -870,11 +873,11 @@ try {
     const { ctx: cg, page: g } = await ctxPage(390)
     await g.goto(`http://class.localhost:${V}${artHref}`, { waitUntil: 'domcontentloaded' }); await waitText(g, /Đăng nhập Class để luyện bài này/)
     await cg.close()
-    // A (chủ bài) mở bài của mình → "Bài của bạn" → Gỡ chia sẻ (2 bước) → bài + thẻ biến mất
+    // A (chủ bài) mở bài của mình → "Bài của bạn" → Gỡ khỏi cộng đồng (2 bước; chưa từng gửi bạn → xoá hẳn) → bài + thẻ biến mất
     const [ca2, a2] = [ca, a]   // cùng trình duyệt của A (nháp local ở đây)
     await a2.goto(`http://class.localhost:${V}${artHref}`, { waitUntil: 'domcontentloaded' })
     await waitText(a2, /Bài của bạn/)
-    await clickText(a2, 'Gỡ chia sẻ'); await waitText(a2, /Nháp trong máy bạn vẫn giữ nguyên/)
+    await clickText(a2, 'Gỡ khỏi cộng đồng'); await waitText(a2, /Nháp trong máy bạn vẫn giữ nguyên/)
     await a2.screenshot({ path: `${SHOTS}/26-bms-owner-remove.png` })
     await clickText(a2, 'Xác nhận gỡ'); await waitText(a2, /không còn được chia sẻ/)
     await a2.goto(ME, { waitUntil: 'domcontentloaded' }); await a2.waitForSelector('.cs-post', { timeout: 15000 }); await new Promise(r => setTimeout(r, 800))

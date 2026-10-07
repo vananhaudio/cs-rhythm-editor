@@ -70,3 +70,9 @@ E2E V1b: BMS artifact → share (bấm đúp = 1 `dm_share`, chỉ gửi tham ch
 ## Ngoài phạm vi (để sau)
 
 Nhịp & Phách / Lớp / Band / profile / bài đang tập làm object share; lời nhắn đi kèm; `last_kind` cho preview; reaction/reply; media; group; realtime; Mira.
+
+## Cập nhật UX (08/10/2026) — xem `docs/BMS-SHARE-LIFECYCLE-V1.md`
+
+Sau test thật của Owner, nút `Gửi bạn bè` riêng được gộp thành MỘT nút `Chia sẻ` (Gửi cho bạn bè / Đăng lên cộng đồng). Bài nháp được tự LƯU RIÊNG
+(`visibility='shared'`, không lên Feed) khi gửi cho bạn; đăng cộng đồng sau đó nâng cấp chính bài đó (một bài = một artifact). Với bài riêng, tin DM của
+chủ bài là grant cho người nhận (ngoại lệ có chủ đích của nguyên tắc "share không cấp quyền", chỉ áp cho bài `shared`); người nhận không forward.

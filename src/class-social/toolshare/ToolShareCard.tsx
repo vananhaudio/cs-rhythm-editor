@@ -19,7 +19,7 @@ export function ToolShareBodyView({ view, onShareToFriend }: { view: ToolShareVi
       {view.note && <div className="cs-tool-share-note">{view.note}</div>}
       {view.action && <a className="cs-btn cs-btn-soft cs-tool-share-cta" href={view.action.href}>{view.action.label}</a>}
       {view.shareRef && onShareToFriend && (
-        <button type="button" className="cs-btn cs-btn-soft cs-tool-share-cta" onClick={() => onShareToFriend(view.shareRef!, view.headline)}>Gửi bạn bè</button>
+        <button type="button" className="cs-btn cs-btn-soft cs-tool-share-cta" onClick={() => onShareToFriend(view.shareRef!, view.headline)}>Chia sẻ</button>
       )}
     </div>
   )

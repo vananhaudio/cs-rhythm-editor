@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # E2E Chat V1b (Share nội bộ BMS artifact) trên stack LOCAL của scripts/e2e-learning-thread.sh (không production).
-# DB tạm: + account_avatar_v1 + friends_ux_v2 + dm_v1 + dm_share_v1 TRƯỚC mọi kịch bản. A–B bạn, A–C bạn, B–C KHÔNG là bạn, T không là bạn ai.
+# DB tạm: + account_avatar_v1 + friends_ux_v2 + dm_v1 + dm_share_v1 + bms_share_lifecycle_v1 TRƯỚC mọi kịch bản. A–B bạn, A–C bạn, B–C KHÔNG là bạn, T không là bạn ai.
 # Dữ liệu: ART1/ART2 (A, class) · ART_PRIV (C, private — A không đọc được) · hội thoại A–C có sẵn tin share tới ART_PRIV · một bài Feed BMS của A.
 #   PUPPETEER_DIR=/path/to/dir bash scripts/e2e-chat-share-v1b.sh
 set -euo pipefail
@@ -47,6 +47,6 @@ begin
     (cid, 3, 'user', c, 'Bài đó hay lắm', null, null, now() - interval '5 minutes');
 end $$;
 SQL
-cat "$ROOT/db/account_avatar_v1_setup.sql" "$ROOT/db/friends_ux_v2_setup.sql" "$ROOT/db/dm_v1_setup.sql" "$ROOT/db/dm_share_v1_setup.sql" > "$TMPX/pre.sql"
+cat "$ROOT/db/account_avatar_v1_setup.sql" "$ROOT/db/friends_ux_v2_setup.sql" "$ROOT/db/dm_v1_setup.sql" "$ROOT/db/dm_share_v1_setup.sql" "$ROOT/db/bms_share_lifecycle_v1_setup.sql" > "$TMPX/pre.sql"
 E2E_CHECKPOINTS=1 E2E_SKIP_BASE=1 E2E_PRE_SQL="$TMPX/pre.sql" E2E_EXTRA_SQL="$TMPX/extra.sql" \
   E2E_EXTRA_RUNNER="$ROOT/tests/e2e-learning-thread/run-chat-share-v1b.mjs" bash "$ROOT/scripts/e2e-learning-thread.sh"
