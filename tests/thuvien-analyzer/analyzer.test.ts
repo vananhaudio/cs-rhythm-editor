@@ -260,6 +260,25 @@ test('adapter PRODUCTION: chỉ gửi { versionId } + Bearer JWT phiên hiện t
   assert.equal(productionMeasureAnalyzer('http://worker.example', token), undefined, 'http không phải loopback → không dùng')
   assert.equal(productionMeasureAnalyzer('off', token), undefined)
   assert.ok(productionMeasureAnalyzer('https://mac-mini.example.ts.net', token))
+  // Nhiều địa chỉ: loopback trước, Funnel cũ chết thì vẫn dùng loopback; loopback chết thì lùi về địa chỉ cấu hình.
+  const probeOk = { ok: true, kind: 'chord-extract-worker' }
+  const hits: string[] = []
+  const reach = (alive: string[]) => (async (url: string) => {
+    hits.push(String(url))
+    if (!alive.some(a => String(url).startsWith(a))) throw new TypeError('Failed to fetch')
+    return new Response(JSON.stringify(String(url).endsWith('/extract-probe') ? probeOk : { ok: false, error: { code: 'bad_request' } }), { status: 200 })
+  }) as unknown as typeof fetch
+  const LOOP = 'http://127.0.0.1:7430', FUNNEL = 'https://mac-mini.example.ts.net:8443'
+  const both = productionMeasureAnalyzer([LOOP, FUNNEL], token, reach([LOOP]))!
+  assert.equal(await both.available(), true, 'Funnel chết không kéo loopback xuống')
+  assert.deepEqual(hits, [`${LOOP}/extract-probe`], 'loopback được thử trước; thấy sống thì không gọi địa chỉ sau')
+  hits.length = 0
+  const onlyFunnel = productionMeasureAnalyzer([LOOP, FUNNEL], token, reach([FUNNEL]))!
+  assert.equal(await onlyFunnel.available(), true)
+  assert.deepEqual(hits, [`${LOOP}/extract-probe`, `${FUNNEL}/extract-probe`])
+  assert.equal(await productionMeasureAnalyzer([LOOP, FUNNEL], token, reach([]))!.available(), false)
+  assert.equal(productionMeasureAnalyzer([undefined, 'off'], token), undefined)
+  assert.ok(productionMeasureAnalyzer([undefined, FUNNEL], token), 'không rpc + có env → chỉ env')
   const offline = createWorkerMeasureAnalyzer('https://worker.example', token, (async () => { throw new Error('offline') }) as typeof fetch)
   assert.equal(await offline.available(), false)
   assert.equal((await offline.analyze({ versionId: 'v', text: TEXT_5_4, meter: null, loadFiles: async () => [] })).ok, false)

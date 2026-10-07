@@ -168,9 +168,28 @@ export function createWorkerMeasureAnalyzer(baseUrl: string, getToken: () => Pro
   }
 }
 
-/** Analyzer cho bản build: https (worker có tên miền) HOẶC loopback http (worker chạy ngay trên máy của Owner, vd. http://127.0.0.1:7430).
- *  Không có / `off` / địa chỉ http không phải loopback → undefined (nút Phân tích vạch nhịp khoá). */
-export function productionMeasureAnalyzer(url: string | undefined, getToken: () => Promise<string | null>): MeasureAnalyzer | undefined {
-  const ok = !!url && (/^https:\/\/[^/\s]+/.test(url) || /^http:\/\/(127\.0\.0\.1|localhost|\[::1\])(:\d+)?(\/|$)/.test(url))
-  return ok ? createWorkerMeasureAnalyzer(url!, getToken) : undefined
+const URL_OK = (url: string) => /^https:\/\/[^/\s]+/.test(url) || /^http:\/\/(127\.0\.0\.1|localhost|\[::1\])(:\d+)?(\/|$)/.test(url)
+
+/** Analyzer cho bản build. Nhận MỘT hoặc NHIỀU địa chỉ worker, thử THEO THỨ TỰ (địa chỉ đầu tiên thăm dò được thì dùng):
+ *  https (worker có tên miền) hoặc loopback http (worker chạy ngay trên máy Owner, vd. http://127.0.0.1:7430).
+ *  Không có / `off` / http không phải loopback → bỏ qua; không còn địa chỉ nào hợp lệ → undefined (nút Phân tích vạch nhịp khoá). */
+export function productionMeasureAnalyzer(urls: string | (string | undefined)[] | undefined, getToken: () => Promise<string | null>, fetcher?: typeof fetch): MeasureAnalyzer | undefined {
+  const list = [...new Set((Array.isArray(urls) ? urls : [urls]).filter((url): url is string => !!url && URL_OK(url)))]
+  const candidates = list.map(url => createWorkerMeasureAnalyzer(url, getToken, fetcher))
+  if (!candidates.length) return undefined
+  if (candidates.length === 1) return candidates[0]
+  let active: MeasureAnalyzer | null = null
+  return {
+    async available() {
+      for (const candidate of candidates) {
+        if (await candidate.available()) { active = candidate; return true }
+      }
+      active = null
+      return false
+    },
+    async analyze(input) {
+      if (!active && !(await this.available())) return { ok: false, error: { code: 'unreachable', message: 'Không gọi được máy phân tích — vẫn đặt vạch thủ công được.' } }
+      return active!.analyze(input)
+    },
+  }
 }

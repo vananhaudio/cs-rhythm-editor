@@ -22,7 +22,10 @@ type Prepared = ReturnType<typeof prepareMusicXml>
 
 /** /thuvien có hai mục; mỗi mục tự lo phần của mình. Mục MusicXML giữ nguyên hành vi cũ. */
 // Worker phân tích vạch nhịp production: chỉ khi build có VITE_MEASURE_ANALYZER_URL (https). Token = phiên Supabase hiện tại.
-const PRODUCTION_ANALYZER = productionMeasureAnalyzer(import.meta.env.VITE_MEASURE_ANALYZER_URL ?? (import.meta.env.VITE_CHORD_LIBRARY_BACKEND === 'rpc' ? 'http://127.0.0.1:7430' : undefined),
+// Thứ tự: worker LOOPBACK trên chính máy Owner trước (đường đã chạy thật ở Gate D/E), rồi địa chỉ cấu hình ở build (nếu có). `off` tắt cả hai.
+// (Lỗi canary: VITE_MEASURE_ANALYZER_URL cũ trỏ tailnet Funnel đã đè mất mặc định loopback → nút khoá "Máy phân tích chưa chạy".)
+const ANALYZER_ENV = import.meta.env.VITE_MEASURE_ANALYZER_URL
+const PRODUCTION_ANALYZER = productionMeasureAnalyzer(ANALYZER_ENV === 'off' ? undefined : [import.meta.env.VITE_CHORD_LIBRARY_BACKEND === 'rpc' ? 'http://127.0.0.1:7430' : undefined, ANALYZER_ENV],
   async () => (await (await import('../supabase.ts')).supabase.auth.getSession()).data.session?.access_token ?? null)
 
 // Phân tích nội dung sheet (PDF/ảnh → lời + hợp âm): worker trên Mac mini của Owner, mặc định loopback; VITE_EXTRACT_WORKER_URLS=off để tắt.
