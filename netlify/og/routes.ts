@@ -25,7 +25,7 @@ export const ROUTE_CLASSES: readonly RouteClass[] = [
   r('/story', 'story'),            // /story/tell|write|… là trang ứng dụng — adapter story tự bỏ qua
   r('/showcase', 'showcase'),
   r('/me/classes', 'class'),       // + session (/me/classes/<id>/sessions/<n>)
-  r('/teamlab/band', 'teamlab-band'), // CHỈ /teamlab/band/<slug> (trang Band công khai của TeamLab; KHÁC Class /band/*)
+  r('/teamlab/band', 'teamlab-band'), // /teamlab/band/<slug> (trang Band công khai của TeamLab; KHÁC Class /band/*) + /teamlab/band/<slug>/room… (workspace của Team đó → cùng metadata công khai)
   r('/teamlab/song', 'teamlab-song'), // CHỈ /teamlab/song/<slug>: ngoại lệ HẸP của proxy /teamlab (edge function riêng og-teamlab.ts)
   r('/me/u', 'profile'),           // luôn private tới khi có opt-in công khai
   ...LANDINGS.map(l => r(l.path, 'landing')),

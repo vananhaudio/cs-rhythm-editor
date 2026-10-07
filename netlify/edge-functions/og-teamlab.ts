@@ -1,4 +1,4 @@
-// ── Netlify Edge Function: thẻ chia sẻ cho TeamLab Public Song + Public Band — CHỈ /teamlab/song/* và /teamlab/band/* ──
+// ── Netlify Edge Function: thẻ chia sẻ cho TeamLab Public Song + Public Band — CHỈ /teamlab/song/* và /teamlab/band/* (gồm /teamlab/band/<slug>/room…) ──
 // og.ts vẫn loại trừ /teamlab/* (site khác qua proxy) — hàm này là ngoại lệ HẸP, tách riêng để không nới exclusion.
 // Người dùng bình thường: context.next() trả thẳng (không đọc body, không RPC). Chỉ crawler xem trước liên kết
 // (netlify/og/crawler.ts) mới qua handler Universal OG (adapter teamlabSong → RPC công khai → regex thay thẻ meta).

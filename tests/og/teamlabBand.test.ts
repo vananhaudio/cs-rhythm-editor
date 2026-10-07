@@ -93,3 +93,67 @@ test('edge: crawler → một RPC (chỉ p_slug) → OG Band đúng; slug sai �
   const w = await edge(FB, 'sai-slug-abcde'); assert.equal(w.res.headers.get('x-og-fn'), 'teamlab-band:not_found'); assert.equal(title(w.html), title(SHELL)); assert.doesNotMatch(w.html, /Lá Mùa Thu/)
   const f = await edge(FB, SLUG, { fail: true }); assert.match(f.res.headers.get('x-og-fn') ?? '', /^error:/); assert.equal(title(f.html), title(SHELL))
 })
+
+// ─── Slice E: path workspace /teamlab/band/<slug>/room… dùng metadata CÔNG KHAI của Team ───────────────────────────
+const BAND_ID = '11111111-2222-3333-4444-555555555555', SONG_ID = '99999999-aaaa-bbbb-cccc-dddddddddddd'
+const ROOM_PATHS = [`/teamlab/band/${SLUG}/room`, `/teamlab/band/${SLUG}/room/`, `/teamlab/band/${SLUG}/room/group/none`, `/teamlab/band/${SLUG}/room/group/${BAND_ID}`, `/teamlab/band/${SLUG}/room/studio/${SONG_ID}`]
+
+test('Slice E: /room, /room/group/none|<id>, /room/studio/<id> → CÙNG title/mô tả/ảnh/og:url canonical với trang Band công khai', async () => {
+  const base = await share(`/teamlab/band/${SLUG}`)
+  for (const p of ROOM_PATHS) {
+    const o = await share(p)
+    assert.equal(o.r.note, 'teamlab-band:public', p)
+    assert.equal(o.t, 'Lá Mùa Thu · TeamLab', p); assert.equal(o.d, base.d, p); assert.equal(o.img, `${STORAGE}/${COVER}`, p)
+    assert.equal(tag(o.out, 'twitter:image'), o.img, p); assert.equal(tag(o.out, 'twitter:title'), o.t, p)
+    assert.equal(o.url, `${ORIGIN}/teamlab/band/${SLUG}`, `${p}: og:url phải về trang Band công khai, không phải /room hay /studio`)
+    assert.equal(o.out, base.out, `${p}: toàn bộ thẻ giống trang Band công khai`)
+  }
+})
+
+test('Slice E PRIVACY: id Band con / id bài KHÔNG vào RPC, tiêu đề, mô tả, ảnh hay og:url; chỉ một RPC teamlab_public_band theo p_slug', async () => {
+  const log: string[] = []; const seen: Record<string, unknown>[] = []
+  const ctx = mockCtx(dbWith(b => { seen.push(b); return b.p_slug === SLUG ? band() : null }), { log })
+  for (const p of ROOM_PATHS) {
+    const o = await share(p, SHELL, ctx)
+    for (const v of [BAND_ID, SONG_ID, 'studio', 'group']) for (const t of [o.t, o.d, o.img, o.url, tag(o.out, 'twitter:title'), tag(o.out, 'twitter:description')]) assert.ok(!String(t).includes(v), `${p}: "${v}" lọt vào thẻ`)
+  }
+  assert.deepEqual(seen, ROOM_PATHS.map(() => ({ p_slug: SLUG })), 'RPC chỉ nhận p_slug')
+  assert.equal(log.filter(l => !l.includes('teamlab_public_band')).length, 0, 'không truy vấn nào khác (không bài, take, thành viên)')
+})
+
+test('Slice E: Team chưa công khai / riêng tư / slug lạ qua /room… → thẻ TeamLab mặc định, KHÔNG chữ nào của Band, kết quả giống nhau', async () => {
+  const outs: string[] = []
+  for (const slug of ['khong-co-abcde', 'team-chua-len-home-zzzzz']) for (const suffix of ['/room', `/room/group/${BAND_ID}`, `/room/studio/${SONG_ID}`]) {
+    const o = await share(`/teamlab/band/${slug}${suffix}`)
+    assert.equal(o.r.note, 'teamlab-band:not_found'); assert.equal(o.r.meta, null); assert.equal(o.t, title(SHELL)); assert.equal(o.img, tag(SHELL, 'og:image'))
+    assert.ok(!o.out.includes('Lá Mùa Thu') && !o.out.includes('Ban nhạc tình ca'))
+    outs.push(o.out.replace(o.url!, 'U'))
+  }
+  assert.ok(outs.every(x => x === outs[0]), 'Team chưa công khai và slug lạ không phân biệt được (trừ og:url)')
+})
+
+test('Slice E: dạng hỏng/lạ dưới /room không được nhận (không RPC, mặc định); trang khác không đổi', async () => {
+  const log: string[] = []
+  for (const p of [`/teamlab/band/${SLUG}/room/group`, `/teamlab/band/${SLUG}/room/group/zzz`, `/teamlab/band/${SLUG}/room/studio/none`, `/teamlab/band/${SLUG}/room/studio/not-a-uuid`,
+    `/teamlab/band/${SLUG}/room/foo`, `/teamlab/band/${SLUG}/room/studio/${SONG_ID}/x`, `/teamlab/band/${SLUG}/roomy`, `/teamlab/band/${SLUG}/ROOM`, `/teamlab/band/${SLUG}/studio/${SONG_ID}`, `/teamlab/band/${SLUG}/x/y/z/w`]) {
+    const o = await share(p, SHELL, mockCtx(published, { log })); assert.equal(o.r.type === 'teamlab-band', false, p); assert.equal(o.r.meta, null, p)
+  }
+  assert.deepEqual(log.filter(l => l.includes('teamlab_public_band')), [])
+})
+
+test('Slice E edge: crawler ở /room… → OG Team công khai; người thường → context.next() nguyên vẹn; UA Zalo/Twitterbot/WhatsApp cùng kết quả', async () => {
+  const ua = ['facebookexternalhit/1.1', 'Zalo', 'Twitterbot/1.0', 'WhatsApp/2.23', 'Slackbot-LinkExpanding 1.0']
+  for (const path of ROOM_PATHS.slice(0, 1).concat(ROOM_PATHS.slice(2))) for (const u of ua) {
+    const calls: string[] = []; const realFetch = globalThis.fetch
+    globalThis.fetch = (async (input: RequestInfo | URL) => { calls.push(String(input)); return new Response(JSON.stringify(band()), { status: 200, headers: { 'content-type': 'application/json' } }) }) as typeof fetch
+    try {
+      const res = await ogTeamlab(new Request(`${ORIGIN}${path}`, { headers: { 'user-agent': u } }), { next: async () => new Response(SHELL, { status: 200, headers: { 'content-type': 'text/html; charset=UTF-8' } }) })
+      const html = await res.text()
+      assert.equal(res.headers.get('x-og-fn'), 'teamlab-band:public', `${u} ${path}`); assert.equal(title(html), 'Lá Mùa Thu · TeamLab'); assert.equal(tag(html, 'og:url'), `${ORIGIN}/teamlab/band/${SLUG}`)
+      assert.equal(calls.length, 1)
+    } finally { globalThis.fetch = realFetch }
+  }
+  const upstream = new Response(SHELL, { status: 200, headers: { 'content-type': 'text/html; charset=UTF-8' } })
+  const res = await ogTeamlab(new Request(`${ORIGIN}${ROOM_PATHS[0]}`, { headers: { 'user-agent': CHROME } }), { next: async () => upstream })
+  assert.equal(res, upstream); assert.equal(upstream.bodyUsed, false)
+})

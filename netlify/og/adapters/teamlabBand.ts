@@ -1,7 +1,7 @@
-// TeamLab Public Band — /teamlab/band/<public_slug>. Nguồn: RPC công khai teamlab_public_band (chỉ Team đang lên Home và công khai;
+// TeamLab Public Band — /teamlab/band/<public_slug> (+ /room… workspace của Team đó → cùng metadata công khai). Nguồn: RPC công khai teamlab_public_band (chỉ Team đang lên Home và công khai;
 // slug sai / không đủ điều kiện → NULL → thẻ mặc định, KHÔNG có chữ nào của Band). Ảnh: cover Team → ảnh đại diện Team → ảnh mặc định TeamLab.
 // Chỉ chạy cho crawler: edge function og-teamlab.ts cổng bằng crawler.ts. Không liên quan route Class /band/* (adapter `band`, dữ liệu Class).
-import { defineAdapter, SLUG_RE } from '../adapter.ts'
+import { defineAdapter, SLUG_RE, UUID_RE } from '../adapter.ts'
 import { publicMeta, str } from '../contract.ts'
 import { canonicalUrl } from '../render.ts'
 
@@ -18,8 +18,17 @@ export const teamlabBandAdapter = defineAdapter<string>({
   type: 'teamlab-band',
   match(path) {
     if (!path.startsWith('/teamlab/band/')) return null
-    const slug = path.slice('/teamlab/band/'.length)
-    return SLUG_RE.test(slug) && slug.length <= 60 ? slug : null
+    const [slug, ...rest] = path.slice('/teamlab/band/'.length).split('/')
+    if (!SLUG_RE.test(slug) || slug.length > 60) return null
+    // Trang công khai /teamlab/band/<slug> VÀ các đường dẫn workspace của chính Team đó (app TeamLab, cần đăng nhập):
+    //   /room · /room/group/<bandId|none> · /room/studio/<teamId>  → cùng metadata CÔNG KHAI của Team, og:url về trang Band.
+    // Chỉ lấy <slug>: id Band con / id bài chỉ được kiểm đúng dạng, KHÔNG đọc, KHÔNG đưa vào tiêu đề/mô tả/ảnh/RPC.
+    if (rest.length === 0) return slug
+    if (rest[0] !== 'room') return null
+    if (rest.length === 1) return slug
+    if (rest.length === 3 && rest[1] === 'group' && (rest[2] === 'none' || UUID_RE.test(rest[2]))) return slug
+    if (rest.length === 3 && rest[1] === 'studio' && UUID_RE.test(rest[2])) return slug
+    return null
   },
   async load(slug, ctx) {
     const d = await ctx.rpc('teamlab_public_band', { p_slug: slug }) as {
