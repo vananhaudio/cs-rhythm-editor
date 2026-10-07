@@ -248,6 +248,49 @@ def plan_alignment(canon, rows_by_page, geos_by_page):
     return systems
 
 
+REPAIR_REASON = "cross_system_single_token_continuity"
+
+
+def repair_cross_system(canon, plan, order):
+    """SỬA CHỮA LIÊN TỤC XUYÊN KHUÔNG: ĐÚNG MỘT token chuẩn bị mất ở ranh giới hai khuông liền nhau (theo `order` của trang), khi hai
+    phía của dãy chuẩn xác định duy nhất token đó. Lý do là liên tục của dãy (N → N+1 → N+2), KHÔNG phải độ giống chữ OCR.
+    Chỉ sửa khi ĐỒNG THỜI:
+      1. hai khuông liền nhau, cả hai có hàng chính; xét ĐẦU hàng chính của khuông sau;
+      2. chữ OCR đầu hàng chưa gán (None, None) — không phải 'noise', không phải đã gán 'edge';
+      3. chữ OCR CUỐI hàng chính khuông trước được gán 'direct' = N (neo tin cậy, hàng không kết thúc bằng chữ chưa gán);
+      4. chữ OCR ngay sau chữ đầu hàng sau được gán 'direct' = M (neo tin cậy);
+      5. trong DÃY GHÉP (đã bỏ nhãn khổ), M cách N đúng 2 vị trí → chỉ thiếu đúng token ở giữa; nhãn khổ không bao giờ là ứng viên;
+      6. chữ OCR chưa gán nằm hình học trước M (hàng OCR đã xếp theo x) và là chữ DUY NHẤT chưa gán ở đó;
+      7. token thiếu chưa được BẤT KỲ hàng nào của bất kỳ khuông nào nhận (không tranh chấp) → một nghiệm duy nhất.
+    Thoả hết → gán chữ đầu hàng = token thiếu ('continuity') và nới span hàng tới token đó. Trả danh sách sửa chữa (không chứa chữ lời)."""
+    keys = [(pi, si) for pi in order for si in sorted(s for (p, s) in plan if p == pi)]
+    pos = {idx: k for k, idx in enumerate(canon.stream)}
+    claimed = {a for sy in plan.values() for r in sy["rows"] for a, _ in r["resolved"] if a is not None}
+    repairs = []
+    for ka, kb in zip(keys, keys[1:]):
+        sa, sb = plan[ka], plan[kb]
+        if sa["primary"] is None or sb["primary"] is None:
+            continue
+        ra, rb = sa["rows"][sa["primary"]], sb["rows"][sb["primary"]]
+        if ra["n"] < 1 or rb["n"] < 2:
+            continue
+        n_idx, n_how = ra["resolved"][-1]
+        m_idx, m_how = rb["resolved"][1]
+        if rb["resolved"][0] != (None, None) or n_how != "direct" or m_how != "direct":
+            continue
+        if n_idx not in pos or m_idx not in pos or pos[m_idx] - pos[n_idx] != 2:
+            continue
+        missing = canon.stream[pos[n_idx] + 1]
+        if canon.label[missing] or missing in claimed:
+            continue
+        rb["resolved"][0] = (missing, "continuity")
+        rb["span"] = (min(rb["span"][0], missing), rb["span"][1])
+        rb.setdefault("repairs", {})[0] = REPAIR_REASON
+        claimed.add(missing)
+        repairs.append({"page": kb[0], "system": kb[1], "index": 0, "canonical": missing, "reason": REPAIR_REASON})
+    return repairs
+
+
 def page_order(systems, n_pages):
     """Thứ tự trang theo NỘI DUNG: trang có hàng khớp ở đoạn lời sớm hơn đứng trước (trang không khớp giữ chỗ nguyên)."""
     keys = []

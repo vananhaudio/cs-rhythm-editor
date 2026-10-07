@@ -201,5 +201,83 @@ class PlanMultiRow(unittest.TestCase):
         self.assertEqual(oa.page_order(plan, 2), [1, 0])
 
 
+class CrossSystemContinuity(unittest.TestCase):
+    """Sửa chữa liên tục xuyên khuông: ĐÚNG MỘT token chuẩn bị mất ở ranh giới hai khuông, hai phía cùng xác định duy nhất token đó.
+    Lý do sửa là liên tục của DÃY chuẩn (N → N+1 → N+2), KHÔNG phải độ giống OCR. Lời tự soạn, không bản quyền."""
+
+    L = [["aaa1", "bbb2", "ccc3", "ddd4", "eee5"], ["fff6", "ggg7", "hhh8", "iii9", "jjj0"]]
+
+    def build(self, a_words, b_words, canon_lines=None):
+        canon = oa.Canon(canon_lines or self.L)
+        rows = [[{"y": 210, "tokens": row(a_words)}, {"y": 410, "tokens": row(b_words)}]]
+        geos = [[{"y1": 100, "y5": 180, "gap": 10, "bars": []}, {"y1": 300, "y5": 380, "gap": 10, "bars": []}]]
+        plan = oa.plan_alignment(canon, rows, geos)
+        return canon, plan
+
+    def resolved(self, plan, si):
+        sy = plan[(0, si)]
+        return sy["rows"][sy["primary"]]["resolved"]
+
+    def test_A_thieu_dung_mot_token_o_ranh_gioi_duoc_noi_lai(self):
+        canon, plan = self.build(["aaa1", "bbb2", "ccc3", "ddd4"], ["zzzq", "fff6", "ggg7", "hhh8"])
+        before = self.resolved(plan, 1)
+        self.assertEqual(before[0], (None, None), "trước sửa: chữ OCR hỏng đầu hàng không gán được (khác dòng nên không phải edge)")
+        before_snapshot = [list(r["resolved"]) for s in plan.values() for r in s["rows"]]
+        repairs = oa.repair_cross_system(canon, plan, [0])
+        after = self.resolved(plan, 1)
+        self.assertEqual(after[0], (4, "continuity"))
+        self.assertEqual(after[1:], before[1:], "các token khác của hàng không đổi")
+        self.assertEqual(plan[(0, 1)]["rows"][plan[(0, 1)]["primary"]]["span"][0], 4, "span phủ cả token vừa nối")
+        self.assertEqual(repairs, [{"page": 0, "system": 1, "index": 0, "canonical": 4, "reason": "cross_system_single_token_continuity"}])
+        self.assertNotEqual(before_snapshot, [list(r["resolved"]) for s in plan.values() for r in s["rows"]])
+
+    def test_B_thieu_nhieu_hon_mot_token_khong_sua(self):
+        canon, plan = self.build(["aaa1", "bbb2", "ccc3"], ["zzzq", "fff6", "ggg7", "hhh8"])      # N=2, hàng sau mở ở 5 → thiếu 3 và 4
+        self.assertEqual(oa.repair_cross_system(canon, plan, [0]), [])
+        self.assertEqual(self.resolved(plan, 1)[0], (None, None))
+
+    def test_C_nhieu_chu_chua_gan_truoc_neo_khong_sua(self):
+        canon, plan = self.build(["aaa1", "bbb2", "ccc3", "ddd4"], ["zzzq", "yyyq", "fff6", "ggg7", "hhh8"])
+        self.assertEqual(oa.repair_cross_system(canon, plan, [0]), [])
+        self.assertEqual(self.resolved(plan, 1)[:2], [(None, None), (None, None)])
+
+    def test_D_neo_truoc_khong_chac_khong_sua(self):
+        # hàng trước KẾT THÚC bằng chữ OCR hỏng (chỉ 'edge', không direct) → neo N không đủ tin cậy dù khoảng trống vẫn đúng 1 token
+        canon, plan = self.build(["aaa1", "bbb2", "ccc3", "zzzq"], ["yyyq", "fff6", "ggg7", "hhh8"])
+        self.assertNotEqual(self.resolved(plan, 0)[-1][1], "direct")
+        self.assertEqual(oa.repair_cross_system(canon, plan, [0]), [])
+
+    def test_D2_hang_sau_khong_bat_dau_bang_chu_chua_gan_thi_khong_dong_vao(self):
+        canon, plan = self.build(["aaa1", "bbb2", "ccc3", "ddd4"], ["fff6", "ggg7", "hhh8", "iii9"])
+        before = [list(r["resolved"]) for s in plan.values() for r in s["rows"]]
+        self.assertEqual(oa.repair_cross_system(canon, plan, [0]), [])
+        self.assertEqual(before, [list(r["resolved"]) for s in plan.values() for r in s["rows"]])
+
+    def test_E_edge_cung_dong_hien_co_khong_doi(self):
+        canon, plan = self.build(["aaa1", "bbb2", "ccc3", "ddd4", "eee5"], ["zzzq", "ggg7", "hhh8", "iii9"])     # chữ hỏng đứng trước ggg7, cùng dòng → edge sẵn có
+        self.assertEqual(self.resolved(plan, 1)[0], (5, "edge"))
+        before = [list(r["resolved"]) for s in plan.values() for r in s["rows"]]
+        self.assertEqual(oa.repair_cross_system(canon, plan, [0]), [])
+        self.assertEqual(before, [list(r["resolved"]) for s in plan.values() for r in s["rows"]])
+
+    def test_F_token_thieu_la_nhan_khoi_hoac_bi_loai_khong_sua(self):
+        lines = [["aaa1", "bbb2", "ccc3", "ddd4"], ["2:"], ["fff6", "ggg7", "hhh8", "iii9"]]    # nhãn "2:" nằm giữa → dãy ghép LIỀN NHAU, không thiếu token nào
+        canon, plan = self.build(["aaa1", "bbb2", "ccc3", "ddd4"], ["zzzq", "fff6", "ggg7", "hhh8"], lines)
+        self.assertEqual(self.resolved(plan, 1)[0], (None, None))
+        self.assertEqual(oa.repair_cross_system(canon, plan, [0]), [])
+
+    def test_G_chong_token_giua_hai_khuong_khong_dong_vao(self):
+        # cuối hàng trước và đầu hàng sau cùng chỉ một token chuẩn (như Tình ca khuông 1→2): N2 = N, không phải N+2
+        canon, plan = self.build(["aaa1", "bbb2", "ccc3", "ddd4", "eee5"], ["eee5", "fff6", "ggg7", "hhh8"])
+        before = [list(r["resolved"]) for s in plan.values() for r in s["rows"]]
+        self.assertEqual(oa.repair_cross_system(canon, plan, [0]), [])
+        self.assertEqual(before, [list(r["resolved"]) for s in plan.values() for r in s["rows"]])
+
+    def test_H_token_thieu_da_duoc_hang_khac_nhan_thi_khong_sua(self):
+        canon, plan = self.build(["aaa1", "bbb2", "ccc3", "ddd4"], ["zzzq", "fff6", "ggg7", "hhh8"])
+        plan[(0, 0)]["rows"].append({"status": "MATCH", "best": 9.0, "second": 0.0, "span": (4, 4), "pairs": {0: 4}, "n": 1, "y": 0, "xs": [0], "resolved": [(4, "direct")], "text_n": 1})
+        self.assertEqual(oa.repair_cross_system(canon, plan, [0]), [])
+
+
 if __name__ == "__main__":
     unittest.main()

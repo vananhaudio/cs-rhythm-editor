@@ -651,6 +651,10 @@ def analyze(payload):
     unresolved_bars = []
     if ocr_plan is not None:
         order = tuple(ocr_align.page_order(ocr_plan, len(pages)))
+        # liên tục xuyên khuông: đúng MỘT token chuẩn mất ở ranh giới hai khuông, hai phía xác định duy nhất → nối lại (xem ocr_align)
+        repairs = ocr_align.repair_cross_system(canon, ocr_plan, order)
+        ambiguities = []     # `next_system` bỏ qua chữ OCR chưa gán ở đầu khuông kế mà KHÔNG đủ chắc để nối → ghi lại, không âm thầm
+        repair_of = {}
         reordered = list(order) != order0
         geos = [g for pi in order for g in page_geos[pi]]
         sys_of = [ocr_plan[(g["page"], g["index"])] for g in geos]
@@ -685,8 +689,15 @@ def analyze(payload):
                     if sj["primary"] is None:
                         continue
                     row_j = sj["rows"][sj["primary"]]
-                    first = next((r_idx for r_idx, _ in row_j["resolved"] if r_idx is not None), None)
-                    if first is not None:
+                    first_k = next((k for k, (r_idx, _) in enumerate(row_j["resolved"]) if r_idx is not None), None)
+                    if first_k is not None:
+                        first = row_j["resolved"][first_k][0]
+                        skipped = sum(1 for k in range(first_k) if row_j["resolved"][k] == (None, None))
+                        if skipped:
+                            ambiguities.append({"page": geos[gj]["page"], "system": gj, "bar": round(x, 1), "skippedUnassigned": skipped,
+                                                "reason": "next_system_skipped_unassigned_leading_token"})
+                        if first_k in row_j.get("repairs", {}):
+                            repair_of[(gi, x)] = row_j["repairs"][first_k]
                         how_of[(gi, x)] = "next_system"
                         return canon.snap(first), gj, None
                 how_of[(gi, x)] = "end"
@@ -737,6 +748,7 @@ def analyze(payload):
             boundaries.append({"index": len(boundaries), "page": g["page"], "system": gi, "x": round(bar["x"], 1),
                                "token": token, "crossesSystem": crossed,
                                **({"anchorHow": how_of.get((gi, bar["x"]))} if ocr_plan is not None else {}),
+                               **({"anchorRepair": repair_of[(gi, bar["x"])]} if ocr_plan is not None and (gi, bar["x"]) in repair_of else {}),
                                **({"barHow": bar["how"], "barEvidence": bar["evidence"]} if "how" in bar else {}),
                                "noteAsym": bar.get("noteAsym", 0.0), **({"pairedVertical": bar["pairedVertical"]} if "pairedVertical" in bar else {}),
                                "nextWord": (geos[gj]["lyrics"]["words"][wi] if wi is not None else None),
@@ -805,6 +817,7 @@ def analyze(payload):
         alignment = {
             "method": "ocr-local-v1", "labelTokensExcluded": sum(canon.label),
             "coverage": {"canonicalTokens": len(canon.stream), "located": len(covered)},
+            "repairs": repairs, "ambiguities": ambiguities,
             "unresolvedBars": unresolved_bars,
             "systems": [{"page": g["page"], "system": gi, "primaryRow": sy["primary"],
                          "rows": [{"row": ri, "status": r["status"], "best": r["best"], "second": r["second"],
