@@ -43,12 +43,18 @@ export default function ClassSessionPage({ classId, sessionNo, isTeacher = false
       <ArrowLeft size={16} /> {className ?? 'Về lớp'}
     </button>
   )
-  const shell = (body: ReactNode) => <div className="cs-col-wide cs-home cs-session">{back}{body}</div>
+  // Chia sẻ buổi học (chỉ tham chiếu qua DM; người nhận mở bằng quyền của chính họ) — hiện ở MỌI trạng thái buổi khi giáo trình đọc được
+  const shareBtn = learn && s ? <ShareButton target={{ type: 'class_session', key: s.sessionId.toLowerCase() }} title={`Buổi ${pad2(sessionNo)}${s.title ? ' · ' + s.title : ''}`} /> : null
+  const shell = (body: ReactNode) => (
+    <div className="cs-col-wide cs-home cs-session">
+      <div className="cs-session-top" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>{back}{shareBtn}</div>
+      {body}
+    </div>
+  )
   const head = (title: string | null) => (
     <header className="cs-card cs-learn-head">
       <span className="cs-learn-kicker">Buổi {pad2(sessionNo)}</span>
       {title && <h1 className="cs-class-name">{title}</h1>}
-      {learn && s && <ShareButton target={{ type: 'class_session', key: s.sessionId.toLowerCase() }} title={`Buổi ${pad2(sessionNo)}${s.title ? ' · ' + s.title : ''}`} />}
     </header>
   )
 
