@@ -92,10 +92,10 @@ test("trang chỉ-luyện: trạng thái đang mở, không có nút lưu/sửa"
 test("local-first: kho nháp + trình dựng KHÔNG gọi server; chỉ nút Chia sẻ mới gọi (qua prop)", () => {
   assert.ok(!/supabase/.test(readFileSync("src/logic/songDraftStorage.ts", "utf8")));
   const sb = readFileSync("src/SongBuilderPage.tsx", "utf8");
-  assert.ok(!/supabase|shareBmsSong|social_share_tool_result/.test(sb), "SongBuilderPage không tự gọi server");
-  assert.match(sb, /onShareSong\(buildDraft\(\), key\)/);
+  assert.ok(!/supabase|social_share_tool_result|bms_save_for_share|social_publish_tool_artifact/.test(sb), "SongBuilderPage không tự gọi server");
+  assert.match(sb, /bmsShare\.save\(buildDraft\(\)\)/);
   const r = readFileSync("src/AppRouter.tsx", "utf8");
-  assert.match(r, /onShareSong=\{user && !embedded && !standalone \? shareBmsSong : undefined\}/);
+  assert.match(r, /bmsShare=\{user && !embedded && !standalone \? bmsShareApi : undefined\}/);
   assert.match(r, /if \(artifactId !== null\) return <BmsArtifactPage artifactId=\{artifactId\} \/>/);
-  assert.ok(!readFileSync("src/MobileStudentPortal.tsx", "utf8").includes("onShareSong"), "BMS nhúng trong App học không có chia sẻ");
+  assert.ok(!/onShareSong|bmsShare/.test(readFileSync("src/MobileStudentPortal.tsx", "utf8")), "BMS nhúng trong App học không có chia sẻ");
 });

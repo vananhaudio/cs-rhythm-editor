@@ -1,5 +1,5 @@
 // BMS Artifact Share V1 — chuyển bài BMS (nháp LOCAL) ⇄ artifact server (tool_artifacts, schema 'bms.song' v1).
-// BMS vẫn local-first: file này CHỈ được gọi khi chủ bài bấm "Chia sẻ lên cộng đồng" (ghi) hoặc khi mở
+// BMS vẫn local-first: file này CHỈ được gọi khi chủ bài bấm "Chia sẻ" (lưu riêng / đăng cộng đồng) hoặc khi mở
 // /song-builder?artifact=<id> (đọc, chỉ luyện). Server kiểm + dựng lại dữ liệu (db/social_bms_artifact_v1_setup.sql).
 // supabase nạp ĐỘNG → phần thuần test được trên Node.
 import { splitWords, makeAnchor } from '../logic/songBuilder'
@@ -82,27 +82,52 @@ export function draftFromArtifact(artifactId: string, data: unknown): SongDraft 
 
 export const isArtifactId = (s: string | null | undefined): s is string => !!s && UUID_RE.test(s)
 
-export type ShareSongResult = { ok: true; artifactId: string | null } | { ok: false; message: string }
+export type SaveSongResult = { ok: true; artifactId: string } | { ok: false; message: string }
+export type PublishResult = { ok: true } | { ok: false; message: string }
 
-/** Chủ bài bấm Chia sẻ → RPC tạo artifact + đúng MỘT bài Feed. clientKey sinh một lần cho một phiên bản bài. */
-export async function shareBmsSong(d: SongDraft, clientKey: string): Promise<ShareSongResult> {
+function rpcMessage(error: { code?: string; message?: string } | null | undefined, online: boolean): string {
+  if (error?.code === '54000') return 'Bạn lưu quá nhiều bài trong thời gian ngắn. Hãy chờ một chút.'
+  if (error?.code === '42501' && !/TS_NOT_MEMBER/.test(error.message ?? '')) return 'Bạn không có quyền thực hiện thao tác này với bài này.'
+  return shareErrorText(error?.message, online)
+}
+
+/** Lưu RIÊNG bài (chưa đăng): lưu để có thể gửi cho bạn. Server idempotent theo nội dung → bấm đúp / mở lại vẫn MỘT bài.
+ *  Lưu nội dung ≠ phân phối nội dung: KHÔNG tạo bài trên Feed. */
+export async function saveBmsForShare(d: SongDraft): Promise<SaveSongResult> {
   const song = songPayloadFromDraft(d)
   if (!song) return { ok: false, message: songShareBlocker(d) ?? 'Bài chưa đủ dữ liệu để chia sẻ.' }
   const online = typeof navigator === 'undefined' ? true : navigator.onLine !== false
   try {
     const { supabase } = await import('../supabase')
-    const { data, error } = await supabase.rpc('social_share_tool_result', { p_tool: 'bms', p_result: { kind: 'song', song }, p_client_key: clientKey })
-    if (error || typeof data !== 'string') return { ok: false, message: shareErrorText(error?.message, online) }
-    const { data: post } = await supabase.from('class_posts').select('tool_share').eq('id', data).maybeSingle()
-    const art = (post?.tool_share as { artifact_id?: unknown } | null)?.artifact_id
-    return { ok: true, artifactId: typeof art === 'string' && isArtifactId(art) ? art : null }
+    const { data, error } = await supabase.rpc('bms_save_for_share', { p_song: song })
+    if (error || typeof data !== 'string' || !isArtifactId(data)) return { ok: false, message: rpcMessage(error, online) }
+    return { ok: true, artifactId: data.toLowerCase() }
   } catch (e) {
     return { ok: false, message: shareErrorText((e as Error)?.message, online) }
   }
 }
 
+/** Đăng lên cộng đồng: PROMOTE chính bài đã lưu (riêng → cộng đồng) + một bài Feed. Idempotent; chỉ chủ bài. */
+export async function publishBmsArtifact(artifactId: string): Promise<PublishResult> {
+  const online = typeof navigator === 'undefined' ? true : navigator.onLine !== false
+  try {
+    const { supabase } = await import('../supabase')
+    const { data, error } = await supabase.rpc('social_publish_tool_artifact', { p_id: artifactId })
+    if (error || typeof data !== 'string') return { ok: false, message: rpcMessage(error, online) }
+    return { ok: true }
+  } catch (e) {
+    return { ok: false, message: shareErrorText((e as Error)?.message, online) }
+  }
+}
+
+/** Cổng chia sẻ BMS cho SongBuilder (chỉ truyền ở route /song-builder khi đã đăng nhập). */
+export const bmsShareApi = { save: saveBmsForShare, publish: publishBmsArtifact }
+export type BmsShareApi = typeof bmsShareApi
+
+export type ArtifactVisibility = 'class' | 'shared'
+
 export type LoadedArtifact =
-  | { status: 'ready'; draft: SongDraft; isMine: boolean }
+  | { status: 'ready'; draft: SongDraft; isMine: boolean; visibility: ArtifactVisibility }
   | { status: 'signed_out' } | { status: 'missing' } | { status: 'error' }
 
 /** Đọc artifact qua RLS (chủ bài / thành viên Class). Không có / không được xem / đã gỡ → 'missing'. */
@@ -112,11 +137,11 @@ export async function loadBmsArtifact(id: string): Promise<LoadedArtifact> {
     const { supabase } = await import('../supabase')
     const { data: { session } } = await supabase.auth.getSession()
     if (!session?.user) return { status: 'signed_out' }
-    const { data, error } = await supabase.from('tool_artifacts').select('id,owner_id,tool,kind,data').eq('id', id).maybeSingle()
+    const { data, error } = await supabase.from('tool_artifacts').select('id,owner_id,tool,kind,data,visibility').eq('id', id).maybeSingle()
     if (error) return { status: 'error' }
     if (!data || data.tool !== 'bms' || data.kind !== 'song') return { status: 'missing' }
     const draft = draftFromArtifact(id, data.data)
-    return draft ? { status: 'ready', draft, isMine: data.owner_id === session.user.id } : { status: 'missing' }
+    return draft ? { status: 'ready', draft, isMine: data.owner_id === session.user.id, visibility: data.visibility === 'shared' ? 'shared' : 'class' } : { status: 'missing' }
   } catch { return { status: 'error' } }
 }
 

@@ -14,8 +14,8 @@ import {
   serializeDraft, importDraftJSON,
 } from './logic/songDraftStorage'
 import type { SongDraft, DraftSummary } from './logic/songDraftStorage'
-import { songShareBlocker, type ShareSongResult } from './bms/bmsArtifact'
-import { newClientKey } from './lib/clientKey'
+import { songShareBlocker, type BmsShareApi } from './bms/bmsArtifact'
+import BmsShareSheet from './bms/BmsShareSheet'
 
 /* =========================================================================
    SONG BUILDER V1 — biến bài YouTube thành dữ liệu luyện nhịp.
@@ -151,10 +151,10 @@ function LyricBlock({ words, mapping, activeIndex, onTap, picker, chords }: {
 }
 
 /* ============================ PAGE ============================ */
-export default function SongBuilderPage({ onClose, embedded = false, initial, onMeaningfulUse, onShareSong }: {
+export default function SongBuilderPage({ onClose, embedded = false, initial, onMeaningfulUse, bmsShare }: {
   onClose?: () => void
-  /** Có (route /song-builder, đã đăng nhập) → bước cuối có "Chia sẻ lên cộng đồng". Không có → BMS local-first như cũ. */
-  onShareSong?: (draft: SongDraft, clientKey: string) => Promise<ShareSongResult>
+  /** Có (route /song-builder, đã đăng nhập) → bước cuối có nút "Chia sẻ" (gửi bạn / đăng cộng đồng). Không có → BMS local-first như cũ. */
+  bmsShare?: BmsShareApi
   embedded?: boolean                                   // render THẲNG trong app (không iframe) → overlay fullscreen
   initial?: { title?: string | null; youtube?: string | null; tempo?: string | null }  // tham số qua prop thay cho URL
   onMeaningfulUse?: () => void
@@ -464,22 +464,13 @@ export default function SongBuilderPage({ onClose, embedded = false, initial, on
     setToast('Đã lưu vào Bài hát của tôi ✓')
   }
 
-  /* ---- Chia sẻ lên cộng đồng (CHỈ khi chủ bài bấm — nháp không bao giờ tự lên server) ---- */
-  // Trạng thái chia sẻ gắn với ĐÚNG phiên bản bài (buildDraft): bài đổi → coi như chưa chia sẻ, key mới.
-  type ShareState = { forDraft: unknown; key: string | null; busy: boolean; error: string | null; done: boolean; artifactId: string | null }
-  const shareBusyRef = useRef(false)
-  const [shareRaw, setShare] = useState<ShareState>({ forDraft: null, key: null, busy: false, error: null, done: false, artifactId: null })
-  const share: ShareState = shareRaw.forDraft === buildDraft ? shareRaw : { forDraft: buildDraft, key: null, busy: false, error: null, done: false, artifactId: null }
-  const shareBlocker = onShareSong ? songShareBlocker(buildDraft()) : null
-  const doShare = async () => {
-    if (!onShareSong || shareBusyRef.current || share.done || shareBlocker) return
-    shareBusyRef.current = true
-    const key = share.key ?? newClientKey()
-    setShare({ ...share, key, busy: true, error: null })
-    const r = await onShareSong(buildDraft(), key)
-    shareBusyRef.current = false
-    setShare(s => ({ ...s, busy: false, ...(r.ok ? { done: true, error: null, artifactId: r.artifactId } : { error: r.message }) }))
-  }
+  /* ---- Chia sẻ (CHỈ khi chủ bài bấm — nháp không bao giờ tự lên server) ---- */
+  // Trạng thái gắn với ĐÚNG phiên bản bài (buildDraft): bài đổi → coi như bài mới. Server idempotent theo nội dung nên mở lại / bấm đúp vẫn MỘT bài.
+  type ShareState = { forDraft: unknown; open: boolean; artifactId: string | null; published: boolean }
+  const [shareRaw, setShare] = useState<ShareState>({ forDraft: null, open: false, artifactId: null, published: false })
+  const share: ShareState = shareRaw.forDraft === buildDraft ? shareRaw : { forDraft: buildDraft, open: false, artifactId: null, published: false }
+  const shareBlocker = bmsShare ? songShareBlocker(buildDraft()) : null
+  const openShare = () => { if (bmsShare && !shareBlocker) setShare({ ...share, open: true }) }
 
   /* ---- thao tác nháp ---- */
   const resumeLatest = () => { if (resumeDraft) applyDraft(resumeDraft); setResumeDraft(null) }
@@ -631,25 +622,26 @@ export default function SongBuilderPage({ onClose, embedded = false, initial, on
         </div>
       )}
 
-      {/* Bước cuối: chia sẻ lên cộng đồng (phụ, dưới nội dung — không tranh nút Lưu) */}
-      {step === STEPS.length - 1 && onShareSong && (
+      {/* Bước cuối: MỘT nút "Chia sẻ" (phụ, dưới nội dung — không tranh nút Lưu) → gửi cho bạn bè / đăng lên cộng đồng */}
+      {step === STEPS.length - 1 && bmsShare && (
         <div className="bms-share" style={{ flexShrink: 0, padding: '10px 14px 0', borderTop: `1px solid ${C.border}`, background: C.surface, fontSize: 12.5, color: C.muted, ...center }}>
-          {share.done ? (
-            <div style={{ paddingBottom: 2 }}>
-              <b style={{ color: C.green }}>✓ Đã chia sẻ lên cộng đồng.</b>{' '}
-              <a href="/me" style={{ color: C.cyan, fontWeight: 700 }}>Xem trên Trang chủ</a>
-              {share.artifactId && <> · <a href={`/song-builder?artifact=${share.artifactId}`} style={{ color: C.cyan, fontWeight: 700 }}>Mở / gỡ bài đã chia sẻ</a></>}
-            </div>
-          ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <Btn kind="soft" onClick={() => void doShare()} disabled={share.busy || !!shareBlocker} style={{ flexShrink: 0, fontSize: 13.5, padding: '8px 12px', whiteSpace: 'nowrap' }}>
-                {share.busy ? 'Đang chia sẻ…' : 'Chia sẻ lên cộng đồng'}
-              </Btn>
-              <span style={{ lineHeight: 1.35 }}>{shareBlocker ?? 'Thành viên Class xem & luyện được bài (video, lời, nhịp, hợp âm). Nháp của bạn vẫn chỉ ở máy.'}</span>
-            </div>
-          )}
-          {share.error && <div role="alert" style={{ color: C.red, marginTop: 4 }}>{share.error}</div>}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Btn kind="soft" onClick={openShare} disabled={!!shareBlocker} style={{ flexShrink: 0, fontSize: 13.5, padding: '8px 12px', whiteSpace: 'nowrap' }}>Chia sẻ</Btn>
+            <span style={{ lineHeight: 1.35 }}>
+              {shareBlocker ?? (share.published
+                ? <><b style={{ color: C.green }}>✓ Đã đăng lên cộng đồng.</b> <a href="/me" style={{ color: C.cyan, fontWeight: 700 }}>Xem trên Trang chủ</a></>
+                : 'Gửi riêng cho bạn bè hoặc đăng lên cộng đồng. Bản nháp của bạn vẫn lưu trên máy.')}
+              {!shareBlocker && share.artifactId && <> · <a href={`/song-builder?artifact=${share.artifactId}`} style={{ color: C.cyan, fontWeight: 700 }}>Mở / gỡ bài đã chia sẻ</a></>}
+            </span>
+          </div>
         </div>
+      )}
+      {share.open && bmsShare && (
+        <BmsShareSheet title={(buildDraft().title || '').trim() || 'Bài hát chưa đặt tên'} artifactId={share.artifactId} canPublish={!share.published}
+          ensureArtifact={async () => { const r = await bmsShare.save(buildDraft()); if (r.ok) setShare(s => ({ ...s, artifactId: r.artifactId })); return r }}
+          publish={bmsShare.publish}
+          onPublished={id => setShare(s => ({ ...s, artifactId: id, published: true }))}
+          onClose={() => setShare(s => ({ ...s, open: false }))} />
       )}
 
       {/* Bước cuối (Nghe thử): HỎI có lưu vào 'Bài của tôi' không — chỉ lưu khi bấm (tránh trùng lắp) */}

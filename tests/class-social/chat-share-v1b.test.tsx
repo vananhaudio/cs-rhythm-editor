@@ -92,12 +92,12 @@ test("MessageList: tin share → card (khung chờ khi chưa resolve); tin text 
   assert.match(html, />trước</); assert.match(html, />sau</);
 });
 
-test("Feed: ToolShareBodyView chỉ hiện 'Gửi bạn bè' cho BMS (shareRef) và khi có onShareToFriend", () => {
+test("Feed: ToolShareBodyView chỉ hiện nút 'Chia sẻ' (mở thẳng chọn bạn) cho BMS (shareRef) và khi có onShareToFriend", () => {
   const bms = bmsCardView(row())!;
-  assert.match(renderToStaticMarkup(<ToolShareBodyView view={bms} onShareToFriend={() => {}} />), /Gửi bạn bè/);
-  assert.equal(/Gửi bạn bè/.test(renderToStaticMarkup(<ToolShareBodyView view={bms} />)), false, "không callback → không nút");
+  assert.match(renderToStaticMarkup(<ToolShareBodyView view={bms} onShareToFriend={() => {}} />), />Chia sẻ</);
+  assert.equal(/>Chia sẻ</.test(renderToStaticMarkup(<ToolShareBodyView view={bms} />)), false, "không callback → không nút");
   const metro = describeToolShare({ v: 1, tool: "metronome", kind: "practice_session", bpm: 80, seconds: 600 });
-  assert.equal(/Gửi bạn bè/.test(renderToStaticMarkup(<ToolShareBodyView view={metro} onShareToFriend={() => {}} />)), false, "Metronome chưa share được cho bạn");
+  assert.equal(/>Chia sẻ</.test(renderToStaticMarkup(<ToolShareBodyView view={metro} onShareToFriend={() => {}} />)), false, "Metronome chưa share được cho bạn");
 });
 
 test("chatErrorText: lỗi share dịu — 22023 theo ngữ cảnh share; 42501 = chưa thể nhắn; không lộ chi tiết", () => {
@@ -125,7 +125,7 @@ test("Phạm vi V1b: chỉ THAM CHIẾU (không ghi chú, không snapshot), mộ
 });
 
 test("Entry point V1b: BmsArtifactPage + card BMS trên Feed; quyền do server (không suy luận bạn bè ở client)", () => {
-  assert.match(code("src/bms/BmsArtifactPage.tsx"), /ShareToFriendSheet/);
+  assert.match(code("src/bms/BmsArtifactPage.tsx"), /BmsShareSheet/);
   assert.match(code("src/class-social/toolshare/ToolShareCard.tsx"), /onShareToFriend/);
   assert.equal(/friendship|relationship\s*===/.test(code("src/class-social/chat/ShareToFriendSheet.tsx")), false);
 });

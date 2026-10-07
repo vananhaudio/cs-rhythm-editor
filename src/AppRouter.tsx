@@ -28,7 +28,7 @@ import Metronome from './Metronome'
 import { shareToolResult } from './class-social/toolshare/toolShareApi'
 import SongBuilderPage from './SongBuilderPage'
 import BmsArtifactPage from './bms/BmsArtifactPage'
-import { shareBmsSong } from './bms/bmsArtifact'
+import { bmsShareApi } from './bms/bmsArtifact'
 import TeacherAdminPage from './TeacherAdminPage'
 import CourseEditorPage from './CourseEditorPage'
 import LessonViewerPage from './LessonViewerPage'
@@ -537,7 +537,7 @@ if (path === '/students') {
     const artifactId = new URLSearchParams(window.location.search).get('artifact')
     if (artifactId !== null) return <BmsArtifactPage artifactId={artifactId} />
     return <SongBuilderPage onClose={standalone || embedded ? undefined : () => { window.location.href = '/start' }}
-      onShareSong={user && !embedded && !standalone ? shareBmsSong : undefined} />
+      bmsShare={user && !embedded && !standalone ? bmsShareApi : undefined} />
   }
 
   // ── Route /tuner ──

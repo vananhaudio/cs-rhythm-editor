@@ -84,7 +84,7 @@ try {
   // ── 1. A: BMS artifact → Gửi bạn bè → chọn B → gửi (bấm đúp = MỘT lần) ──
   await openArtifact(A, ART1)
   assert.match(await A.$eval('.bms-artifact-banner', e => e.textContent), /Bài của bạn/)
-  assert.equal(await A.$$eval('.bms-artifact-share', es => es.length), 1, 'có nút "Gửi bạn bè" trên trang artifact')
+  assert.equal(await A.$$eval('.bms-artifact-share', es => es.length), 1, 'có nút "Chia sẻ" trên trang artifact')
   await A.click('.bms-artifact-share')
   await sheet(A)
   await waitFor(A, () => document.querySelectorAll('[role=dialog] [role=radio]').length > 0)
@@ -180,7 +180,7 @@ try {
   await B.goto(ME, { waitUntil: 'networkidle0' })
   await B.waitForSelector('.cs-tool-share', { timeout: 15000 })
   const feedBtn = await B.$$eval('.cs-tool-share', es => es.map(e => ({ title: e.querySelector('.cs-tool-share-headline')?.textContent, btns: [...e.querySelectorAll('button')].map(b => b.textContent.trim()) })))
-  assert.ok(feedBtn.some(c => c.title === 'Bài trên Feed của An' && c.btns.includes('Gửi bạn bè')), JSON.stringify(feedBtn))
+  assert.ok(feedBtn.some(c => c.title === 'Bài trên Feed của An' && c.btns.includes('Chia sẻ')), JSON.stringify(feedBtn))
   const feedArt = await B.$$eval('.cs-tool-share', es => es.find(e => e.querySelector('.cs-tool-share-headline')?.textContent === 'Bài trên Feed của An').querySelector('a').getAttribute('href').split('=')[1])
   await B.evaluate(() => [...document.querySelectorAll('.cs-tool-share')].find(e => e.querySelector('.cs-tool-share-headline')?.textContent === 'Bài trên Feed của An').querySelector('button').click())
   await sheet(B)
@@ -193,7 +193,7 @@ try {
   await B.evaluate(() => [...document.querySelectorAll('[role=dialog] button')].find(x => x.textContent.trim() === 'Xong').click())
   await waitFor(B, () => !document.querySelector('[role=dialog]'))
   await waitFor(A, () => document.querySelectorAll('.cs-chat-scroll .cs-share-card').length >= 1 || true)
-  ok('7 Feed: card BMS có "Gửi bạn bè" → chọn An → dm_share đúng artifact của card; "Xong" đóng sheet, không bắt buộc chuyển trang')
+  ok('7 Feed: card BMS có "Chia sẻ" (mở thẳng chọn bạn) → chọn An → dm_share đúng artifact của card; "Xong" đóng sheet, không bắt buộc chuyển trang')
 
   // ── 8. Artifact bị GỠ sau khi share: tin còn, card chuyển "không còn khả dụng" ──
   await openArtifact(A, ART2)

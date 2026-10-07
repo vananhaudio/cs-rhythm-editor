@@ -805,7 +805,7 @@ try {
     const SB = `http://class.localhost:${V}/song-builder`
     const serverCalls = []
     const { c: ca, pg: a } = await loginAt('a@test.local', 390)
-    a.on('request', r => { if (/tool_artifacts|social_share_tool_result|social_delete_tool_artifact/.test(r.url())) serverCalls.push(r.url()) })
+    a.on('request', r => { if (/tool_artifacts|social_share_tool_result|social_delete_tool_artifact|bms_save_for_share|social_publish_tool_artifact/.test(r.url())) serverCalls.push(r.url()) })
     // Nháp BMS hoàn chỉnh CHỈ trong máy (localStorage) — như người dùng vừa dựng xong
     await a.evaluate(() => {
       const anchor = (w, word, b) => ({ id: `anchor_${String(w).padStart(3, '0')}_b${b}`, wordIndex: w, word, beatIndex: b, tick: b * 480, source: 'anchor' })
@@ -821,8 +821,8 @@ try {
     })
     await a.goto(SB, { waitUntil: 'domcontentloaded' })
     await clickText(a, '▶ Tiếp tục')
-    await waitText(a, /Chia sẻ lên cộng đồng/)
-    await waitText(a, /Nháp của bạn vẫn chỉ ở máy/)
+    await waitText(a, /Gửi riêng cho bạn bè hoặc đăng lên cộng đồng/)
+    await waitText(a, /Bản nháp của bạn vẫn lưu trên máy/)
     await clickText(a, '💾 Lưu vào Bài hát của tôi')   // lưu thư viện LOCAL — không lên server
     await new Promise(r => setTimeout(r, 600))
     assert.deepEqual(serverCalls, [], 'dựng / tiếp tục / lưu nháp KHÔNG gọi server: ' + serverCalls.join(' '))
@@ -830,8 +830,11 @@ try {
     await new Promise(r => setTimeout(r, 2400))   // toast "Đã lưu" tắt rồi mới chụp
     await a.screenshot({ path: `${SHOTS}/23-bms-share.png` })
     // Bấm đúp Chia sẻ → vẫn MỘT bài
-    await a.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => x.textContent.trim() === 'Chia sẻ lên cộng đồng'); b.click(); b.click() })
-    await waitText(a, /Đã chia sẻ lên cộng đồng/)
+    await clickText(a, 'Chia sẻ')
+    await a.waitForSelector('[role=dialog]', { timeout: 10000 })
+    await a.evaluate(() => { const b = [...document.querySelectorAll('[role=dialog] button')].find(x => x.textContent.includes('Đăng lên cộng đồng')); b.click(); b.click() })
+    await waitText(a, /Đã đăng lên cộng đồng/)
+    await a.evaluate(() => [...document.querySelectorAll('[role=dialog] button')].find(x => x.textContent.trim() === 'Xong').click())
     const artHref = await a.$eval('a[href^="/song-builder?artifact="]', e => e.getAttribute('href'))
     assert.match(artHref, /^\/song-builder\?artifact=[0-9a-f-]{36}$/)
     await a.goto(ME, { waitUntil: 'domcontentloaded' })
