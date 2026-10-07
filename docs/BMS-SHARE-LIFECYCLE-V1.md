@@ -65,8 +65,9 @@ Không thêm bảng. Thêm: CHECK `visibility in ('class','shared')`, chỉ mụ
 | DB lifecycle + hồi quy V1b/V1a + đồng thời + rollback | `bash scripts/test-bms-share-lifecycle-db.sh` | 61 kiểm tra lifecycle · 56 V1b · 89 V1a · 3 phiên song song: 1 artifact, 1 bài Feed · rollback ×2 |
 | Unit/render | `npm run test:class-social` | 279/279 |
 | E2E lifecycle (Chrome thật) | `bash scripts/e2e-bms-share-lifecycle.sh` | 8 kịch bản |
-| E2E V1b | `bash scripts/e2e-chat-share-v1b.sh` | xem báo cáo |
-| E2E V1a trên DB+FE mới | `CHAT_V1B=1 bash scripts/e2e-chat-v1.sh` | xem báo cáo |
+| E2E V1b | `bash scripts/e2e-chat-share-v1b.sh` | 12/12 PASS |
+| E2E V1a trên DB+FE mới | `CHAT_V1B=1 bash scripts/e2e-chat-v1.sh` | 19/19 PASS |
+| E2E nền (toàn bộ, gồm luồng BMS mới) | `bash scripts/e2e-learning-thread.sh` | 75 PASS (script tự nạp DB lifecycle khi không truyền `E2E_PRE_SQL`) |
 
 ## Phát hành (CHƯA duyệt)
 
