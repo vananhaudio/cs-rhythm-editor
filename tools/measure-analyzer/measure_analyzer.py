@@ -31,6 +31,7 @@ from PIL import Image, ImageFilter
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import ocr_align  # noqa: E402 — ghép OCR ↔ lời chuẩn (module riêng, test riêng)
 import staff_window  # noqa: E402 — kiểm chứng cửa sổ 5 dòng kẻ (module riêng, test riêng)
+import broken_bar  # noqa: E402 — phục hồi vạch bị đứt nét (đường phụ, module riêng, test riêng)
 
 DEFAULTS = {
     "darkThreshold": 185,      # điểm ảnh tối hơn mức này = mực (dòng kẻ, vạch)
@@ -381,6 +382,11 @@ def find_bars(dark, system, opts):
         width = b - a + 1
         cov = [max(dark[s0:s1, c].mean() for c in range(max(a - 1, 0), min(b + 2, dark.shape[1]))) if s1 > s0 else 1.0 for s0, s1 in spaces]
         if min(cov) < opts["barSpaceFill"] or width > max(4, 0.6 * gap):
+            # ĐƯỜNG PHỤ: vạch bị đứt nét (rớt vì độ phủ khe) — chỉ cứu khi có chứng cứ hình học thẳng hàng, không phải thân nốt
+            if width <= max(4, 0.6 * gap) and not (b < x1 - gap and notehead_beside(dark, L, gap, a, b, opts)):
+                ev = broken_bar.evidence(dark, L, gap, a, b)
+                if ev["ok"]:
+                    cands.append({"x": (a + b) / 2, "width": width, "fill": float(full[a:b + 1].max()), "how": "broken_bar_rescue", "evidence": ev})
             continue
         # đuôi nốt / gạch nối thò ra ngoài khuông; vạch nhịp dừng đúng ở dòng 1 và dòng 5
         cols = slice(max(a - 1, 0), b + 2)
@@ -393,6 +399,17 @@ def find_bars(dark, system, opts):
         if b < x1 - gap and notehead_beside(dark, L, gap, a, b, opts):
             continue
         cands.append({"x": (a + b) / 2, "width": width, "fill": float(full[a:b + 1].max())})
+    # ĐƯỜNG PHỤ: cột yếu hơn ngưỡng thường (mật độ thấp vì nét đứt) không thuộc ứng viên thường nào
+    normal_runs = runs(full >= opts["barColumnFill"])
+    for a, b in runs(full >= broken_bar.MIN_COLUMN_FILL):
+        if any(a <= nb and b >= na for na, nb in normal_runs) or a < x0 or b > x1 + 6 * gap or b - a + 1 > max(4, 0.6 * gap):
+            continue
+        if b < x1 - gap and notehead_beside(dark, L, gap, a, b, opts):
+            continue
+        ev = broken_bar.evidence(dark, L, gap, a, b)
+        if ev["ok"]:
+            cands.append({"x": (a + b) / 2, "width": b - a + 1, "fill": float(full[a:b + 1].max()), "how": "broken_bar_rescue", "evidence": ev})
+    cands.sort(key=lambda c: c["x"])
     # gộp vạch kép / vạch + dấu nhắc lại thành một ranh giới
     merged = []
     for c in cands:
@@ -400,13 +417,16 @@ def find_bars(dark, system, opts):
             merged[-1]["xs"].append(c["x"]); merged[-1]["fill"] = min(merged[-1]["fill"], c["fill"])
         else:
             merged.append({"xs": [c["x"]], "fill": c["fill"]})
+        if "how" in c:
+            merged[-1].update(how=c["how"], evidence=c["evidence"])
     bars = []
     for m in merged:
         x = m["xs"][-1] if len(m["xs"]) > 1 else m["xs"][0]
         if x - x0 <= 1.5 * gap:      # nét mở đầu khuông (không phải vạch nhịp)
             continue
         bars.append({"x": float(x), "double": len(m["xs"]) > 1, "fill": m["fill"],
-                     "repeatDots": has_repeat_dots(dark, L, gap, m["xs"])})
+                     "repeatDots": has_repeat_dots(dark, L, gap, m["xs"]),
+                     **({"how": m["how"], "evidence": m["evidence"]} if "how" in m else {})})
     if bars:
         x1 = max(x1, int(bars[-1]["x"]) + 1)
     return {"y1": int(y1), "y5": int(y5), "x0": x0, "x1": x1, "bars": bars}
@@ -692,6 +712,7 @@ def analyze(payload):
             boundaries.append({"index": len(boundaries), "page": g["page"], "system": gi, "x": round(bar["x"], 1),
                                "token": token, "crossesSystem": crossed,
                                **({"anchorHow": how_of.get((gi, bar["x"]))} if ocr_plan is not None else {}),
+                               **({"barHow": bar["how"], "barEvidence": bar["evidence"]} if "how" in bar else {}),
                                "nextWord": (geos[gj]["lyrics"]["words"][wi] if wi is not None else None),
                                "marginGaps": round(margin, 2), "double": bar["double"], "repeat": bar["repeatDots"],
                                "score": round(max(0.0, score), 2), "confidence": level(score), "reasons": reasons or ["vạch rõ, chữ sau vạch khớp lời"]})
