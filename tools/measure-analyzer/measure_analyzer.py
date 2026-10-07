@@ -30,6 +30,7 @@ from PIL import Image, ImageFilter
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import ocr_align  # noqa: E402 — ghép OCR ↔ lời chuẩn (module riêng, test riêng)
+import staff_window  # noqa: E402 — kiểm chứng cửa sổ 5 dòng kẻ (module riêng, test riêng)
 
 DEFAULTS = {
     "darkThreshold": 185,      # điểm ảnh tối hơn mức này = mực (dòng kẻ, vạch)
@@ -254,6 +255,7 @@ def find_systems(gray, opts):
     Lấy bộ nào thấy NHIỀU khuông hơn trên trang này (hoà → engine). Đổi về cấu trúc cũ {"lines": 5 × (hàng đầu, hàng cuối), "gap"}.
     Khuông TAB 6 dây vẫn bị bỏ qua. Không có engine → chỉ bộ cũ."""
     dark, legacy = _find_systems_legacy(gray, opts)
+    legacy = [staff_window.validate_window(dark, sy) for sy in legacy]
     staff = _engine_staff()
     if staff is None:
         return dark, legacy
@@ -281,6 +283,7 @@ def find_systems(gray, opts):
         if thin_line_at(centers[-1] + gap, ref) or thin_line_at(centers[0] - gap, ref):
             continue
         systems.append({"lines": [_line_extent(fill, c) for c in centers], "gap": gap})
+    systems = [staff_window.validate_window(dark, sy) for sy in systems]
     return (dark, systems) if len(systems) >= len(legacy) else (dark, legacy)
 
 
