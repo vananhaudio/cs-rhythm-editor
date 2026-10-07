@@ -231,7 +231,7 @@ do $$ declare a uuid; p uuid; begin
   p := public.social_publish_tool_artifact(a);
   perform t.reset();
   delete from public.class_posts where id = p;
-  perform t.ok(not exists (select 1 from public.tool_artifacts where id = a), '9 xoá bài Feed → trigger xoá artifact (semantics hiện tại, không đổi)');
+  perform t.ok(not exists (select 1 from public.tool_artifacts where id = a), '9 xoá bài Feed khi artifact CHƯA từng gửi DM → xoá artifact (không mồ côi)');
 end $$;
 
 -- ── 10. Rate limit lưu riêng ──
@@ -243,4 +243,100 @@ do $$ declare i int; e text; begin
   perform t.ok(public.bms_save_for_share(t.song('Bài số 5')) is not null, '10 lưu lại bài ĐÃ có vẫn được (không đếm bài mới)');
   perform t.reset();
   delete from public.tool_artifacts where owner_id = t.u('C') and visibility = 'shared';
+end $$;
+
+-- ── 11. GỠ KHỎI CỘNG ĐỒNG ≠ XOÁ: class + đã gửi DM → hạ về shared, giữ id/grant; chưa gửi → xoá ──
+do $$ declare a uuid; p1 uuid; p2 uuid; r text; n0 bigint; pst0 bigint; begin
+  -- CASE A: đăng cộng đồng rồi gửi cho B, C (C KHÔNG được gửi), rồi gỡ khỏi cộng đồng
+  perform t.as_user('A');
+  a := public.bms_save_for_share(t.song('Case A'));
+  p1 := public.social_publish_tool_artifact(a);
+  perform public.dm_share(t.u('B'), 'tool_artifact', a::text);
+  perform t.as_user('C');
+  perform t.ok((select count(*) from public.tool_artifacts where id = a) = 1, '11A class: C đọc được (trước khi gỡ)');
+  perform t.as_user('A');
+  n0 := t.n_art(); pst0 := t.n_post();
+  r := public.social_unpublish_tool_artifact(a);
+  perform t.reset();
+  perform t.ok(r = 'private', '11A gỡ khỏi cộng đồng khi đã gửi DM → trả "private" (artifact còn)');
+  perform t.ok(t.vis(a) = 'shared' and t.n_art() = n0, '11A artifact CÙNG id, visibility class → shared, không xoá');
+  perform t.ok(not exists (select 1 from public.class_posts where id = p1) and t.n_post() = pst0 - 1, '11A bài Feed biến mất');
+  perform t.as_user('B');
+  perform t.ok((select count(*) from public.tool_artifacts where id = a) = 1, '11A người đã nhận (B) VẪN mở được (grant lịch sử còn)');
+  perform t.ok((select count(*) from public.dm_messages(public.dm_find(t.u('A'))) where ref_key = a::text) = 1, '11A DM card cũ còn nguyên');
+  perform t.as_user('C');
+  perform t.ok((select count(*) from public.tool_artifacts where id = a) = 0, '11A thành viên Class khác (C) KHÔNG còn đọc được ngay lập tức');
+  perform t.as_user('T');
+  perform t.ok((select count(*) from public.tool_artifacts where id = a) = 0, '11A Thầy cũng không đọc được (riêng tư)');
+  perform t.friends('B', 'C', 'accepted');
+  perform t.as_user('B');
+  perform t.ok(t.err(format($q$select * from public.dm_share(%L, 'tool_artifact', %L)$q$, t.u('C'), a)) like '22023:%', '11A người nhận KHÔNG forward artifact đã hạ về shared (kể cả khi B–C là bạn)');
+  perform t.reset(); perform t.unfriend_row('B', 'C');
+  -- gọi lại: idempotent
+  perform t.as_user('A');
+  perform t.ok(public.social_unpublish_tool_artifact(a) = 'private', '11A gỡ lần nữa → vẫn "private" (idempotent, không xoá bài riêng)');
+  -- đăng lại trên CHÍNH artifact
+  p2 := public.social_publish_tool_artifact(a);
+  perform t.reset();
+  perform t.ok(t.vis(a) = 'class' and t.n_art() = n0 and t.n_post() = pst0, '11A đăng lại: chính artifact shared → class, +1 bài Feed (không bản sao)');
+  perform t.ok(p2 <> p1 and (select count(*) from public.class_posts where tool_share ->> 'artifact_id' = a::text) = 1, '11A đúng MỘT bài Feed trỏ artifact (không trùng)');
+  perform t.as_user('A');
+  perform t.ok(public.social_publish_tool_artifact(a) = p2, '11A đăng thêm lần nữa → cùng bài');
+  perform t.as_user('C');
+  perform t.ok((select count(*) from public.tool_artifacts where id = a) = 1, '11A sau đăng lại C đọc được');
+  perform t.reset();
+  insert into t.ids values ('CASEA', a);
+end $$;
+
+do $$ declare a uuid; p uuid; r text; n0 bigint; begin
+  -- CASE B: đăng cộng đồng, CHƯA từng gửi DM → gỡ = xoá (không mồ côi)
+  perform t.as_user('A');
+  a := public.bms_save_for_share(t.song('Case B'));
+  p := public.social_publish_tool_artifact(a);
+  n0 := t.n_art();
+  r := public.social_unpublish_tool_artifact(a);
+  perform t.reset();
+  perform t.ok(r = 'deleted' and not exists (select 1 from public.tool_artifacts where id = a) and not exists (select 1 from public.class_posts where id = p), '11B chưa từng gửi DM: gỡ khỏi cộng đồng → xoá cả artifact và bài Feed');
+  perform t.ok(t.n_art() = n0 - 1, '11B không để lại artifact mồ côi');
+  -- bài riêng chưa đăng: gỡ khỏi cộng đồng KHÔNG xoá
+  perform t.as_user('A');
+  a := public.bms_save_for_share(t.song('Chỉ lưu riêng'));
+  perform t.ok(public.social_unpublish_tool_artifact(a) = 'private' and t.vis(a) = 'shared', '11B bài riêng chưa đăng: gỡ khỏi cộng đồng = không làm gì (KHÔNG xoá)');
+  -- người khác / không phải chủ
+  perform t.as_user('B');
+  perform t.ok(t.err(format($q$select public.social_unpublish_tool_artifact(%L)$q$, a)) like '42501:%', '11B không phải chủ → 42501');
+  perform t.ok(t.err($q$select public.social_unpublish_tool_artifact(gen_random_uuid())$q$) like '42501:%', '11B id lạ ≡ cùng lỗi');
+  perform t.as_anon();
+  perform t.fails($q$select public.social_unpublish_tool_artifact(gen_random_uuid())$q$, '11B anon không gọi được');
+  perform t.reset();
+end $$;
+
+-- CASE: xoá bài Feed TRỰC TIẾP (đường hiện có, trigger) dùng cùng luật
+do $$ declare a uuid; p uuid; begin
+  perform t.as_user('A');
+  a := public.bms_save_for_share(t.song('Case Feed'));
+  p := public.social_publish_tool_artifact(a);
+  perform public.dm_share(t.u('B'), 'tool_artifact', a::text);
+  perform t.reset();
+  delete from public.class_posts where id = p;
+  perform t.ok(t.vis(a) = 'shared', '11F xoá bài Feed trực tiếp khi đã gửi DM → artifact hạ về shared (không xoá)');
+  perform t.as_user('B');
+  perform t.ok((select count(*) from public.tool_artifacts where id = a) = 1, '11F người nhận vẫn mở được');
+  perform t.as_user('C');
+  perform t.ok((select count(*) from public.tool_artifacts where id = a) = 0, '11F người khác không đọc được');
+  perform t.reset();
+end $$;
+
+-- CASE C: chủ chủ động xoá bài RIÊNG → artifact xoá, DM giữ nguyên
+do $$ declare a uuid := (select id from t.ids where k = 'CASEA'); p uuid; n bigint; begin
+  perform t.as_user('A');
+  perform t.ok(public.social_unpublish_tool_artifact(a) = 'private', '11C (chuẩn bị) Case A hạ về shared');
+  select count(*) into n from public.dm_messages(public.dm_find(t.u('B')));
+  perform t.ok(public.social_delete_tool_artifact(a), '11C chủ chủ động xoá bài riêng (hành động KHÁC "gỡ khỏi cộng đồng")');
+  perform t.reset();
+  perform t.ok(not exists (select 1 from public.tool_artifacts where id = a), '11C artifact bị xoá');
+  perform t.as_user('B');
+  perform t.ok((select count(*) from public.dm_messages(public.dm_find(t.u('A')))) = n and (select count(*) from public.dm_messages(public.dm_find(t.u('A'))) where ref_key = a::text) = 1, '11C DM còn nguyên; card sẽ "không còn khả dụng"');
+  perform t.ok((select count(*) from public.tool_artifacts where id = a) = 0, '11C người nhận không còn mở được');
+  perform t.reset();
 end $$;

@@ -10,7 +10,7 @@ const V = process.env.VITE_PORT
 const ORIGIN = `http://class.localhost:${V}`
 const ME = `${ORIGIN}/me`, SB = `${ORIGIN}/song-builder`
 const ID = { A: 'aaaaaaaa-0000-4000-8000-00000000000a', B: 'bbbbbbbb-0000-4000-8000-00000000000b', C: 'cccccccc-0000-4000-8000-00000000000c' }
-const EMAIL = { A: 'a@test.local', B: 'b@test.local', C: 'c@test.local' }
+const EMAIL = { A: 'a@test.local', B: 'b@test.local', C: 'c@test.local', T: 't@test.local' }
 const NAME = { B: 'Bình', C: 'Chi' }
 const SH1 = 'b1111111-0000-4000-8000-000000000001', SH2 = 'b2222222-0000-4000-8000-000000000002'
 const GONE = 'Nội dung này không còn khả dụng', MISSING = /không còn được chia sẻ hoặc bạn chưa có quyền xem/
@@ -72,11 +72,11 @@ async function artifactPage(page, id) {
   await page.goto(`${SB}?artifact=${id}`, { waitUntil: 'networkidle0' })
   await page.waitForSelector('.bms-artifact-banner, .bms-artifact-msg', { timeout: 20000 })
 }
-async function lastStep(page) {
-  await page.evaluate(() => {
+async function lastStep(page, title = 'Bài nháp của An') {
+  await page.evaluate(T => {
     const anchor = (w, word, b) => ({ id: `anchor_${String(w).padStart(3, '0')}_b${b}`, wordIndex: w, word, beatIndex: b, tick: b * 480, source: 'anchor' })
     localStorage.setItem('csre-sb-scratch-v1', JSON.stringify({
-      id: 'd_e2e1', title: 'Bài nháp của An', youtubeUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', videoId: 'dQw4w9WgXcQ', thumbnail: null,
+      id: 'd_e2e1', title: T, youtubeUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', videoId: 'dQw4w9WgXcQ', thumbnail: null,
       lyricsText: 'Có chàng trai viết lên cây\nlời yêu thương cô gái ấy',
       fit: { ok: true, fitted: true, bpm: 76, beatDuration: 60 / 76, gridOffset: 1.2, validTaps: 12, rejected: 0, avgError: 0.01, maxError: 0.02, assign: [] },
       timeSignature: 4, downbeatPosition: 1, groupBeats: true,
@@ -84,7 +84,7 @@ async function lastStep(page) {
       chords: [{ wordIndex: 0, name: 'Am' }, { wordIndex: 3, name: 'F' }, { wordIndex: 6, name: 'C' }, { wordIndex: 9, name: 'G' }],
       step: 5, createdAt: Date.now(), updatedAt: Date.now(),
     }))
-  })
+  }, title)
   await page.goto(SB, { waitUntil: 'domcontentloaded' })
   await clickText(page, '▶ Tiếp tục')
   await waitFor(page, () => /Gửi riêng cho bạn bè hoặc đăng lên cộng đồng/.test(document.body.innerText))
@@ -197,7 +197,7 @@ try {
   assert.equal(calls(A2, 'bms_save_for_share').length, 0, 'bài đã có sẵn → không lưu thêm')
   await A2.evaluate(() => [...document.querySelectorAll('[role=dialog] button')].find(x => x.textContent.trim() === 'Xong').click())
   await waitFor(A2, () => /đang chia sẻ cho Class/.test(document.querySelector('.bms-artifact-banner').textContent))
-  assert.match(await A2.$eval('.bms-artifact-banner', e => e.textContent), /Gỡ chia sẻ/)
+  assert.match(await A2.$eval('.bms-artifact-banner', e => e.textContent), /Gỡ khỏi cộng đồng/)
   await artifactPage(C, SH1)
   assert.match(await C.$eval('.bms-artifact-banner', e => e.textContent), /Bài chia sẻ/, 'sau promote, C mở được')
   ok('6 chủ bài mở bài riêng: banner "đang gửi riêng, chưa đăng", [Chia sẻ|Gỡ bài], menu 2 lựa chọn (320px trong màn hình) → Đăng = promote chính id (không lưu thêm) → banner "đang chia sẻ cho Class"; C mở được')
@@ -218,6 +218,59 @@ try {
   await artifactPage(B, SH2)
   assert.match(await B.$eval('.bms-artifact-msg', e => e.textContent), MISSING)
   ok('7 chủ bài gỡ bài riêng: artifact xoá, tin Chat còn nguyên (card "Nội dung này không còn khả dụng"), người nhận không mở được nữa')
+
+  // ── 8. CASE A: bài đã đăng + đã gửi DM → "Gỡ khỏi cộng đồng" = hạ về riêng tư, KHÔNG xoá; đăng lại trên chính bài ──
+  const T = await open('T')
+  await artifactPage(A, ART)
+  assert.match(await A.$eval('.bms-artifact-banner', e => e.textContent), /đang chia sẻ cho Class/)
+  await clickText(A, 'Gỡ khỏi cộng đồng', '.bms-artifact-banner button')
+  assert.match(await A.$eval('.bms-artifact-banner', e => e.textContent), /họ vẫn mở được/, 'xác nhận nói rõ: đã gửi bạn thì họ vẫn mở được')
+  await clickText(A, 'Xác nhận gỡ', '.bms-artifact-banner button')
+  await waitFor(A, () => /đang gửi riêng/.test(document.querySelector('.bms-artifact-banner')?.textContent ?? ''))
+  assert.equal(calls(A, 'social_unpublish_tool_artifact').at(-1).body.p_id, ART)
+  assert.equal(await A.$$eval('.bms-artifact-banner button', es => es.map(e => e.textContent.trim()).join('|')), 'Chia sẻ|Gỡ bài', 'giờ là bài riêng: [Chia sẻ|Gỡ bài]')
+  await A.goto(ME, { waitUntil: 'networkidle0' }); await sleep(1200)
+    const feedAfter = await A.$$eval('.cs-tool-share', es => es.map(e => e.querySelector('a')?.getAttribute('href')))
+  assert.equal(feedAfter.includes(`/song-builder?artifact=${ART}`), false, 'Feed không còn bài')
+  await artifactPage(T, ART)
+  assert.match(await T.$eval('.bms-artifact-msg', e => e.textContent), MISSING, 'thành viên Class khác (Thầy) không còn mở được')
+  const cardsB3 = await chatCards(B)
+  assert.ok(cardsB3.some(c => c.href === `/song-builder?artifact=${ART}` && !c.gone), 'card DM cũ của B vẫn hoạt động')
+  await B.click(`.cs-chat-scroll a[href="/song-builder?artifact=${ART}"]`)
+  await B.waitForSelector('.bms-artifact-banner', { timeout: 20000 })
+  assert.match(await B.$eval('.bms-artifact-banner', e => e.textContent), /Bài được gửi riêng cho bạn/, 'B (đã nhận) vẫn mở được, nay là bài riêng')
+  assert.equal(await B.$('.bms-artifact-share'), null, 'B không forward')
+  await artifactPage(C, ART)
+  assert.match(await C.$eval('.bms-artifact-banner', e => e.textContent), /Bài được gửi riêng cho bạn/, 'C (cũng đã nhận từ A) vẫn mở được')
+  // đăng lại trên CHÍNH artifact
+  const pubs0 = calls(A, 'social_publish_tool_artifact').length
+  await artifactPage(A, ART)
+  await A.click('.bms-artifact-share'); await dialog(A)
+  await A.evaluate(() => [...document.querySelectorAll('[role=dialog] button')].find(x => x.textContent.startsWith('Đăng lên cộng đồng')).click())
+  await waitFor(A, () => document.querySelector('[role=dialog] [role=status]')?.textContent === 'Đã đăng lên cộng đồng')
+  const pub = calls(A, 'social_publish_tool_artifact')
+  assert.equal(pub.length, pubs0 + 1); assert.equal(pub.at(-1).body.p_id, ART, 'đăng lại CHÍNH artifact')
+  await A.goto(ME, { waitUntil: 'networkidle0' }); await A.waitForSelector('.cs-tool-share', { timeout: 15000 })
+  assert.equal((await A.$$eval('.cs-tool-share', es => es.map(e => e.querySelector('a')?.getAttribute('href')))).filter(h => h === `/song-builder?artifact=${ART}`).length, 1, 'đúng MỘT bài Feed (không trùng)')
+  await artifactPage(T, ART)
+  assert.match(await T.$eval('.bms-artifact-banner', e => e.textContent), /Bài chia sẻ/, 'đăng lại: thành viên Class mở được')
+  ok('8 bài class đã gửi DM → "Gỡ khỏi cộng đồng": hạ về riêng tư (không xoá), Feed hết bài, Thầy không mở được, B/C (đã nhận) vẫn mở, DM card sống; đăng lại = chính artifact, đúng 1 bài Feed')
+
+  // ── 9. CASE B: bài class CHƯA từng gửi DM → "Gỡ khỏi cộng đồng" = xoá như cũ (không mồ côi) ──
+  await lastStep(A, 'Bài chỉ đăng cộng đồng')
+  await A.click('.bms-share button'); await dialog(A)
+  await A.evaluate(() => [...document.querySelectorAll('[role=dialog] button')].find(x => x.textContent.startsWith('Đăng lên cộng đồng')).click())
+  await waitFor(A, () => document.querySelector('[role=dialog] [role=status]')?.textContent === 'Đã đăng lên cộng đồng')
+  const ART_B = calls(A, 'social_publish_tool_artifact').at(-1).body.p_id
+  assert.notEqual(ART_B, ART)
+  await artifactPage(A, ART_B)
+  await clickText(A, 'Gỡ khỏi cộng đồng', '.bms-artifact-banner button'); await clickText(A, 'Xác nhận gỡ', '.bms-artifact-banner button')
+  await waitFor(A, () => document.querySelector('.bms-artifact-msg')?.textContent.includes('không còn được chia sẻ'))
+  await A.goto(ME, { waitUntil: 'networkidle0' }); await A.waitForSelector('.cs-tool-share', { timeout: 15000 })
+  assert.equal((await A.$$eval('.cs-tool-share', es => es.map(e => e.querySelector('a')?.getAttribute('href')))).includes(`/song-builder?artifact=${ART_B}`), false, 'Feed không còn bài')
+  await artifactPage(A, ART_B)
+  assert.match(await A.$eval('.bms-artifact-msg', e => e.textContent), MISSING, 'artifact đã xoá, không mồ côi')
+  ok('9 bài class CHƯA từng gửi DM: "Gỡ khỏi cộng đồng" → xoá cả bài Feed và artifact (không mồ côi)')
 
   assert.deepEqual(errors, [], 'lỗi trang/console')
   ok('không lỗi trang / console')

@@ -70,3 +70,19 @@ test("Phạm vi: không đụng Nhịp & Phách / Mira / realtime trong thay đ�
     assert.equal(/nhipphach|Mira|realtime|\.channel\(/i.test(code(f)), false, f);
   }
 });
+
+test("Gỡ khỏi cộng đồng ≠ xoá: RPC riêng, trả private|deleted; bài riêng 'Gỡ bài' mới là xoá", () => {
+  const api = code("src/bms/bmsArtifact.ts");
+  assert.match(api, /rpc\('social_unpublish_tool_artifact', \{ p_id: artifactId \}\)/);
+  assert.match(api, /data !== 'private' && data !== 'deleted'/, "chỉ nhận hai kết quả hợp lệ");
+  const p = code("src/bms/BmsArtifactPage.tsx");
+  assert.match(p, /'Gỡ khỏi cộng đồng'/);
+  assert.match(p, /isPrivate \? 'Gỡ bài' : 'Gỡ khỏi cộng đồng'/);
+  // bài đã đăng → unpublish (không xoá mặc định); bài riêng → xoá chủ động
+  assert.match(p, /if \(isPriv\) \{\s*if \(await deleteBmsArtifact\(artifactId\)\)/);
+  assert.match(p, /const r = await unpublishBmsArtifact\(artifactId\)/);
+  assert.match(p, /if \(r\.result === 'deleted'\) \{ setState\(\{ status: 'missing' \}\)/, "chưa từng gửi → đã xoá → trang báo không còn");
+  assert.match(p, /setVisOverride\('shared'\)/, "đã gửi → bài còn, chuyển sang riêng tư tại chỗ");
+  assert.match(p, /họ vẫn mở được/, "xác nhận nói rõ người đã nhận vẫn mở được");
+  assert.equal(/Gỡ chia sẻ/.test(p), false, "không còn nhãn mơ hồ 'Gỡ chia sẻ'");
+});

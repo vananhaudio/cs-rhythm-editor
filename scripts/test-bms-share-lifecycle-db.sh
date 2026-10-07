@@ -101,6 +101,12 @@ run_test lc_r1 "$ROOT/db/tests/dm_share_v1_test.sql"; ok "hồi quy V1b: $(grep 
 baseline lc_r2; mig lc_r2 "$ROOT/db/bms_share_lifecycle_v1_setup.sql" >/dev/null
 run_test lc_r2 "$ROOT/db/tests/dm_v1_test.sql"; ok "hồi quy V1a: $(grep -c '^PASS' "$TMP/test.out") PASS"
 
+echo "── HỒI QUY: BMS Artifact + Nhịp & Phách (test SQL cũ, gồm RPC Tool Share dùng chung) chạy trên DB đã có lifecycle"
+for t in social_bms_artifact_v1_test social_nhipphach_artifact_v1_test; do   # (social_tool_share_v1_test chỉ đúng trước khi có BMS — gốc chạy ở bước t_ts của test-learning-threads-db.sh)
+  baseline lc_r3; mig lc_r3 "$ROOT/db/bms_share_lifecycle_v1_setup.sql" >/dev/null
+  run_test lc_r3 "$ROOT/db/tests/$t.sql"; ok "hồi quy $t: $(grep -c '^PASS' "$TMP/test.out") PASS"
+  "$PGBIN/dropdb" -h "$TMP" -p "$PORT" -U postgres lc_r3
+done
 echo "── Đồng thời: hai phiên song song save/publish cùng một bài"
 baseline lc_cc; mig lc_cc "$ROOT/db/bms_share_lifecycle_v1_setup.sql" >/dev/null
 SONG="\$j\${\"title\":\"Song song\",\"video_id\":\"dQw4w9WgXcQ\",\"lyrics\":\"la la la\",\"fit\":{\"bpm\":90,\"beat_duration\":0.6667,\"grid_offset\":0.5},\"time_signature\":4,\"downbeat_position\":1,\"group_beats\":true,\"anchors\":[{\"word_index\":0,\"beat_index\":0}],\"chords\":[{\"word_index\":0,\"name\":\"C\"}]}\$j\$"
@@ -119,6 +125,38 @@ wait $W1 && wait $W2 && wait $W3 || fail "phiên song song lỗi"
 [ "$(q lc_cc "select count(*) from public.tool_artifacts where data ->> 'title' = 'Song song'")" = "1" ] && ok "3 phiên × 15 lần save → ĐÚNG 1 artifact" || fail "nhân bản artifact: $(q lc_cc "select count(*) from public.tool_artifacts where data ->> 'title' = 'Song song'")"
 [ "$(q lc_cc "select count(*) from public.class_posts where tool_share ->> 'tool' = 'bms'")/$(q lc_cc "select visibility from public.tool_artifacts where data ->> 'title' = 'Song song'")" = "1/class" ] && ok "3 phiên × 5 lần publish song song → ĐÚNG 1 bài Feed, artifact đã promote (class)" || fail "nhân bản bài Feed"
 
+echo "── Đồng thời: đăng / gỡ khỏi cộng đồng đua nhau (không trạng thái nửa vời)"
+q lc_cc "insert into public.friendships (requester_id, addressee_id, status, responded_at) values ('aaaaaaaa-0000-4000-8000-00000000000a','bbbbbbbb-0000-4000-8000-00000000000b','accepted',now()) on conflict do nothing" >/dev/null
+song_json() { echo "\$j\${\"title\":\"$1\",\"video_id\":\"dQw4w9WgXcQ\",\"lyrics\":\"la la la\",\"fit\":{\"bpm\":90,\"beat_duration\":0.6667,\"grid_offset\":0.5},\"time_signature\":4,\"downbeat_position\":1,\"group_beats\":true,\"anchors\":[{\"word_index\":0,\"beat_index\":0}],\"chords\":[{\"word_index\":0,\"name\":\"C\"}]}\$j\$"; }
+SONGD="$(song_json 'Race DM')"; SONGN="$(song_json 'Race NoDM')"
+psqld lc_cc -q >/dev/null <<SQL
+select set_config('request.jwt.claims','{"sub":"aaaaaaaa-0000-4000-8000-00000000000a","role":"authenticated"}',false);
+set role authenticated;
+do \$\$ declare a uuid; begin a := public.bms_save_for_share($SONGD::jsonb); perform public.social_publish_tool_artifact(a); perform public.dm_share('bbbbbbbb-0000-4000-8000-00000000000b','tool_artifact',a::text); end \$\$;
+SQL
+race() { psqld lc_cc -q >/dev/null <<SQL
+select set_config('request.jwt.claims','{"sub":"aaaaaaaa-0000-4000-8000-00000000000a","role":"authenticated"}',false);
+set role authenticated;
+do \$\$ declare i int; a uuid; begin
+  for i in 1..25 loop
+    begin
+      a := public.bms_save_for_share($1::jsonb);
+      if random() < 0.5 then perform public.social_publish_tool_artifact(a); else perform public.social_unpublish_tool_artifact(a); end if;
+    exception when others then null;
+    end;
+  end loop; end \$\$;
+SQL
+}
+race "$SONGD" & R1=$!; race "$SONGD" & R2=$!; race "$SONGD" & R3=$!
+wait $R1 && wait $R2 && wait $R3 || fail "phiên đua lỗi"
+INV="$(q lc_cc "select (select count(*) from public.tool_artifacts where title = 'Race DM') || '/' || (select visibility from public.tool_artifacts where title = 'Race DM') || '/' || (select count(*) from public.class_posts where tool_share ->> 'title' = 'Race DM')")"
+case "$INV" in "1/class/1"|"1/shared/0") ok "artifact ĐÃ gửi DM sau 75 thao tác đăng/gỡ đua nhau: giữ đúng 1 artifact, trạng thái nhất quán ($INV = artifact/visibility/số bài Feed)";; *) fail "trạng thái nửa vời (DM): $INV";; esac
+[ "$(q lc_cc "select count(*) from public.dm_messages where ref_type is not null")" -ge "1" ] && ok "tin DM không bị ảnh hưởng bởi đua đăng/gỡ" || fail "mất tin DM"
+race "$SONGN" & R1=$!; race "$SONGN" & R2=$!; race "$SONGN" & R3=$!
+wait $R1 && wait $R2 && wait $R3 || fail "phiên đua lỗi (không DM)"
+NA="$(q lc_cc "select count(*) from public.tool_artifacts where title = 'Race NoDM'")"; NP="$(q lc_cc "select count(*) from public.class_posts where tool_share ->> 'title' = 'Race NoDM'")"; NV="$(q lc_cc "select coalesce(max(visibility), '-') from public.tool_artifacts where title = 'Race NoDM'")"
+case "$NA/$NV/$NP" in "1/class/1"|"1/shared/0"|"0/-/0") ok "artifact CHƯA gửi DM sau 75 thao tác đua nhau: nhất quán ($NA/$NV/$NP), không mồ côi, không trùng bài Feed";; *) fail "trạng thái nửa vời (không DM): $NA/$NV/$NP";; esac
+
 echo "── Rollback ×2 (có artifact shared → giữ check, KHÔNG mất dữ liệu)"
 baseline lc_rb; mig lc_rb "$ROOT/db/bms_share_lifecycle_v1_setup.sql" >/dev/null
 psqld lc_rb -q <<SQL
@@ -128,7 +166,8 @@ select public.bms_save_for_share($SONG::jsonb);
 SQL
 mig lc_rb "$ROOT/db/bms_share_lifecycle_v1_rollback.sql" >/dev/null || fail "rollback 1"; mig lc_rb "$ROOT/db/bms_share_lifecycle_v1_rollback.sql" >/dev/null || fail "rollback 2"; ok "rollback ×2 (idempotent)"
 [ "$(q lc_rb "select pg_get_expr(polqual, polrelid) from pg_policy where polrelid = 'public.tool_artifacts'::regclass")" = "$POL_BASE" ] && ok "rollback: policy về ĐÚNG như production" || fail "policy rollback"
-[ "$(q lc_rb "select count(*) from pg_proc where proname in ('bms_save_for_share','social_publish_tool_artifact','dm_artifact_granted')")" = "0" ] && ok "rollback: gỡ 3 hàm lifecycle" || fail "còn hàm"
+[ "$(q lc_rb "select count(*) from pg_proc where proname in ('bms_save_for_share','social_publish_tool_artifact','social_unpublish_tool_artifact','tool_artifact_demote_or_delete','dm_artifact_granted')")" = "0" ] && ok "rollback: gỡ 5 hàm lifecycle" || fail "còn hàm"
+[ "$(q lc_rb "select md5(prosrc) from pg_proc where proname = 'tool_artifacts_cleanup_on_post_delete'")" = "084462af8e4a71394dafe2b6b5b0b2ad" ] && [ "$(q lc_rb "select md5(prosrc) from pg_proc where proname = 'social_delete_tool_artifact'")" = "cbcac72830a72003d414863d1aee8806" ] && ok "rollback: trigger xoá-bài-Feed về ĐÚNG nguyên văn baseline (md5 production)" || fail "trigger không về baseline"
 [ "$(q lc_rb "select count(*) from public.tool_artifacts where visibility = 'shared'")" = "1" ] && ok "rollback: artifact shared KHÔNG bị xoá (chỉ chủ bài đọc được)" || fail "mất artifact"
 [ "$(q lc_rb "select pg_get_constraintdef(oid) from pg_constraint where conname = 'tool_artifacts_visibility_check'")" = "CHECK ((visibility = ANY (ARRAY['class'::text, 'shared'::text])))" ] && ok "rollback: còn dữ liệu shared → giữ check nhận 'shared'" || fail "check rollback: $(q lc_rb "select pg_get_constraintdef(oid) from pg_constraint where conname = 'tool_artifacts_visibility_check'")"
 q lc_rb "delete from public.tool_artifacts where visibility = 'shared'" >/dev/null; mig lc_rb "$ROOT/db/bms_share_lifecycle_v1_rollback.sql" >/dev/null

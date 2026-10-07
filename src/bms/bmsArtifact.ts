@@ -120,6 +120,21 @@ export async function publishBmsArtifact(artifactId: string): Promise<PublishRes
   }
 }
 
+export type UnpublishResult = { ok: true; result: 'private' | 'deleted' } | { ok: false; message: string }
+
+/** "Gỡ khỏi cộng đồng" ≠ xoá bài: gỡ bài Feed. Bài đã từng gửi cho bạn bè → còn (chỉ người đã nhận mở được); chưa từng gửi → xoá hẳn. */
+export async function unpublishBmsArtifact(artifactId: string): Promise<UnpublishResult> {
+  const online = typeof navigator === 'undefined' ? true : navigator.onLine !== false
+  try {
+    const { supabase } = await import('../supabase')
+    const { data, error } = await supabase.rpc('social_unpublish_tool_artifact', { p_id: artifactId })
+    if (error || (data !== 'private' && data !== 'deleted')) return { ok: false, message: rpcMessage(error, online) }
+    return { ok: true, result: data }
+  } catch (e) {
+    return { ok: false, message: shareErrorText((e as Error)?.message, online) }
+  }
+}
+
 /** Cổng chia sẻ BMS cho SongBuilder (chỉ truyền ở route /song-builder khi đã đăng nhập). */
 export const bmsShareApi = { save: saveBmsForShare, publish: publishBmsArtifact }
 export type BmsShareApi = typeof bmsShareApi
@@ -145,7 +160,7 @@ export async function loadBmsArtifact(id: string): Promise<LoadedArtifact> {
   } catch { return { status: 'error' } }
 }
 
-/** Chủ bài gỡ chia sẻ: artifact + bài Feed trỏ tới nó (RPC, cùng transaction). */
+/** Chủ bài XOÁ bài riêng (hành động chủ động, khác "Gỡ khỏi cộng đồng"): artifact xoá, tin Chat còn. */
 export async function deleteBmsArtifact(id: string): Promise<boolean> {
   try {
     const { supabase } = await import('../supabase')

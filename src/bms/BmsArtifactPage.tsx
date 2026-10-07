@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react'
 import PracticePlayer from '../PracticePlayer'
 import BmsShareSheet from './BmsShareSheet'
-import { deleteBmsArtifact, loadBmsArtifact, publishBmsArtifact, type ArtifactVisibility, type LoadedArtifact } from './bmsArtifact'
+import { deleteBmsArtifact, loadBmsArtifact, publishBmsArtifact, unpublishBmsArtifact, type ArtifactVisibility, type LoadedArtifact } from './bmsArtifact'
 
 const C = { bg: '#0B0E14', surface: '#131823', border: 'rgba(255,255,255,0.09)', text: '#E6EAF2', muted: '#8A93A6', accent: '#6C63FF', red: '#F43F5E' }
 const FONT = `'Be Vietnam Pro',system-ui,sans-serif`
@@ -12,7 +12,7 @@ const FONT = `'Be Vietnam Pro',system-ui,sans-serif`
 export default function BmsArtifactPage({ artifactId }: { artifactId: string }) {
   const [state, setState] = useState<LoadedArtifact | { status: 'loading' }>({ status: 'loading' })
   const [sharing, setSharing] = useState(false)
-  const [promoted, setPromoted] = useState(false)   // vừa đăng lên cộng đồng ngay trên trang này
+  const [visOverride, setVisOverride] = useState<ArtifactVisibility | null>(null)   // đổi ngay trên trang này (đăng / gỡ khỏi cộng đồng)
   const [removing, setRemoving] = useState<'idle' | 'confirm' | 'busy' | 'error'>('idle')
   useEffect(() => { void loadBmsArtifact(artifactId).then(setState) }, [artifactId])
 
@@ -36,13 +36,21 @@ export default function BmsArtifactPage({ artifactId }: { artifactId: string }) 
     )
   }
 
+  // Bài riêng: "Gỡ bài" = XOÁ (tin Chat còn). Bài đã đăng: "Gỡ khỏi cộng đồng" ≠ xoá — đã gửi bạn thì bài còn (chỉ người đã nhận mở được).
   const remove = async () => {
     if (removing !== 'confirm') { setRemoving('confirm'); return }
     setRemoving('busy')
-    if (await deleteBmsArtifact(artifactId)) setState({ status: 'missing' })
-    else setRemoving('error')
+    const isPriv = (visOverride ?? state.visibility) === 'shared'
+    if (isPriv) {
+      if (await deleteBmsArtifact(artifactId)) setState({ status: 'missing' }); else setRemoving('error')
+      return
+    }
+    const r = await unpublishBmsArtifact(artifactId)
+    if (!r.ok) { setRemoving('error'); return }
+    if (r.result === 'deleted') { setState({ status: 'missing' }); return }
+    setVisOverride('shared'); setRemoving('idle')
   }
-  const visibility: ArtifactVisibility = promoted ? 'class' : state.visibility
+  const visibility: ArtifactVisibility = visOverride ?? state.visibility
   const isPrivate = visibility === 'shared'
   // Người được gửi riêng KHÔNG chia sẻ tiếp (không forward); bài đã đăng cộng đồng thì ai xem cũng gửi được cho bạn
   const canShare = state.isMine || !isPrivate
@@ -56,12 +64,12 @@ export default function BmsArtifactPage({ artifactId }: { artifactId: string }) 
       {canShare && <button type="button" className="bms-artifact-share" onClick={() => setSharing(true)} style={btn()}>Chia sẻ</button>}
       {state.isMine && (
         <button onClick={() => void remove()} disabled={removing === 'busy'} style={btn({ border: `1px solid ${removing === 'confirm' ? C.red : C.border}`, color: removing === 'confirm' ? C.red : C.muted })}>
-          {removing === 'confirm' ? 'Xác nhận gỡ' : removing === 'busy' ? 'Đang gỡ…' : isPrivate ? 'Gỡ bài' : 'Gỡ chia sẻ'}
+          {removing === 'confirm' ? 'Xác nhận gỡ' : removing === 'busy' ? 'Đang gỡ…' : isPrivate ? 'Gỡ bài' : 'Gỡ khỏi cộng đồng'}
         </button>
       )}
       {removing === 'confirm' && <span style={{ width: '100%', fontSize: 12 }}>{isPrivate
         ? 'Bài sẽ không còn mở được với những người đã nhận. Tin nhắn trong Chat vẫn còn. Nháp trong máy bạn vẫn giữ nguyên.'
-        : 'Bài và thẻ trên Feed sẽ bị xoá. Nháp trong máy bạn vẫn giữ nguyên.'}</span>}
+        : 'Bài sẽ biến mất khỏi cộng đồng. Nếu bạn đã gửi bài này cho bạn bè, họ vẫn mở được. Nháp trong máy bạn vẫn giữ nguyên.'}</span>}
       {removing === 'error' && <span role="alert" style={{ width: '100%', color: C.red, fontSize: 12 }}>Chưa gỡ được. Hãy thử lại.</span>}
     </div>
   )
@@ -71,7 +79,7 @@ export default function BmsArtifactPage({ artifactId }: { artifactId: string }) 
       {sharing && canShare && (
         <BmsShareSheet title={state.draft.title || 'Bài BMS'} artifactId={artifactId.toLowerCase()} canPublish={state.isMine && isPrivate}
           ensureArtifact={async () => ({ ok: true, artifactId: artifactId.toLowerCase() })}
-          publish={publishBmsArtifact} onPublished={() => setPromoted(true)} onClose={() => setSharing(false)} />
+          publish={publishBmsArtifact} onPublished={() => setVisOverride('class')} onClose={() => setSharing(false)} />
       )}
     </>
   )

@@ -53,18 +53,30 @@ Không thêm bảng. Thêm: CHECK `visibility in ('class','shared')`, chỉ mụ
 - Gửi bài `class` cho bạn: chỉ tham chiếu, không đổi visibility.
 - Người nhận bài riêng không thấy `Chia sẻ`/`Gỡ`; chỉ luyện.
 
-## Gỡ bài
+## Gỡ bài — "Gỡ khỏi cộng đồng" ≠ "Xoá"
 
-- Chủ bài gỡ artifact `shared`: artifact xoá; **tin Chat không bị xoá** (không FK) → card "Nội dung này không còn khả dụng"; người nhận không mở được nữa. Xác nhận 2 bước, nói rõ "Tin nhắn trong Chat vẫn còn".
-- Artifact `class`: giữ semantics hiện tại (`social_delete_tool_artifact` xoá artifact + bài Feed). **Lưu ý còn mở:** xoá bài Feed (đường hiện có) kích trigger xoá artifact ⇒ các card đã gửi cho bạn cũng thành "không còn khả dụng". Đề xuất (chưa làm, cần Owner): khi bài Feed bị xoá mà artifact đã được gửi qua DM thì hạ về `shared` thay vì xoá.
+Nguyên tắc: **Object ≠ nơi phân phối object.** Một artifact có thể được phân phối qua DM và/hoặc Feed; gỡ khỏi một nơi không mặc định xoá object.
+
+| Hành động | Artifact | Kết quả |
+|---|---|---|
+| **A.** `Gỡ khỏi cộng đồng` — bài `class` ĐÃ TỪNG được chủ bài gửi qua DM | giữ nguyên id | xoá bài Feed · hạ `class → shared` · người đã nhận vẫn mở được · thành viên Class khác không đọc được ngay lập tức · tin DM còn · đăng lại được trên chính artifact |
+| **B.** `Gỡ khỏi cộng đồng` — bài `class` CHƯA từng gửi DM | xoá | xoá bài Feed + artifact (không để object mồ côi), như hành vi cũ |
+| **C.** `Gỡ bài bài riêng` (chủ chủ động xoá bài `shared`) | xoá | tin DM giữ nguyên, card → "Nội dung này không còn khả dụng"; người nhận không mở được nữa |
+| Bài riêng chưa đăng + `Gỡ khỏi cộng đồng` | giữ | không làm gì (không xoá bài riêng) |
+
+- Hàm nội bộ `tool_artifact_demote_or_delete(id, owner)` quyết định A/B ở **server**: "đã từng gửi" = có tin DM trỏ tới artifact do **chính chủ bài** gửi (đọc `dm_messages` bằng SECURITY DEFINER; client không có quyền đọc `dm_*`). Tin do người nhận forward (artifact `class`) không tính là grant.
+- Luật này áp cho CẢ HAI đường: RPC `social_unpublish_tool_artifact(id)` (trả `'private'` | `'deleted'`, idempotent) và **xoá bài Feed trực tiếp** (trigger `class_posts_tool_artifact_cleanup` đổi sang gọi hàm trên; trước đây luôn xoá artifact làm hỏng card Chat đã gửi).
+- Khoá advisory cùng khoá với `social_publish_tool_artifact` → đăng / gỡ đua nhau không để trạng thái nửa vời (đã test: 3 phiên × 25 thao tác ngẫu nhiên, trạng thái luôn nhất quán: `class ⇔ có đúng 1 bài Feed`, `shared ⇔ 0 bài`, không mồ côi).
+- `social_delete_tool_artifact` KHÔNG đổi (xoá chủ động: artifact + bài Feed; tin Chat luôn còn). UI dùng nó chỉ cho "Gỡ bài" của bài riêng.
+- Gỡ khỏi cộng đồng ≠ thu hồi grant: người đã nhận qua DM giữ quyền mở (kể cả sau unfriend).
 
 ## Kiểm thử
 
 | Gate | Lệnh | Kết quả (08/10) |
 |---|---|---|
-| DB lifecycle + hồi quy V1b/V1a + đồng thời + rollback | `bash scripts/test-bms-share-lifecycle-db.sh` | 61 kiểm tra lifecycle · 56 V1b · 89 V1a · 3 phiên song song: 1 artifact, 1 bài Feed · rollback ×2 |
-| Unit/render | `npm run test:class-social` | 279/279 |
-| E2E lifecycle (Chrome thật) | `bash scripts/e2e-bms-share-lifecycle.sh` | 8 kịch bản |
+| DB lifecycle + hồi quy + đồng thời + rollback | `bash scripts/test-bms-share-lifecycle-db.sh` | 89 kiểm tra lifecycle · hồi quy 56 V1b · 89 V1a · 37 BMS Artifact · 39 Nhịp & Phách · đồng thời (save/publish; đăng/gỡ đua nhau) nhất quán · rollback ×2 về đúng md5 production |
+| Unit/render | `npm run test:class-social` | 280/280 |
+| E2E lifecycle (Chrome thật) | `bash scripts/e2e-bms-share-lifecycle.sh` | 10 kịch bản (gồm gỡ khỏi cộng đồng A/B) |
 | E2E V1b | `bash scripts/e2e-chat-share-v1b.sh` | 12/12 PASS |
 | E2E V1a trên DB+FE mới | `CHAT_V1B=1 bash scripts/e2e-chat-v1.sh` | 19/19 PASS |
 | E2E nền (toàn bộ, gồm luồng BMS mới) | `bash scripts/e2e-learning-thread.sh` | 75 PASS (script tự nạp DB lifecycle khi không truyền `E2E_PRE_SQL`) |

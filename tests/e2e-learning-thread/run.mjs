@@ -858,7 +858,7 @@ try {
       assert.match(t, /Có Chàng Trai Viết Lên Cây/); assert.match(t, /76·4\/4/)
       assert.match(t, /chàng[\s\S]*yêu[\s\S]*thương/, 'lời karaoke đúng bài')
       assert.match(t, /\bAm\b[\s\S]*\bG\b/, 'hợp âm đúng bài')
-      assert.equal(/Gỡ chia sẻ|Lưu vào Bài hát|Chia sẻ lên cộng đồng/.test(t), false, 'người xem không lưu/sửa/gỡ')
+      assert.equal(/Gỡ chia sẻ|Gỡ khỏi cộng đồng|Gỡ bài|Lưu vào Bài hát|Chia sẻ lên cộng đồng/.test(t), false, 'người xem không lưu/sửa/gỡ')
     }
     await checkPractice()
     await noHorizontalOverflow(b, 'BMS chỉ luyện (390px)')
@@ -873,11 +873,11 @@ try {
     const { ctx: cg, page: g } = await ctxPage(390)
     await g.goto(`http://class.localhost:${V}${artHref}`, { waitUntil: 'domcontentloaded' }); await waitText(g, /Đăng nhập Class để luyện bài này/)
     await cg.close()
-    // A (chủ bài) mở bài của mình → "Bài của bạn" → Gỡ chia sẻ (2 bước) → bài + thẻ biến mất
+    // A (chủ bài) mở bài của mình → "Bài của bạn" → Gỡ khỏi cộng đồng (2 bước; chưa từng gửi bạn → xoá hẳn) → bài + thẻ biến mất
     const [ca2, a2] = [ca, a]   // cùng trình duyệt của A (nháp local ở đây)
     await a2.goto(`http://class.localhost:${V}${artHref}`, { waitUntil: 'domcontentloaded' })
     await waitText(a2, /Bài của bạn/)
-    await clickText(a2, 'Gỡ chia sẻ'); await waitText(a2, /Nháp trong máy bạn vẫn giữ nguyên/)
+    await clickText(a2, 'Gỡ khỏi cộng đồng'); await waitText(a2, /Nháp trong máy bạn vẫn giữ nguyên/)
     await a2.screenshot({ path: `${SHOTS}/26-bms-owner-remove.png` })
     await clickText(a2, 'Xác nhận gỡ'); await waitText(a2, /không còn được chia sẻ/)
     await a2.goto(ME, { waitUntil: 'domcontentloaded' }); await a2.waitForSelector('.cs-post', { timeout: 15000 }); await new Promise(r => setTimeout(r, 800))
