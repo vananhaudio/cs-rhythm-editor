@@ -523,6 +523,7 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
 
         <section className="cl-card" aria-label="Lời và hợp âm">
           <h2>Lời + hợp âm *</h2>
+          <p className="cl-lead"><strong>Dán lời và hợp âm chuẩn của bài hát</strong> (từ Hợp Âm Việt hoặc nguồn tương đương). Đây là lời và hợp âm cuối cùng của bài — sheet chỉ dùng để xác định ô nhịp.</p>
           <p className="cl-help">Đặt hợp âm trong ngoặc vuông, ngay trước chữ đổi hợp âm: <code>Chiều [Am] nao, tiễn nhau [E7] đi</code>. Mỗi câu một dòng. Nhãn như <code>1.</code> hay <code>ĐK:</code> viết ở đầu dòng.</p>
           <textarea value={form.text} onChange={event => set({ text: event.target.value })} aria-label="Ô soạn lời và hợp âm" aria-invalid={!!errors.text}
             spellCheck={false} rows={14} placeholder={'1. [C] Câu hát đầu [Am] tiên\n[F] Câu tiếp [G] theo'} />
@@ -530,19 +531,6 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
           {issues.length > 0 && <p className="cl-warn" role="note">Dòng {issues.join(', ')}: còn ngoặc vuông chưa thành hợp âm (thiếu ngoặc đóng, hoặc để trống).</p>}
           {anchorsWillReset && <p className="cl-warn" role="note">Bài này đã có vạch nhịp theo lời cũ. Lưu lời mới thì vạch nhịp phải làm lại.</p>}
         </section>
-
-        <AnchorSection detail={detail} willReset={anchorsWillReset} sourceCount={plan.length} sourcesSaved={!sourcesChanged}
-          editing={anchorEditing} dirty={dirty} onLive={setLiveAnchors} busy={busy || sourceBusy}
-          onEdit={() => { setMessage(''); setFailed(''); setSeed(current => ({ anchors: null, flagged: [], notes: [], key: current.key + 1 })); setAnchorEditing(true) }}
-          onCancel={() => { setAnchorEditing(false); setSeed(current => ({ ...current, anchors: null, flagged: [], notes: [] })) }} onAccept={anchors => void acceptAnchors(anchors)}
-          analyzer={!analyzer ? { enabled: false, reason: 'Chưa bật ở bản này.' }
-            : !analyzerReady ? { enabled: false, reason: 'Bộ phân tích cục bộ chưa chạy.' }
-            : !detail?.sources.length ? { enabled: false, reason: 'Cần sheet nguồn (đã lưu) để phân tích.' }
-            : dirty ? { enabled: false, reason: 'Lưu các thay đổi trước, rồi mới phân tích.' }
-            : !hasText ? { enabled: false, reason: 'Cần lời + hợp âm.' }
-            : { enabled: true, reason: '' }}
-          analysis={analysis} seed={seed} onAnalyze={() => void analyze()}
-          onUseProposal={() => analysis.result && adoptProposal(analysis.result)} onKeepCurrent={() => setAnalysis({ state: 'idle' })} />
 
         <section className="cl-card" aria-label="Nguồn sheet">
           <h2>Nguồn sheet</h2>
@@ -557,9 +545,6 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
                 </div>
                 <div className="cl-src-actions">
                   <button type="button" className="cl-secondary" onClick={() => void viewItem(item)}>Xem</button>
-                  {extractor && <button type="button" className="cl-secondary" disabled={!extractorReady || extraction.state === 'running' || sourceBusy || busy}
-                    title={extractorReady ? 'Máy đọc lời + hợp âm trên file này' : 'Máy phân tích chưa chạy.'}
-                    aria-label={`Phân tích ${item.name}`} onClick={() => void runExtraction([item], item.name)}>Phân tích</button>}
                   <button type="button" className="cl-secondary" disabled={sourceBusy || busy} onClick={() => void removeItem(item)}
                     aria-label={`${item.kind === 'attached' ? 'Bỏ khỏi phiên bản mới' : 'Xoá'} ${item.name}`}>{item.kind === 'attached' ? 'Bỏ khỏi bản mới' : 'Xoá'}</button>
                 </div>
@@ -575,11 +560,35 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
               onChange={event => { const files = [...(event.target.files ?? [])]; event.target.value = ''; void addFiles(files) }} />
           </label>
           {sourceError && <p className="cl-error" role="alert">{sourceError}</p>}
-          {extractor && plan.length > 1 && <button type="button" className="cl-secondary" disabled={!extractorReady || extraction.state === 'running' || sourceBusy || busy}
-            onClick={() => void runExtraction(plan, `${plan.length} file`)}>Phân tích sheet</button>}
-          {extractor && !extractorReady && plan.length > 0 && <p className="cl-help">Máy phân tích chưa chạy trên máy này — vẫn nhập lời + hợp âm tay được.</p>}
-          <ExtractionPanel state={extraction} onUse={useExtraction} onDismiss={() => setExtraction({ state: 'idle' })} />
+          <p className="cl-help">Sheet dùng để xác định <strong>khuông và ô nhịp</strong>. Sau khi <strong>Lưu</strong>, bấm <strong>Phân tích vạch nhịp</strong> ở mục bên dưới.</p>
+          {extractor && plan.length > 0 && <details className="cl-advanced">
+            <summary>Công cụ nâng cao</summary>
+            <p className="cl-help">OCR dùng để kiểm tra kỹ thuật, không phải nguồn lời chuẩn. Kết quả không thay thế ô Lời + hợp âm trừ khi thầy tự bấm “Dùng kết quả này”.</p>
+            {!extractorReady && <p className="cl-help">Máy phân tích chưa chạy trên máy này.</p>}
+            <div className="cl-src-actions">
+              {plan.map(item => <button key={item.key} type="button" className="cl-secondary" disabled={!extractorReady || extraction.state === 'running' || sourceBusy || busy}
+                title={extractorReady ? 'Đọc chữ trên file này (tham khảo)' : 'Máy phân tích chưa chạy.'}
+                aria-label={`Phân tích nội dung sheet (tham khảo): ${item.name}`} onClick={() => void runExtraction([item], item.name)}>Phân tích nội dung sheet (tham khảo): {item.name}</button>)}
+              {plan.length > 1 && <button type="button" className="cl-secondary" disabled={!extractorReady || extraction.state === 'running' || sourceBusy || busy}
+                onClick={() => void runExtraction(plan, `${plan.length} file`)}>Phân tích nội dung cả {plan.length} file (tham khảo)</button>}
+            </div>
+            <ExtractionPanel state={extraction} onUse={useExtraction} onDismiss={() => setExtraction({ state: 'idle' })} />
+          </details>}
         </section>
+
+        <AnchorSection detail={detail} willReset={anchorsWillReset} sourceCount={plan.length} sourcesSaved={!sourcesChanged}
+          editing={anchorEditing} dirty={dirty} onLive={setLiveAnchors} busy={busy || sourceBusy}
+          onEdit={() => { setMessage(''); setFailed(''); setSeed(current => ({ anchors: null, flagged: [], notes: [], key: current.key + 1 })); setAnchorEditing(true) }}
+          onCancel={() => { setAnchorEditing(false); setSeed(current => ({ ...current, anchors: null, flagged: [], notes: [] })) }} onAccept={anchors => void acceptAnchors(anchors)}
+          analyzer={!hasText ? { enabled: false, reason: 'Cần dán lời + hợp âm trước.' }
+            : !analyzer ? { enabled: false, reason: 'Chưa bật ở bản này.' }
+            : !analyzerReady ? { enabled: false, reason: 'Máy phân tích chưa chạy trên máy này.' }
+            : !detail ? { enabled: false, reason: 'Lưu bài (kèm sheet) trước, rồi phân tích vạch nhịp.' }
+            : !detail.sources.length ? { enabled: false, reason: 'Cần sheet nguồn (đã lưu) để phân tích.' }
+            : dirty ? { enabled: false, reason: 'Lưu các thay đổi trước, rồi mới phân tích.' }
+            : { enabled: true, reason: '' }}
+          analysis={analysis} seed={seed} onAnalyze={() => void analyze()}
+          onUseProposal={() => analysis.result && adoptProposal(analysis.result)} onKeepCurrent={() => setAnalysis({ state: 'idle' })} />
       </div>
 
       <section className="cl-card cl-preview" aria-label="Xem thử">
@@ -663,8 +672,9 @@ function ExtractionPanel({ state, onUse, onDismiss }: { state: { state: 'idle' |
   if (state.state === 'failed') return <div className="cl-card cl-extract" role="alert"><p className="cl-error">Phân tích không thành công. {state.message}</p>
     <button type="button" className="cl-secondary" onClick={onDismiss}>Đóng</button></div>
   const p = state.proposal!
-  return <section className="cl-card cl-extract" aria-label="Kết quả phân tích">
-    <h3>Kết quả phân tích</h3>
+  return <section className="cl-card cl-extract" aria-label="Kết quả đọc nội dung sheet (tham khảo)">
+    <h3>Kết quả đọc nội dung sheet (tham khảo)</h3>
+    <p className="cl-help">Chữ OCR có thể sai chính tả — chỉ để tham khảo, không phải lời chuẩn.</p>
     <ul className="cl-extract-facts">
       <li>Cách đọc: {READING_LABEL[p.reading]} · {p.pageCount} trang</li>
       <li>Hợp âm: {p.chords === 'DETECTED' ? `thấy ${p.chordCount} hợp âm` : p.chords === 'NO_CHORDS_DETECTED' ? 'KHÔNG thấy hợp âm in trên sheet' : 'chưa rõ'}</li>

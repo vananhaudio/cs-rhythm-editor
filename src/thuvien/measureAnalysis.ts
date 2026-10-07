@@ -139,9 +139,11 @@ export function createWorkerMeasureAnalyzer(baseUrl: string, getToken: () => Pro
       try {
         const controller = new AbortController()
         const timer = setTimeout(() => controller.abort(), 3000)
-        const reply = await fetcher(`${base}/health`, { signal: controller.signal })
+        // POST (không GET): service worker của trang chặn GET tới loopback. Probe không cần đăng nhập, không chạm DB/Storage.
+        const reply = await fetcher(`${base}/extract-probe`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}', signal: controller.signal })
         clearTimeout(timer)
-        return reply.ok && (await reply.json() as { ok?: boolean }).ok === true
+        const body = await reply.json() as { ok?: boolean; kind?: string }
+        return reply.ok && body.ok === true && body.kind === 'chord-extract-worker'
       } catch { return false }
     },
     async analyze(input) {
@@ -166,9 +168,9 @@ export function createWorkerMeasureAnalyzer(baseUrl: string, getToken: () => Pro
   }
 }
 
-/** Analyzer cho bản build: CHỈ khi có VITE_MEASURE_ANALYZER_URL dạng https — không có thì undefined (nút Phân tích khoá).
- *  Không bao giờ rơi về localhost / cầu dev. */
+/** Analyzer cho bản build: https (worker có tên miền) HOẶC loopback http (worker chạy ngay trên máy của Owner, vd. http://127.0.0.1:7430).
+ *  Không có / `off` / địa chỉ http không phải loopback → undefined (nút Phân tích vạch nhịp khoá). */
 export function productionMeasureAnalyzer(url: string | undefined, getToken: () => Promise<string | null>): MeasureAnalyzer | undefined {
-  if (!url || !/^https:\/\/[^/\s]+/.test(url)) return undefined
-  return createWorkerMeasureAnalyzer(url, getToken)
+  const ok = !!url && (/^https:\/\/[^/\s]+/.test(url) || /^http:\/\/(127\.0\.0\.1|localhost|\[::1\])(:\d+)?(\/|$)/.test(url))
+  return ok ? createWorkerMeasureAnalyzer(url!, getToken) : undefined
 }

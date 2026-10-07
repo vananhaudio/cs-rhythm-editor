@@ -180,3 +180,8 @@
 .cl-extract h3 { margin: 0 0 6px; font-size: 15px; }
 .cl-extract-facts { margin: 0 0 8px; padding-left: 18px; font-size: 13px; }
 .cl-extract-text { max-height: 220px; overflow: auto; margin: 8px 0; padding: 8px; background: #F4F4F5; border-radius: 8px; font-size: 13px; white-space: pre-wrap; }
+
+/* Lời + hợp âm chuẩn là bước đầu; OCR chỉ là công cụ nâng cao thu gọn */
+.cl-lead { margin: 0 0 8px; font-size: 14px; color: #3f3f46; }
+.cl-advanced { margin-top: 12px; border-top: 1px dashed #D4D4D8; padding-top: 8px; }
+.cl-advanced > summary { cursor: pointer; font-size: 13px; color: #71717A; }

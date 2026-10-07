@@ -234,15 +234,16 @@ test('adapter HTTP: health + POST /analyze (base64, số chữ mỗi dòng); m�
   assert.equal((await down.analyze({ versionId: 'v', loadFiles: async () => [], text: TEXT_5_4, meter: null })).ok, false)
 })
 
-test('adapter PRODUCTION: chỉ gửi { versionId } + Bearer JWT phiên hiện tại; không https / không có URL → không có analyzer (nút khoá, không rơi về localhost)', async () => {
+test('adapter PRODUCTION: chỉ gửi { versionId } + Bearer JWT phiên hiện tại; thăm dò bằng POST (không GET); chỉ https hoặc loopback http, còn lại → không có analyzer (nút khoá)', async () => {
   const calls: { url: string; init?: RequestInit }[] = []
   const fetcher = (async (url: string, init?: RequestInit) => {
     calls.push({ url, init })
-    if (url.endsWith('/health')) return new Response(JSON.stringify({ ok: true, version: 'measure-analyzer/0.2.0' }))
+    if (url.endsWith('/extract-probe')) return new Response(JSON.stringify({ ok: true, kind: 'chord-extract-worker', schema: 'chord-extraction/1' }))
     return new Response(JSON.stringify({ ok: true, anchors: { measures: [A(0, 1)] }, confidence: { overall: 'HIGH', measures: [] }, review: { needsReview: false, measures: [], notes: [] }, diagnostics: {} }))
   }) as typeof fetch
   const analyzer = createWorkerMeasureAnalyzer('https://worker.example/', async () => 'jwt-cua-phien', fetcher)
   assert.equal(await analyzer.available(), true)
+  assert.deepEqual([calls[0].url, calls[0].init!.method], ['https://worker.example/extract-probe', 'POST'], 'availability = POST probe, không GET /health (service worker chặn GET loopback)')
   let loaded = false
   const r = await analyzer.analyze({ versionId: '11111111-1111-4111-8111-111111111111', text: TEXT_5_4, meter: null, loadFiles: async () => { loaded = true; return [] } })
   assert.ok(r.ok)
@@ -255,7 +256,9 @@ test('adapter PRODUCTION: chỉ gửi { versionId } + Bearer JWT phiên hiện t
   const token = async () => 'x'
   assert.equal(productionMeasureAnalyzer(undefined, token), undefined)
   assert.equal(productionMeasureAnalyzer('', token), undefined)
-  assert.equal(productionMeasureAnalyzer('http://127.0.0.1:54398', token), undefined, 'không bao giờ dùng cầu dev')
+  assert.ok(productionMeasureAnalyzer('http://127.0.0.1:7430', token), 'worker loopback trên máy Owner')
+  assert.equal(productionMeasureAnalyzer('http://worker.example', token), undefined, 'http không phải loopback → không dùng')
+  assert.equal(productionMeasureAnalyzer('off', token), undefined)
   assert.ok(productionMeasureAnalyzer('https://mac-mini.example.ts.net', token))
   const offline = createWorkerMeasureAnalyzer('https://worker.example', token, (async () => { throw new Error('offline') }) as typeof fetch)
   assert.equal(await offline.available(), false)
