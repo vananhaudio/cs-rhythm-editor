@@ -578,20 +578,27 @@ def analyze(payload):
     ocr_diag = None
     ocr_warning = None
     line_words = payload.get("lineWords")
-    if isinstance(line_words, list) and [len(w) for w in line_words] == counts:
-        docs, ocr_warning = get_ocr_docs(payload, len(pages))
-        clock["ocr"] = time.perf_counter()
-        if docs:
-            canon = ocr_align.Canon(line_words)
-            rows_by_page = []
-            for doc in docs:
-                rows_by_page.extend(ocr_align.doc_rows(doc, page_dims[len(rows_by_page):]))
-            geos_by_page = [[{"y1": g["y1"], "y5": g["y5"], "gap": g["gap"], "bars": [b["x"] for b in g["bars"]]} for g in gp] for gp in page_geos]
-            ocr_plan = ocr_align.plan_alignment(canon, rows_by_page, geos_by_page)
-            clock["align"] = time.perf_counter()
-            if not any(sy["primary"] is not None for sy in ocr_plan.values()):
-                ocr_plan = None
-                ocr_warning = {"code": "OCR_NO_MATCH", "message": "OCR không khớp hàng lời nào với lời chuẩn — dùng căn chỉnh theo độ rộng."}
+    if isinstance(line_words, list) and [len(w) if isinstance(w, list) else -1 for w in line_words] == counts:
+        try:
+            if not all(isinstance(t, str) for w in line_words for t in w):
+                raise ValueError("lineWords phải là chuỗi")
+            docs, ocr_warning = get_ocr_docs(payload, len(pages))
+            clock["ocr"] = time.perf_counter()
+            if docs:
+                canon = ocr_align.Canon(line_words)
+                rows_by_page = []
+                for doc in docs:
+                    rows_by_page.extend(ocr_align.doc_rows(doc, page_dims[len(rows_by_page):]))
+                geos_by_page = [[{"y1": g["y1"], "y5": g["y5"], "gap": g["gap"], "bars": [b["x"] for b in g["bars"]]} for g in gp] for gp in page_geos]
+                ocr_plan = ocr_align.plan_alignment(canon, rows_by_page, geos_by_page)
+                clock["align"] = time.perf_counter()
+                if not any(sy["primary"] is not None for sy in ocr_plan.values()):
+                    ocr_plan = None
+                    ocr_warning = {"code": "OCR_NO_MATCH", "message": "OCR không khớp hàng lời nào với lời chuẩn — dùng căn chỉnh theo độ rộng."}
+        except Exception:
+            # OCR/lời chuẩn hỏng ở bất kỳ bước nào: KHÔNG được làm hỏng analyzer cũ → bỏ OCR, giữ căn chỉnh theo độ rộng
+            ocr_plan = canon = None
+            ocr_warning = {"code": "OCR_ERROR", "message": "Ghép OCR gặp lỗi — dùng căn chỉnh theo độ rộng."}
     how_of = {}
     unresolved_bars = []
     if ocr_plan is not None:

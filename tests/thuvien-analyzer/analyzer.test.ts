@@ -119,6 +119,29 @@ test('OCR ↔ lời chuẩn (ocrDocs giả, không chạy tesseract): cùng anch
   assert.equal(bad.diagnostics.alignment, undefined)
 })
 
+test('OCR hỏng KHÔNG làm hỏng analyzer: engine lỗi / lệch số trang / lời chuẩn sai kiểu → rơi về căn chỉnh theo độ rộng, cùng anchors, có cảnh báo', async () => {
+  const sys = [['w', '|', 'w', 'w', '|', 'w', 's', 'w'], ['w', 'w', '|', '|', 'w', 'w']]
+  const src = png(sheet(sys))
+  const base = { sources: [src], lineTokenCounts: analysisLineCounts(TEXT_5_4), lineTokenLengths: analysisTokenLengths(TEXT_5_4) }
+  const words = [['Một', 'hai', 'ba', 'bốn', 'năm'], ['sáu', 'bảy', 'tám', 'chín']]
+  const expected = { pickup: A(0, 0), measures: [A(0, 1), A(0, 3), A(1, 0), A(1, 2), A(1, 2)] }
+  type Out = { ok: boolean; anchors: unknown; diagnostics: { alignment?: unknown; warnings: { code: string }[] } }
+  const run = async (extra: Record<string, unknown>) => await runAnalyzerRaw({ ...base, ...extra }) as Out
+  const cases: [string, Record<string, unknown>, string][] = [
+    ['engine OCR không chạy được (tessdata không tồn tại / tesseract lỗi)', { lineWords: words, ocr: { tessdataDir: '/khong/ton/tai' } }, 'OCR_UNAVAILABLE'],
+    ['số trang OCR ≠ số trang phân tích', { lineWords: words, ocrDocs: [{ pages: [{ regions: [] }, { regions: [] }] }] }, 'OCR_PAGE_MISMATCH'],
+    ['OCR không khớp hàng lời nào', { lineWords: words, ocrDocs: [{ pages: [{ regions: [{ kind: 'lyric_block', lines: [{ role: 'lyric', bbox: [0, 0.3, 1, 0.03], tokens: ['xq', 'zv', 'wk'].map((text, i) => ({ text, bbox: [0.1 + i * 0.1, 0.3, 0.05, 0.02] })) }] }] }] }] }, 'OCR_NO_MATCH'],
+    ['lời chuẩn sai kiểu (không phải chuỗi)', { lineWords: [[1, 2, 3, 4, 5], [6, 7, 8, 9]], ocrDocs: [{ pages: [{ regions: [] }] }] }, 'OCR_ERROR'],
+  ]
+  for (const [name, extra, code] of cases) {
+    const r = await run(extra)
+    assert.equal(r.ok, true, name)
+    assert.deepEqual(r.anchors, expected, `${name}: anchors như căn chỉnh theo độ rộng`)
+    assert.equal(r.diagnostics.alignment, undefined, name)
+    assert.ok(r.diagnostics.warnings.some(w => w.code === code), `${name}: cảnh báo ${code}`)
+  }
+})
+
 test('thứ tự trang: file trang 2 nạp trước trang 1 → máy xếp lại theo nội dung (căn chỉnh), kết quả như đúng thứ tự + báo cần kiểm', async () => {
   const p1 = png(sheet([['w1', '|', 'w2', 'w2', '|', 'w1', 'w2', 'w4']]))
   const p2 = png(sheet([['w5', 'w5', 'w5', 'w5', '|', 'w5', '|', 'w5', 'w5']]))
