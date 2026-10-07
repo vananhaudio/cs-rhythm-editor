@@ -12,17 +12,20 @@ import MeasureSheet from './MeasureSheet.tsx'
 import type { ChordAnchors } from './chordAnchors.ts'
 import AnchorEditor from './AnchorEditor.tsx'
 import type { MeasureAnalysisResult, MeasureAnalyzer } from './measureAnalysis.ts'
+import type { ContentExtractor, ExtractionTarget } from './contentExtractor.ts'
+import { applyProposal, buildProposal, hasSubstantialText } from './extractionProposal.ts'
+import type { ExtractionProposal } from './extractionProposal.ts'
 
 // Mục "Hợp âm chuẩn hóa" của /thuvien — bàn làm việc của thầy: tìm, thêm, sửa lời + hợp âm.
 // Mọi đọc/ghi đi qua `library` (src/thuvien/chordLibrary.ts); component không biết Supabase.
 // CSS: ./ChordLibrary.css, nạp ở ThuVienPage.
 
-type Props = { tabs?: ReactNode; library?: ChordLibrary; analyzer?: MeasureAnalyzer; readSource?: SourceReader }
+type Props = { tabs?: ReactNode; library?: ChordLibrary; analyzer?: MeasureAnalyzer; extractor?: ContentExtractor; readSource?: SourceReader }
 /** Đọc byte một file nguồn để đưa cho analyzer (mặc định: link xem có hạn → fetch). */
 type SourceReader = (library: ChordLibrary, path: string) => Promise<Blob>
 const readViaViewUrl: SourceReader = async (library, path) => (await fetch(await library.sources.viewUrl(path))).blob()
 
-export default function ChordLibraryPage({ tabs, library = getChordLibrary(), analyzer, readSource = readViaViewUrl }: Props) {
+export default function ChordLibraryPage({ tabs, library = getChordLibrary(), analyzer, extractor, readSource = readViaViewUrl }: Props) {
   const [open, setOpen] = useState<string | null>(() => chordSheetFromSearch(window.location.search))
   const [notice, setNotice] = useState('')
 
@@ -50,7 +53,7 @@ export default function ChordLibraryPage({ tabs, library = getChordLibrary(), an
 
   return <main className="tv-chords">
     {open
-      ? <ChordEditor key={open} library={library} analyzer={analyzer} readSource={readSource} versionId={open === NEW_CHORD_SHEET ? null : open}
+      ? <ChordEditor key={open} library={library} analyzer={analyzer} extractor={extractor} readSource={readSource} versionId={open === NEW_CHORD_SHEET ? null : open}
           onOpenVersion={id => go(id)}
           onClose={message => { setNotice(message ?? ''); go(null) }}
           // Lưu xong chỉ đổi địa chỉ (để tải lại trang vẫn mở đúng bài) — KHÔNG dựng lại editor, kẻo mất thông báo "Đã lưu".
@@ -137,9 +140,10 @@ const draftOf = (form: Form): ChordDraft => ({
   title: form.title, composer: form.composer, meter: parseMeter(form.meter), suggestedBpm: parseBpm(form.bpm), text: form.text,
 })
 
-function ChordEditor({ library, analyzer, readSource, versionId, onClose, onSaved, onOpenVersion }: {
+function ChordEditor({ library, analyzer, extractor, readSource, versionId, onClose, onSaved, onOpenVersion }: {
   library: ChordLibrary
   analyzer: MeasureAnalyzer | undefined
+  extractor: ContentExtractor | undefined
   readSource: SourceReader
   versionId: string | null
   onClose: (message?: string) => void
@@ -166,6 +170,9 @@ function ChordEditor({ library, analyzer, readSource, versionId, onClose, onSave
   // Phân tích tự động (5B): analyzer chỉ có ở dev/trang thử. Đề xuất nạp VÀO trình sửa 5A — không tự lưu, không tự duyệt.
   const [analyzerReady, setAnalyzerReady] = useState(false)
   const [analysis, setAnalysis] = useState<{ state: 'idle' | 'running' | 'choose' | 'failed'; result?: Extract<MeasureAnalysisResult, { ok: true }>; message?: string }>({ state: 'idle' })
+  // Phân tích NỘI DUNG sheet (lời + hợp âm). Chỉ ĐỀ XUẤT — "Dùng kết quả này" điền vào form (form thành dirty), không tự lưu/duyệt.
+  const [extractorReady, setExtractorReady] = useState(false)
+  const [extraction, setExtraction] = useState<{ state: 'idle' | 'running' | 'failed' | 'done'; label?: string; message?: string; proposal?: ExtractionProposal }>({ state: 'idle' })
   const [seed, setSeed] = useState<{ anchors: ChordAnchors | null; flagged: number[]; notes: string[]; key: number }>({ anchors: null, flagged: [], notes: [], key: 0 })
 
   useEffect(() => {
@@ -173,6 +180,11 @@ function ChordEditor({ library, analyzer, readSource, versionId, onClose, onSave
     if (analyzer) analyzer.available().then(ok => { if (active) setAnalyzerReady(ok) }, () => { if (active) setAnalyzerReady(false) })
     return () => { active = false }
   }, [analyzer])
+  useEffect(() => {
+    let active = true
+    if (extractor) extractor.available().then(ok => { if (active) setExtractorReady(ok) }, () => { if (active) setExtractorReady(false) })
+    return () => { active = false }
+  }, [extractor])
 
   useEffect(() => {
     if (!versionId) return
@@ -394,6 +406,39 @@ function ChordEditor({ library, analyzer, readSource, versionId, onClose, onSave
     }
   }
 
+  /** Phân tích một hay nhiều file nguồn (theo thứ tự trong danh sách). File chưa lưu → staged; file đã gắn phiên bản → persisted. */
+  async function runExtraction(items: PlanItem[], label: string) {
+    if (!extractor || !items.length || extraction.state === 'running') return
+    setExtraction({ state: 'running', label }); setMessage(''); setFailed('')
+    const documents: unknown[] = []
+    for (const item of items) {
+      let target: ExtractionTarget
+      if (item.kind === 'pending') {
+        const parsed = parseSourcePath(item.source.path)
+        if (!parsed) { setExtraction({ state: 'failed', label, message: 'Đường dẫn file nguồn không hợp lệ.' }); return }
+        target = { kind: 'staged', draftId, sourceIndex: parsed.index, mime: item.source.mime }
+      } else {
+        const index = detail?.sources.findIndex(source => source.path === item.source.path) ?? -1
+        if (!detail || index < 0) { setExtraction({ state: 'failed', label, message: 'Không tìm thấy file nguồn trong phiên bản đã lưu.' }); return }
+        target = { kind: 'persisted', versionId: detail.versionId, sourceIndex: index }
+      }
+      const outcome = await extractor.extract(target)
+      if (!outcome.ok) { setExtraction({ state: 'failed', label, message: `${item.name}: ${outcome.error.message}` }); return }
+      documents.push(outcome.document)
+    }
+    setExtraction({ state: 'done', label, proposal: buildProposal(documents) })
+  }
+
+  function useExtraction() {
+    const proposal = extraction.proposal
+    if (!proposal) return
+    if (hasSubstantialText(form.text) && proposal.text.trim()
+        && !window.confirm('Ô lời + hợp âm đang có nội dung. Thay bằng kết quả máy đọc? (Chưa lưu — thầy vẫn xem lại và bấm Lưu.)')) return
+    setForm(current => ({ ...current, ...applyProposal(current, proposal) }))
+    setMessage('Đã điền kết quả máy đọc vào form — xem lại, chọn Nhịp/BPM rồi bấm Lưu. Máy chưa lưu hay duyệt gì.'); setFailed('')
+    setExtraction({ state: 'idle' })
+  }
+
   async function approve() {
     if (busy || !detail) return
     setBusy(true); setMessage(''); setFailed('')
@@ -512,6 +557,9 @@ function ChordEditor({ library, analyzer, readSource, versionId, onClose, onSave
                 </div>
                 <div className="cl-src-actions">
                   <button type="button" className="cl-secondary" onClick={() => void viewItem(item)}>Xem</button>
+                  {extractor && <button type="button" className="cl-secondary" disabled={!extractorReady || extraction.state === 'running' || sourceBusy || busy}
+                    title={extractorReady ? 'Máy đọc lời + hợp âm trên file này' : 'Máy phân tích chưa chạy.'}
+                    aria-label={`Phân tích ${item.name}`} onClick={() => void runExtraction([item], item.name)}>Phân tích</button>}
                   <button type="button" className="cl-secondary" disabled={sourceBusy || busy} onClick={() => void removeItem(item)}
                     aria-label={`${item.kind === 'attached' ? 'Bỏ khỏi phiên bản mới' : 'Xoá'} ${item.name}`}>{item.kind === 'attached' ? 'Bỏ khỏi bản mới' : 'Xoá'}</button>
                 </div>
@@ -527,6 +575,10 @@ function ChordEditor({ library, analyzer, readSource, versionId, onClose, onSave
               onChange={event => { const files = [...(event.target.files ?? [])]; event.target.value = ''; void addFiles(files) }} />
           </label>
           {sourceError && <p className="cl-error" role="alert">{sourceError}</p>}
+          {extractor && plan.length > 1 && <button type="button" className="cl-secondary" disabled={!extractorReady || extraction.state === 'running' || sourceBusy || busy}
+            onClick={() => void runExtraction(plan, `${plan.length} file`)}>Phân tích sheet</button>}
+          {extractor && !extractorReady && plan.length > 0 && <p className="cl-help">Máy phân tích chưa chạy trên máy này — vẫn nhập lời + hợp âm tay được.</p>}
+          <ExtractionPanel state={extraction} onUse={useExtraction} onDismiss={() => setExtraction({ state: 'idle' })} />
         </section>
       </div>
 
@@ -598,5 +650,34 @@ function AnchorSection({ detail, willReset, sourceCount, sourcesSaved, editing, 
           ? <MeasureSheet rows={lines} label="Vạch nhịp theo ô" />
           : <p className="cl-placeholder">{willReset ? 'Lời đã đổi — vạch nhịp cũ không còn khớp, cần đặt lại sau khi lưu.' : detail?.hasAnchors && !anchors ? 'Dữ liệu vạch nhịp không đọc được theo lời hiện tại.' : 'Chưa có dữ liệu vạch nhịp.'}</p>}
       </div>}
+  </section>
+}
+
+const READING_LABEL: Record<ExtractionProposal['reading'], string> = {
+  text_layer: 'đọc từ lớp chữ của PDF', ocr: 'đọc bằng OCR (nhận dạng ảnh)', mixed: 'lẫn lớp chữ PDF và OCR', vision: 'đọc bằng AI thị giác', unknown: 'không rõ cách đọc',
+}
+/** Kết quả phân tích nội dung — chỉ đề xuất; nút "Dùng kết quả này" điền form, không lưu. */
+function ExtractionPanel({ state, onUse, onDismiss }: { state: { state: 'idle' | 'running' | 'failed' | 'done'; label?: string; message?: string; proposal?: ExtractionProposal }; onUse: () => void; onDismiss: () => void }) {
+  if (state.state === 'idle') return null
+  if (state.state === 'running') return <p className="cl-help" role="status" aria-live="polite">Đang phân tích {state.label}… (vài chục giây)</p>
+  if (state.state === 'failed') return <div className="cl-card cl-extract" role="alert"><p className="cl-error">Phân tích không thành công. {state.message}</p>
+    <button type="button" className="cl-secondary" onClick={onDismiss}>Đóng</button></div>
+  const p = state.proposal!
+  return <section className="cl-card cl-extract" aria-label="Kết quả phân tích">
+    <h3>Kết quả phân tích</h3>
+    <ul className="cl-extract-facts">
+      <li>Cách đọc: {READING_LABEL[p.reading]} · {p.pageCount} trang</li>
+      <li>Hợp âm: {p.chords === 'DETECTED' ? `thấy ${p.chordCount} hợp âm` : p.chords === 'NO_CHORDS_DETECTED' ? 'KHÔNG thấy hợp âm in trên sheet' : 'chưa rõ'}</li>
+      <li>Tên bài: {p.title ?? '(không nhận ra)'} · Tác giả: {p.author ?? '(không nhận ra)'} · BPM: {p.bpm ?? '(không thấy)'}</li>
+      <li>Nhịp: máy không đọc được — thầy tự chọn.</li>
+    </ul>
+    {p.warnings.filter(w => w.code !== 'METER_UNREADABLE').length > 0 && <ul className="cl-warn" aria-label="Cảnh báo của máy">
+      {p.warnings.filter(w => w.code !== 'METER_UNREADABLE').map(w => <li key={w.code}>{w.message}</li>)}
+    </ul>}
+    {p.text.trim() ? <pre className="cl-extract-text" aria-label="Bản nháp máy đọc">{p.text}</pre> : <p className="cl-placeholder">Máy không đọc được lời nào.</p>}
+    <div className="cl-src-actions">
+      <button type="button" className="cl-primary" disabled={!p.text.trim() && p.title === null && p.author === null && p.bpm === null} onClick={onUse}>Dùng kết quả này</button>
+      <button type="button" className="cl-secondary" onClick={onDismiss}>Bỏ qua</button>
+    </div>
   </section>
 }

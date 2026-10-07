@@ -871,3 +871,146 @@ test('5B: analyzer lỗi → báo rõ, KHÔNG đổi vạch; trình sửa thủ 
   fireEvent.click(view.getByRole('button', { name: /^Khe trước “nay,” — dòng 1/ }))
   assert.equal((view.getByRole('button', { name: 'Chấp nhận vạch nhịp' }) as HTMLButtonElement).disabled, false)
 })
+
+// ── Phân tích NỘI DUNG sheet (PDF/ảnh → lời + hợp âm) ──
+type ExtractorT = import('../../src/thuvien/contentExtractor').ContentExtractor
+type TargetT = import('../../src/thuvien/contentExtractor').ExtractionTarget
+const extField = (value: unknown) => ({ value, evidence: [], source: 'ocr', confidence: 0.8 })
+const extDoc = (text: string, o: { title?: string; author?: string; bpm?: number; chords?: 'DETECTED' | 'NO_CHORDS_DETECTED'; count?: number } = {}) => ({
+  schema: 'chord-extraction/1', input: { pageCount: 1 }, pages: [{ regions: [{ lines: [{ tokens: [{ source: 'ocr' }] }] }] }],
+  pipeline: { fallbackReasons: [] },
+  interpretation: {
+    metadata: { title: o.title ? extField(o.title) : null, author: o.author ? extField(o.author) : null, key: null, timeSignature: null, bpm: o.bpm ? extField(o.bpm) : null },
+    chords: { status: o.chords ?? 'DETECTED', count: o.count ?? (text.match(/\[/g) ?? []).length }, draft: { text, warnings: [], reviewRequired: true },
+  },
+})
+function fakeExtractor(result: () => import('../../src/thuvien/contentExtractor').ExtractionOutcome | Promise<import('../../src/thuvien/contentExtractor').ExtractionOutcome>, ready = true) {
+  const targets: TargetT[] = []
+  const extractor: ExtractorT = { available: async () => ready, extract: async target => { targets.push(target); return result() } }
+  return { extractor, targets }
+}
+async function openNew(library: ReturnType<typeof createMockChordLibrary>, extractor?: ExtractorT) {
+  goto('?muc=hopam')
+  const view = render(<ChordLibraryPage library={library} extractor={extractor} />)
+  await settle()
+  fireEvent.click(view.getByRole('button', { name: '+ Thêm bài' }))
+  await settle()
+  return view
+}
+const newLibrary = () => createMockChordLibrary({ storage: memoryStorage() })
+
+test('extraction UI: không có extractor → không hiện nút; worker chưa chạy → nút khoá + lý do', async () => {
+  const none = await openNew(newLibrary())
+  await pick(none, [pngFile('a.png')])
+  assert.equal(none.queryByRole('button', { name: /^Phân tích a\.png/ }), null)
+  cleanup()
+  const down = await openNew(newLibrary(), fakeExtractor(() => ({ ok: true, document: extDoc('x') }), false).extractor)
+  await pick(down, [pngFile('a.png')])
+  const button = down.getByRole('button', { name: 'Phân tích sheet-01.png'.replace('sheet-01.png', 'a.png') }) as HTMLButtonElement
+  assert.equal(button.disabled, true); assert.equal(button.title, 'Máy phân tích chưa chạy.')
+  assert.match(down.getByRole('region', { name: 'Nguồn sheet' }).textContent ?? '', /chưa chạy trên máy này/)
+})
+
+test('extraction UI: file CHƯA LƯU → staged (draftId + sourceIndex + mime); panel; Dùng kết quả điền form, KHÔNG lưu/duyệt', async () => {
+  network = 0
+  const library = newLibrary()
+  const fake = fakeExtractor(() => ({ ok: true, document: extDoc('Tình ca\n[Am] Sáng nay [E7] mình đi', { title: 'Tình ca', author: 'Hoàng Việt', bpm: 88 }) }))
+  const view = await openNew(library, fake.extractor)
+  await pick(view, [pngFile('sheet.png')])
+  fireEvent.click(view.getByRole('button', { name: 'Phân tích sheet.png' }))
+  await settle(60)
+  assert.equal(fake.targets.length, 1)
+  const t = fake.targets[0] as Extract<TargetT, { kind: 'staged' }>
+  assert.deepEqual([t.kind, t.sourceIndex, t.mime], ['staged', 0, 'image/png'])
+  assert.match(t.draftId, /^[0-9a-f-]{36}$/)
+  const panel = view.getByRole('region', { name: 'Kết quả phân tích' })
+  assert.match(panel.textContent ?? '', /thấy 2 hợp âm.*Tình ca.*Hoàng Việt.*88.*Nhịp: máy không đọc được/)
+  assert.equal(panel.querySelector('pre')?.textContent, '[Am] Sáng nay [E7] mình đi', 'dòng tiêu đề đã bị bỏ khỏi lời')
+  assert.equal((view.getByLabelText('Ô soạn lời và hợp âm') as HTMLTextAreaElement).value, '', 'chưa bấm Dùng → chưa đổi gì')
+  fireEvent.click(view.getByRole('button', { name: 'Dùng kết quả này' }))
+  await settle()
+  assert.equal((view.getByLabelText('Ô soạn lời và hợp âm') as HTMLTextAreaElement).value, '[Am] Sáng nay [E7] mình đi')
+  assert.equal((view.getByLabelText(/Tên bài/) as HTMLInputElement).value, 'Tình ca')
+  assert.equal((view.getByLabelText(/Tác giả/) as HTMLInputElement).value, 'Hoàng Việt')
+  assert.equal((view.getByLabelText(/BPM gợi ý/) as HTMLInputElement).value, '88')
+  assert.equal(view.queryByRole('region', { name: 'Kết quả phân tích' }), null)
+  assert.match(view.getByRole('status').textContent ?? '', /chưa lưu hay duyệt/)
+  assert.equal((await library.searchChordSheets('tinh ca')).length, 0, 'không tự lưu bài')
+  assert.equal(confirmAsked, 0, 'ô trống → không hỏi xác nhận')
+  assert.equal(network, 0)
+})
+
+test('extraction UI: ô lời đang có nội dung → hỏi trước khi thay; Từ chối giữ nguyên; tên/tác giả đã nhập không bị đè', async () => {
+  const view = await openNew(newLibrary(), fakeExtractor(() => ({ ok: true, document: extDoc('[Am] Lời máy đọc', { title: 'Tên máy', author: 'Máy' }) })).extractor)
+  type(view.getByLabelText(/Tên bài/), 'Tên của thầy')
+  type(view.getByLabelText('Ô soạn lời và hợp âm'), '[C] Lời thầy đã gõ rất dài ở đây rồi đó')
+  await pick(view, [pngFile('s.png')])
+  fireEvent.click(view.getByRole('button', { name: 'Phân tích s.png' }))
+  await settle(60)
+  confirmAnswer = false
+  fireEvent.click(view.getByRole('button', { name: 'Dùng kết quả này' }))
+  await settle()
+  assert.equal(confirmAsked, 1)
+  assert.equal((view.getByLabelText('Ô soạn lời và hợp âm') as HTMLTextAreaElement).value, '[C] Lời thầy đã gõ rất dài ở đây rồi đó', 'từ chối → giữ lời cũ')
+  confirmAnswer = true
+  fireEvent.click(view.getByRole('button', { name: 'Dùng kết quả này' }))
+  await settle()
+  assert.equal((view.getByLabelText('Ô soạn lời và hợp âm') as HTMLTextAreaElement).value, '[Am] Lời máy đọc')
+  assert.equal((view.getByLabelText(/Tên bài/) as HTMLInputElement).value, 'Tên của thầy', 'tên đã có không bị đè')
+  assert.equal((view.getByLabelText(/Tác giả/) as HTMLInputElement).value, 'Máy', 'ô tác giả trống → điền')
+})
+
+test('extraction UI: lỗi → báo rõ, form không đổi; KHÔNG hợp âm → cảnh báo, không bịa; đang phân tích → nút khoá', async () => {
+  let release: (v: import('../../src/thuvien/contentExtractor').ExtractionOutcome) => void = () => {}
+  const view = await openNew(newLibrary(), fakeExtractor(() => new Promise(resolve => { release = resolve })).extractor)
+  await pick(view, [pngFile('s.png')])
+  fireEvent.click(view.getByRole('button', { name: 'Phân tích s.png' }))
+  await settle()
+  assert.match(view.getByRole('status').textContent ?? '', /Đang phân tích s\.png/)
+  assert.equal((view.getByRole('button', { name: 'Phân tích s.png' }) as HTMLButtonElement).disabled, true)
+  release({ ok: false, error: { code: 'source_missing', message: 'Không tìm thấy file nguồn trên kho — nạp lại file.' } })
+  await settle()
+  assert.match(view.getByRole('alert').textContent ?? '', /Phân tích không thành công\. s\.png: Không tìm thấy file nguồn/)
+  assert.equal((view.getByLabelText('Ô soạn lời và hợp âm') as HTMLTextAreaElement).value, '')
+  fireEvent.click(view.getByRole('button', { name: 'Đóng' }))
+  cleanup()
+  const nochord = await openNew(newLibrary(), fakeExtractor(() => ({ ok: true, document: extDoc('Chỉ có lời thôi', { chords: 'NO_CHORDS_DETECTED', count: 0 }) })).extractor)
+  await pick(nochord, [pngFile('s.png')])
+  fireEvent.click(nochord.getByRole('button', { name: 'Phân tích s.png' }))
+  await settle(60)
+  const warn = nochord.getByLabelText('Cảnh báo của máy').textContent ?? ''
+  assert.match(warn, /Máy không thấy hợp âm in trên sheet/)
+  assert.equal(nochord.getByLabelText('Bản nháp máy đọc').textContent?.includes('['), false)
+})
+
+test('extraction UI: nhiều file → "Phân tích sheet" chạy tuần tự đúng thứ tự, gộp một panel', async () => {
+  let n = 0
+  const fake = fakeExtractor(() => ({ ok: true, document: extDoc(n++ === 0 ? '[Am] Trang một' : '[C] Trang hai', { title: n === 1 ? 'Bài hai trang' : undefined }) }))
+  const view = await openNew(newLibrary(), fake.extractor)
+  assert.equal(view.queryByRole('button', { name: 'Phân tích sheet' }), null, 'một file → không có nút gộp')
+  await pick(view, [pngFile('p1.png'), pngFile('p2.png', 'b')])
+  fireEvent.click(view.getByRole('button', { name: 'Phân tích sheet' }))
+  await settle(80)
+  assert.deepEqual(fake.targets.map(t => (t as { sourceIndex: number }).sourceIndex), [0, 1])
+  assert.equal(view.getByLabelText('Bản nháp máy đọc').textContent, '[Am] Trang một\n\n[C] Trang hai')
+})
+
+test('extraction UI: phiên bản ĐÃ LƯU → persisted (versionId + vị trí file); sau Dùng kết quả form dirty nhưng chưa tạo phiên bản mới', async () => {
+  const { library, versionId } = await autoSong()
+  const fake = fakeExtractor(() => ({ ok: true, document: extDoc('[G] Lời mới từ sheet') }))
+  goto('?muc=hopam')
+  const view = render(<ChordLibraryPage library={library} extractor={fake.extractor} readSource={async () => new Blob(['x'])} />)
+  await settle()
+  fireEvent.click(view.getByRole('button', { name: 'Mở bài Bài tự soạn phân tích' }))
+  await settle(60)
+  fireEvent.click(view.getByRole('button', { name: /^Phân tích sheet-01/ }))
+  await settle(60)
+  assert.deepEqual(fake.targets, [{ kind: 'persisted', versionId, sourceIndex: 0 }])
+  fireEvent.click(view.getByRole('button', { name: 'Dùng kết quả này' }))
+  await settle()
+  assert.equal(confirmAsked, 1, 'đang có lời → hỏi')
+  assert.equal((view.getByLabelText('Ô soạn lời và hợp âm') as HTMLTextAreaElement).value, '[G] Lời mới từ sheet')
+  const [item] = await library.searchChordSheets('tu soan phan tich')
+  assert.equal(item.versionNumber ?? 1, 1, 'chưa lưu → vẫn phiên bản 1')
+  assert.equal((view.getByRole('button', { name: 'Lưu' }) as HTMLButtonElement).disabled, false, 'form dirty → Lưu sáng; thầy tự bấm')
+})

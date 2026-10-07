@@ -8,6 +8,8 @@ import type { ThuVienSection } from './sections.ts'
 import type { ChordLibrary } from './chordLibrary.ts'
 import { productionMeasureAnalyzer } from './measureAnalysis.ts'
 import type { MeasureAnalyzer } from './measureAnalysis.ts'
+import { createContentExtractor, extractorUrlsFrom } from './contentExtractor.ts'
+import type { ContentExtractor } from './contentExtractor.ts'
 import ThuVienTabs from './ThuVienTabs.tsx'
 import './ThuVienPage.css'
 import './ChordLibrary.css'
@@ -23,7 +25,21 @@ type Prepared = ReturnType<typeof prepareMusicXml>
 const PRODUCTION_ANALYZER = productionMeasureAnalyzer(import.meta.env.VITE_MEASURE_ANALYZER_URL,
   async () => (await (await import('../supabase.ts')).supabase.auth.getSession()).data.session?.access_token ?? null)
 
-export default function ThuVienPage({ chordLibrary, measureAnalyzer = PRODUCTION_ANALYZER }: { chordLibrary?: ChordLibrary; measureAnalyzer?: MeasureAnalyzer } = {}) {
+// Phân tích nội dung sheet (PDF/ảnh → lời + hợp âm): worker trên Mac mini của Owner, mặc định loopback; VITE_EXTRACT_WORKER_URLS=off để tắt.
+const sessionToken = async () => (await (await import('../supabase.ts')).supabase.auth.getSession()).data.session?.access_token ?? null
+const extractorUrls = extractorUrlsFrom(import.meta.env.VITE_EXTRACT_WORKER_URLS)
+const PRODUCTION_EXTRACTOR = extractorUrls && import.meta.env.VITE_CHORD_LIBRARY_BACKEND === 'rpc'
+  ? createContentExtractor({
+    urls: extractorUrls, getToken: sessionToken,
+    readExtraction: async id => {
+      const { data, error } = await (await import('../supabase.ts')).supabase.rpc('chord_extraction_get', { p_id: id })
+      if (error) throw new Error(error.message)
+      return data
+    },
+  })
+  : undefined
+
+export default function ThuVienPage({ chordLibrary, measureAnalyzer = PRODUCTION_ANALYZER, contentExtractor = PRODUCTION_EXTRACTOR }: { chordLibrary?: ChordLibrary; measureAnalyzer?: MeasureAnalyzer; contentExtractor?: ContentExtractor } = {}) {
   const [section, setSection] = useState<ThuVienSection>(() => sectionFromSearch(window.location.search))
 
   useEffect(() => {
@@ -40,7 +56,7 @@ export default function ThuVienPage({ chordLibrary, measureAnalyzer = PRODUCTION
 
   const tabs = <ThuVienTabs section={section} onChange={change} />
   if (section === 'chords') {
-    return <Suspense fallback={<main className="tv-chords"><p className="cl-empty">Đang mở Hợp âm chuẩn hóa…</p></main>}><ChordLibraryPage tabs={tabs} library={chordLibrary} analyzer={measureAnalyzer} /></Suspense>
+    return <Suspense fallback={<main className="tv-chords"><p className="cl-empty">Đang mở Hợp âm chuẩn hóa…</p></main>}><ChordLibraryPage tabs={tabs} library={chordLibrary} analyzer={measureAnalyzer} extractor={contentExtractor} /></Suspense>
   }
   return <MusicXmlLibrary tabs={tabs} />
 }

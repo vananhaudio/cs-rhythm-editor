@@ -174,3 +174,9 @@
 .tv-chords .cl-anchor-flags { margin: 8px 0; padding: 8px 10px; border-radius: 8px; background: #fff7e6; color: #6b4a00; font-size: 13px; }
 .tv-chords .cl-anchor-flags p { margin: 2px 0; }
 .tv-chords .cl-anchor-flag { color: #b26a00; }
+
+/* Kết quả phân tích nội dung sheet */
+.cl-extract { margin-top: 12px; }
+.cl-extract h3 { margin: 0 0 6px; font-size: 15px; }
+.cl-extract-facts { margin: 0 0 8px; padding-left: 18px; font-size: 13px; }
+.cl-extract-text { max-height: 220px; overflow: auto; margin: 8px 0; padding: 8px; background: #F4F4F5; border-radius: 8px; font-size: 13px; white-space: pre-wrap; }
