@@ -35,8 +35,45 @@ test('cơ bản: lấy đà + vạch + ô ngân; đuôi nốt KHÔNG thành vạ
   assert.deepEqual(r.anchors, { pickup: A(0, 0), measures: [A(0, 1), A(0, 3), A(1, 0), A(1, 2), A(1, 2)] })
   assert.deepEqual(r.diagnostics.systems.map(s => s.bars.length), [3, 3], 'đuôi nốt (cả khi không có chữ) không bị nhận là vạch')
   assert.equal(r.diagnostics.boundaries.length, 6)
-  assert.deepEqual(r.review.measures, [5], 'ô không có chữ mới (ngân hay không lời?) → LOW, chờ thầy')
+  // CASE A — ô ngân là biểu diễn HỢP LỆ (contract Rhythm Scroll): trùng vị trí chỉ là thông tin, KHÔNG tham gia confidence
+  assert.deepEqual(r.anchors.measures[3], r.anchors.measures[4], 'ô trùng vẫn còn nguyên')
+  assert.deepEqual(r.review.measures, [], 'ô trùng một mình không LOW, không vào danh sách cần kiểm')
+  assert.equal(r.review.needsReview, false, 'ô trùng một mình không bật needsReview')
+  assert.notEqual(r.confidence.overall, 'LOW')
   assert.equal(r.confidence.measures[0].confidence, 'HIGH')
+  const held = r.confidence.measures[4]
+  assert.equal(held.confidence, 'HIGH', 'điểm = điểm của bằng chứng vạch, không bị cap 0.3')
+  assert.ok(held.score >= 0.8)
+  assert.doesNotMatch(held.reasons.join(' '), /cần thầy chọn|ô ngân hay ô không lời/, 'không còn lời cảnh báo')
+})
+
+test('CASE B — ô trùng KHÔNG nâng cũng KHÔNG hạ confidence: mọi ô mang đúng confidence của vạch mở ô; bằng chứng xấu độc lập vẫn hạ', async () => {
+  const S1 = ['w', '|', 'w', 'w', '|', 'w', 's', 'w']
+  const T = 'một hai ba bốn năm\nsáu bảy tám chín'
+  const cases: [string, string[][]][] = [
+    [T, [S1, ['w', 'w', '|', '|', 'w', 'w']]],     // ô trùng, mọi bằng chứng tốt
+    [T, [S1, ['w', 'w', '|', '!', 'w', 'w']]],     // ô trùng mở bằng vạch MỜ → giữ MEDIUM (không bị nâng HIGH, không bị hạ LOW)
+    [T, [S1, ['w', 'w', '!', '|', 'w', 'w']]],     // vạch mờ ở ô liền trước ô trùng → ô trùng vẫn HIGH, ô trước vẫn MEDIUM
+  ]
+  const seen: string[] = []
+  let sawDuplicate = false, sawIndependentNonHigh = false
+  for (const [text, systems] of cases) {
+    const r = await runAnalyzer(text, [png(sheet(systems))])
+    assert.ok(r.ok)
+    const boundaries = r.diagnostics.boundaries
+    for (const [i, m] of r.confidence.measures.entries()) {
+      const bar: { confidence: string } | undefined = m.boundary === undefined ? undefined : boundaries[m.boundary]
+      if (!bar) continue
+      assert.equal(m.confidence, bar.confidence, `ô ${i + 1}: confidence = confidence của vạch mở ô (không bị ép)`)
+      const dup = i > 0 && r.anchors.measures[i].line === r.anchors.measures[i - 1].line && r.anchors.measures[i].token === r.anchors.measures[i - 1].token
+      if (dup) sawDuplicate = true
+      if (dup && m.confidence !== 'HIGH') sawIndependentNonHigh = true
+      if (dup) seen.push(`${m.confidence}:${m.score}`)
+    }
+  }
+  assert.ok(sawDuplicate, 'có ô trùng trong fixture')
+  assert.ok(sawIndependentNonHigh, 'ô trùng mang bằng chứng xấu độc lập vẫn giữ mức MEDIUM/LOW của nó (không bị nâng)')
+  assert.deepEqual(seen, ['HIGH:1', 'MEDIUM:0.75', 'HIGH:1'])
 })
 
 test('không lấy đà: vạch trước chữ đầu → ô 1 = chữ đầu; ô đầu dài mà không có vạch mở → ô 1 suy ra ở đầu bài (MEDIUM)', async () => {

@@ -779,11 +779,8 @@ def analyze(payload):
     measure_conf = ([{"measure": 1, "confidence": "MEDIUM", "score": 0.6, "reasons": ["ô 1 mở đầu bài (không có vạch) — suy ra"]}] if implicit_first else [])
     for b in measure_bounds:
         measure_conf.append({"measure": len(measure_conf) + 1, "confidence": b["confidence"], "score": b["score"], "reasons": list(b["reasons"]), "boundary": b["index"]})
-    for i in range(1, len(measures)):
-        if measures[i] == measures[i - 1]:
-            mc = measure_conf[i]
-            mc["reasons"].append("ô không có chữ mới — ô ngân hay ô không lời? cần thầy chọn")
-            mc["confidence"], mc["score"] = "LOW", min(mc["score"], 0.3)
+    # Ô trùng vị trí lời với ô liền trước (measures[i] == measures[i-1]) là biểu diễn HỢP LỆ của ô ngân (contract Rhythm Scroll):
+    # KHÔNG tham gia confidence — không nâng, không hạ, không bật review. Confidence của ô chỉ do bằng chứng của chính vạch mở ô.
     review = [m["measure"] for m in measure_conf if m["confidence"] == "LOW"]
     notes = []
     if unmatched_sheet:

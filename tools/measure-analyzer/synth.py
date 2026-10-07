@@ -4,7 +4,7 @@
 
 stdin JSON: { "out": "x.png" | "x.pdf" (ảnh nhúng) | "x.vector.pdf" (nét vẽ, "pages": N), "systems": [ { "items": ["w","w","|","w","|","|", "s", ...] } ], "tab": false, "skew": 0.0,
               "width": 900, "gap": 8 }
-  "w" / "wN" = một chữ N chữ cái (mặc định 3; độ rộng theo N) có nốt phía trên; "|" = vạch nhịp; "s" = nốt có đuôi KHÔNG có chữ (đuôi nốt phủ cả khuông).
+  "w" / "wN" = một chữ N chữ cái (mặc định 3; độ rộng theo N) có nốt phía trên; "|" = vạch nhịp; "!" = vạch nhịp MỜ (đứt nét); "s" = nốt có đuôi KHÔNG có chữ (đuôi nốt phủ cả khuông).
 Mỗi khuông luôn kết thúc bằng vạch ở mép phải.
 """
 import json
@@ -51,6 +51,10 @@ def draw(spec):
             x += step
             if item == "|":
                 d.line([int(x), lines[0], int(x), lines[4]], fill=15, width=1)
+            elif item == "!":                                                                  # vạch MỜ (đứt nét ~30%): bằng chứng vạch yếu, để thử confidence
+                for yy in range(lines[0], lines[4] + 1):
+                    if yy % 5 < 4:
+                        d.line([int(x), yy, int(x), yy], fill=15, width=1)
             elif item[0] in ("w", "s"):
                 head_y = lines[3] - gap // 2
                 d.ellipse([int(x) - gap // 2 - 1, head_y - gap // 2, int(x) + gap // 2 + 1, head_y + gap // 2], fill=15)

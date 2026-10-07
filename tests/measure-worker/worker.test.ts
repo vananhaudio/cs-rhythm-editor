@@ -177,7 +177,7 @@ test('phân tích THẬT: nguồn + lời CHỈ từ DB, tải bằng token củ
     assert.deepEqual(data.anchors, { pickup: { line: 0, token: 0 }, measures: [{ line: 0, token: 1 }, { line: 0, token: 3 }, { line: 1, token: 0 }, { line: 1, token: 2 }, { line: 1, token: 2 }] })
     assert.deepEqual(Object.keys(data.anchors.measures[0]), ['line', 'token'])
     assert.equal(data.diagnostics.generator, 'measure-analyzer/0.2.0')
-    assert.deepEqual(data.review.measures, [5])
+    assert.deepEqual(data.review.measures, [], 'ô trùng (ngân) không còn bị đẩy vào danh sách cần kiểm')
     // chỉ ĐỌC: Auth, 2 RPC đọc, 1 file Storage — mọi lời gọi bằng token của người gọi; không RPC ghi nào
     assert.deepEqual(calls.map(c => `${c.method} ${c.path}`), [
       'GET /auth/v1/user', 'POST /rest/v1/rpc/my_chordlib_caps', 'POST /rest/v1/rpc/chord_sheet_get',
