@@ -32,6 +32,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import ocr_align  # noqa: E402 — ghép OCR ↔ lời chuẩn (module riêng, test riêng)
 import staff_window  # noqa: E402 — kiểm chứng cửa sổ 5 dòng kẻ (module riêng, test riêng)
 import broken_bar  # noqa: E402 — phục hồi vạch bị đứt nét (đường phụ, module riêng, test riêng)
+import note_structure  # noqa: E402 — loại thân nốt bị nhận nhầm là vạch (hình học, module riêng, test riêng)
 
 DEFAULTS = {
     "darkThreshold": 185,      # điểm ảnh tối hơn mức này = mực (dòng kẻ, vạch)
@@ -375,6 +376,20 @@ def find_bars(dark, system, opts):
     full = dark[y1:y5 + 1].mean(0)
     spaces = [(L[k][1] + 1, L[k + 1][0]) for k in range(4)]
     cands = []
+    rejected = []
+
+    def note_check(cand):
+        """Ứng viên đã được nhận là vạch (thường hoặc cứu nét đứt) → kiểm cấu trúc nốt ở hai đầu. Giữ → gắn chứng cứ; loại → ghi vào `rejected`."""
+        ev = note_structure.evaluate(dark, L, gap, cand["x"])
+        if ev["reject"]:
+            pos = ev["positions"][ev["atPosition"]]
+            rejected.append({"x": round(cand["x"], 1), "rejectedAs": ev["reason"], "asymmetry": ev["score"], "atPosition": ev["atPosition"],
+                             "left": pos["left"], "right": pos["right"], "pairedVertical": ev["pairedVertical"], "barHow": cand.get("how", "normal")})
+            return False
+        cand["noteAsym"] = ev["score"]
+        if ev["pairedVertical"]:
+            cand["pairedVertical"] = ev["companion"]
+        return True
     for a, b in runs(full >= opts["barColumnFill"]):
         # vạch kết có thể nằm hơi quá đoạn dòng kẻ dò được (dòng kẻ nhạt ở ô cuối) — nhận thêm trong 6 khe
         if a < x0 or b > x1 + 6 * gap:
@@ -386,7 +401,9 @@ def find_bars(dark, system, opts):
             if width <= max(4, 0.6 * gap) and not (b < x1 - gap and notehead_beside(dark, L, gap, a, b, opts)):
                 ev = broken_bar.evidence(dark, L, gap, a, b)
                 if ev["ok"]:
-                    cands.append({"x": (a + b) / 2, "width": width, "fill": float(full[a:b + 1].max()), "how": "broken_bar_rescue", "evidence": ev})
+                    cand = {"x": (a + b) / 2, "width": width, "fill": float(full[a:b + 1].max()), "how": "broken_bar_rescue", "evidence": ev}
+                    if note_check(cand):
+                        cands.append(cand)
             continue
         # đuôi nốt / gạch nối thò ra ngoài khuông; vạch nhịp dừng đúng ở dòng 1 và dòng 5
         cols = slice(max(a - 1, 0), b + 2)
@@ -398,7 +415,9 @@ def find_bars(dark, system, opts):
         # vạch ở đúng mép phải khuông: bên phải là lề giấy (scan ố có thể tối) — không xét đầu nốt
         if b < x1 - gap and notehead_beside(dark, L, gap, a, b, opts):
             continue
-        cands.append({"x": (a + b) / 2, "width": width, "fill": float(full[a:b + 1].max())})
+        cand = {"x": (a + b) / 2, "width": width, "fill": float(full[a:b + 1].max())}
+        if note_check(cand):
+            cands.append(cand)
     # ĐƯỜNG PHỤ: cột yếu hơn ngưỡng thường (mật độ thấp vì nét đứt) không thuộc ứng viên thường nào
     normal_runs = runs(full >= opts["barColumnFill"])
     for a, b in runs(full >= broken_bar.MIN_COLUMN_FILL):
@@ -408,7 +427,9 @@ def find_bars(dark, system, opts):
             continue
         ev = broken_bar.evidence(dark, L, gap, a, b)
         if ev["ok"]:
-            cands.append({"x": (a + b) / 2, "width": b - a + 1, "fill": float(full[a:b + 1].max()), "how": "broken_bar_rescue", "evidence": ev})
+            cand = {"x": (a + b) / 2, "width": b - a + 1, "fill": float(full[a:b + 1].max()), "how": "broken_bar_rescue", "evidence": ev}
+            if note_check(cand):
+                cands.append(cand)
     cands.sort(key=lambda c: c["x"])
     # gộp vạch kép / vạch + dấu nhắc lại thành một ranh giới
     merged = []
@@ -419,6 +440,9 @@ def find_bars(dark, system, opts):
             merged.append({"xs": [c["x"]], "fill": c["fill"]})
         if "how" in c:
             merged[-1].update(how=c["how"], evidence=c["evidence"])
+        merged[-1]["noteAsym"] = max(merged[-1].get("noteAsym", 0.0), c.get("noteAsym", 0.0))
+        if "pairedVertical" in c:
+            merged[-1]["pairedVertical"] = c["pairedVertical"]
     bars = []
     for m in merged:
         x = m["xs"][-1] if len(m["xs"]) > 1 else m["xs"][0]
@@ -426,10 +450,11 @@ def find_bars(dark, system, opts):
             continue
         bars.append({"x": float(x), "double": len(m["xs"]) > 1, "fill": m["fill"],
                      "repeatDots": has_repeat_dots(dark, L, gap, m["xs"]),
-                     **({"how": m["how"], "evidence": m["evidence"]} if "how" in m else {})})
+                     **({"how": m["how"], "evidence": m["evidence"]} if "how" in m else {}),
+                     "noteAsym": m.get("noteAsym", 0.0), **({"pairedVertical": m["pairedVertical"]} if "pairedVertical" in m else {})})
     if bars:
         x1 = max(x1, int(bars[-1]["x"]) + 1)
-    return {"y1": int(y1), "y5": int(y5), "x0": x0, "x1": x1, "bars": bars}
+    return {"y1": int(y1), "y5": int(y5), "x0": x0, "x1": x1, "bars": bars, "rejected": rejected}
 
 
 def reach(dark, cols, y, step):
@@ -713,6 +738,7 @@ def analyze(payload):
                                "token": token, "crossesSystem": crossed,
                                **({"anchorHow": how_of.get((gi, bar["x"]))} if ocr_plan is not None else {}),
                                **({"barHow": bar["how"], "barEvidence": bar["evidence"]} if "how" in bar else {}),
+                               "noteAsym": bar.get("noteAsym", 0.0), **({"pairedVertical": bar["pairedVertical"]} if "pairedVertical" in bar else {}),
                                "nextWord": (geos[gj]["lyrics"]["words"][wi] if wi is not None else None),
                                "marginGaps": round(margin, 2), "double": bar["double"], "repeat": bar["repeatDots"],
                                "score": round(max(0.0, score), 2), "confidence": level(score), "reasons": reasons or ["vạch rõ, chữ sau vạch khớp lời"]})
@@ -818,6 +844,7 @@ def analyze(payload):
             "sheetTokens": sheet_total, "canonicalTokens": total,
             "pickupDetected": pickup is not None, "implicitFirstMeasure": implicit_first,
             "warnings": diagnostics_warn,
+            "rejectedBars": [{"page": g["page"], "system": gi, **r} for gi, g in enumerate(geos) for r in g.get("rejected", [])],
             "timingsMs": timings,
             **({"alignment": alignment} if alignment else {}),
             "traceId": payload.get("traceId"),

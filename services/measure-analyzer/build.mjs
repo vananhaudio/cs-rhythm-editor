@@ -14,6 +14,7 @@ await build({ entryPoints: ['services/measure-analyzer/server.ts'], bundle: true
 copyFileSync('tools/measure-analyzer/measure_analyzer.py', `${out}/measure_analyzer.py`)
 copyFileSync('tools/measure-analyzer/staff_window.py', `${out}/staff_window.py`)
 copyFileSync('tools/measure-analyzer/broken_bar.py', `${out}/broken_bar.py`)
+copyFileSync('tools/measure-analyzer/note_structure.py', `${out}/note_structure.py`)
 copyFileSync('tools/measure-analyzer/ocr_align.py', `${out}/ocr_align.py`)   // ghép OCR ↔ lời chuẩn (analyzer import cạnh nó)
 // Gói engine extraction (Python thuần, không __pycache__) — worker chạy nó bằng MA_EXTRACT_DIR=<release>/chord-extract
 cpSync('tools/chord-extract/chord_extract', `${out}/chord-extract/chord_extract`, { recursive: true, filter: src => !src.includes('__pycache__') })
