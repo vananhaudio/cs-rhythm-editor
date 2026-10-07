@@ -4,6 +4,7 @@
 // (giáo án vẫn do RLS class_lesson_content chặn ở server, URL không vượt quyền).
 // NHỊP HỌC: một buổi có N nhịp HỌC → THỰC HÀNH → TRẢ BÀI. Nhịp KHÔNG phải model riêng: nó hình thành bởi VỊ TRÍ khối
 // checkpoint mà Owner đặt trong LessonSection[] (xem docs/GIAO-TRINH-CHUAN.md). Trang này chỉ render đúng thứ tự đó.
+import ShareButton from '../../share/ShareButton'
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { ArrowLeft, ArrowRight } from 'lucide-react'
 import '../../learning-thread/styles'
@@ -42,7 +43,14 @@ export default function ClassSessionPage({ classId, sessionNo, isTeacher = false
       <ArrowLeft size={16} /> {className ?? 'Về lớp'}
     </button>
   )
-  const shell = (body: ReactNode) => <div className="cs-col-wide cs-home cs-session">{back}{body}</div>
+  // Chia sẻ buổi học (chỉ tham chiếu qua DM; người nhận mở bằng quyền của chính họ) — hiện ở MỌI trạng thái buổi khi giáo trình đọc được
+  const shareBtn = learn && s ? <ShareButton target={{ type: 'class_session', key: s.sessionId.toLowerCase() }} title={`Buổi ${pad2(sessionNo)}${s.title ? ' · ' + s.title : ''}`} /> : null
+  const shell = (body: ReactNode) => (
+    <div className="cs-col-wide cs-home cs-session">
+      <div className="cs-session-top" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>{back}{shareBtn}</div>
+      {body}
+    </div>
+  )
   const head = (title: string | null) => (
     <header className="cs-card cs-learn-head">
       <span className="cs-learn-kicker">Buổi {pad2(sessionNo)}</span>

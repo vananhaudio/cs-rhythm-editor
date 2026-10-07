@@ -145,7 +145,12 @@ do $$ declare base text; n_before text; e text; begin
   base := t.err($q$select * from public.dm_share(t.u('B'), 'tool_artifact', 'a9999999-0000-4000-8000-000000000009')$q$);   -- không tồn tại
   perform t.ok(base like '22023:%', '3 artifact không tồn tại → lỗi 22023');
   perform t.ok(t.err($q$select * from public.dm_share(t.u('B'), 'tool_artifact', 'a3333333-0000-4000-8000-000000000003')$q$) = base, '3 artifact CÓ nhưng người gửi không đọc được ≡ không tồn tại (cùng lỗi, không leak)');
-  perform t.ok(t.err($q$select * from public.dm_share(t.u('B'), 'tool_artifact', 'a4444444-0000-4000-8000-000000000004')$q$) = base, '3 artifact tool khác (nhipphach) ngoài phạm vi V1b ≡ cùng lỗi');
+  -- Phạm vi theo phiên bản: V1b chỉ BMS (nhipphach ≡ cùng lỗi); từ Universal Share (có tool_artifact_save_for_share) Nhịp & Phách được phép gửi
+  if to_regprocedure('public.tool_artifact_save_for_share(text,jsonb)') is null then
+    perform t.ok(t.err($q$select * from public.dm_share(t.u('B'), 'tool_artifact', 'a4444444-0000-4000-8000-000000000004')$q$) = base, '3 artifact tool khác (nhipphach) ngoài phạm vi V1b ≡ cùng lỗi');
+  else
+    perform t.ok(true, '3 (Universal Share) nhipphach được phép gửi — kiểm ở universal_share_v1_test (ở đây không gửi để giữ đếm hàng)');
+  end if;
   perform t.ok(t.err($q$select * from public.dm_share(t.u('B'), 'tool_artifact', 'khong-phai-uuid')$q$) = base, '3 khoá sai định dạng ≡ cùng lỗi');
   perform t.ok(t.err($q$select * from public.dm_share(t.u('B'), 'tool_artifact', null)$q$) = base, '3 khoá null ≡ cùng lỗi');
   perform t.ok(t.err($q$select * from public.dm_share(t.u('B'), 'post', 'a1111111-0000-4000-8000-000000000001')$q$) = base, '3 ref_type ngoài allowlist ≡ cùng lỗi');

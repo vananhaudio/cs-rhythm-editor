@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # E2E BMS Share Lifecycle (local → shared → class) trên stack LOCAL của scripts/e2e-learning-thread.sh (không production).
-# DB tạm: + account_avatar_v1 + friends_ux_v2 + dm_v1 + dm_share_v1 + bms_share_lifecycle_v1. A–B bạn, A–C bạn, B–C KHÔNG là bạn.
+# DB tạm: + account_avatar_v1 + friends_ux_v2 + dm_v1 + dm_share_v1 + bms_share_lifecycle_v1 + universal_share_v1. A–B bạn, A–C bạn, B–C KHÔNG là bạn.
 # Dữ liệu: SH1, SH2 = bài RIÊNG của A (visibility 'shared'), đã gửi cho B qua DM (tin do A gửi).
 #   PUPPETEER_DIR=/path/to/dir bash scripts/e2e-bms-share-lifecycle.sh
 set -euo pipefail
@@ -31,6 +31,6 @@ begin
     (cid, 2, 'user', a, 'Đã chia sẻ một nội dung', 'tool_artifact', 'b2222222-0000-4000-8000-000000000002', now() - interval '5 minutes');
 end $$;
 SQL
-cat "$ROOT/db/account_avatar_v1_setup.sql" "$ROOT/db/friends_ux_v2_setup.sql" "$ROOT/db/dm_v1_setup.sql" "$ROOT/db/dm_share_v1_setup.sql" "$ROOT/db/bms_share_lifecycle_v1_setup.sql" > "$TMPX/pre.sql"
+cat "$ROOT/db/account_avatar_v1_setup.sql" "$ROOT/db/friends_ux_v2_setup.sql" "$ROOT/db/dm_v1_setup.sql" "$ROOT/db/dm_share_v1_setup.sql" "$ROOT/db/bms_share_lifecycle_v1_setup.sql" "$ROOT/db/universal_share_v1_setup.sql" > "$TMPX/pre.sql"
 E2E_CHECKPOINTS=1 E2E_SKIP_BASE=1 E2E_PRE_SQL="$TMPX/pre.sql" E2E_EXTRA_SQL="$TMPX/extra.sql" \
   E2E_EXTRA_RUNNER="$ROOT/tests/e2e-learning-thread/run-bms-share-lifecycle.mjs" bash "$ROOT/scripts/e2e-learning-thread.sh"

@@ -1,11 +1,12 @@
-// Nút DUY NHẤT "Chia sẻ" của BMS → sheet hai lựa chọn: "Gửi cho bạn bè" (gửi riêng qua Chat) · "Đăng lên cộng đồng".
-// Một bài = một đối tượng lưu trên server: bài nháp chưa lưu được TỰ LƯU RIÊNG khi cần (idempotent theo nội dung), rồi
-//   gửi cho bạn  → chỉ gửi tham chiếu (bài vẫn riêng tư, chỉ người nhận mở được);
-//   đăng cộng đồng → NÂNG CẤP chính bài đó từ riêng → cộng đồng (không tạo bản sao).
+// Nút DUY NHẤT "Chia sẻ" → sheet theo KHẢ NĂNG của object: "Gửi cho bạn bè" (gửi riêng qua Chat) · "Đăng lên cộng đồng" (chỉ khi object hỗ trợ).
+// Chỉ còn một lựa chọn hợp lệ → vào thẳng chọn bạn (không hiện menu một mục). Dùng chung mọi loại share (BMS, Nhịp & Phách, lớp, buổi học…).
+// Với object lưu trên server (artifact): bản nháp chưa lưu được TỰ LƯU RIÊNG khi cần (idempotent theo nội dung), rồi
+//   gửi cho bạn  → chỉ gửi tham chiếu; đăng cộng đồng → NÂNG CẤP chính object đó (không tạo bản sao).
 // UX không hiện các từ kỹ thuật (artifact/shared/class/promote). Quyền do server quyết (RLS + RPC).
 import { lazy, Suspense, useRef, useState } from 'react'
+import type { ShareRef } from './shareRef'
 
-const ShareToFriendSheet = lazy(() => import('../class-social/chat/ShareToFriendSheet'))
+const ShareToFriendSheet = lazy(() => import('./ShareToFriendSheet'))
 const FONT = `'Be Vietnam Pro',system-ui,sans-serif`
 const S = {
   overlay: { position: 'fixed', inset: 0, zIndex: 2000, background: 'rgba(8,10,16,.62)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', fontFamily: FONT } as const,
@@ -14,50 +15,51 @@ const S = {
   ghost: { minHeight: 40, border: '1px solid #d8d8de', borderRadius: 12, background: '#fff', color: '#16161a', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: FONT, padding: '0 14px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center' } as const,
 }
 
-export type EnsureResult = { ok: true; artifactId: string } | { ok: false; message: string }
+export type EnsureResult = { ok: true; target: ShareRef } | { ok: false; message: string }
 type Phase = 'menu' | 'busy' | 'friends' | 'published'
 
-export default function BmsShareSheet({ title, artifactId, canPublish, ensureArtifact, publish, onPublished, onClose }: {
+export default function ShareSheet({ title, target, canPublish, ensureTarget, publish, onPublished, onClose }: {
   title: string
-  /** Có sẵn (trang xem bài) hoặc null (bản nháp chưa lưu → tự lưu riêng khi cần) */
-  artifactId: string | null
-  /** Chủ bài và bài chưa đăng cộng đồng */
+  /** Có sẵn (trang xem object) hoặc null (bản nháp chưa lưu → tự lưu riêng khi cần) */
+  target: ShareRef | null
+  /** Object hỗ trợ đăng cộng đồng VÀ người dùng được phép (chủ bài, chưa đăng) */
   canPublish: boolean
-  ensureArtifact: () => Promise<EnsureResult>
-  publish: (artifactId: string) => Promise<{ ok: true } | { ok: false; message: string }>
-  onPublished?: (artifactId: string) => void
+  ensureTarget: () => Promise<EnsureResult>
+  /** Chỉ artifact: nhận id artifact */
+  publish?: (target: ShareRef) => Promise<{ ok: true } | { ok: false; message: string }>
+  onPublished?: (target: ShareRef) => void
   onClose: () => void
 }) {
-  // Chỉ còn MỘT lựa chọn (gửi bạn) → vào thẳng chọn bạn, không hiện menu một mục
-  const direct = !canPublish && !!artifactId
+  const canCommunity = canPublish && !!publish
+  const direct = !canCommunity && !!target
   const [phase, setPhase] = useState<Phase>(direct ? 'friends' : 'menu')
-  const [id, setId] = useState<string | null>(artifactId)
+  const [id, setId] = useState<ShareRef | null>(target)
   const [error, setError] = useState<string | null>(null)
   const busyRef = useRef(false)
 
-  const resolve = async (): Promise<string | null> => {
+  const resolve = async (): Promise<ShareRef | null> => {
     if (id) return id
-    const r = await ensureArtifact()
+    const r = await ensureTarget()
     if (!r.ok) { setError(r.message); return null }
-    setId(r.artifactId)
-    return r.artifactId
+    setId(r.target)
+    return r.target
   }
   const run = async (kind: 'friends' | 'publish') => {
     if (busyRef.current) return
     busyRef.current = true; setPhase('busy'); setError(null)
     try {
-      const aid = await resolve()
-      if (!aid) { setPhase('menu'); return }
-      if (kind === 'friends') { setPhase('friends'); return }
-      const r = await publish(aid)
+      const t = await resolve()
+      if (!t) { setPhase('menu'); return }
+      if (kind === 'friends' || !publish) { setPhase('friends'); return }
+      const r = await publish(t)
       if (!r.ok) { setError(r.message); setPhase('menu'); return }
-      onPublished?.(aid)
+      onPublished?.(t)
       setPhase('published')
     } finally { busyRef.current = false }
   }
 
   if (phase === 'friends' && id) {
-    return <Suspense fallback={null}><ShareToFriendSheet artifactId={id} title={title} onClose={onClose} /></Suspense>
+    return <Suspense fallback={null}><ShareToFriendSheet target={id} title={title} onClose={onClose} /></Suspense>
   }
   return (
     <div style={S.overlay} onMouseDown={e => { if (e.target === e.currentTarget && phase !== 'busy') onClose() }}>
@@ -82,7 +84,7 @@ export default function BmsShareSheet({ title, artifactId, canPublish, ensureArt
               <span style={{ fontSize: 15.5, fontWeight: 800 }}>Gửi cho bạn bè</span>
               <span style={{ fontSize: 13, color: '#5b5b66' }}>Gửi riêng qua Chat</span>
             </button>
-            {canPublish && (
+            {canCommunity && (
               <button type="button" disabled={phase === 'busy'} onClick={() => void run('publish')} style={{ ...S.opt, opacity: phase === 'busy' ? 0.6 : 1 }}>
                 <span style={{ fontSize: 15.5, fontWeight: 800 }}>Đăng lên cộng đồng</span>
                 <span style={{ fontSize: 13, color: '#5b5b66' }}>Chia sẻ để mọi người trong Class cùng xem</span>
@@ -96,3 +98,4 @@ export default function BmsShareSheet({ title, artifactId, canPublish, ensureArt
     </div>
   )
 }
+

@@ -3,7 +3,10 @@
 // Chủ bài thấy "Bản của bạn" + "Gỡ chia sẻ". Trang hiển thị bằng <img> (SVG không chạy script).
 import { useEffect, useState } from "react";
 import { createAnnotatedScoreRenderer } from "../musicxml-beats/renderer/verovioAdapter";
-import { deleteToolArtifact } from "../class-social/toolshare/toolShareApi";
+import ShareSheet from "../share/ShareSheet";
+import { publishArtifact } from "../share/artifactApi";
+import { artifactRef } from "../share/shareRef";
+import { useArtifactLifecycle } from "../share/useArtifactLifecycle";
 import { COUNTING_LEVEL_LABEL } from "../class-social/toolshare/registry";
 import { loadSharedScore, type LoadedShared } from "../class-social/toolshare/nhipphachShare";
 import { NP_CSS, NP_SCOPE } from "./theme";
@@ -13,7 +16,9 @@ type Pages = { status: "rendering" } | { status: "ok"; urls: string[] } | { stat
 export default function SharedScoreView({ artifactId }: { artifactId: string }) {
   const [state, setState] = useState<LoadedShared | { status: "loading" }>({ status: "loading" });
   const [pages, setPages] = useState<Pages>({ status: "rendering" });
-  const [removing, setRemoving] = useState<"idle" | "confirm" | "busy" | "error">("idle");
+  const [sharing, setSharing] = useState(false);
+  // Vòng đời dùng chung với BMS (gỡ bài riêng = xoá · gỡ khỏi cộng đồng ≠ xoá · không forward)
+  const life = useArtifactLifecycle(artifactId, state.status === "ready" ? state : null, () => setState({ status: "missing" }), "Bản nhạc gốc của bạn không đổi.");
 
   useEffect(() => { void loadSharedScore(artifactId).then(setState); }, [artifactId]);
   useEffect(() => {
@@ -30,12 +35,6 @@ export default function SharedScoreView({ artifactId }: { artifactId: string }) 
     })();
     return () => { cancelled = true; urls.forEach(u => URL.revokeObjectURL(u)); };
   }, [state]);
-
-  const remove = async () => {
-    if (removing !== "confirm") { setRemoving("confirm"); return; }
-    setRemoving("busy");
-    if (await deleteToolArtifact(artifactId)) setState({ status: "missing" }); else setRemoving("error");
-  };
 
   return (
     <main className={NP_SCOPE}>
@@ -65,15 +64,18 @@ export default function SharedScoreView({ artifactId }: { artifactId: string }) 
               </p>
               <div className="np-shared-banner np-row" style={{ marginTop: 10, gap: 10, alignItems: "center", flexWrap: "wrap" }}>
                 <span className="np-muted" style={{ flex: 1, minWidth: 200, fontSize: 13 }}>
-                  {state.isMine ? <><b>Bản của bạn</b> · đang chia sẻ cho Class</> : <><b>Bản chia sẻ</b> · chỉ xem, không sửa bản gốc</>}
+                  {state.isMine
+                    ? (life.isPrivate ? <><b>Bản của bạn</b> · đang gửi riêng, chưa đăng lên cộng đồng</> : <><b>Bản của bạn</b> · đang chia sẻ cho Class</>)
+                    : (life.isPrivate ? <><b>Bản được gửi riêng cho bạn</b> · chỉ xem, không sửa bản gốc</> : <><b>Bản chia sẻ</b> · chỉ xem, không sửa bản gốc</>)}
                 </span>
+                {life.canShare && <button type="button" className="np-btn sm np-btn-quiet np-share-btn" onClick={() => setSharing(true)}>Chia sẻ</button>}
                 {state.isMine && (
-                  <button type="button" className="np-btn sm np-btn-quiet" disabled={removing === "busy"} onClick={() => void remove()}>
-                    {removing === "confirm" ? "Xác nhận gỡ" : removing === "busy" ? "Đang gỡ…" : "Gỡ chia sẻ"}
+                  <button type="button" className="np-btn sm np-btn-quiet" disabled={life.removing === "busy"} onClick={() => void life.remove()}>
+                    {life.removing === "confirm" ? "Xác nhận gỡ" : life.removing === "busy" ? "Đang gỡ…" : life.removeLabel}
                   </button>
                 )}
-                {removing === "confirm" && <span className="np-muted" style={{ width: "100%", fontSize: 12 }}>Bản chia sẻ và thẻ trên Feed sẽ bị xoá. Bản nhạc gốc của bạn không đổi.</span>}
-                {removing === "error" && <span role="alert" style={{ width: "100%", fontSize: 12, color: "#b42318" }}>Chưa gỡ được. Hãy thử lại.</span>}
+                {life.removing === "confirm" && <span className="np-muted" style={{ width: "100%", fontSize: 12 }}>{life.confirmText}</span>}
+                {life.removing === "error" && <span role="alert" style={{ width: "100%", fontSize: 12, color: "#b42318" }}>Chưa gỡ được. Hãy thử lại.</span>}
               </div>
             </section>
             {pages.status === "rendering" && <p className="np-muted" role="status">Đang dựng bản nhạc…</p>}
@@ -86,6 +88,11 @@ export default function SharedScoreView({ artifactId }: { artifactId: string }) 
           </>
         )}
       </div>
+      {sharing && state.status === "ready" && life.canShare && (
+        <ShareSheet title={state.score.title || "Bản nhạc"} target={artifactRef(artifactId)} canPublish={life.canPublish}
+          ensureTarget={async () => ({ ok: true, target: artifactRef(artifactId) })}
+          publish={t => publishArtifact(t.key)} onPublished={life.markPublished} onClose={() => setSharing(false)} />
+      )}
     </main>
   );
 }

@@ -59,9 +59,9 @@ test("artifact → bản chỉ-xem: đúng MusicXML + thiết lập; sai schema 
 
 test("khối chia sẻ: chưa có bản nhạc → nút tắt + lý do; đã sẵn sàng → mời chia sẻ, nói rõ bản gốc không đổi", () => {
   const none = renderToStaticMarkup(<ShareScoreBlock xml={null} name="" settings={ST} rendered={false} />);
-  assert.match(none, /<button[^>]*disabled=""[^>]*>Chia sẻ lên cộng đồng<\/button>/); assert.match(none, /hiển thị xong/);
+  assert.match(none, /<button[^>]*disabled=""[^>]*>Chia sẻ<\/button>/); assert.match(none, /hiển thị xong/);
   const ready = renderToStaticMarkup(<ShareScoreBlock xml={XML} name="dan-ga-con.musicxml" settings={ST} rendered />);
-  assert.ok(!/disabled/.test(ready)); assert.match(ready, /Bản gốc của bạn không đổi/);
+  assert.ok(!/disabled/.test(ready)); assert.match(ready, /Bản gốc của bạn không đổi/); assert.match(ready, />Chia sẻ<\/button>/); assert.ok(!/Chia sẻ lên cộng đồng/.test(ready), "chỉ MỘT nút Chia sẻ");
 });
 
 test("không đường Tool Share nào chạm kho master / kho Nhịp Phách; trang chỉ-xem không lưu/xuất/sửa", () => {

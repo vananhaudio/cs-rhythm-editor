@@ -2,6 +2,7 @@
 // Client KHÔNG tự suy luận quyền: dm_can_message / can_send do server quyết.
 import { supabase } from '../../supabase'
 import type { Result } from '../posts/postsApi'
+import type { ShareRef } from '../../share/shareRef'
 import {
   chatErrorText, toConversations, toMessages, PAGE,
   type ChatMessage, type ConversationItem, type ConversationRow, type MessageRow,
@@ -72,9 +73,9 @@ export async function canMessage(userId: string): Promise<Result<boolean>> {
   return r.ok ? { ok: true, value: r.value === true } : r
 }
 
-/** Chia sẻ một BMS artifact cho một người bạn (V1b): CHỈ gửi tham chiếu; DB kiểm bạn bè + quyền đọc object của người gửi. */
-export async function shareToFriend(userId: string, artifactId: string): Promise<Result<{ conversationId: string; seq: number }>> {
-  const r = await rpc<{ conversation_id: string; seq: number | string }[]>('dm_share', { p_user: userId, p_ref_type: 'tool_artifact', p_ref_key: artifactId }, 'share')
+/** Chia sẻ một đối tượng cho một người bạn: CHỈ gửi tham chiếu. DB kiểm bạn bè (dm_rule) + NGƯỜI GỬI có quyền với object; không cấp quyền cho người nhận. */
+export async function shareToFriend(userId: string, ref: ShareRef): Promise<Result<{ conversationId: string; seq: number }>> {
+  const r = await rpc<{ conversation_id: string; seq: number | string }[]>('dm_share', { p_user: userId, p_ref_type: ref.type, p_ref_key: ref.key }, 'share')
   if (!r.ok) return r
   const row = r.value?.[0]
   return row?.conversation_id ? { ok: true, value: { conversationId: row.conversation_id, seq: Number(row.seq) } } : { ok: false, message: 'Chưa thực hiện được. Hãy thử lại.' }

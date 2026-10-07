@@ -78,9 +78,14 @@ if [ -n "${E2E_CHECKPOINTS:-}" ]; then
   echo "── + Lớp của tôi V1 (checkpoint + tiến độ buổi) + Quiz Checkpoint V1"
 fi
 # Tuỳ chọn: E2E_PRE_SQL = migration tính năng mới, chạy TRƯỚC mọi kịch bản (một transaction như prod-db) → kịch bản cũ là hồi quy
-# Mặc định: nút BMS "Chia sẻ" cần DB BMS Share Lifecycle (kèm Chat V1a/V1b làm nền) → nạp sẵn khi không truyền E2E_PRE_SQL riêng
+# Universal Share (lớp học / buổi học) cần bảng class_sessions: chế độ E2E_CHECKPOINTS đã tạo nó ở trên; chạy mặc định thì nạp fixture TEST-ONLY tối thiểu
+# (db/tests/local/universal_share_fixture.sql — production có bảng đầy đủ). Gate của migration vẫn nguyên: không bỏ kiểm nền.
+if [ -z "$(psqld -tAc "select to_regclass('public.class_sessions')")" ]; then
+  psqld -f "$ROOT/db/tests/local/universal_share_fixture.sql" >/dev/null; echo "── + class_sessions (fixture test-only)"
+fi
+# Mặc định: nút BMS "Chia sẻ" cần DB BMS Share Lifecycle + Universal Share (kèm Chat V1a/V1b làm nền) → nạp sẵn khi không truyền E2E_PRE_SQL riêng
 if [ -z "${E2E_PRE_SQL:-}" ]; then
-  cat "$ROOT/db/account_avatar_v1_setup.sql" "$ROOT/db/friends_ux_v2_setup.sql" "$ROOT/db/dm_v1_setup.sql" "$ROOT/db/dm_share_v1_setup.sql" "$ROOT/db/bms_share_lifecycle_v1_setup.sql" > "$TMP/default_pre.sql"
+  cat "$ROOT/db/account_avatar_v1_setup.sql" "$ROOT/db/friends_ux_v2_setup.sql" "$ROOT/db/dm_v1_setup.sql" "$ROOT/db/dm_share_v1_setup.sql" "$ROOT/db/bms_share_lifecycle_v1_setup.sql" "$ROOT/db/universal_share_v1_setup.sql" > "$TMP/default_pre.sql"
   E2E_PRE_SQL="$TMP/default_pre.sql"
 fi
 if [ -n "${E2E_PRE_SQL:-}" ]; then psqld -1 -f "$E2E_PRE_SQL" >/dev/null; echo "── + $(basename "$E2E_PRE_SQL")"; fi

@@ -4,6 +4,7 @@
 // (db/social_tool_share_v1_setup.sql). Thêm BMS / Nhịp & Phách / Ban nhạc = thêm MỘT mục ở đây + một nhánh ở RPC.
 import type { LucideIcon } from 'lucide-react'
 import { ListMusic, Music4, Timer } from 'lucide-react'
+import { artifactRef, type ShareRef } from '../../share/shareRef'
 
 export type ToolShareView = {
   tool: string
@@ -15,8 +16,8 @@ export type ToolShareView = {
   thumbnail?: string | null   // BMS: ảnh YouTube dựng từ video id đã kiểm (không nhận URL tuỳ ý)
   note: string | null         // "Hoàn thành một phiên luyện tập"
   action: { label: string; href: string } | null   // "Thử ở 80 BPM" → /metronome?tempo=80
-  /** Có = object gốc chia sẻ được cho bạn bè trong Chat (V1b: chỉ BMS artifact) */
-  shareRef?: { type: 'tool_artifact'; key: string } | null
+  /** Có = object gốc chia sẻ được cho bạn bè trong Chat (artifact: BMS, Nhịp & Phách) */
+  shareRef?: ShareRef | null
 }
 
 type ToolDef = { describe: (raw: Record<string, unknown>) => ToolShareView | null }
@@ -77,7 +78,7 @@ TOOL_REGISTRY.bms = {
       thumbnail: `https://i.ytimg.com/vi/${vid}/mqdefault.jpg`,
       note: null,
       action: { label: 'Luyện bài này', href: `/song-builder?artifact=${id.toLowerCase()}` },
-      shareRef: { type: 'tool_artifact', key: id.toLowerCase() },
+      shareRef: artifactRef(id),
     }
   },
 }
@@ -98,6 +99,7 @@ TOOL_REGISTRY.nhipphach = {
       detail: [typeof meter === 'string' ? `Nhịp ${meter}` : null, COUNTING_LEVEL_LABEL[level]].filter(Boolean).join(' · '),
       thumbnail: null, note: null,
       action: { label: 'Xem bản nhạc', href: `/nhipphach?artifact=${id.toLowerCase()}` },
+      shareRef: artifactRef(id),
     }
   },
 }

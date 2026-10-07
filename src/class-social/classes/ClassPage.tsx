@@ -6,6 +6,7 @@
 //        • lớp không có bài trả (chế độ giáo trình / không giáo trình): KHÔNG master-detail giả
 //   C. Cánh cửa nhẹ "Không gian lớp" (/me/classes/<id>/space) — Feed của lớp + Thành viên ở đó, không preview ở đây
 // Không tab, không "Tiếp tục học", không card "Đang học", không tự cuộn. Quyền do server quyết; trang chỉ ĐỌC + trình bày.
+import ShareButton from '../../share/ShareButton'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { ArrowLeft } from 'lucide-react'
 import '../../learning-thread/styles'
@@ -86,6 +87,7 @@ export default function ClassPage({ classId, isTeacher = false, onOpenThread, on
       {/* A — tên lớp + lịch (thông tin thật sự hữu ích); không lặp tên khoá / Thầy / mã */}
       <header className="cs-classv2-head">
         <h1 className="cs-class-name">{name}</h1>
+        {member && <ShareButton target={{ type: 'class', key: classId.toLowerCase() }} title={name} />}
         {c?.schedule && <p className="cs-classv2-meta">{c.schedule}</p>}
         {c && !c.isMember && !isTeacher && <p className="cs-classv2-meta">Bạn đang xem lớp này — bạn chưa tham gia.</p>}
         {learn?.role === 'teacher' && <p className="cs-classv2-meta">Giáo viên xem trước: mọi buổi đều mở.</p>}

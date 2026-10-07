@@ -1,13 +1,12 @@
 // Nhịp & Phách → Tool Share (artifact). Sản phẩm canonical = MusicXML ĐANG HIỂN THỊ + thiết lập đếm/trình bày;
-// bản khắc dựng lại từ hai thứ đó (không gửi SVG/PDF/PNG). Chỉ chạy khi người dùng bấm "Chia sẻ lên cộng đồng"
+// bản khắc dựng lại từ hai thứ đó (không gửi SVG/PDF/PNG). Chỉ chạy khi người dùng bấm "Chia sẻ" (lưu riêng / đăng cộng đồng)
 // (ghi) hoặc khi mở /nhipphach?artifact=<id> (đọc). KHÔNG đọc/ghi musicxml_library (kho master) hay kho Nhịp Phách.
 // supabase nạp ĐỘNG → phần thuần test được trên Node.
 import type { ScoreSettings } from "../../musicxml-beats/renderer/types";
-import { shareErrorText } from "./toolShareApi";
+import { saveArtifactForShare, isArtifactId as isArtifactIdCommon, type ArtifactVisibility } from "../../share/artifactApi";
 
 export const MAX_SHARE_XML_BYTES = 1_048_576;
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-export const isArtifactId = (s: string | null | undefined): s is string => !!s && UUID_RE.test(s);
+export const isArtifactId = isArtifactIdCommon;
 
 export type ShareableScore = { title: string; composer: string | null; xml: string; settings: ScoreSettings };
 
@@ -29,23 +28,11 @@ export function settingsPayload(st: ScoreSettings): Record<string, unknown> {
   };
 }
 
-export type ShareScoreResult = { ok: true; artifactId: string | null } | { ok: false; message: string };
-
-export async function shareNhipPhachScore(s: ShareableScore, clientKey: string): Promise<ShareScoreResult> {
-  const online = typeof navigator === "undefined" ? true : navigator.onLine !== false;
-  try {
-    const { supabase } = await import("../../supabase");
-    const { data, error } = await supabase.rpc("social_share_tool_result", {
-      p_tool: "nhipphach", p_client_key: clientKey,
-      p_result: { kind: "score", score: { title: s.title.trim().slice(0, 120), composer: s.composer?.trim().slice(0, 120) || null, musicxml: s.xml, settings: settingsPayload(s.settings) } },
-    });
-    if (error || typeof data !== "string") return { ok: false, message: shareErrorText(error?.message, online) };
-    const { data: post } = await supabase.from("class_posts").select("tool_share").eq("id", data).maybeSingle();
-    const art = (post?.tool_share as { artifact_id?: unknown } | null)?.artifact_id;
-    return { ok: true, artifactId: typeof art === "string" && isArtifactId(art) ? art : null };
-  } catch (e) {
-    return { ok: false, message: shareErrorText((e as Error)?.message, online) };
-  }
+/** Lưu RIÊNG bản đang hiển thị (chưa đăng) — vòng đời chung của artifact (src/share/artifactApi.ts). Server chuẩn hoá + idempotent theo nội dung. */
+export function saveNhipPhachForShare(s: ShareableScore) {
+  return saveArtifactForShare("nhipphach", {
+    title: s.title.trim().slice(0, 120), composer: s.composer?.trim().slice(0, 120) || null, musicxml: s.xml, settings: settingsPayload(s.settings),
+  });
 }
 
 export type SharedScore = { title: string; composer: string | null; meter: string | null; xml: string; settings: ScoreSettings };
@@ -69,7 +56,7 @@ export function sharedScoreFromArtifact(data: unknown, content: unknown): Shared
   };
 }
 
-export type LoadedShared = { status: "ready"; score: SharedScore; isMine: boolean } | { status: "signed_out" } | { status: "missing" } | { status: "error" };
+export type LoadedShared = { status: "ready"; score: SharedScore; isMine: boolean; visibility: ArtifactVisibility } | { status: "signed_out" } | { status: "missing" } | { status: "error" };
 
 export async function loadSharedScore(id: string): Promise<LoadedShared> {
   if (!isArtifactId(id)) return { status: "missing" };
@@ -77,10 +64,10 @@ export async function loadSharedScore(id: string): Promise<LoadedShared> {
     const { supabase } = await import("../../supabase");
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user) return { status: "signed_out" };
-    const { data, error } = await supabase.from("tool_artifacts").select("id,owner_id,tool,kind,data,content").eq("id", id).maybeSingle();
+    const { data, error } = await supabase.from("tool_artifacts").select("id,owner_id,tool,kind,data,content,visibility").eq("id", id).maybeSingle();
     if (error) return { status: "error" };
     if (!data || data.tool !== "nhipphach" || data.kind !== "score") return { status: "missing" };
     const score = sharedScoreFromArtifact(data.data, data.content);
-    return score ? { status: "ready", score, isMine: data.owner_id === session.user.id } : { status: "missing" };
+    return score ? { status: "ready", score, isMine: data.owner_id === session.user.id, visibility: data.visibility === "shared" ? "shared" : "class" } : { status: "missing" };
   } catch { return { status: "error" }; }
 }
