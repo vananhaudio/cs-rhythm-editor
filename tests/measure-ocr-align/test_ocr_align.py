@@ -116,6 +116,66 @@ class BarToToken(unittest.TestCase):
         self.assertEqual(oa.bar_token(res, [x for _, x in toks], 175), (None, "unresolved"))
 
 
+class NoiseRule(unittest.TestCase):
+    """Chữ OCR thừa chỉ bị bỏ khi lời chuẩn KHÔNG còn chỗ nào để nó là lời thật (ngoài biên bài, hoặc giữa hai neo liền nhau)."""
+
+    def setUp(self):
+        self.end = oa.Canon([["a1", "bbbb", "cccc"], ["dddd", "eeee", "ffff", "gggg"]])    # dòng cuối là hết bài
+        self.tail_ids = {"dddd": 3, "eeee": 4, "ffff": 5, "gggg": 6}
+
+    def resolve(self, canon, words):
+        toks = row(words)
+        r = oa.align_row(toks, canon)
+        return r, oa.resolve_tokens(r, canon), [x for _, x in toks]
+
+    def test_noise_sau_chu_cuoi_cua_bai(self):
+        r, res, xs = self.resolve(self.end, ["dddd", "eeee", "ffff", "gggg", "zq"])
+        self.assertEqual(r["status"], "MATCH")
+        self.assertEqual(res[4], (None, "noise"))
+        # vạch đứng ngay trước chữ thừa: không còn chữ hát nào → hết hàng (không "unresolved")
+        self.assertEqual(oa.bar_token(res, xs, xs[4] - 1), (None, "row_end"))
+
+    def test_noise_truoc_chu_dau_cua_bai(self):
+        r, res, _ = self.resolve(self.end, ["zq", "a1", "bbbb", "cccc", "dddd"])
+        self.assertEqual(r["pairs"][1], 0)                                    # "a1" = token chuẩn đầu tiên của cả bài
+        self.assertEqual(res[0], (None, "noise"))
+
+    def test_noise_giua_hai_neo_chac_chan_va_lien_nhau(self):
+        canon = oa.Canon([["alpha", "bravo", "charlie", "delta", "echo"]])
+        r, res, xs = self.resolve(canon, ["alpha", "bravo", "zzq", "charlie", "delta", "echo"])
+        self.assertEqual(res[2], (None, "noise"))                             # bravo(1) và charlie(2) liền nhau → chữ giữa là thừa
+        self.assertEqual(oa.bar_token(res, xs, xs[2] - 1), (2, "direct"))      # vạch trước chữ thừa → chữ hát thật kế tiếp = "charlie"
+
+    def test_chu_hong_nhung_co_the_la_loi_that_KHONG_bi_bo(self):
+        # cuối một dòng chuẩn mà còn dòng sau: "zzzz" có thể là chữ đầu dòng sau bị OCR hỏng → không được coi là nhiễu
+        canon = oa.Canon([["alpha", "bravo", "charlie"], ["delta", "echo", "foxtrot"]])
+        r, res, xs = self.resolve(canon, ["alpha", "bravo", "charlie", "zzzz"])
+        self.assertEqual(res[3], (None, None))
+        self.assertEqual(oa.bar_token(res, xs, xs[3] - 1), (None, "unresolved"))
+        # giữa hai neo mà lời chuẩn còn NHIỀU token hơn số chữ OCR ở giữa (OCR rớt chữ): không biết "zzzz" là chữ nào → không bỏ, không đoán
+        canon2 = oa.Canon([["alpha", "bravo", "charlie", "delta", "echo", "foxtrot", "golfball"]])
+        r2, res2, _ = self.resolve(canon2, ["alpha", "bravo", "zzzz", "echo", "foxtrot", "golfball"])
+        self.assertEqual(r2["pairs"][3], 4)                                   # "echo" ghép đúng token 4: giữa hai neo có 2 token chuẩn (charlie, delta)
+        self.assertEqual(res2[2], (None, None))
+
+    def test_nhieu_noise_lien_tiep_o_bien(self):
+        _, res, xs = self.resolve(self.end, ["dddd", "eeee", "ffff", "gggg", "zq", "xw", "vv"])
+        self.assertEqual([h for _, h in res[4:]], ["noise", "noise", "noise"])
+        self.assertEqual(oa.bar_token(res, xs, xs[4] - 1), (None, "row_end"))
+        _, res_l, _ = self.resolve(self.end, ["zq", "xw", "a1", "bbbb", "cccc", "dddd"])
+        self.assertEqual([h for _, h in res_l[:2]], ["noise", "noise"])
+
+    def test_noise_khong_doi_chi_so_chuan(self):
+        canon = oa.Canon([["alpha", "bravo", "charlie", "delta", "echo"]])
+        clean_toks = row(["alpha", "bravo", "charlie", "delta", "echo"])
+        noisy_toks = row(["alpha", "bravo", "zzq", "charlie", "delta", "echo"])
+        rc, rn = oa.align_row(clean_toks, canon), oa.align_row(noisy_toks, canon)
+        resc, resn = oa.resolve_tokens(rc, canon), oa.resolve_tokens(rn, canon)
+        real = [idx for idx, h in resn if h != "noise"]
+        self.assertEqual(real, [idx for idx, _ in resc])                       # chỉ số chuẩn của chữ thật y hệt khi có/không có nhiễu
+        self.assertEqual(rn["span"], rc["span"])                               # nhiễu không làm đổi span
+
+
 class PlanMultiRow(unittest.TestCase):
     def test_hai_hang_duoi_mot_khuong_ra_hai_span_khac_nhau(self):
         rows_by_page = [[

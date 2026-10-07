@@ -147,8 +147,15 @@ def align_row(tokens, canon):
 
 
 def resolve_tokens(row, canon):
-    """Mỗi token OCR → (chỉ số phẳng | None, cách): 'direct' (khớp trực tiếp), 'interpolated' (nội suy từ hai phía đã khớp, CHỈ khi
-    số token OCR giữa hai neo bằng đúng số token chuẩn), 'edge' (sát đầu/cuối hàng, lệch ≤ 1), hoặc None (không đủ chắc)."""
+    """Mỗi token OCR → (chỉ số phẳng | None, cách):
+      'direct'       khớp trực tiếp với một token chuẩn;
+      'interpolated' nội suy từ hai neo đã khớp — CHỈ khi số token OCR giữa hai neo bằng ĐÚNG số token chuẩn giữa hai neo;
+      'edge'         sát đầu/cuối hàng, lệch ≤ 1 và vẫn CÙNG DÒNG chuẩn với neo;
+      'noise'        chữ OCR thừa, bị bỏ qua — chỉ khi lời chuẩn không còn chỗ nào để nó là chữ thật:
+                       (A) nằm giữa hai neo mà hai token chuẩn LIỀN NHAU (tiến trình chuẩn liên tục, không còn token nào ở giữa);
+                       (B) sau token chuẩn CUỐI CÙNG của cả bài, hoặc trước token chuẩn ĐẦU TIÊN của cả bài (ngoài biên lời chuẩn).
+      None           không đủ chắc → unresolved / review, KHÔNG đoán. Độ giống thấp KHÔNG phải lý do để coi là nhiễu: một chữ OCR
+                     hỏng nhưng vẫn có thể là lời thật (đứng giữa dòng, hoặc ở cuối một dòng chuẩn còn dòng sau) thì không bị bỏ."""
     n = row["n"]
     pairs = row["pairs"]
     mapped = sorted(pairs)
@@ -164,21 +171,31 @@ def resolve_tokens(row, canon):
             il, ir = pairs[left], pairs[right]
             if ir - il == right - left:            # canonical liền mạch đúng bằng số token OCR → chắc chắn
                 res = (il + (k - left), "interpolated")
-        elif left is not None and k - left == 1:
-            res = (pairs[left] + 1, "edge")
-        elif right is not None and right - k == 1:
-            res = (pairs[right] - 1, "edge")
-        if res[0] is not None and not (0 <= res[0] < canon.total):
-            res = (None, None)
+            elif ir - il == 1:                      # hai neo liền nhau trong lời chuẩn → mọi chữ OCR ở giữa là thừa
+                res = (None, "noise")
+        elif left is not None:
+            il = pairs[left]
+            if il + 1 >= canon.total:               # hết lời chuẩn: không còn token nào để chữ này là lời thật
+                res = (None, "noise")
+            elif k - left == 1 and canon.flat[il + 1][0] == canon.flat[il][0]:
+                res = (il + 1, "edge")
+        elif right is not None:
+            ir = pairs[right]
+            if ir == 0:                             # trước token chuẩn đầu tiên của cả bài
+                res = (None, "noise")
+            elif right - k == 1 and canon.flat[ir - 1][0] == canon.flat[ir][0]:
+                res = (ir - 1, "edge")
         out.append(res)
     return out
 
 
 def bar_token(resolved, xs, bar_x):
-    """Token chuẩn CHỮ HÁT ĐẦU TIÊN sau vạch (chữ OCR đầu tiên có tâm x ≥ vạch). Trả (chỉ số phẳng | None, cách):
-    'direct' | 'interpolated' | 'edge' | 'row_end' (không còn chữ nào sau vạch trong hàng) | 'unresolved'."""
+    """Token chuẩn CHỮ HÁT ĐẦU TIÊN sau vạch (chữ OCR đầu tiên có tâm x ≥ vạch, bỏ qua chữ 'noise'). Trả (chỉ số phẳng | None, cách):
+    'direct' | 'interpolated' | 'edge' | 'row_end' (không còn chữ hát nào sau vạch trong hàng) | 'unresolved'."""
     k = next((i for i, x in enumerate(xs) if x >= bar_x), None)
-    if k is None:
+    while k is not None and k < len(xs) and resolved[k][1] == "noise":
+        k += 1
+    if k is None or k >= len(xs):
         return None, "row_end"
     idx, how = resolved[k]
     if idx is None:
