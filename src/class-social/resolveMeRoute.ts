@@ -136,6 +136,29 @@ export function bandAdminSlugFromPath(pathname: string): string | null {
   return BAND_SLUG_RE.test(slug) && slug.length <= 60 ? slug : null
 }
 
+// ── Trò chuyện (Chat V1a): /me/chat (danh sách) · /me/chat/<id hội thoại> · /me/chat/u/<id người> (nhắn tin tới người này; hội thoại chỉ tạo khi gửi tin đầu) ──
+export const CHAT_PREFIX = SECTION_PATHS.chat + '/'
+export const CHAT_WITH_PREFIX = CHAT_PREFIX + 'u/'
+
+export function chatConversationPath(conversationId: string): string {
+  return CHAT_PREFIX + conversationId
+}
+export function chatWithPath(userId: string): string {
+  return CHAT_WITH_PREFIX + userId
+}
+export function chatConversationIdFromPath(pathname: string): string | null {
+  const p = pathname.replace(/\/+$/, '')
+  if (!p.startsWith(CHAT_PREFIX) || p.startsWith(CHAT_WITH_PREFIX)) return null
+  const id = p.slice(CHAT_PREFIX.length)
+  return UUID_RE.test(id) ? id.toLowerCase() : null
+}
+export function chatWithUserIdFromPath(pathname: string): string | null {
+  const p = pathname.replace(/\/+$/, '')
+  if (!p.startsWith(CHAT_WITH_PREFIX)) return null
+  const id = p.slice(CHAT_WITH_PREFIX.length)
+  return UUID_RE.test(id) ? id.toLowerCase() : null
+}
+
 /** Màn đang mở trong /me: mục, trang cá nhân, learning thread, hàng đợi Thầy, danh sách lớp, hoặc một lớp. */
 export type MeView =
   | { kind: 'section'; section: SocialSection }
@@ -148,6 +171,8 @@ export type MeView =
   | { kind: 'classSpace'; classId: string }
   | { kind: 'bands' }
   | { kind: 'bandAdmin'; slug: string }
+  | { kind: 'chatConversation'; conversationId: string }
+  | { kind: 'chatWith'; userId: string }
 
 export function viewFromPath(pathname: string): MeView {
   const userId = profileUserIdFromPath(pathname)
@@ -162,6 +187,10 @@ export function viewFromPath(pathname: string): MeView {
   if (classId) return { kind: 'class', classId }
   const bandSlug = bandAdminSlugFromPath(pathname)
   if (bandSlug) return { kind: 'bandAdmin', slug: bandSlug }
+  const chatId = chatConversationIdFromPath(pathname)
+  if (chatId) return { kind: 'chatConversation', conversationId: chatId }
+  const chatWith = chatWithUserIdFromPath(pathname)
+  if (chatWith) return { kind: 'chatWith', userId: chatWith }
   const p = pathname.replace(/\/+$/, '')
   if (p === BANDS_PATH) return { kind: 'bands' }
   if (p === QUEUE_PATH) return { kind: 'queue' }
@@ -180,6 +209,8 @@ export function sameView(a: MeView, b: MeView): boolean {
     case 'classes': return b.kind === 'classes'
     case 'bands': return b.kind === 'bands'
     case 'bandAdmin': return b.kind === 'bandAdmin' && a.slug === b.slug
+    case 'chatConversation': return b.kind === 'chatConversation' && a.conversationId === b.conversationId
+    case 'chatWith': return b.kind === 'chatWith' && a.userId === b.userId
     default: return b.kind === 'section' && a.section === b.section
   }
 }
@@ -195,6 +226,8 @@ export function viewPath(view: MeView): string {
     case 'classes': return CLASSES_PATH
     case 'bands': return BANDS_PATH
     case 'bandAdmin': return bandAdminPath(view.slug)
+    case 'chatConversation': return chatConversationPath(view.conversationId)
+    case 'chatWith': return chatWithPath(view.userId)
     default: return SECTION_PATHS[view.section]
   }
 }

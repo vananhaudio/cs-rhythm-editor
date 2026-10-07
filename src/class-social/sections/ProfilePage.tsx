@@ -3,7 +3,7 @@
 // khi DB báo can_view_wall (chính mình | bạn bè | Thầy kiểm duyệt). Kể cả khi gọi thẳng API,
 // get_user_wall/RLS trả rỗng cho người chưa là bạn — ẩn ở đây chỉ là giao diện.
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ArrowLeft, Lock, ShieldCheck, UserX } from 'lucide-react'
+import { ArrowLeft, Lock, MessageCircle, ShieldCheck, UserX } from 'lucide-react'
 import type { ClassIdentity } from '../useClassSession'
 import type { ImageKind } from '../profile/imageFile'
 import { safeImageUrl } from '../media/safeImageUrl'
@@ -17,6 +17,7 @@ import {
 } from '../friends/friendModel'
 import { Avatar, ConfirmDialog, EmptyState } from '../ui'
 import RelationshipButton from './RelationshipButton'
+import { useCanMessage } from '../chat/useCanMessage'
 import { useHistoryTab } from '../useHistoryTab'
 import IdentityHeader from './IdentityHeader'
 import WallComposer from './WallComposer'
@@ -29,7 +30,7 @@ const PROFILE_TABS = ['wall', 'journey'] as const
 
 type Load = { status: 'loading' } | { status: 'error'; message: string } | { status: 'missing' } | { status: 'ready'; profile: PublicProfile }
 
-export default function ProfilePage({ me, userId, identityRev = 0, canEditAvatar, onEditMedia, onBack, onOpenProfile, onOpenThread, onEditProfile, onFriendsChanged }: {
+export default function ProfilePage({ me, userId, identityRev = 0, canEditAvatar, onEditMedia, onBack, onOpenProfile, onOpenThread, onEditProfile, onFriendsChanged, onMessage }: {
   me: ClassIdentity
   userId: string
   identityRev?: number
@@ -44,6 +45,8 @@ export default function ProfilePage({ me, userId, identityRev = 0, canEditAvatar
   onEditProfile?: () => void
   /** Quan hệ bạn bè vừa đổi (DB đã xác nhận) → shell nạp lại badge lời mời */
   onFriendsChanged?: () => void
+  /** Nhắn tin (chỉ hiện khi server cho phép — dm_can_message) */
+  onMessage?: (userId: string) => void
 }) {
   const isSelf = userId === me.userId
   const [load, setLoad] = useState<Load>({ status: 'loading' })
@@ -136,7 +139,7 @@ export default function ProfilePage({ me, userId, identityRev = 0, canEditAvatar
       {back}
       {isSelf
         ? <IdentityHeader me={me} canEditAvatar={canEditAvatar} onEdit={onEditMedia} onEditProfile={onEditProfile} />
-        : <OtherHeader profile={p} busy={busy} onAct={act} />}
+        : <OtherHeader profile={p} busy={busy} onAct={act} onMessage={onMessage} />}
       {notice && <p className="cs-rel-notice" role="status">{notice}</p>}
       {actionError && <p className="cs-form-error" role="alert">{actionError}</p>}
       {confirming && (
@@ -165,11 +168,13 @@ export default function ProfilePage({ me, userId, identityRev = 0, canEditAvatar
   )
 }
 
-function OtherHeader({ profile, busy, onAct }: {
+function OtherHeader({ profile, busy, onAct, onMessage }: {
   profile: PublicProfile
   busy: boolean
   onAct: (a: FriendAction) => void
+  onMessage?: (userId: string) => void
 }) {
+  const canMsg = useCanMessage(profile.userId, !!onMessage && profile.relationship !== 'self', profile.relationship)
   const cover = safeImageUrl(profile.coverUrl)
   const [broken, setBroken] = useState<string | null>(null)
   const showCover = cover && broken !== cover
@@ -186,7 +191,14 @@ function OtherHeader({ profile, busy, onAct }: {
           <h1 className="cs-identity-name">{profile.name}</h1>
           {profile.isTeacher && <div className="cs-identity-facts"><span className="cs-badge">Giáo viên</span></div>}
           {profile.relationship === 'incoming' && <div className="cs-rel-status">{profile.name} đã gửi cho bạn lời mời kết bạn</div>}
-          <RelationshipButton relationship={profile.relationship} name={profile.name} busy={busy} onAct={onAct} />
+          <div className="cs-rel-row">
+            <RelationshipButton relationship={profile.relationship} name={profile.name} busy={busy} onAct={onAct} />
+            {canMsg && onMessage && (
+              <button type="button" className="cs-btn cs-btn-soft cs-rel-btn" onClick={() => onMessage(profile.userId)}>
+                <MessageCircle size={18} aria-hidden="true" />Nhắn tin
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </section>

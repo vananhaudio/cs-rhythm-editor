@@ -14,7 +14,9 @@ const COLLAPSE_KEY = 'cs-sidebar-collapsed'
 /** Số cần chú ý theo mục (vd. lời mời kết bạn chưa xử lý). 0/thiếu = không hiện. */
 export type NavBadges = Partial<Record<SocialSection, number>>
 
-const badgeLabel = (id: SocialSection, n: number) => id === 'friends' ? `${n} lời mời kết bạn` : `${n} mục mới`
+const badgeLabel = (id: SocialSection, n: number) => id === 'friends' ? `${n} lời mời kết bạn` : id === 'chat' ? `${n} cuộc trò chuyện chưa đọc` : `${n} mục mới`
+const badgeSummary = (b: NavBadges | undefined) =>
+  (Object.entries(b ?? {}) as [SocialSection, number][]).filter(([, n]) => n > 0).map(([id, n]) => badgeLabel(id, n)).join(', ')
 
 function Badge({ id, n, collapsed }: { id: SocialSection; n: number; collapsed?: boolean }) {
   if (!(n > 0)) return null
@@ -154,7 +156,7 @@ export default function ClassSocialLayout({ me, section, onSection, children, ca
         </button>
         {/* Mobile: menu nằm sau ☰ → badge phải hiện ngay trên nút ☰ (không cần mở menu mới thấy) */}
         <button type="button" className="cs-icon-btn cs-only-mobile cs-menu-btn" onClick={() => setMenuOpen(true)}
-          aria-label={totalBadge > 0 ? `Mở menu — ${badges?.friends ? badgeLabel('friends', badges.friends) : totalBadge + ' mục mới'}` : 'Mở menu'}>
+          aria-label={totalBadge > 0 ? `Mở menu — ${badgeSummary(badges)}` : 'Mở menu'}>
           <Menu size={22} />
           {totalBadge > 0 && <span className="cs-nav-badge is-corner" aria-hidden="true">{totalBadge > 99 ? '99+' : totalBadge}</span>}
         </button>
