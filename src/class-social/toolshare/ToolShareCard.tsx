@@ -1,9 +1,12 @@
 // Thân bài "Kết quả công cụ" trên Feed / Tường — MỘT renderer cho mọi công cụ (nội dung do registry quyết).
 // Không hiện payload/JSON/tool id; hành động "thử lại" là link cùng tab tới công cụ với tham số đã kiểm.
+import { lazy, Suspense, useState } from 'react'
 import { describeToolShare, type ToolShareView } from './registry'
 import { useToolSharePayload } from './toolShareApi'
 
-export function ToolShareBodyView({ view }: { view: ToolShareView | null }) {
+const ShareToFriendSheet = lazy(() => import('../chat/ShareToFriendSheet'))
+
+export function ToolShareBodyView({ view, onShareToFriend }: { view: ToolShareView | null; onShareToFriend?: (ref: NonNullable<ToolShareView['shareRef']>, title: string) => void }) {
   if (!view) return <p className="cs-tool-share-missing">Kết quả này không còn hiển thị được.</p>
   const Icon = view.icon
   return (
@@ -15,12 +18,21 @@ export function ToolShareBodyView({ view }: { view: ToolShareView | null }) {
         onError={e => { e.currentTarget.style.display = 'none' }} />}
       {view.note && <div className="cs-tool-share-note">{view.note}</div>}
       {view.action && <a className="cs-btn cs-btn-soft cs-tool-share-cta" href={view.action.href}>{view.action.label}</a>}
+      {view.shareRef && onShareToFriend && (
+        <button type="button" className="cs-btn cs-btn-soft cs-tool-share-cta" onClick={() => onShareToFriend(view.shareRef!, view.headline)}>Gửi bạn bè</button>
+      )}
     </div>
   )
 }
 
 export default function ToolShareBody({ postId }: { postId: string }) {
   const raw = useToolSharePayload(postId)
+  const [sheet, setSheet] = useState<{ key: string; title: string } | null>(null)
   if (raw === undefined) return <div className="cs-tool-share"><span className="cs-skeleton" style={{ width: '45%', height: 18 }} /></div>
-  return <ToolShareBodyView view={describeToolShare(raw)} />
+  return (
+    <>
+      <ToolShareBodyView view={describeToolShare(raw)} onShareToFriend={(ref, title) => setSheet({ key: ref.key, title })} />
+      {sheet && <Suspense fallback={null}><ShareToFriendSheet artifactId={sheet.key} title={sheet.title} onClose={() => setSheet(null)} /></Suspense>}
+    </>
+  )
 }

@@ -9,12 +9,12 @@ import {
 
 const online = () => (typeof navigator === 'undefined' ? true : navigator.onLine !== false)
 
-async function rpc<T>(fn: string, args: Record<string, unknown>): Promise<Result<T>> {
+async function rpc<T>(fn: string, args: Record<string, unknown>, ctx?: 'share'): Promise<Result<T>> {
   try {
     const { data, error, status } = await supabase.rpc(fn, args)
     if (error) {
       if (import.meta.env.DEV) console.warn(`[class-chat] ${fn}:`, error.code, error.message)
-      return { ok: false, message: chatErrorText({ ...error, status }, !online()) }
+      return { ok: false, message: chatErrorText({ ...error, status }, !online(), ctx) }
     }
     return { ok: true, value: data as T }
   } catch (e) {
@@ -70,4 +70,12 @@ export async function findConversation(userId: string): Promise<Result<string | 
 export async function canMessage(userId: string): Promise<Result<boolean>> {
   const r = await rpc<boolean>('dm_can_message', { p_user: userId })
   return r.ok ? { ok: true, value: r.value === true } : r
+}
+
+/** Chia sẻ một BMS artifact cho một người bạn (V1b): CHỈ gửi tham chiếu; DB kiểm bạn bè + quyền đọc object của người gửi. */
+export async function shareToFriend(userId: string, artifactId: string): Promise<Result<{ conversationId: string; seq: number }>> {
+  const r = await rpc<{ conversation_id: string; seq: number | string }[]>('dm_share', { p_user: userId, p_ref_type: 'tool_artifact', p_ref_key: artifactId }, 'share')
+  if (!r.ok) return r
+  const row = r.value?.[0]
+  return row?.conversation_id ? { ok: true, value: { conversationId: row.conversation_id, seq: Number(row.seq) } } : { ok: false, message: 'Chưa thực hiện được. Hãy thử lại.' }
 }

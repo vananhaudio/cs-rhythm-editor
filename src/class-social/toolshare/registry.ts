@@ -15,6 +15,8 @@ export type ToolShareView = {
   thumbnail?: string | null   // BMS: ảnh YouTube dựng từ video id đã kiểm (không nhận URL tuỳ ý)
   note: string | null         // "Hoàn thành một phiên luyện tập"
   action: { label: string; href: string } | null   // "Thử ở 80 BPM" → /metronome?tempo=80
+  /** Có = object gốc chia sẻ được cho bạn bè trong Chat (V1b: chỉ BMS artifact) */
+  shareRef?: { type: 'tool_artifact'; key: string } | null
 }
 
 type ToolDef = { describe: (raw: Record<string, unknown>) => ToolShareView | null }
@@ -75,6 +77,7 @@ TOOL_REGISTRY.bms = {
       thumbnail: `https://i.ytimg.com/vi/${vid}/mqdefault.jpg`,
       note: null,
       action: { label: 'Luyện bài này', href: `/song-builder?artifact=${id.toLowerCase()}` },
+      shareRef: { type: 'tool_artifact', key: id.toLowerCase() },
     }
   },
 }

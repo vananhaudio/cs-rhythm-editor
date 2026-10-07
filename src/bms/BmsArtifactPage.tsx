@@ -1,8 +1,9 @@
 // /song-builder?artifact=<id> — mở bài BMS người khác (hoặc chính mình) đã chia sẻ, chế độ CHỈ LUYỆN:
 // xem · nghe · luyện đúng bài (lưới nhịp, mốc, hợp âm). Không lưu, không sửa bản gốc, không ghi vào "Bài của tôi".
 // Chủ bài: thấy "Bài của bạn" + "Gỡ chia sẻ" (xoá artifact + bài Feed). Bài đã gỡ / không có quyền → thông báo nhẹ.
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import PracticePlayer from '../PracticePlayer'
+const ShareToFriendSheet = lazy(() => import('../class-social/chat/ShareToFriendSheet'))
 import { deleteBmsArtifact, loadBmsArtifact, type LoadedArtifact } from './bmsArtifact'
 
 const C = { bg: '#0B0E14', surface: '#131823', border: 'rgba(255,255,255,0.09)', text: '#E6EAF2', muted: '#8A93A6', accent: '#6C63FF', red: '#F43F5E' }
@@ -10,6 +11,7 @@ const FONT = `'Be Vietnam Pro',system-ui,sans-serif`
 
 export default function BmsArtifactPage({ artifactId }: { artifactId: string }) {
   const [state, setState] = useState<LoadedArtifact | { status: 'loading' }>({ status: 'loading' })
+  const [sharing, setSharing] = useState(false)
   const [removing, setRemoving] = useState<'idle' | 'confirm' | 'busy' | 'error'>('idle')
   useEffect(() => { void loadBmsArtifact(artifactId).then(setState) }, [artifactId])
 
@@ -44,6 +46,9 @@ export default function BmsArtifactPage({ artifactId }: { artifactId: string }) 
       <span style={{ flex: 1, minWidth: 180 }}>
         {state.isMine ? <><b style={{ color: C.text }}>Bài của bạn</b> · đang chia sẻ cho Class</> : <><b style={{ color: C.text }}>Bài chia sẻ</b> · chỉ luyện, không sửa bài gốc</>}
       </span>
+      <button type="button" className="bms-artifact-share" onClick={() => setSharing(true)} style={{ border: `1px solid ${C.border}`, background: 'transparent', color: C.text, borderRadius: 10, padding: '6px 10px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: FONT }}>
+        Gửi bạn bè
+      </button>
       {state.isMine && (
         <button onClick={() => void remove()} disabled={removing === 'busy'} style={{ border: `1px solid ${removing === 'confirm' ? C.red : C.border}`, background: 'transparent', color: removing === 'confirm' ? C.red : C.muted, borderRadius: 10, padding: '6px 10px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: FONT }}>
           {removing === 'confirm' ? 'Xác nhận gỡ' : removing === 'busy' ? 'Đang gỡ…' : 'Gỡ chia sẻ'}
@@ -53,5 +58,10 @@ export default function BmsArtifactPage({ artifactId }: { artifactId: string }) 
       {removing === 'error' && <span role="alert" style={{ width: '100%', color: C.red, fontSize: 12 }}>Chưa gỡ được. Hãy thử lại.</span>}
     </div>
   )
-  return <PracticePlayer draft={state.draft} onClose={close} banner={banner} />
+  return (
+    <>
+      <PracticePlayer draft={state.draft} onClose={close} banner={banner} />
+      {sharing && <Suspense fallback={null}><ShareToFriendSheet artifactId={artifactId.toLowerCase()} title={state.draft.title || 'Bài BMS'} onClose={() => setSharing(false)} /></Suspense>}
+    </>
+  )
 }

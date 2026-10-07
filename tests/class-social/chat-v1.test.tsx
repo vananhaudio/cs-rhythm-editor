@@ -243,7 +243,8 @@ test("Phạm vi V1a: không realtime, không đọc/ghi thẳng bảng dm_*, kh�
   assert.equal(/\.channel\(|postgres_changes|supabase_realtime|realtime/i.test(all), false, "V1a không realtime");
   assert.equal(/\.from\(\s*['"`]dm_/.test(all), false, "không truy cập thẳng bảng dm_*");
   assert.equal(/type="file"|\.upload\(|getUserMedia|MediaRecorder|FileReader|sticker/i.test(all), false, "không media");
-  assert.equal(/ref_type|ref_key|shared_object|class-ai|@Mira|sender_kind/i.test(all), false, "chưa Share/Mira");
+  // V1b mở đúng MỘT cửa: tham chiếu share (ref_type/ref_key). Vẫn không Mira / class-ai / sender_kind.
+  assert.equal(/shared_object|class-ai|@Mira|sender_kind/i.test(all), false, "chưa Mira");
   for (const rpc of ["dm_conversations", "dm_messages", "dm_send", "dm_start", "dm_mark_read", "dm_unread_count", "dm_find", "dm_can_message"]) {
     assert.match(code("src/class-social/chat/chatApi.ts"), new RegExp(`['"]${rpc}['"]`), `chatApi gọi RPC ${rpc}`);
   }

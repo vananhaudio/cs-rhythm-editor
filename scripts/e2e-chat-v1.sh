@@ -26,5 +26,7 @@ begin
 end $$;
 SQL
 cat "$ROOT/db/account_avatar_v1_setup.sql" "$ROOT/db/friends_ux_v2_setup.sql" "$ROOT/db/dm_v1_setup.sql" > "$TMPX/pre.sql"
+# CHAT_V1B=1: hồi quy V1a trên DB đã lên V1b (migration V1b nối sau V1a) + frontend V1b
+[ -n "${CHAT_V1B:-}" ] && cat "$ROOT/db/dm_share_v1_setup.sql" >> "$TMPX/pre.sql"
 E2E_CHECKPOINTS=1 E2E_SKIP_BASE=1 E2E_PRE_SQL="$TMPX/pre.sql" E2E_EXTRA_SQL="$TMPX/extra.sql" \
   E2E_EXTRA_RUNNER="$ROOT/tests/e2e-learning-thread/run-chat-v1.mjs" bash "$ROOT/scripts/e2e-learning-thread.sh"

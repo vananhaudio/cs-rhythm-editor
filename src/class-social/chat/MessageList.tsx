@@ -1,7 +1,8 @@
 // Dòng tin: tin người kia bên trái, tin mình bên phải; chen nhãn giờ khi cách >30 phút; "Xem tin cũ hơn" ở đầu.
 // Cuộn: tự xuống cuối khi mở/khi mình gửi/khi đang ở cuối; nếu đang đọc tin cũ thì hiện nút "Tin mới" thay vì giật màn.
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useLayoutEffect, useRef, useState } from 'react'
 import { ArrowDown } from 'lucide-react'
+import ShareMessageCard from './ShareMessageCard'
 import { firstSeqOf, lastSeqOf, layoutMessages, type ChatMessage, type PendingMessage } from './chatModel'
 
 const NEAR_BOTTOM = 96
@@ -47,6 +48,8 @@ export default function MessageList({ messages, pending, hasMore, loadingOlder, 
   }
   const toBottom = () => { const el = box.current; if (el) { el.scrollTop = el.scrollHeight; stick.current = true; setBelow(false) } }
 
+  // Card share tải xong → cao hơn khung chờ: đang ở cuối thì giữ ở cuối
+  const settle = useCallback(() => { const el = box.current; if (el && stick.current) el.scrollTop = el.scrollHeight }, [])
   const rows = layoutMessages(messages)
   const lastMine = messages.length > 0 && messages[messages.length - 1].mine
   return (
@@ -62,7 +65,9 @@ export default function MessageList({ messages, pending, hasMore, loadingOlder, 
           <div key={m.seq}>
             {label && <div className="cs-chat-divider">{label}</div>}
             <div className={'cs-msg-row ' + (m.mine ? 'is-mine' : 'is-theirs') + (cont ? ' is-cont' : '')}>
-              <div className="cs-msg-bubble">{m.body}</div>
+              {m.ref
+                ? <div className="cs-msg-share"><ShareMessageCard refKey={m.ref.key} onSettle={settle} /></div>
+                : <div className="cs-msg-bubble">{m.body}</div>}
             </div>
           </div>
         ))}
