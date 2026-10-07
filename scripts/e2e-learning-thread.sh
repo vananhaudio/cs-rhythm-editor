@@ -78,6 +78,11 @@ if [ -n "${E2E_CHECKPOINTS:-}" ]; then
   echo "── + Lớp của tôi V1 (checkpoint + tiến độ buổi) + Quiz Checkpoint V1"
 fi
 # Tuỳ chọn: E2E_PRE_SQL = migration tính năng mới, chạy TRƯỚC mọi kịch bản (một transaction như prod-db) → kịch bản cũ là hồi quy
+# Mặc định: nút BMS "Chia sẻ" cần DB BMS Share Lifecycle (kèm Chat V1a/V1b làm nền) → nạp sẵn khi không truyền E2E_PRE_SQL riêng
+if [ -z "${E2E_PRE_SQL:-}" ]; then
+  cat "$ROOT/db/account_avatar_v1_setup.sql" "$ROOT/db/friends_ux_v2_setup.sql" "$ROOT/db/dm_v1_setup.sql" "$ROOT/db/dm_share_v1_setup.sql" "$ROOT/db/bms_share_lifecycle_v1_setup.sql" > "$TMP/default_pre.sql"
+  E2E_PRE_SQL="$TMP/default_pre.sql"
+fi
 if [ -n "${E2E_PRE_SQL:-}" ]; then psqld -1 -f "$E2E_PRE_SQL" >/dev/null; echo "── + $(basename "$E2E_PRE_SQL")"; fi
 echo "── DB local sẵn sàng (migration P1 + P2 + Lớp học V1 + Feed V1 + Danh tính học tập V1 + 2 bài đã cấu hình)"
 
