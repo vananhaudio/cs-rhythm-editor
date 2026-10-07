@@ -23,6 +23,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 
 import numpy as np
 from PIL import Image, ImageFilter
@@ -505,8 +506,10 @@ def analyze(payload):
     opts = {**DEFAULTS, **(payload.get("options") or {})}
     counts = [int(c) for c in payload["lineTokenCounts"]]
     total = sum(counts)
+    clock = {"start": time.perf_counter()}
     with tempfile.TemporaryDirectory() as work:
         pages, warnings = load_pages(payload["sources"], work, opts)
+    clock["render"] = time.perf_counter()
     if not pages:
         return fail("no_pages", "Không có trang ảnh nào để phân tích.", warnings)
     if total == 0:
@@ -536,6 +539,8 @@ def analyze(payload):
         page_geos.append(geos_p)
     if not any(page_geos):
         return fail("no_staff", "Không tìm thấy khuông nhạc nào.", warnings)
+
+    clock["geometry"] = time.perf_counter()
 
     # ── Ghép HÌNH HỌC: mỗi cụm chữ trên sheet ↔ một token chuẩn, bằng căn chỉnh chuỗi (Needleman–Wunsch) theo
     # độ rộng mực ↔ độ dài chữ. Cho phép chữ thừa trên sheet / token không thấy trên sheet ở ĐÚNG chỗ của nó, thay vì
@@ -575,6 +580,7 @@ def analyze(payload):
     line_words = payload.get("lineWords")
     if isinstance(line_words, list) and [len(w) for w in line_words] == counts:
         docs, ocr_warning = get_ocr_docs(payload, len(pages))
+        clock["ocr"] = time.perf_counter()
         if docs:
             canon = ocr_align.Canon(line_words)
             rows_by_page = []
@@ -582,6 +588,7 @@ def analyze(payload):
                 rows_by_page.extend(ocr_align.doc_rows(doc, page_dims[len(rows_by_page):]))
             geos_by_page = [[{"y1": g["y1"], "y5": g["y5"], "gap": g["gap"], "bars": [b["x"] for b in g["bars"]]} for g in gp] for gp in page_geos]
             ocr_plan = ocr_align.plan_alignment(canon, rows_by_page, geos_by_page)
+            clock["align"] = time.perf_counter()
             if not any(sy["primary"] is not None for sy in ocr_plan.values()):
                 ocr_plan = None
                 ocr_warning = {"code": "OCR_NO_MATCH", "message": "OCR không khớp hàng lời nào với lời chuẩn — dùng căn chỉnh theo độ rộng."}
@@ -754,6 +761,13 @@ def analyze(payload):
         }
     elif ocr_warning:
         diagnostics_warn.append(ocr_warning)
+    stamps = [("start", None), ("render", "render"), ("geometry", "geometry"), ("ocr", "ocr"), ("align", "align")]
+    timings, last = {}, clock["start"]
+    for key, name in stamps[1:]:
+        if key in clock:
+            timings[name + "Ms"] = round((clock[key] - last) * 1000)
+            last = clock[key]
+    timings["totalMs"] = round((time.perf_counter() - clock["start"]) * 1000)
     result = {
         "ok": True,
         "anchors": {**({"pickup": pickup} if pickup else {}), "measures": measures},
@@ -773,6 +787,7 @@ def analyze(payload):
             "sheetTokens": sheet_total, "canonicalTokens": total,
             "pickupDetected": pickup is not None, "implicitFirstMeasure": implicit_first,
             "warnings": diagnostics_warn,
+            "timingsMs": timings,
             **({"alignment": alignment} if alignment else {}),
             "traceId": payload.get("traceId"),
         },
