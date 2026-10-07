@@ -3,7 +3,7 @@
 //   · Tất cả bạn bè (my_friends). Mỗi hành động: server xác nhận → danh sách đổi ngay → nạp lại đối chiếu DB.
 // Hai mục lời mời chỉ hiện khi có (hoặc khi tải lỗi) — không dựng khung để nói "không có gì".
 import { useEffect, useState } from 'react'
-import { Users } from 'lucide-react'
+import { MessageCircle, Users } from 'lucide-react'
 import { runFriendAction } from '../friends/friendsApi'
 import { unfriendConfirm, type PersonCard } from '../friends/friendModel'
 import type { FriendRequests } from '../friends/useFriendRequests'
@@ -13,9 +13,11 @@ import { Avatar, ConfirmDialog, EmptyState, MoreMenu, PersonLink } from '../ui'
 import FriendRequestList from './FriendRequestList'
 import { IdentityBadges } from '../identity/IdentityBadges'
 
-export default function Friends({ requests, onOpenProfile }: {
+export default function Friends({ requests, onOpenProfile, onMessage }: {
   requests: FriendRequests
   onOpenProfile: (userId: string) => void
+  /** Nhắn tin tới một người bạn (mở /me/chat/u/<id>) */
+  onMessage?: (userId: string) => void
 }) {
   const lists = useFriendLists()
   const { friends, outgoing, reloadFriends, reloadOutgoing, patchFriends, patchOutgoing } = lists
@@ -138,6 +140,10 @@ export default function Friends({ requests, onOpenProfile }: {
                     <span className="cs-person-name">{p.name}{p.isTeacher ? <span className="cs-post-role"> · Giáo viên</span> : <IdentityBadges userId={p.userId} />}</span>
                   </span>
                 </PersonLink>
+                {onMessage && (
+                  <button type="button" className="cs-btn cs-btn-soft cs-btn-sm cs-person-msg" aria-label={`Nhắn tin cho ${p.name}`}
+                    onClick={() => onMessage(p.userId)}><MessageCircle size={16} aria-hidden="true" />Nhắn tin</button>
+                )}
                 <MoreMenu className="cs-person-more" label={`Tuỳ chọn với ${p.name}`}
                   items={[{ label: 'Huỷ kết bạn', danger: true, onSelect: () => { if (!anyBusy) setConfirming(p) } }]} />
               </li>

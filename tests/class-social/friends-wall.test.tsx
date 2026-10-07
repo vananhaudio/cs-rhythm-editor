@@ -178,7 +178,7 @@ test("Badge chỉ đếm lời mời ĐẾN (incoming_friend_requests), một ng
   assert.match(hook, /count: items\.length/);
   const page = code("src/class-social/ClassSocialPage.tsx");
   assert.match(page, /const requests = useFriendRequests\(\)/);
-  assert.match(page, /badges=\{\{ friends: requests\.count \}\}/);
+  assert.match(page, /badges=\{\{ friends: requests\.count, chat: chatUnread\.count \}\}/);   // Chat V1a: thêm badge chưa đọc, badge Bạn bè vẫn chỉ là lời mời ĐẾN
   assert.match(page, /<Friends requests=\{requests\}/);
   assert.match(page, /requests=\{requests\}/);
   // DB: incoming_friend_requests chỉ lấy pending gửi ĐẾN mình

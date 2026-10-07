@@ -151,13 +151,13 @@ test('edge: crawler + slug sai / đã gỡ → thẻ TeamLab mặc định; RPC 
   assert.equal(p.res.headers.get('x-og-fn'), 'skip'); assert.deepEqual(p.calls, [])
 })
 
-test('cấu hình: og-teamlab CHỈ /teamlab/song/*; og.ts vẫn loại trừ /teamlab/* và không nhắc /teamlab/song; không có edge function thứ ba', () => {
+test('cấu hình: og-teamlab CHỈ /teamlab/song/* + /teamlab/band/*; og.ts vẫn loại trừ /teamlab/* và không nhắc /teamlab/song; không có edge function thứ ba', () => {
   const t = read('netlify/edge-functions/og-teamlab.ts')
-  assert.match(t, /path: '\/teamlab\/song\/\*'/); assert.doesNotMatch(t, /excludedPath/)
-  assert.deepEqual([...t.matchAll(/path: ('[^']+'|\[[^\]]*\])/g)].map(m => m[1]), ["'/teamlab/song/*'"])
+  assert.doesNotMatch(t, /excludedPath/)
+  assert.deepEqual([...t.matchAll(/path: ('[^']+'|\[[^\]]*\])/g)].map(m => m[1]), ["['/teamlab/song/*', '/teamlab/band/*']"])   // đúng HAI đường dẫn, không rộng hơn
   const og = read('netlify/edge-functions/og.ts')
   const excluded = [...og.slice(og.indexOf('excludedPath')).matchAll(/'(\/[^']*)'/g)].map(m => m[1])
-  assert.ok(excluded.includes('/teamlab') && excluded.includes('/teamlab/*')); assert.ok(!excluded.some(e => e.startsWith('/teamlab/song')))
+  assert.ok(excluded.includes('/teamlab') && excluded.includes('/teamlab/*')); assert.ok(!excluded.some(e => e.startsWith('/teamlab/song') || e.startsWith('/teamlab/band')))
   assert.match(og, /path: '\/\*'/)
   assert.deepEqual(readdirSync(new URL('../../netlify/edge-functions/', import.meta.url)).sort(), ['og-teamlab.ts', 'og.ts'])
   // Cổng crawler đứng TRƯỚC mọi xử lý: người thường đi thẳng context.next()

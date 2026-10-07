@@ -1,0 +1,51 @@
+// TeamLab Public Band — /teamlab/band/<public_slug> (+ /room… workspace của Team đó → cùng metadata công khai). Nguồn: RPC công khai teamlab_public_band (chỉ Team đang lên Home và công khai;
+// slug sai / không đủ điều kiện → NULL → thẻ mặc định, KHÔNG có chữ nào của Band). Ảnh: cover Team → ảnh đại diện Team → ảnh mặc định TeamLab.
+// Chỉ chạy cho crawler: edge function og-teamlab.ts cổng bằng crawler.ts. Không liên quan route Class /band/* (adapter `band`, dữ liệu Class).
+import { defineAdapter, SLUG_RE, UUID_RE } from '../adapter.ts'
+import { publicMeta, str } from '../contract.ts'
+import { canonicalUrl } from '../render.ts'
+
+const TEAM_IMAGE_BASE = 'https://wojmdilyflffvdtpovmq.supabase.co/storage/v1/object/public/teamlab-team-avatars'
+// Cùng dạng khoá với TeamLab (src/lib/teamProfile.ts): <project uuid>/cover-….jpg và <project uuid>/<tên>.jpg
+const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+const COVER_PATH = new RegExp(`^${UUID}/cover-[A-Za-z0-9._-]{1,74}\\.jpg$`)
+const AVATAR_PATH = new RegExp(`^${UUID}/[A-Za-z0-9._-]{1,80}\\.jpg$`)
+
+const teamImage = (path: unknown, re: RegExp): string | null =>
+  typeof path === 'string' && re.test(path) ? `${TEAM_IMAGE_BASE}/${path}` : null
+
+/** Ảnh xem trước của Team: cover → ảnh đại diện → ảnh mặc định TeamLab (dùng chung với adapter Studio). */
+export const teamPreviewImage = (coverPath: unknown, avatarPath: unknown, origin: string): string =>
+  teamImage(coverPath, COVER_PATH) ?? teamImage(avatarPath, AVATAR_PATH) ?? `${origin}/teamlab/og-image.png`
+
+export const teamlabBandAdapter = defineAdapter<string>({
+  type: 'teamlab-band',
+  match(path) {
+    if (!path.startsWith('/teamlab/band/')) return null
+    const [slug, ...rest] = path.slice('/teamlab/band/'.length).split('/')
+    if (!SLUG_RE.test(slug) || slug.length > 60) return null
+    // Trang công khai /teamlab/band/<slug> VÀ các đường dẫn workspace của chính Team đó (app TeamLab, cần đăng nhập):
+    //   /room · /room/group/<bandId|none> · /room/studio/<teamId>  → cùng metadata CÔNG KHAI của Team, og:url về trang Band.
+    // Chỉ lấy <slug>: id Band con / id bài chỉ được kiểm đúng dạng, KHÔNG đọc, KHÔNG đưa vào tiêu đề/mô tả/ảnh/RPC.
+    if (rest.length === 0) return slug
+    if (rest[0] !== 'room') return null
+    if (rest.length === 1) return slug
+    if (rest.length === 3 && rest[1] === 'group' && (rest[2] === 'none' || UUID_RE.test(rest[2]))) return slug
+    if (rest.length === 3 && rest[1] === 'studio' && UUID_RE.test(rest[2])) return slug
+    return null
+  },
+  async load(slug, ctx) {
+    const d = await ctx.rpc('teamlab_public_band', { p_slug: slug }) as {
+      slug?: unknown; name?: unknown; description?: unknown; cover_path?: unknown; avatar_path?: unknown
+    } | null
+    const name = str(d?.name)
+    if (!d || !name || d.slug !== slug) return null
+    const slogan = str(d.description)
+    return publicMeta({
+      title: `${name} · TeamLab`,
+      description: slogan || `Các bài đã xuất bản của ${name} trên TeamLab.`,
+      image: teamImage(d.cover_path, COVER_PATH) ?? teamImage(d.avatar_path, AVATAR_PATH) ?? `${ctx.origin}/teamlab/og-image.png`,
+      canonicalUrl: canonicalUrl(ctx.origin, `/teamlab/band/${slug}`),
+    })
+  },
+})
