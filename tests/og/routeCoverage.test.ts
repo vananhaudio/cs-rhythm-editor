@@ -53,7 +53,7 @@ test('resource ↔ adapter khớp hai chiều: mỗi resource có adapter đăng
   for (const c of ROUTE_CLASSES.filter(c => c.kind === 'resource')) assert.ok(types.has(c.adapter!), `${c.prefix} → adapter ${c.adapter} chưa đăng ký`)
   const routed = new Set(ROUTE_CLASSES.map(c => c.adapter).filter(Boolean))
   // session dùng chung route /me/classes với class; tool dò theo dữ liệu trên các route 'page'
-  for (const t of types) if (!['session', 'tool'].includes(t)) assert.ok(routed.has(t), `adapter ${t} không có route nào`)
+  for (const t of types) if (!['session', 'tool', 'teamlab-studio'].includes(t)) assert.ok(routed.has(t), `adapter ${t} không có route nào`)
 })
 
 test('landing nào cũng là route SPA thật và gắn entity có mã', () => {

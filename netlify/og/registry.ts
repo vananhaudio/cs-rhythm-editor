@@ -11,12 +11,13 @@ import { showcaseAdapter } from './adapters/showcase.ts'
 import { storyAdapter } from './adapters/story.ts'
 import { teamlabBandAdapter } from './adapters/teamlabBand.ts'
 import { teamlabSongAdapter } from './adapters/teamlabSong.ts'
+import { teamlabStudioAdapter } from './adapters/teamlabStudio.ts'
 import { toolAdapter } from './adapters/tool.ts'
 import { canonicalUrl } from './render.ts'
 
 /** Thứ tự = ưu tiên. tool (dò theo dữ liệu, nhận mọi path một đoạn) luôn cuối. */
 export const ADAPTERS: readonly Adapter[] = [
-  storyAdapter, showcaseAdapter, bandAdapter, sessionAdapter, classAdapter, profileAdapter, landingAdapter, teamlabSongAdapter, teamlabBandAdapter, toolAdapter,
+  storyAdapter, showcaseAdapter, bandAdapter, sessionAdapter, classAdapter, profileAdapter, landingAdapter, teamlabSongAdapter, teamlabStudioAdapter, teamlabBandAdapter, toolAdapter,
 ]
 
 export type Resolution = {

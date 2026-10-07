@@ -14,6 +14,10 @@ const AVATAR_PATH = new RegExp(`^${UUID}/[A-Za-z0-9._-]{1,80}\\.jpg$`)
 const teamImage = (path: unknown, re: RegExp): string | null =>
   typeof path === 'string' && re.test(path) ? `${TEAM_IMAGE_BASE}/${path}` : null
 
+/** Ảnh xem trước của Team: cover → ảnh đại diện → ảnh mặc định TeamLab (dùng chung với adapter Studio). */
+export const teamPreviewImage = (coverPath: unknown, avatarPath: unknown, origin: string): string =>
+  teamImage(coverPath, COVER_PATH) ?? teamImage(avatarPath, AVATAR_PATH) ?? `${origin}/teamlab/og-image.png`
+
 export const teamlabBandAdapter = defineAdapter<string>({
   type: 'teamlab-band',
   match(path) {
