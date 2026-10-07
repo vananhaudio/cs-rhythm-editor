@@ -4,6 +4,7 @@
 // (giáo án vẫn do RLS class_lesson_content chặn ở server, URL không vượt quyền).
 // NHỊP HỌC: một buổi có N nhịp HỌC → THỰC HÀNH → TRẢ BÀI. Nhịp KHÔNG phải model riêng: nó hình thành bởi VỊ TRÍ khối
 // checkpoint mà Owner đặt trong LessonSection[] (xem docs/GIAO-TRINH-CHUAN.md). Trang này chỉ render đúng thứ tự đó.
+import ShareButton from '../../share/ShareButton'
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { ArrowLeft, ArrowRight } from 'lucide-react'
 import '../../learning-thread/styles'
@@ -47,6 +48,7 @@ export default function ClassSessionPage({ classId, sessionNo, isTeacher = false
     <header className="cs-card cs-learn-head">
       <span className="cs-learn-kicker">Buổi {pad2(sessionNo)}</span>
       {title && <h1 className="cs-class-name">{title}</h1>}
+      {learn && s && <ShareButton target={{ type: 'class_session', key: s.sessionId.toLowerCase() }} title={`Buổi ${pad2(sessionNo)}${s.title ? ' · ' + s.title : ''}`} />}
     </header>
   )
 
