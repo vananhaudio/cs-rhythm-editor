@@ -239,10 +239,13 @@ export function createWorker(config: WorkerConfig): Server {
         return res.end()
       }
       if (req.method === 'GET' && path === '/health') return send(200, { ok: true, version: VERSION, ...(await health()), ...(extractor ? { extract: await extractor.health() } : {}) })
-      if (req.method === 'POST' && path === '/extract-content') {
+      if (req.method === 'POST' && (path === '/extract-content' || path === '/extract-staged' || path === '/extract-staged/status' || path === '/extract-probe')) {
         if (origin && !allowed) throw new HttpError(403, 'origin', 'Nguồn gọi không được phép.')
         if (!extractor) throw new HttpError(503, 'not_configured', 'Tính năng đọc nội dung PDF chưa được bật.')
-        const result = await extractor.handle(req, log, controller.signal)
+        const result = path === '/extract-content' ? await extractor.handle(req, log, controller.signal)
+          : path === '/extract-staged' ? await extractor.handleStaged(req, log, controller.signal)
+          : path === '/extract-staged/status' ? await extractor.handleStagedStatus(req, log, controller.signal)
+          : await extractor.handleProbe(req)
         log.status = result.status
         return send(result.status, { ...result.body, requestId })
       }
@@ -261,7 +264,8 @@ export function createWorker(config: WorkerConfig): Server {
     } finally {
       clearTimeout(deadline)
       log.durationMs = now() - started
-      if (path !== '/health') void writeLog(log)
+      // không ghi log cho /health, probe (UI gọi mỗi lần mở trang) và các lần hỏi trạng thái thành công (poll mỗi ~1,5 giây)
+      if (path !== '/health' && path !== '/extract-probe' && !(path === '/extract-staged/status' && log.status === 200)) void writeLog(log)
     }
   })
 }

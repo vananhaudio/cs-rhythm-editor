@@ -1,4 +1,4 @@
-// /extract-content — Slice 2A. PDF/ảnh đã nạp → engine chord_extract (Python) → chord-extraction/1 → lưu (RPC) → đọc lại (RPC).
+// /extract-content, /extract-staged, /extract-probe — Slice 2A + UI V1. PDF/ảnh đã nạp → engine chord_extract (Python) → chord-extraction/1 → lưu (RPC) → đọc lại (RPC).
 //
 // Dùng LẠI cơ chế của worker phân tích vạch nhịp, không tạo cơ chế xác thực thứ hai:
 //   JWT người gọi → /auth/v1/user → RPC my_chordlib_caps (bắt buộc review) → RPC chord_extraction_begin (DB quyết quyền, tìm phiên bản,
@@ -9,7 +9,7 @@
 // (không qua worker). Worker chết giữa chừng → lease ở DB hết hạn → đọc ra failed/abandoned.
 // Không ghi log: JWT, khoá API, lời bài hát, byte file, đường dẫn nguồn.
 import { execFile, spawn } from 'node:child_process'
-import { createHash, randomUUID } from 'node:crypto'
+import { createHash, randomBytes, randomUUID } from 'node:crypto'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import type { IncomingMessage } from 'node:http'
 import { tmpdir } from 'node:os'
@@ -37,6 +37,8 @@ export const EXTRACT_LIMITS = {
   maxConcurrent: 1, maxQueue: 2,               // engine OCR nặng: một việc một lúc, hàng chờ ngắn; đầy → 429 TRƯỚC khi tạo bản ghi
   jobTimeoutMs: 120_000, jobTimeoutVisionMs: 240_000,   // < lease 5 phút của DB
   maxStdoutBytes: 16 * 1024 * 1024, maxRssBytes: 1024 * 1024 * 1024, maxPages: 20,
+  // Việc phân tích TẠM (trước khi có phiên bản): kết quả chỉ nằm trong RAM của worker
+  stagedTtlMs: 15 * 60_000, maxStagedRunningPerUser: 2, maxStagedPerUser: 12, maxStagedTotal: 40, maxStagedResultBytes: 4 * 1024 * 1024,
 }
 
 export type ExtractWorkerConfig = {
@@ -55,6 +57,9 @@ export type ExtractWorkerConfig = {
 
 type Deps = { config: ExtractWorkerConfig; supabaseUrl: string; anonKey: string; now: () => number; writeLog: (entry: Record<string, unknown>) => Promise<void> | void }
 type Source = { path: string; mime: string; sha256: string; size_bytes?: number }
+type EngineDoc = { schema?: unknown; extractionId?: unknown; input?: { sha256?: unknown; pageCount?: unknown }; pages?: unknown; interpretation?: unknown
+  pipeline?: { engineVersion?: unknown; vision?: { status?: unknown }; stages?: unknown; fallbackReasons?: unknown; metrics?: unknown } }
+type StagedJob = { id: string; uid: string; state: 'running' | 'succeeded' | 'failed'; expiresAt: number; errorCode?: FailCode; document?: EngineDoc; sha256?: string; bytes?: number }
 
 export function createExtractor(deps: Deps) {
   const { config } = deps
@@ -110,6 +115,29 @@ export function createExtractor(deps: Deps) {
     return new HttpError(502, 'upstream', 'Không ghi được lần phân tích.')
   }
 
+  /** Chuỗi xác thực CHUNG cho mọi route: JWT → /auth/v1/user → rate-limit theo uid → my_chordlib_caps (review). Trả uid. */
+  async function authenticate(token: string, log: Record<string, unknown>, signal: AbortSignal): Promise<string> {
+    const uid = await userOf(token, signal)
+    log.uidHash = createHash('sha256').update(uid).digest('hex').slice(0, 12)
+    rateLimit(uid)
+    const caps = await upstream('/rest/v1/rpc/my_chordlib_caps', token, signal, {})
+    if (caps.status === 401) throw new HttpError(401, 'unauthorized', 'Phiên đăng nhập không hợp lệ.')
+    if (!caps.ok) throw new HttpError(502, 'upstream', 'Không đọc được quyền.')
+    if ((((await caps.json().catch(() => ({}))) as { caps?: { review?: unknown } }).caps?.review) !== true) {
+      throw new HttpError(403, 'forbidden', 'Chỉ người duyệt Hợp âm chuẩn hóa mới phân tích được.')
+    }
+    return uid
+  }
+  /** uid từ chính Supabase Auth (không tin gì browser khai). */
+  async function userOf(token: string, signal: AbortSignal): Promise<string> {
+    const user = await upstream('/auth/v1/user', token, signal)
+    if (user.status === 401 || user.status === 403) throw new HttpError(401, 'unauthorized', 'Phiên đăng nhập không hợp lệ hoặc đã hết hạn.')
+    if (!user.ok) throw new HttpError(502, 'upstream', 'Không xác thực được phiên đăng nhập.')
+    const uid = String(((await user.json().catch(() => ({}))) as { id?: unknown }).id ?? '')
+    if (!UUID.test(uid)) throw new HttpError(401, 'unauthorized', 'Phiên đăng nhập không hợp lệ.')
+    return uid
+  }
+
   async function handle(req: IncomingMessage, log: Record<string, unknown>, signal: AbortSignal): Promise<{ status: number; body: Record<string, unknown> }> {
     const token = /^Bearer ([A-Za-z0-9._-]{20,4096})$/.exec(req.headers.authorization ?? '')?.[1]
     if (!token) throw new HttpError(401, 'unauthorized', 'Cần đăng nhập.')
@@ -127,20 +155,7 @@ export function createExtractor(deps: Deps) {
     }
     log.versionId = versionId; log.sourceIndex = sourceIndex
 
-    const user = await upstream('/auth/v1/user', token, signal)
-    if (user.status === 401 || user.status === 403) throw new HttpError(401, 'unauthorized', 'Phiên đăng nhập không hợp lệ hoặc đã hết hạn.')
-    if (!user.ok) throw new HttpError(502, 'upstream', 'Không xác thực được phiên đăng nhập.')
-    const uid = String(((await user.json().catch(() => ({}))) as { id?: unknown }).id ?? '')
-    if (!UUID.test(uid)) throw new HttpError(401, 'unauthorized', 'Phiên đăng nhập không hợp lệ.')
-    log.uidHash = createHash('sha256').update(uid).digest('hex').slice(0, 12)
-    rateLimit(uid)
-
-    const caps = await upstream('/rest/v1/rpc/my_chordlib_caps', token, signal, {})
-    if (caps.status === 401) throw new HttpError(401, 'unauthorized', 'Phiên đăng nhập không hợp lệ.')
-    if (!caps.ok) throw new HttpError(502, 'upstream', 'Không đọc được quyền.')
-    if ((((await caps.json().catch(() => ({}))) as { caps?: { review?: unknown } }).caps?.review) !== true) {
-      throw new HttpError(403, 'forbidden', 'Chỉ người duyệt Hợp âm chuẩn hóa mới phân tích được.')
-    }
+    await authenticate(token, log, signal)
 
     // Chỗ chạy: đầy → từ chối TRƯỚC khi tạo bản ghi (không để lại hàng 'running' không ai chạy).
     if (inFlight >= limits.maxConcurrent + limits.maxQueue) throw new HttpError(429, 'busy', 'Máy phân tích đang bận — thử lại sau ít phút.')
@@ -168,6 +183,65 @@ export function createExtractor(deps: Deps) {
     }
   }
 
+  /**
+   * PHẦN DÙNG CHUNG của /extract-content và /extract-staged: tải file private bằng CHÍNH token (policy Storage là ranh giới bảo mật)
+   * → kiểm loại thật (magic bytes) + sha256 (so với sha đã khai nếu có) → engine chord_extract → kiểm kết quả đúng khuôn + đúng file.
+   * Gọi SAU khi đã giữ chỗ chạy. Tự dọn thư mục tạm. Ném JobFailure có mã đóng; không bao giờ nuốt lỗi.
+   */
+  async function processSource(p: { token: string; path: string; mime: string; expectSha?: string; version: string; forceVision: boolean; signal: AbortSignal; log: Record<string, unknown> }): Promise<{ doc: EngineDoc & { pages: unknown[] }; sha: string; bytes: number }> {
+    let dir: string | null = null
+    try {
+      // 2) tải file private bằng CHÍNH token (policy Storage quyết quyền đọc)
+      const key = p.path.split('/').map(encodeURIComponent).join('/')
+      let reply: Response
+      try { reply = await upstream(`/storage/v1/object/authenticated/${BUCKET}/${key}`, p.token, p.signal) } catch (error) {
+        throw new JobFailure(error instanceof HttpError && error.code === 'timeout' ? 'timeout' : 'upstream')
+      }
+      if (reply.status === 404 || reply.status === 400) throw new JobFailure('source_missing')
+      if (reply.status === 401 || reply.status === 403) throw new JobFailure('forbidden_source')
+      if (!reply.ok || !reply.body) throw new JobFailure('upstream')
+      let bytes: Buffer
+      try { bytes = await readCapped(reply, limits.maxFileBytes, p.signal) } catch (error) {
+        throw new JobFailure(error instanceof HttpError && error.code === 'too_large' ? 'too_large' : error instanceof HttpError && error.code === 'timeout' ? 'timeout' : 'upstream')
+      }
+      // 3) toàn vẹn: loại thật của file + sha256 tính trên byte ĐÃ TẢI phải bằng sha256 đã khai ở phiên bản
+      if (!MAGIC[p.mime](bytes)) throw new JobFailure('unsupported_mime')
+      const sha = createHash('sha256').update(bytes).digest('hex')
+      if (p.expectSha !== undefined && sha !== p.expectSha) throw new JobFailure('sha_mismatch')
+
+      // 4) engine
+      dir = await mkdtemp(join(config.tempRoot ?? tmpdir(), 'chord-extract-'))
+      const file = join(dir, `source.${MIME_EXT[p.mime]}`)
+      await writeFile(file, bytes)
+      const args = ['-m', 'chord_extract', file, '--json-errors', '--max-pages', String(limits.maxPages)]
+      if (config.vision) {
+        args.push('--vision', 'anthropic-api', '--vision-model', config.vision.model)
+        if (config.vision.baseUrl) args.push('--vision-base-url', config.vision.baseUrl)
+      }
+      if (p.forceVision) args.push('--force-vision')
+      const raw = await runEngine(config, limits, args, p.signal, childEnv(dir))
+      if (raw && typeof raw === 'object' && (raw as { ok?: unknown }).ok === false) {
+        const code = String(((raw as { error?: { code?: unknown } }).error?.code) ?? 'engine_failed')
+        throw new JobFailure((['bad_file', 'too_large', 'ocr_unavailable', 'engine_failed'] as string[]).includes(code) ? code as FailCode : 'engine_failed')
+      }
+
+      // 5) kết quả phải đúng khuôn tối thiểu và đúng file; gắn danh tính DB vào tài liệu
+      const doc = raw as EngineDoc
+      if (!doc || doc.schema !== 'chord-extraction/1' || !Array.isArray(doc.pages) || !doc.pages.length || !doc.interpretation || !doc.pipeline
+          || doc.input?.sha256 !== sha || doc.pipeline.engineVersion !== p.version) throw new JobFailure('invalid_result')
+      p.log.pageCount = doc.pages.length
+      p.log.methods = [...new Set((doc.pages as { method?: string }[]).map(p => p.method))]
+      p.log.fallbackReasons = Array.isArray(doc.pipeline.fallbackReasons) ? (doc.pipeline.fallbackReasons as { code?: string }[]).map(r => r.code) : []
+      p.log.visionStatus = doc.pipeline.vision?.status
+      const visionStage = Array.isArray(doc.pipeline.stages) ? (doc.pipeline.stages as { stage?: string; engine?: string; model?: string }[]).find(s => s.stage === 'vision') : undefined
+      if (visionStage) { p.log.provider = visionStage.engine; p.log.model = visionStage.model }
+
+      return { doc: doc as EngineDoc & { pages: unknown[] }, sha, bytes: bytes.length }
+    } finally {
+      if (dir) await rm(dir, { recursive: true, force: true }).catch(() => {})
+    }
+  }
+
   async function rpc(token: string, fn: string, args: Record<string, unknown>, signal: AbortSignal) {
     const reply = await upstream(`/rest/v1/rpc/${fn}`, token, signal, args)
     if (!reply.ok) { await reply.text().catch(() => ''); throw new JobFailure('upstream') }
@@ -179,7 +253,6 @@ export function createExtractor(deps: Deps) {
     const log: Record<string, unknown> = { event: 'extract_job', extractionId: job.extractionId, versionId: job.versionId, sourceIndex: job.sourceIndex }
     const controller = new AbortController()
     const deadline = setTimeout(() => controller.abort(), config.vision ? limits.jobTimeoutVisionMs : limits.jobTimeoutMs)
-    let dir: string | null = null
     let slot = false
     const closeSignal = new AbortController().signal
     try {
@@ -190,55 +263,12 @@ export function createExtractor(deps: Deps) {
       await acquire(); slot = true
       if (controller.signal.aborted) throw new JobFailure('timeout')
 
-      // 2) tải file private bằng CHÍNH token (policy Storage quyết quyền đọc)
-      const key = source.path.split('/').map(encodeURIComponent).join('/')
-      let reply: Response
-      try { reply = await upstream(`/storage/v1/object/authenticated/${BUCKET}/${key}`, job.token, controller.signal) } catch (error) {
-        throw new JobFailure(error instanceof HttpError && error.code === 'timeout' ? 'timeout' : 'upstream')
-      }
-      if (reply.status === 404 || reply.status === 400) throw new JobFailure('source_missing')
-      if (reply.status === 401 || reply.status === 403) throw new JobFailure('forbidden_source')
-      if (!reply.ok || !reply.body) throw new JobFailure('upstream')
-      let bytes: Buffer
-      try { bytes = await readCapped(reply, limits.maxFileBytes, controller.signal) } catch (error) {
-        throw new JobFailure(error instanceof HttpError && error.code === 'too_large' ? 'too_large' : error instanceof HttpError && error.code === 'timeout' ? 'timeout' : 'upstream')
-      }
-      // 3) toàn vẹn: loại thật của file + sha256 tính trên byte ĐÃ TẢI phải bằng sha256 đã khai ở phiên bản
-      if (!MAGIC[source.mime](bytes)) throw new JobFailure('unsupported_mime')
-      const sha = createHash('sha256').update(bytes).digest('hex')
-      if (sha !== source.sha256) throw new JobFailure('sha_mismatch')
-
-      // 4) engine
-      dir = await mkdtemp(join(config.tempRoot ?? tmpdir(), 'chord-extract-'))
-      const file = join(dir, `source.${MIME_EXT[source.mime]}`)
-      await writeFile(file, bytes)
-      const args = ['-m', 'chord_extract', file, '--json-errors', '--max-pages', String(limits.maxPages)]
-      if (config.vision) {
-        args.push('--vision', 'anthropic-api', '--vision-model', config.vision.model)
-        if (config.vision.baseUrl) args.push('--vision-base-url', config.vision.baseUrl)
-      }
-      if (job.forceVision) args.push('--force-vision')
-      const raw = await runEngine(config, limits, args, controller.signal, childEnv(dir))
-      if (raw && typeof raw === 'object' && (raw as { ok?: unknown }).ok === false) {
-        const code = String(((raw as { error?: { code?: unknown } }).error?.code) ?? 'engine_failed')
-        throw new JobFailure((['bad_file', 'too_large', 'ocr_unavailable', 'engine_failed'] as string[]).includes(code) ? code as FailCode : 'engine_failed')
-      }
-
-      // 5) kết quả phải đúng khuôn tối thiểu và đúng file; gắn danh tính DB vào tài liệu
-      const doc = raw as { schema?: unknown; extractionId?: unknown; input?: { sha256?: unknown; pageCount?: unknown }; pages?: unknown; interpretation?: unknown; pipeline?: { engineVersion?: unknown; vision?: { status?: unknown }; stages?: unknown; fallbackReasons?: unknown; metrics?: unknown } }
-      if (!doc || doc.schema !== 'chord-extraction/1' || !Array.isArray(doc.pages) || !doc.pages.length || !doc.interpretation || !doc.pipeline
-          || doc.input?.sha256 !== source.sha256 || doc.pipeline.engineVersion !== job.version) throw new JobFailure('invalid_result')
+      const { doc, sha, bytes } = await processSource({ token: job.token, path: source.path, mime: source.mime, expectSha: source.sha256, version: job.version, forceVision: job.forceVision, signal: controller.signal, log })
       doc.extractionId = job.extractionId
-      log.pageCount = doc.pages.length
-      log.methods = [...new Set((doc.pages as { method?: string }[]).map(p => p.method))]
-      log.fallbackReasons = Array.isArray(doc.pipeline.fallbackReasons) ? (doc.pipeline.fallbackReasons as { code?: string }[]).map(r => r.code) : []
-      log.visionStatus = doc.pipeline.vision?.status
-      const visionStage = Array.isArray(doc.pipeline.stages) ? (doc.pipeline.stages as { stage?: string; engine?: string; model?: string }[]).find(s => s.stage === 'vision') : undefined
-      if (visionStage) { log.provider = visionStage.engine; log.model = visionStage.model }
 
       // 6) ghi kết quả (RPC kiểm lại sha256, khuôn, kích thước)
       await rpc(job.token, 'chord_extraction_complete', {
-        p_id: job.extractionId, p_input_sha256: sha, p_input_bytes: bytes.length, p_page_count: doc.pages.length,
+        p_id: job.extractionId, p_input_sha256: sha, p_input_bytes: bytes, p_page_count: (doc.pages as unknown[]).length,
         p_observation: doc.pages, p_interpretation: doc.interpretation, p_pipeline: doc.pipeline, p_duration_ms: deps.now() - started,
       }, closeSignal)
       log.status = 'succeeded'
@@ -251,10 +281,115 @@ export function createExtractor(deps: Deps) {
       clearTimeout(deadline)
       if (slot) release()
       inFlight -= 1
-      if (dir) await rm(dir, { recursive: true, force: true }).catch(() => {})
       log.durationMs = deps.now() - started
       void deps.writeLog({ requestId: randomUUID(), ...log })
     }
+  }
+
+  // ───────────────────────── Phân tích TẠM (trước khi có bài/phiên bản) ─────────────────────────
+  // File đang nằm ở {uid}/{draftId}/{n}.{ext} trong bucket (UI tải lên TRƯỚC khi Lưu — đúng kiến trúc Thư viện hiện có).
+  // Browser chỉ gửi {draftId, sourceIndex, mime}; worker TỰ dựng đường dẫn từ uid của JWT, tải bằng chính JWT (policy Storage quyết),
+  // chạy cùng pipeline, giữ kết quả TRONG RAM (không DB, không chord_sheet/version, không hàng extraction).
+  // Mọi lời gọi từ UI dùng POST (service worker của trang chặn GET cross-origin tới loopback).
+  const staged = new Map<string, StagedJob>()
+  const purgeStaged = () => { const t = deps.now(); for (const [id, job] of staged) if (job.expiresAt <= t && job.state !== 'running') staged.delete(id) }
+  setInterval(purgeStaged, 60_000).unref()
+
+  async function readJsonBody(req: IncomingMessage): Promise<Record<string, unknown> | null> {
+    let parsed: unknown
+    try { parsed = JSON.parse(await readBody(req, limits.maxBodyBytes)) } catch (error) {
+      throw error instanceof HttpError ? error : new HttpError(400, 'bad_request', 'Yêu cầu không hợp lệ.')
+    }
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed as Record<string, unknown> : null
+  }
+  const bearer = (req: IncomingMessage) => {
+    const token = /^Bearer ([A-Za-z0-9._-]{20,4096})$/.exec(req.headers.authorization ?? '')?.[1]
+    if (!token) throw new HttpError(401, 'unauthorized', 'Cần đăng nhập.')
+    return token
+  }
+
+  async function handleStaged(req: IncomingMessage, log: Record<string, unknown>, signal: AbortSignal): Promise<{ status: number; body: Record<string, unknown> }> {
+    const token = bearer(req)
+    const body = await readJsonBody(req)
+    const { draftId, sourceIndex, mime } = (body ?? {}) as Record<string, unknown>
+    // chỉ ba khoá này, đủ cả ba — không URL, không đường dẫn, không byte file, không uid
+    if (!body || Object.keys(body).length !== 3 || typeof draftId !== 'string' || !UUID.test(draftId) || !Number.isInteger(sourceIndex)
+        || (sourceIndex as number) < 0 || (sourceIndex as number) > 9 || typeof mime !== 'string' || !Object.hasOwn(MIME_EXT, mime)) {
+      throw new HttpError(400, 'bad_request', 'Chỉ nhận { draftId, sourceIndex, mime }.')
+    }
+    log.sourceIndex = sourceIndex; log.mime = mime
+    const uid = await authenticate(token, log, signal)
+
+    purgeStaged()
+    // Trần: số việc ĐANG CHẠY mỗi người (chặn spam); số kết quả GIỮ LẠI mỗi người/tổng — đầy thì bỏ kết quả cũ nhất đã xong (không chặn người dùng).
+    if ([...staged.values()].filter(j => j.uid === uid && j.state === 'running').length >= limits.maxStagedRunningPerUser) {
+      throw new HttpError(429, 'too_many_jobs', 'Đang có phân tích chưa xong — đợi nó xong rồi phân tích tiếp.')
+    }
+    const evictOldest = (belongs: (j: StagedJob) => boolean) => {
+      const oldest = [...staged.values()].filter(j => j.state !== 'running' && belongs(j)).sort((a, b) => a.expiresAt - b.expiresAt)[0]
+      if (!oldest) return false
+      staged.delete(oldest.id); return true
+    }
+    while ([...staged.values()].filter(j => j.uid === uid).length >= limits.maxStagedPerUser) if (!evictOldest(j => j.uid === uid)) throw new HttpError(429, 'too_many_jobs', 'Đang có quá nhiều phân tích tạm.')
+    while (staged.size >= limits.maxStagedTotal) if (!evictOldest(() => true)) throw new HttpError(429, 'busy', 'Máy phân tích đang bận — thử lại sau ít phút.')
+    if (inFlight >= limits.maxConcurrent + limits.maxQueue) throw new HttpError(429, 'busy', 'Máy phân tích đang bận — thử lại sau ít phút.')
+    const version = await engineVersion()
+    const job: StagedJob = { id: randomBytes(16).toString('hex'), uid, state: 'running', expiresAt: deps.now() + limits.stagedTtlMs }
+    staged.set(job.id, job)
+    inFlight += 1
+    log.jobId = job.id.slice(0, 8)
+    void runStaged(job, token, `${uid}/${draftId}/${sourceIndex}.${MIME_EXT[mime]}`, mime, version)
+    return { status: 202, body: { ok: true, jobId: job.id, status: 'running' } }
+  }
+
+  async function runStaged(job: StagedJob, token: string, path: string, mime: string, version: string) {
+    const started = deps.now()
+    const log: Record<string, unknown> = { event: 'extract_staged', jobId: job.id.slice(0, 8), mime }
+    const controller = new AbortController()
+    const deadline = setTimeout(() => controller.abort(), limits.jobTimeoutMs)
+    let slot = false
+    try {
+      await acquire(); slot = true
+      if (controller.signal.aborted) throw new JobFailure('timeout')
+      const { doc, sha, bytes } = await processSource({ token, path, mime, version, forceVision: false, signal: controller.signal, log })
+      if (JSON.stringify(doc).length > limits.maxStagedResultBytes) throw new JobFailure('too_large')
+      job.document = doc; job.sha256 = sha; job.bytes = bytes; job.state = 'succeeded'
+      log.status = 'succeeded'; log.sha8 = sha.slice(0, 8)
+    } catch (error) {
+      job.state = 'failed'; job.errorCode = error instanceof JobFailure ? error.code : controller.signal.aborted ? 'timeout' : 'internal'
+      log.status = 'failed'; log.errorCode = job.errorCode
+    } finally {
+      clearTimeout(deadline)
+      job.expiresAt = deps.now() + limits.stagedTtlMs   // TTL tính từ lúc XONG
+      if (slot) release()
+      inFlight -= 1
+      log.durationMs = deps.now() - started
+      void deps.writeLog({ requestId: randomUUID(), ...log })
+    }
+  }
+
+  /** POST {jobId}: chỉ chính uid đã tạo việc mới đọc được; không có/hết hạn/của người khác → cùng một 404. */
+  async function handleStagedStatus(req: IncomingMessage, log: Record<string, unknown>, signal: AbortSignal): Promise<{ status: number; body: Record<string, unknown> }> {
+    const token = bearer(req)
+    const body = await readJsonBody(req)
+    const jobId = (body ?? {}).jobId
+    if (!body || Object.keys(body).length !== 1 || typeof jobId !== 'string' || !/^[0-9a-f]{32}$/.test(jobId)) throw new HttpError(400, 'bad_request', 'Chỉ nhận { jobId }.')
+    const uid = await userOf(token, signal)
+    log.uidHash = createHash('sha256').update(uid).digest('hex').slice(0, 12)
+    purgeStaged()
+    const job = staged.get(jobId)
+    if (!job || job.uid !== uid) throw new HttpError(404, 'not_found', 'Không có kết quả phân tích này (có thể đã hết hạn) — hãy phân tích lại.')
+    log.jobId = jobId.slice(0, 8)
+    if (job.state === 'running') return { status: 200, body: { ok: true, status: 'running' } }
+    if (job.state === 'failed') return { status: 200, body: { ok: true, status: 'failed', errorCode: job.errorCode } }
+    return { status: 200, body: { ok: true, status: 'succeeded', sha256: job.sha256, bytes: job.bytes, document: job.document } }
+  }
+
+  /** POST {} không cần đăng nhập, không chạm DB/Storage/engine: chữ ký xác định để UI biết "đúng worker đọc sheet đang sống". */
+  async function handleProbe(req: IncomingMessage): Promise<{ status: number; body: Record<string, unknown> }> {
+    const body = await readJsonBody(req)
+    if (!body || Object.keys(body).length !== 0) throw new HttpError(400, 'bad_request', 'Chỉ nhận {}.')
+    return { status: 200, body: { ok: true, kind: 'chord-extract-worker', schema: 'chord-extraction/1', engine: await engineVersion() } }
   }
 
   async function health() {
@@ -262,7 +397,7 @@ export function createExtractor(deps: Deps) {
     catch { return { engine: null, vision: null } }
   }
 
-  return { handle, health }
+  return { handle, handleStaged, handleStagedStatus, handleProbe, health }
 }
 
 /** Tiến trình engine: hết hạn / bị huỷ → SIGKILL CẢ NHÓM (tesseract, pdftoppm… con cháu) và trả lỗi NGAY, không chờ stdio đóng;

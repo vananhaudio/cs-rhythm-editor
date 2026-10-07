@@ -30,6 +30,7 @@ const A = 'aaaaaaaa-0000-4000-8000-00000000000a'
 const TOK_T = 'teacher-token-aaaaaaaaaaaaaaaaaaaa'
 const TOK_A = 'student-token-bbbbbbbbbbbbbbbbbbbb'
 const TOK_BAD = 'expired-token-cccccccccccccccccccc'
+const TOK_X = 'admin-token-ddddddddddddddddddddd'
 const work = mkdtempSync(join(tmpdir(), 'extract-e2e-'))
 const files = join(work, 'files'); mkdirSync(files)
 after(() => rmSync(work, { recursive: true, force: true }))
@@ -37,7 +38,7 @@ const sha = (b: Buffer) => createHash('sha256').update(b).digest('hex')
 
 if (!target) { test('extraction e2e', { skip }, () => {}) } else {
   const db = target
-  const bridge = await startBridge({ target: db, filesDir: files, anonKey: 'anon-key', tokens: { [TOK_T]: T, [TOK_A]: A } })
+  const bridge = await startBridge({ target: db, filesDir: files, anonKey: 'anon-key', tokens: { [TOK_T]: T, [TOK_A]: A, [TOK_X]: X } })
   after(() => bridge.close())
 
   // ── dữ liệu mẫu (PDF text tổng hợp qua chính helper của test Python) ──
@@ -91,8 +92,8 @@ open(${JSON.stringify(out)}, "wb").write(support.make_text_pdf(pages))`])
     const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`
     return {
       base, close: () => new Promise<void>(resolve => { server.close(() => resolve()); server.closeAllConnections?.() }),
-      post: async (body: unknown, token: string | null = TOK_T, headers: Record<string, string> = {}) => {
-        const res = await fetch(`${base}/extract-content`, { method: 'POST', headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}), ...headers }, body: JSON.stringify(body) })
+      post: async (body: unknown, token: string | null = TOK_T, headers: Record<string, string> = {}, route = '/extract-content') => {
+        const res = await fetch(`${base}${route}`, { method: 'POST', headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}), ...headers }, body: JSON.stringify(body) })
         return { status: res.status, body: await res.json() as Record<string, any> }
       },
     }
@@ -350,6 +351,153 @@ open(${JSON.stringify(out)}, "wb").write(support.make_text_pdf(pages))`])
     assert.ok(ok.pageCount >= 1 && Array.isArray(ok.methods) && /^[0-9a-f]{8}$/.test(ok.sha8) && 'fallbackReasons' in ok)
     assert.ok(!/[0-9a-f-]{36}\/[0-9a-f-]{36}\/[0-9]\.(pdf|jpg|png|webp)/.test(text), 'log lộ đường dẫn nguồn {uid}/{version}/{n}.ext')
     for (const secret of [TOK_T, TOK_A, 'Bearer', 'SECRET-VISION-KEY', 'Chieu', 'khong', 'Mua roi', 'Traceback']) assert.ok(!text.includes(secret), `log lộ "${secret}": ${text.slice(Math.max(0, text.indexOf(secret) - 120), text.indexOf(secret) + 80)}`)
+  })
+
+  // ═════════════ PHÂN TÍCH TẠM (/extract-staged): file đã ở Storage, CHƯA có bài/phiên bản ═════════════
+  const extractionRows = async () => Number((await sql(db, 'select count(*) from public.chord_sheet_extractions')).out)
+  const versionRows = async () => Number((await sql(db, 'select (select count(*) from public.chord_sheets) + (select count(*) from public.chord_sheet_versions)')).out)
+  /** Đặt file vào {owner}/{draftId}/{index}.{ext} — KHÔNG có dòng chord_sheet/version nào (đúng như UI nạp file trước khi Lưu). */
+  async function seedStaged(bytes: Buffer, mime: string, owner = T, name?: { draftId?: string; ext?: string }) {
+    const draftId = name?.draftId ?? randomUUID()
+    const ext = name?.ext ?? ({ 'application/pdf': 'pdf', 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' }[mime]!)
+    const path = `${owner}/${draftId}/0.${ext}`
+    mkdirSync(dirname(join(files, path)), { recursive: true }); writeFileSync(join(files, path), bytes)
+    const r = await sql(db, `insert into storage.objects (bucket_id, name, owner, metadata) values ('chord-sheet-sources', '${path}', '${owner}', '{"mimetype":"${mime}","size":${bytes.length}}'::jsonb)`)
+    assert.ok(r.ok, r.err)
+    return draftId
+  }
+  const cleanStaged = () => sql(db, "delete from storage.objects where bucket_id = 'chord-sheet-sources' and name not in (select s ->> 'path' from public.chord_sheet_versions v, jsonb_array_elements(v.sources) s)")
+  const stagedStart = (w: Awaited<ReturnType<typeof startWorker>>, body: unknown, token: string | null = TOK_T) => w.post(body, token, {}, '/extract-staged')
+  const stagedStatus = (w: Awaited<ReturnType<typeof startWorker>>, jobId: unknown, token: string | null = TOK_T) => w.post({ jobId }, token, {}, '/extract-staged/status')
+  async function stagedDone(w: Awaited<ReturnType<typeof startWorker>>, jobId: string, token = TOK_T, ms = 120_000) {
+    const end = Date.now() + ms
+    for (;;) {
+      const r = await stagedStatus(w, jobId, token)
+      assert.equal(r.status, 200, JSON.stringify(r.body))
+      if (r.body.status !== 'running') return r.body
+      assert.ok(Date.now() < end, 'việc tạm chạy quá lâu')
+      await new Promise(res => setTimeout(res, 250))
+    }
+  }
+
+  test('STAGED — Text PDF: chưa có bài → /extract-staged → POST status → tài liệu hợp lệ; KHÔNG ghi DB (không extraction, không bài/phiên bản)', { skip }, async () => {
+    const draftId = await seedStaged(TEXT_PDF, 'application/pdf')
+    const [e0, v0] = [await extractionRows(), await versionRows()]
+    const r = await stagedStart(worker, { draftId, sourceIndex: 0, mime: 'application/pdf' })
+    assert.equal(r.status, 202); assert.match(r.body.jobId, /^[0-9a-f]{32}$/); assert.equal(r.body.status, 'running')
+    const out = await stagedDone(worker, r.body.jobId)
+    assert.equal(out.status, 'succeeded'); assert.equal(out.sha256, sha(TEXT_PDF)); assert.equal(out.bytes, TEXT_PDF.length)
+    const doc = out.document
+    assert.deepEqual(doc.pages.map((p: any) => [p.kind, p.method]), [['text', 'text_layer'], ['text', 'text_layer']])
+    assert.equal(doc.interpretation.chords.status, 'DETECTED'); assert.equal(doc.input.sha256, sha(TEXT_PDF))
+    const v = validate(doc); if (v !== null) assert.equal(v.split('\n')[0], '0', `không hợp lệ chord-extraction/1: ${v}`)
+    assert.equal(await extractionRows(), e0, 'KHÔNG ghi chord_sheet_extractions'); assert.equal(await versionRows(), v0, 'KHÔNG tạo chord_sheet/version')
+    await cleanStaged()
+  })
+  test('STAGED — xác thực/quyền: không token 401, token hỏng 401, học viên 403 (không tạo việc)', { skip }, async () => {
+    const draftId = await seedStaged(TEXT_PDF, 'application/pdf'); const body = { draftId, sourceIndex: 0, mime: 'application/pdf' }
+    assert.equal((await stagedStart(worker, body, null)).status, 401)
+    assert.equal((await stagedStart(worker, body, TOK_BAD)).status, 401)
+    const student = await stagedStart(worker, body, TOK_A); assert.deepEqual([student.status, student.body.error.code], [403, 'forbidden'])
+    assert.equal((await stagedStatus(worker, '0'.repeat(32), null)).status, 401); assert.equal((await stagedStatus(worker, '0'.repeat(32), TOK_BAD)).status, 401)
+    await cleanStaged()
+  })
+  test('STAGED — body chặt: khoá thừa/thiếu, UUID/index/mime sai, path/url/uid → 400', { skip }, async () => {
+    const ok = { draftId: randomUUID(), sourceIndex: 0, mime: 'application/pdf' }
+    for (const bad of [{ ...ok, path: '/etc/passwd' }, { ...ok, url: 'http://169.254.169.254/' }, { ...ok, uid: X }, { ...ok, sourcePath: 'a/b/0.pdf' }, { ...ok, bytes: 'AAAA' },
+      { draftId: ok.draftId, sourceIndex: 0 }, { sourceIndex: 0, mime: ok.mime }, { ...ok, draftId: 'abc' }, { ...ok, draftId: `${X}/../x` }, { ...ok, sourceIndex: 10 }, { ...ok, sourceIndex: -1 },
+      { ...ok, sourceIndex: '0' }, { ...ok, mime: 'text/html' }, { ...ok, mime: 'application/x-msdownload' }, { ...ok, mime: '__proto__' }, [], 'x']) {
+      const r = await stagedStart(worker, bad); assert.deepEqual([r.status, r.body.error.code], [400, 'bad_request'], JSON.stringify(bad))
+    }
+    for (const bad of [{}, { jobId: 'xyz' }, { jobId: '0'.repeat(32), extra: 1 }, { jobId: 'A'.repeat(32) }]) assert.equal((await worker.post(bad, TOK_T, {}, '/extract-staged/status')).status, 400, JSON.stringify(bad))
+    assert.equal((await worker.post({ ...ok }, TOK_T, { origin: 'https://evil.example' }, '/extract-staged')).status, 403)
+  })
+  test('STAGED — không có file: job failed/source_missing; MIME khai ≠ byte thật: failed/unsupported_mime', { skip }, async () => {
+    let r = await stagedStart(worker, { draftId: randomUUID(), sourceIndex: 0, mime: 'application/pdf' }); assert.equal(r.status, 202)
+    let out = await stagedDone(worker, r.body.jobId); assert.deepEqual([out.status, out.errorCode], ['failed', 'source_missing']); assert.ok(!('document' in out))
+    const d2 = await seedStaged(PNG, 'application/pdf')   // đuôi .pdf nhưng byte là PNG
+    r = await stagedStart(worker, { draftId: d2, sourceIndex: 0, mime: 'application/pdf' })
+    out = await stagedDone(worker, r.body.jobId); assert.deepEqual([out.status, out.errorCode], ['failed', 'unsupported_mime'])
+    await cleanStaged()
+  })
+  test('STAGED — worker tự dựng path từ uid của JWT: file của NGƯỜI KHÁC (dù người gọi có quyền review) không trỏ tới được', { skip }, async () => {
+    const draftId = await seedStaged(TEXT_PDF, 'application/pdf', X)   // file nằm ở thư mục của admin X
+    const r = await stagedStart(worker, { draftId, sourceIndex: 0, mime: 'application/pdf' }, TOK_T)   // T gọi với draftId đó
+    const out = await stagedDone(worker, r.body.jobId, TOK_T)
+    assert.deepEqual([out.status, out.errorCode], ['failed', 'source_missing'], 'T chỉ thấy thư mục {uid của T}/draftId — không có file')
+    await cleanStaged()
+  })
+  test('STAGED — người khác không đọc được việc của mình; hết hạn / worker khởi động lại → 404 sạch để phân tích lại', { skip }, async () => {
+    const draftId = await seedStaged(TEXT_PDF, 'application/pdf')
+    const r = await stagedStart(worker, { draftId, sourceIndex: 0, mime: 'application/pdf' })
+    await stagedDone(worker, r.body.jobId)
+    const other = await stagedStatus(worker, r.body.jobId, TOK_X)   // admin X (có review) KHÔNG đọc được việc của T
+    assert.deepEqual([other.status, other.body.error.code], [404, 'not_found'])
+    assert.equal((await stagedStatus(worker, '1'.repeat(32))).status, 404, 'jobId không tồn tại')
+    // hết hạn
+    const short = await startWorker({ limits: { perMinute: 10_000, perDay: 100_000, stagedTtlMs: 400 } })
+    try {
+      const a = await stagedStart(short, { draftId, sourceIndex: 0, mime: 'application/pdf' }); const done = await stagedDone(short, a.body.jobId); assert.equal(done.status, 'succeeded')
+      await new Promise(res => setTimeout(res, 800))
+      const gone = await stagedStatus(short, a.body.jobId); assert.deepEqual([gone.status, gone.body.error.code], [404, 'not_found'])
+    } finally { await short.close() }
+    // worker khởi động lại: job mất → 404, UI cho phân tích lại
+    const restarted = await startWorker({ limits: { perMinute: 10_000, perDay: 100_000 } })
+    try { assert.equal((await stagedStatus(restarted, r.body.jobId)).status, 404) } finally { await restarted.close() }
+    await cleanStaged()
+  })
+  test('STAGED — rate-limit theo uid, trần việc đang chạy/người, trần kích thước kết quả, bỏ kết quả cũ nhất khi đầy', { skip }, async () => {
+    const draftId = await seedStaged(TEXT_PDF, 'application/pdf'); const body = { draftId, sourceIndex: 0, mime: 'application/pdf' }
+    const limited = await startWorker({ limits: { perMinute: 2 } })
+    try {
+      const codes: number[] = []; for (let i = 0; i < 3; i++) codes.push((await stagedStart(limited, body)).status)
+      assert.deepEqual([codes[0], codes[1], codes[2]].map(c => c === 202 || c === 429), [true, true, true]); assert.equal(codes[2], 429)
+    } finally { await limited.close() }
+    const small = await startWorker({ limits: { perMinute: 10_000, perDay: 100_000, maxStagedResultBytes: 1000 } })
+    try {
+      const a = await stagedStart(small, body); const out = await stagedDone(small, a.body.jobId)
+      assert.deepEqual([out.status, out.errorCode], ['failed', 'too_large']); assert.ok(!('document' in out))
+    } finally { await small.close() }
+    const stub = join(work, 'slow-python-staged.sh')
+    writeFileSync(stub, '#!/bin/bash\nif [[ "$*" == *--version* ]]; then echo chord-extract/1.0.0-slice1; exit 0; fi\nsleep 20\n'); chmodSync(stub, 0o755)
+    const cap = await startWorker({ python: stub, limits: { perMinute: 10_000, perDay: 100_000, maxStagedRunningPerUser: 1, jobTimeoutMs: 1500 } })
+    try {
+      const first = await stagedStart(cap, body); assert.equal(first.status, 202)
+      const second = await stagedStart(cap, body); assert.deepEqual([second.status, second.body.error.code], [429, 'too_many_jobs'])
+      const out = await stagedDone(cap, first.body.jobId, TOK_T, 15_000); assert.deepEqual([out.status, out.errorCode], ['failed', 'timeout'])
+    } finally { await cap.close() }
+    const evict = await startWorker({ limits: { perMinute: 10_000, perDay: 100_000, maxStagedPerUser: 2 } })
+    try {   // giữ tối đa 2 kết quả: việc thứ 3 vẫn được nhận, kết quả CŨ NHẤT bị bỏ (404), hai kết quả mới còn
+      const ids: string[] = []
+      for (let i = 0; i < 3; i++) { const a = await stagedStart(evict, body); assert.equal(a.status, 202); await stagedDone(evict, a.body.jobId); ids.push(a.body.jobId) }
+      assert.equal((await stagedStatus(evict, ids[0])).status, 404); assert.equal((await stagedStatus(evict, ids[1])).status, 200); assert.equal((await stagedStatus(evict, ids[2])).status, 200)
+    } finally { await evict.close() }
+    await cleanStaged()
+  })
+  test('PROBE — POST {} không cần đăng nhập, chữ ký xác định, không chạm DB/Storage/engine; body khác {} → 400; chưa cấu hình → 503', { skip }, async () => {
+    const [e0, g0] = [await extractionRows(), bridge.faults.storageGets]
+    const r = await worker.post({}, null, {}, '/extract-probe')
+    assert.deepEqual([r.status, r.body.ok, r.body.kind, r.body.schema, typeof r.body.engine], [200, true, 'chord-extract-worker', 'chord-extraction/1', 'string'])
+    assert.equal((await worker.post({ a: 1 }, null, {}, '/extract-probe')).status, 400); assert.equal((await worker.post([], null, {}, '/extract-probe')).status, 400)
+    assert.equal((await worker.post({}, null, { origin: 'https://evil.example' }, '/extract-probe')).status, 403)
+    assert.equal(await extractionRows(), e0); assert.equal(bridge.faults.storageGets, g0)
+    const server = createWorker({ supabaseUrl: bridge.url, anonKey: 'anon-key', python: PYTHON, analyzer: join(ROOT, 'tools/measure-analyzer/measure_analyzer.py'), allowedOrigins: [], logDir })
+    await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve))
+    try {
+      const res = await fetch(`http://127.0.0.1:${(server.address() as AddressInfo).port}/extract-probe`, { method: 'POST', body: '{}', headers: { 'content-type': 'application/json' } })
+      assert.equal(res.status, 503)
+    } finally { server.close(); server.closeAllConnections?.() }
+  })
+  test('STAGED — log chỉ metadata (không JWT, uid, đường dẫn, lời); poll/probe không làm đầy log', { skip }, async () => {
+    await new Promise(r => setTimeout(r, 500))
+    const text = readdirSync(logDir).map(f => readFileSync(join(logDir, f), 'utf8')).join('\n')
+    const entries = text.split('\n').filter(Boolean).map(l => JSON.parse(l) as Record<string, any>)
+    const staged = entries.filter(e => e.event === 'extract_staged'); assert.ok(staged.length >= 4)
+    for (const e of staged) assert.ok(typeof e.jobId === 'string' && e.jobId.length === 8 && typeof e.durationMs === 'number' && !('document' in e))
+    assert.ok(staged.some(e => e.status === 'succeeded' && e.pageCount >= 1 && /^[0-9a-f]{8}$/.test(e.sha8)) && staged.some(e => e.errorCode === 'source_missing'))
+    assert.ok(!entries.some(e => e.path === '/extract-probe') && !entries.some(e => e.path === '/extract-staged/status' && e.status === 200), 'probe và poll thành công không được ghi log')
+    for (const secret of [TOK_T, TOK_A, TOK_X, T, X, A, 'Chieu', 'Mua roi', 'Traceback']) assert.ok(!text.includes(secret), `log lộ "${secret}"`)
+    assert.ok(!/[0-9a-f-]{36}\/[0-9a-f-]{36}\/[0-9]\.(pdf|jpg|png|webp)/.test(text), 'log lộ đường dẫn nguồn')
   })
 
   test('Tắt hẳn: worker không cấu hình extract → /extract-content = 503 not_configured; /health không có extract', { skip }, async () => {
