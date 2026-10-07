@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { after, test } from 'node:test'
 import { fileURLToPath } from 'node:url'
-import { analysisLineCounts, createHttpMeasureAnalyzer, createWorkerMeasureAnalyzer, parseAnalysisResult, productionMeasureAnalyzer } from '../../src/thuvien/measureAnalysis.ts'
+import { analysisLineCounts, analysisTokenLengths, createHttpMeasureAnalyzer, createWorkerMeasureAnalyzer, parseAnalysisResult, productionMeasureAnalyzer } from '../../src/thuvien/measureAnalysis.ts'
 import { runAnalyzer, runAnalyzerRaw } from './harness.ts'
 
 const SYNTH = fileURLToPath(new URL('../../tools/measure-analyzer/synth.py', import.meta.url))
@@ -86,6 +86,37 @@ test('PDF SCAN 1-bit CCITT (Tình ca): trước đây 422 unsupported (pdfimages
   const r = await runAnalyzer(TEXT_5_4, [{ path: pdf, mime: 'application/pdf' }])
   assert.ok(r.ok, JSON.stringify(!r.ok && r.error))
   assert.deepEqual(r.anchors, { pickup: A(0, 0), measures: [A(0, 1), A(0, 3), A(1, 0), A(1, 2), A(1, 2)] })
+})
+
+test('OCR ↔ lời chuẩn (ocrDocs giả, không chạy tesseract): cùng anchors như căn chỉnh độ rộng; anchors trỏ vào lời CHUẨN; chữ OCR sai chính tả vẫn định vị đúng', async () => {
+  const systems = [['w', '|', 'w', 'w', '|', 'w', 's', 'w'], ['w', 'w', '|', '|', 'w', 'w']]
+  const png1 = png(sheet(systems))
+  // vị trí chữ trong sheet tổng hợp (synth.py): x của mục i = left + 3·gap + (i+1)·step, hàng lời ở lines[4] + 3·gap
+  const W = 900, gap = 8, left = 60, right = W - 40, H = 352
+  const words = [['Một', 'hai', 'ba', 'bốn', 'năm'], ['sáu', 'bảy', 'tám', 'chín']]
+  const typo = [['Mot', 'hái', 'bà', 'bồn', 'nam'], ['sau', 'bãy', 'tam', 'chín']]      // OCR sai dấu/chữ — chỉ để định vị
+  const tokens = systems.map((items, si) => {
+    const step = (right - left - 4 * gap) / (items.length + 1)
+    const out: { text: string; bbox: number[] }[] = []
+    let wi = 0
+    items.forEach((item, i) => {
+      if (item[0] !== 'w') return
+      const x = left + 3 * gap + (i + 1) * step
+      out.push({ text: typo[si][wi++], bbox: [(x - 12) / W, (60 + si * 136 + 4 * gap + 3 * gap) / H, 24 / W, 10 / H] })
+    })
+    return out
+  })
+  const doc = { pages: [{ regions: [{ kind: 'lyric_block', lines: tokens.map((toks, si) => ({ role: 'lyric', bbox: [0.1, toks[0].bbox[1], 0.8, 0.03], tokens: toks.map(t => ({ ...t })) })) }] }] }
+  const raw = await runAnalyzerRaw({ sources: [png1], lineTokenCounts: analysisLineCounts(TEXT_5_4), lineTokenLengths: analysisTokenLengths(TEXT_5_4), lineWords: words, ocrDocs: [doc] }) as { ok: boolean; anchors: unknown; diagnostics: { alignment?: { method: string; systems: { rows: { status: string }[] }[]; unresolvedBars: unknown[] } } }
+  assert.equal(raw.ok, true)
+  assert.deepEqual(raw.anchors, { pickup: A(0, 0), measures: [A(0, 1), A(0, 3), A(1, 0), A(1, 2), A(1, 2)] })
+  assert.equal(raw.diagnostics.alignment?.method, 'ocr-local-v1')
+  assert.deepEqual(raw.diagnostics.alignment?.systems.map(s => s.rows[0].status), ['MATCH', 'MATCH'])
+  assert.deepEqual(raw.diagnostics.alignment?.unresolvedBars, [])
+  // lời chuẩn dạng chữ không khớp số đếm → bỏ qua OCR, vẫn chạy như cũ (không hỏng)
+  const bad = await runAnalyzerRaw({ sources: [png1], lineTokenCounts: analysisLineCounts(TEXT_5_4), lineTokenLengths: analysisTokenLengths(TEXT_5_4), lineWords: [['x']], ocrDocs: [doc] }) as { ok: boolean; diagnostics: { alignment?: unknown } }
+  assert.equal(bad.ok, true)
+  assert.equal(bad.diagnostics.alignment, undefined)
 })
 
 test('thứ tự trang: file trang 2 nạp trước trang 1 → máy xếp lại theo nội dung (căn chỉnh), kết quả như đúng thứ tự + báo cần kiểm', async () => {

@@ -19,7 +19,7 @@ import { join } from 'node:path'
 import { HttpError, readBody, readCapped } from './shared.ts'
 import { createExtractor } from './extract.ts'
 import type { ExtractWorkerConfig } from './extract.ts'
-import { analysisLineCounts, analysisTokenLengths, parseAnalysisResult } from '../../src/thuvien/measureAnalysis.ts'
+import { analysisLineCounts, analysisLineWords, analysisTokenLengths, parseAnalysisResult } from '../../src/thuvien/measureAnalysis.ts'
 
 export const VERSION = 'measure-analyzer/0.2.0'
 const BUCKET = 'chord-sheet-sources'
@@ -183,6 +183,8 @@ export function createWorker(config: WorkerConfig): Server {
       // 5) phân tích — tokenizer của app (5A/5B) trên lời chuẩn lấy từ DB
       const raw = await runAnalyzer(config, limits, {
         sources: files, lineTokenCounts: analysisLineCounts(text), lineTokenLengths: analysisTokenLengths(text),
+        // OCR lời gần đúng (chord-extract) chỉ để ĐỊNH VỊ vạch → chữ chuẩn; chỉ bật khi worker có engine extraction
+        ...(config.extract ? { lineWords: analysisLineWords(text), ocr: { tessdataDir: config.extract.tessdataDir ?? null } } : {}),
         meter: detail.meter ?? null, traceId: versionId,
       }, signal) as { ok?: unknown; error?: { code?: unknown }; diagnostics?: { generator?: unknown } }
       if (raw.ok !== true) throw analyzerError(String(raw.error?.code ?? 'analysis_failed'))
@@ -281,7 +283,7 @@ function runAnalyzer(config: WorkerConfig, limits: typeof LIMITS, payload: unkno
     if (signal.aborted) return reject(new HttpError(504, 'timeout', 'Hết thời gian phân tích.'))
     const child = spawn(config.python, [config.analyzer], {
       stdio: ['pipe', 'pipe', 'ignore'],
-      env: { PATH: config.childPath ?? process.env.PATH ?? '', HOME: process.env.HOME ?? '', LANG: 'en_US.UTF-8' },
+      env: { PATH: config.childPath ?? process.env.PATH ?? '', HOME: process.env.HOME ?? '', LANG: 'en_US.UTF-8', PYTHONDONTWRITEBYTECODE: '1' },
     })
     let out = ''
     let killed: HttpError | null = null

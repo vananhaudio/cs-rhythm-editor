@@ -27,6 +27,9 @@ import tempfile
 import numpy as np
 from PIL import Image, ImageFilter
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import ocr_align  # noqa: E402 — ghép OCR ↔ lời chuẩn (module riêng, test riêng)
+
 DEFAULTS = {
     "darkThreshold": 185,      # điểm ảnh tối hơn mức này = mực (dòng kẻ, vạch)
     "inkThreshold": 150,       # mực chữ (chặt hơn để bỏ hình mờ/watermark)
@@ -188,20 +191,48 @@ def extract_scanned(path, work, si, opts):
     return [open_gray(os.path.join(work, n), opts) for n in names]
 
 
-def _engine_staff():
-    """Bộ tìm khuông THÍCH NGHI của chord-extract (staff.find_staves) — dùng lại, không viết lại. Trong release nằm ở
-    <release>/chord-extract/; trong repo ở tools/chord-extract/. Không có → None (rơi về bộ cũ)."""
+def _engine_dir():
+    """Thư mục chứa package chord_extract: trong release <release>/chord-extract/, trong repo tools/chord-extract/."""
     here = os.path.dirname(os.path.abspath(__file__))
     for base in (os.path.join(here, "chord-extract"), os.path.join(here, "..", "chord-extract")):
         if os.path.isdir(os.path.join(base, "chord_extract")):
             if base not in sys.path:
                 sys.path.insert(0, base)
-            try:
-                from chord_extract import staff
-                return staff
-            except Exception:
-                return None
+            return base
     return None
+
+
+def _engine_staff():
+    """Bộ tìm khuông THÍCH NGHI của chord-extract (staff.find_staves) — dùng lại, không viết lại. Không có → None (rơi về bộ cũ)."""
+    if _engine_dir() is None:
+        return None
+    try:
+        from chord_extract import staff
+        return staff
+    except Exception:
+        return None
+
+
+def get_ocr_docs(payload, n_pages):
+    """OCR lời gần đúng bằng chord-extract (CHỈ để định vị). `ocrDocs` có sẵn (test/đo) thì dùng, không thì chạy engine nếu
+    payload.ocr bật. Trả (docs | None, cảnh báo | None). Không có / lỗi / lệch số trang → None: rơi về căn chỉnh theo độ rộng."""
+    docs = payload.get("ocrDocs")
+    if docs is None:
+        cfg = payload.get("ocr")
+        if not cfg:
+            return None, None
+        try:
+            if _engine_dir() is None:
+                return None, {"code": "OCR_UNAVAILABLE", "message": "Không có engine OCR — dùng căn chỉnh theo độ rộng."}
+            from chord_extract.config import ExtractConfig
+            from chord_extract.pipeline import extract_document
+            conf = ExtractConfig(lang="vie", tessdata_dir=cfg.get("tessdataDir"))
+            docs = [extract_document(src["path"], conf, None) for src in payload["sources"]]
+        except Exception:
+            return None, {"code": "OCR_UNAVAILABLE", "message": "OCR không chạy được — dùng căn chỉnh theo độ rộng."}
+    if sum(len(d.get("pages", [])) for d in docs) != n_pages:
+        return None, {"code": "OCR_PAGE_MISMATCH", "message": "Số trang OCR khác số trang phân tích — dùng căn chỉnh theo độ rộng."}
+    return docs, None
 
 
 def _line_extent(fill, center):
@@ -484,12 +515,13 @@ def analyze(payload):
     lengths = payload.get("lineTokenLengths")
     flat_len = [max(1, int(n)) for row in lengths for n in row] if lengths and [len(r) for r in lengths] == counts else [1] * total
 
-    page_geos, scales, angles = [], [], []
+    page_geos, scales, angles, page_dims = [], [], [], []
     for pi, (src, gray) in enumerate(pages):
         gray, angle = deskew(gray, opts)
         angles.append(angle)
         gray, bar_gray, scale = normalize_scale(gray, opts)
         scales.append(round(scale, 3))
+        page_dims.append((gray.shape[1], gray.shape[0]))
         dark, found = find_systems(gray, opts)
         if bar_gray is not None:
             dark = bar_gray < opts["darkThreshold"]
@@ -535,7 +567,72 @@ def analyze(payload):
     unmatched_canon = total - len(token_of)
     count_match = unmatched_sheet == 0 and unmatched_canon == 0
 
-    def token_after(gi, x):
+    # ── OCR ↔ lời chuẩn: khi có lời chuẩn dạng chữ + OCR, thay căn chỉnh theo độ rộng ở trên. Hình học (khuông, vạch), contract,
+    # confidence giữ nguyên; chỉ nguồn "chữ nào đứng sau vạch" đổi. OCR chỉ định vị — anchors luôn trỏ vào lời chuẩn.
+    ocr_plan = canon = None
+    ocr_diag = None
+    ocr_warning = None
+    line_words = payload.get("lineWords")
+    if isinstance(line_words, list) and [len(w) for w in line_words] == counts:
+        docs, ocr_warning = get_ocr_docs(payload, len(pages))
+        if docs:
+            canon = ocr_align.Canon(line_words)
+            rows_by_page = []
+            for doc in docs:
+                rows_by_page.extend(ocr_align.doc_rows(doc, page_dims[len(rows_by_page):]))
+            geos_by_page = [[{"y1": g["y1"], "y5": g["y5"], "gap": g["gap"], "bars": [b["x"] for b in g["bars"]]} for g in gp] for gp in page_geos]
+            ocr_plan = ocr_align.plan_alignment(canon, rows_by_page, geos_by_page)
+            if not any(sy["primary"] is not None for sy in ocr_plan.values()):
+                ocr_plan = None
+                ocr_warning = {"code": "OCR_NO_MATCH", "message": "OCR không khớp hàng lời nào với lời chuẩn — dùng căn chỉnh theo độ rộng."}
+    how_of = {}
+    unresolved_bars = []
+    if ocr_plan is not None:
+        order = tuple(ocr_align.page_order(ocr_plan, len(pages)))
+        reordered = list(order) != order0
+        geos = [g for pi in order for g in page_geos[pi]]
+        sys_of = [ocr_plan[(g["page"], g["index"])] for g in geos]
+        token_of = {}                                # (khuông, cụm chữ mực) → token chuẩn: chỉ để confidence cũ xét "chữ sau vạch có khớp không"
+        for gi, g in enumerate(geos):
+            sy = sys_of[gi]
+            if sy["primary"] is None or not g["lyrics"]:
+                continue
+            row = sy["rows"][sy["primary"]]
+            for wi, w in enumerate(g["lyrics"]["words"]):
+                hit = next((row["resolved"][k][0] for k, x in enumerate(row["xs"]) if w[0] <= x <= w[1] and row["resolved"][k][0] is not None), None)
+                if hit is not None:
+                    token_of[(gi, wi)] = hit
+        primaries = [sy["rows"][sy["primary"]] for sy in sys_of if sy["primary"] is not None]
+        sheet_total = sum(r["n"] for r in primaries)
+        unmatched_sheet = sum(1 for r in primaries for idx, _ in r["resolved"] if idx is None)
+        covered = set()
+        for sy in ocr_plan.values():
+            for r in sy["rows"]:
+                if r["status"] == "MATCH":
+                    covered.update(i for i in range(r["span"][0], r["span"][1] + 1) if not canon.label[i])
+        unmatched_canon = len(canon.stream) - len(covered)
+        count_match = unmatched_sheet == 0 and unmatched_canon == 0
+        cost = (1.0 - sum(r["best"] / (2 * r["n"]) for r in primaries) / len(primaries)) if primaries else 1.0
+
+        def token_after(gi, x):
+            idx, how = ocr_align.system_bar(canon, sys_of[gi], x)
+            if how == "row_end":
+                # hết hàng: chữ hát đầu tiên của khuông kế (có hàng chính), như bản cũ; không còn → vạch kết bài
+                for gj in range(gi + 1, len(geos)):
+                    sj = sys_of[gj]
+                    if sj["primary"] is None:
+                        continue
+                    row_j = sj["rows"][sj["primary"]]
+                    first = next((r_idx for r_idx, _ in row_j["resolved"] if r_idx is not None), None)
+                    if first is not None:
+                        how_of[(gi, x)] = "next_system"
+                        return canon.snap(first), gj, None
+                how_of[(gi, x)] = "end"
+                return total, gi, None
+            how_of[(gi, x)] = how
+            return idx, gi, None
+
+    def token_after_width(gi, x):
         """Token chuẩn của cụm chữ ĐẦU TIÊN nằm sau vạch (cùng khuông, rồi sang khuông sau nếu hết khuông)."""
         for gj in range(gi, len(geos)):
             words = geos[gj]["lyrics"]["words"] if geos[gj]["lyrics"] else []
@@ -546,11 +643,18 @@ def analyze(payload):
                     return token_of[(gj, wi)], gj, wi
         return total, gi, None
 
+    if ocr_plan is None:
+        token_after = token_after_width
+
     boundaries = []
     for gi, g in enumerate(geos):
         words = g["lyrics"]["words"] if g["lyrics"] else []
         for bar in g["bars"]:
             token, gj, wi = token_after(gi, bar["x"])
+            if token is None:
+                # không đủ chắc chữ nào đứng sau vạch (OCR hỏng/thiếu, không nội suy được) → KHÔNG đoán: không đưa vào dòng thời gian
+                unresolved_bars.append({"page": g["page"], "system": gi, "x": round(bar["x"], 1), "how": how_of.get((gi, bar["x"]))})
+                continue
             crossed = gj != gi
             left = min([bar["x"] - w[1] for w in words if (w[0] + w[1]) / 2 < bar["x"]] or [99 * g["gap"]])
             right = min([w[0] - bar["x"] for w in words if (w[0] + w[1]) / 2 >= bar["x"]] or [99 * g["gap"]])
@@ -570,6 +674,7 @@ def analyze(payload):
                 reasons.append("dấu nhắc lại — dòng thời gian cần thầy dựng")
             boundaries.append({"index": len(boundaries), "page": g["page"], "system": gi, "x": round(bar["x"], 1),
                                "token": token, "crossesSystem": crossed,
+                               **({"anchorHow": how_of.get((gi, bar["x"]))} if ocr_plan is not None else {}),
                                "nextWord": (geos[gj]["lyrics"]["words"][wi] if wi is not None else None),
                                "marginGaps": round(margin, 2), "double": bar["double"], "repeat": bar["repeatDots"],
                                "score": round(max(0.0, score), 2), "confidence": level(score), "reasons": reasons or ["vạch rõ, chữ sau vạch khớp lời"]})
@@ -625,12 +730,36 @@ def analyze(payload):
         notes.append(f"Đã xếp lại thứ tự trang theo nội dung: {', '.join(str(i + 1) for i in order)} — cần kiểm.")
     if any(b["repeat"] for b in boundaries):
         notes.append("Có dấu nhắc lại — máy chưa dựng đoạn hát lại; dòng thời gian cần thầy kiểm.")
+    alignment = None
+    if ocr_plan is not None:
+        if ocr_warning:
+            diagnostics_warn.append(ocr_warning)
+        multi_rows = any(sum(1 for r in sy["rows"] if r["status"] == "MATCH") > 1 for sy in sys_of)
+        if multi_rows:
+            notes.append("Sheet có nhiều hàng lời dưới một khuông (nhiều khổ): anchors theo hàng TRÊN CÙNG; các hàng còn lại ở diagnostics.alignment — máy không tự dựng khổ sau.")
+        if unresolved_bars:
+            notes.append(f"{len(unresolved_bars)} vạch chưa xác định được chữ hát ngay sau (OCR hỏng/thiếu) — không đưa vào dòng thời gian, cần thầy thêm tay.")
+        if any(r["status"] == "AMBIGUOUS" for sy in sys_of for r in sy["rows"]):
+            notes.append("Có hàng lời khớp được nhiều chỗ trong lời chuẩn (lặp lại) — không đoán, cần thầy kiểm.")
+        alignment = {
+            "method": "ocr-local-v1", "labelTokensExcluded": sum(canon.label),
+            "coverage": {"canonicalTokens": len(canon.stream), "located": len(covered)},
+            "unresolvedBars": unresolved_bars,
+            "systems": [{"page": g["page"], "system": gi, "primaryRow": sy["primary"],
+                         "rows": [{"row": ri, "status": r["status"], "best": r["best"], "second": r["second"],
+                                   "span": ({"start": canon.at(r["span"][0]), "end": canon.at(r["span"][1])} if r["span"] else None),
+                                   "bars": ocr_align.row_bar_candidates(canon, r, [b["x"] for b in g["bars"]]) if r["status"] == "MATCH" else []}
+                                  for ri, r in enumerate(sy["rows"])]}
+                        for gi, (g, sy) in enumerate(zip(geos, sys_of))],
+        }
+    elif ocr_warning:
+        diagnostics_warn.append(ocr_warning)
     result = {
         "ok": True,
         "anchors": {**({"pickup": pickup} if pickup else {}), "measures": measures},
         "confidence": {"overall": level(min([m["score"] for m in measure_conf] or [0]) if not review else 0.3),
                        "measures": measure_conf},
-        "review": {"needsReview": bool(review) or not count_match or reordered or any(b["repeat"] for b in boundaries),
+        "review": {"needsReview": bool(review) or not count_match or reordered or any(b["repeat"] for b in boundaries) or bool(unresolved_bars),
                    "measures": review, "notes": notes},
         "diagnostics": {
             "engine": "numpy-pillow-v2-align", "generator": GENERATOR,
@@ -644,6 +773,7 @@ def analyze(payload):
             "sheetTokens": sheet_total, "canonicalTokens": total,
             "pickupDetected": pickup is not None, "implicitFirstMeasure": implicit_first,
             "warnings": diagnostics_warn,
+            **({"alignment": alignment} if alignment else {}),
             "traceId": payload.get("traceId"),
         },
     }

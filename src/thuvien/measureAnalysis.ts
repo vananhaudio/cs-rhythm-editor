@@ -51,6 +51,9 @@ export interface MeasureAnalyzer {
 export const analysisLineCounts = (text: string): number[] => anchorLines(text).map(line => line.tokens.length)
 /** Độ dài (số chữ cái/số) từng token — để analyzer căn chỉnh cụm mực trên sheet với token theo ĐỘ RỘNG, không đếm dồn.
  *  Chỉ gửi con số, không gửi chữ. Token chỉ có hợp âm (không chữ) = 1. */
+/** Các chữ hát CHUẨN từng dòng (đúng tokenizer của app, chỉ số = {line, token}). CHỈ worker/test dùng để ghép với OCR lời gần đúng trên
+ *  sheet — browser KHÔNG gửi lời cho worker; worker tự lấy lời từ DB bằng JWT. Không được ghi log. */
+export const analysisLineWords = (text: string): string[][] => anchorLines(text).map(line => line.tokens.map(token => token.word))
 export const analysisTokenLengths = (text: string): number[][] =>
   anchorLines(text).map(line => line.tokens.map(token => [...token.word.normalize('NFC')].filter(ch => /[\p{L}\p{N}]/u.test(ch)).length || 1))
 

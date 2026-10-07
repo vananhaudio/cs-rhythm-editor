@@ -30,6 +30,7 @@
     "test:nhipphach-library": "tsc -p tests/nhipphach-library/tsconfig.json && node --experimental-strip-types --test tests/nhipphach-library/library.test.ts",
     "test:thuvien": "tsc -p tests/thuvien/tsconfig.json && node --experimental-strip-types --test tests/thuvien/*.test.ts",
     "test:chord-extract-worker": "tsc -p services/measure-analyzer/tsconfig.json && bash scripts/test-chord-extraction-db.sh",
+    "test:measure-ocr-align": "python3 -m unittest discover -s tests/measure-ocr-align -p 'test_*.py'",
     "test:chord-extract": "python3 -m unittest discover -s tests/chord-extract -p 'test_*.py'",
     "test:thuvien-ui": "tsx --tsconfig tsconfig.app.json --test tests/thuvien-ui/*.test.tsx",
     "test:master-musicxml-copy": "tsc -p tests/nhipphach-library/tsconfig.json && node --experimental-strip-types --test tests/nhipphach-library/master-copy.test.ts",
