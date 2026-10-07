@@ -109,4 +109,14 @@ grep -q "không thuộc Chat V1a, không rollback" "$TMP/c2.err" && ok "rollback
 baseline tva_drift
 q tva_drift "create or replace function public.is_friend_of(p_other uuid) returns boolean language sql security definer set search_path = '' as \$\$ select true \$\$" >/dev/null
 [ "$(gate tva_drift)" = "FAIL" ] && ok "is_friend_of bị sửa tay → preflight GATE FAIL" || fail "drift is_friend_of không bị bắt"
+
+echo "── Proof dryrun production (đuôi nối sau setup) chạy thử trên DB tạm có dữ liệu giống production"
+cmp -s <(cat "$ROOT/db/dm_v1_setup.sql" "$ROOT/db/dm_v1_prod_proof_tail.sql") "$ROOT/db/dm_v1_prod_dryrun.sql" && ok "dm_v1_prod_dryrun.sql = setup + đuôi proof (không lệch)" || fail "dm_v1_prod_dryrun.sql lệch: chạy cat setup + tail"
+grep -qiE '^\s*(begin|commit|rollback)\s*;' "$ROOT/db/dm_v1_prod_dryrun.sql" && fail "proof có begin/commit" || ok "proof không có begin/commit (prod-db sở hữu transaction)"
+baseline tva_proof
+q tva_proof "insert into public.friendships (requester_id, addressee_id, status, responded_at) values ('aaaaaaaa-0000-4000-8000-00000000000a','bbbbbbbb-0000-4000-8000-00000000000b','accepted',now())" >/dev/null
+FPP="$(fp tva_proof)"
+psqld tva_proof -c "begin;" -f "$ROOT/db/dm_v1_prod_dryrun.sql" -c "rollback;" 2>&1 | sed -E 's/^psql:[^:]*:[0-9]*: (NOTICE|ERROR):  //' | tee "$TMP/proof.out" | grep -E "PROOF|FAIL|ERROR" || true
+grep -q "DM_V1_PROD_DRYRUN_PROOF = PASS" "$TMP/proof.out" && ok "proof production chạy PASS trên DB tạm" || fail "proof production: $(tail -3 "$TMP/proof.out")"
+[ "$(q tva_proof "select count(*) from pg_class where relname like 'dm\_%'")" = "0" ] && [ "$(fp tva_proof)" = "$FPP" ] && ok "sau ROLLBACK: không còn bảng dm_*, friendships nguyên vẹn" || fail "rollback proof không sạch"
 echo "ALL DM V1 DB TESTS PASSED"

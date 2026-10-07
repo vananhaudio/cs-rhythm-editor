@@ -36,6 +36,6 @@ select section, item from (
       || 'is_class_member=459786921eb5bbd4ff07c83bdb4db480,is_class_member_user=09b747d3ec6be35cc8e9f77c5c4e0b8a,'
       || 'is_friend_of=c5281e64105ae14e008445ba7fb5c354'
    and (select string_agg(p.proname || '=' || md5(p.prosrc), ',' order by p.proname) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-         where n.nspname = 'public' and p.proname like 'dm\_%') = 'dm_append=07e8750b2391ef413f8c7ee258031241,dm_can_message=05d8157fabb5e6f2da69c1b98c01aa7c,dm_conversations=aaaaae7481c7c569cbce0ace968b643e,dm_find=eca4bcd25d5241e9e9f800642761206c,dm_mark_read=a38c5348c98e51e6f94fb31b73eacc6d,dm_messages=e01f291a572f31eb103d9d963e28cf4b,dm_rule=763d62ac7dc770931aa9a422701d21df,dm_send=28ea5818ec92c40cb3e98948a7644b7e,dm_start=8481b089af50d1c3b3d6b156e75ee5e8,dm_unread_count=5d09828bb274a9f22306a2da39023d9c'
+         where n.nspname = 'public' and p.proname like 'dm\_%') = 'dm_append=07e8750b2391ef413f8c7ee258031241,dm_can_message=05d8157fabb5e6f2da69c1b98c01aa7c,dm_conversations=aaaaae7481c7c569cbce0ace968b643e,dm_find=eca4bcd25d5241e9e9f800642761206c,dm_mark_read=a38c5348c98e51e6f94fb31b73eacc6d,dm_messages=e01f291a572f31eb103d9d963e28cf4b,dm_rule=763d62ac7dc770931aa9a422701d21df,dm_send=28ea5818ec92c40cb3e98948a7644b7e,dm_start=8481b089af50d1c3b3d6b156e75ee5e8,dm_unread_count=4490dabacd28d12f4a0179f7baa39b16'
   then 'PASS' else 'FAIL' end
 ) z order by o;

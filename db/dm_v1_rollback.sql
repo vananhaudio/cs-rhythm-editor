@@ -22,8 +22,12 @@ drop function if exists public.dm_find(uuid);
 drop function if exists public.dm_can_message(uuid);
 drop function if exists public.dm_append(uuid, uuid, text);
 drop function if exists public.dm_rule(uuid, uuid);
-drop table if exists public.dm_messages;
-drop table if exists public.dm_participants;
-drop table if exists public.dm_conversations;
+-- Gỡ bảng trong MỘT câu lệnh, đặt cuối: DROP bảng có khoá ngoại → xin khoá mạnh trên auth.users tới COMMIT; một câu = cửa sổ ngắn nhất
+do $tables$
+begin
+  drop table if exists public.dm_messages;
+  drop table if exists public.dm_participants;
+  drop table if exists public.dm_conversations;
+end $tables$;
 
 notify pgrst, 'reload schema';
