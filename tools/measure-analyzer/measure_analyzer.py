@@ -808,6 +808,7 @@ def analyze(payload):
     # nhưng chữ sau vạch lấy từ HÀNG LỜI của lượt k (token riêng — số âm tiết mỗi lời có thể khác). Chỉ dựng khi lượt đầy đủ và rõ;
     # thiếu hàng / vạch không xác định được → KHÔNG dựng lượt đó (không đoán) và bắt buộc duyệt.
     verse_passes, verse_withheld = [], []
+    n_pass0 = len(measures)
     if ocr_plan is not None:
         base_systems = [gi for gi, sy in enumerate(sys_of) if ocr_align.system_row(sy, 0) is not None]
         n_rank = max((len(ocr_align.match_rows(sy)) for sy in sys_of), default=1)
@@ -817,7 +818,10 @@ def analyze(payload):
                 verse_withheld.append({"verse": rank + 1, "reason": "missing_row", "systems": lacking})
                 break
             ms, cs, bad = [], [], []
-            if implicit_first or pickup:
+            # Cùng giai điệu → cùng cấu trúc nhịp: lượt k có ĐÚNG số ô của lượt 0. Ô 1 suy ra (bài không vạch mở đầu) có ở lượt 0 nên có ở lượt k.
+            # Nhịp lấy đà KHÔNG sinh ô riêng cho lời 2: anchors chỉ có một `pickup`, và chưa có bằng chứng âm nhạc để chia lại ô — phần lấy đà
+            # của lời 2 nằm trong ô cuối của lượt trước (ô cuối + lấy đà = một nhịp đủ); thầy kiểm (needsReview + ghi chú).
+            if implicit_first:
                 row0 = ocr_align.system_row(sys_of[first["system"]], rank)
                 idx0 = next((i for i, _ in row0["resolved"] if i is not None), None)
                 if idx0 is None:
@@ -840,6 +844,9 @@ def analyze(payload):
             if bad:
                 verse_withheld.append({"verse": rank + 1, "reason": "unresolved_bars", "bars": bad})
                 break
+            if len(ms) != n_pass0:
+                verse_withheld.append({"verse": rank + 1, "reason": "measure_count_mismatch", "expected": n_pass0, "got": len(ms)})
+                break
             verse_passes.append({"verse": rank + 1, "measures": ms, "confidence": cs})
         for vp in verse_passes:
             measures += vp["measures"]
@@ -861,8 +868,12 @@ def analyze(payload):
             diagnostics_warn.append(ocr_warning)
         for vp in verse_passes:
             notes.append(f"Sheet có hàng lời thứ {vp['verse']} dưới mỗi khuông: đã dựng {len(vp['measures'])} ô nối tiếp sau lượt trước (lời {vp['verse']} dùng lại vạch, token riêng) — cần thầy kiểm thứ tự hát.")
+        if verse_passes and pickup:
+            notes.append("Bài có nhịp lấy đà: lời 2 không có ô lấy đà riêng (anchors chỉ có một nhịp lấy đà) — phần lấy đà của lời 2 nằm trong ô cuối của lượt trước; cần thầy kiểm.")
         for vw in verse_withheld:
-            if vw["reason"] == "missing_row":
+            if vw["reason"] == "measure_count_mismatch":
+                notes.append(f"Lời {vw['verse']}: số ô ({vw['got']}) khác lời 1 ({vw['expected']}) — KHÔNG dựng lời {vw['verse']} (không đoán); cần thầy đặt vạch tay.")
+            elif vw["reason"] == "missing_row":
                 notes.append(f"Có hàng lời thứ {vw['verse']} ở một số khuông nhưng thiếu/không khớp ở khuông {', '.join(str(g + 1) for g in vw['systems'])} — KHÔNG dựng lời {vw['verse']} (không đoán); cần thầy đặt vạch tay.")
             else:
                 notes.append(f"Lời {vw['verse']}: {len(vw['bars'])} vạch chưa xác định được chữ hát ngay sau — KHÔNG dựng lời {vw['verse']} (không đoán); cần thầy đặt vạch tay.")
@@ -897,7 +908,7 @@ def analyze(payload):
         "anchors": {**({"pickup": pickup} if pickup else {}), "measures": measures},
         "confidence": {"overall": level(min([m["score"] for m in measure_conf] or [0]) if not review else 0.3),
                        "measures": measure_conf},
-        "review": {"needsReview": bool(review) or not count_match or reordered or any(b["repeat"] for b in boundaries) or bool(unresolved_bars) or bool(verse_withheld),
+        "review": {"needsReview": bool(review) or not count_match or reordered or any(b["repeat"] for b in boundaries) or bool(unresolved_bars) or bool(verse_withheld) or bool(verse_passes and pickup),
                    "measures": review, "notes": notes},
         "diagnostics": {
             "engine": "numpy-pillow-v2-align", "generator": GENERATOR,
