@@ -1076,3 +1076,68 @@ test('luồng chính: Nguồn sheet đứng trước Phân tích vạch nhịp; 
   assert.equal(view.queryByRole('button', { name: /^Phân tích$/ }), null, 'không còn nút "Phân tích" trần cạnh file nguồn')
   assert.ok(view.getByRole('button', { name: /^Phân tích nội dung sheet \(tham khảo\)/ }), 'công cụ cũ vẫn dùng được, nhãn tham khảo')
 })
+
+// ── Multi-verse anchors V1: cảnh báo lời chưa có vạch ──
+const TWO_VERSE_TEXT = '1. Sáng [Am] nay, mình cùng [E7] đi qua bao con phố\nNắng [Dm] vàng rơi trên vai người\n\n2. Chiều [Am] qua, ta cùng [E7] về bên con đường cũ\nGió [Dm] mây bay trên đồi cao\n(Lặp lại 2 lần)\nĐK 2:'
+const VERSE_1_ONLY = [{ line: 0, token: 0 }, { line: 0, token: 4 }, { line: 1, token: 0 }, { line: 1, token: 3 }]
+const VERSE_2 = [{ line: 3, token: 0 }, { line: 3, token: 5 }, { line: 4, token: 0 }, { line: 4, token: 3 }]
+async function twoVerseSong(anchors: { line: number | null; token: number | null }[]) {
+  const library = createMockChordLibrary({ storage: memoryStorage() })
+  let created = await library.createChordSheet({ title: 'Bài hai lời', composer: '', meter: { beats: 4, beatType: 4 }, suggestedBpm: 80, text: TWO_VERSE_TEXT }, { versionId: library.newVersionId(), sources: [] })
+  created = await library.acceptAnchors(created.versionId, { measures: anchors })
+  await library.approveChordSheetVersion(created.versionId)
+  goto('?muc=hopam')
+  const view = render(<ChordLibraryPage library={library} />)
+  await settle()
+  fireEvent.click(view.getByRole('button', { name: 'Mở bài Bài hai lời' }))
+  await settle(60)
+  return view
+}
+const uncoveredNote = (view: ReturnType<typeof render>) => view.container.querySelector('.cl-uncovered')
+
+test('vạch chỉ phủ lời 1 → cảnh báo đúng dòng lời 2 (không báo dòng trống, chú thích "(Lặp lại…)", nhãn "ĐK 2:"); không chặn việc xem/sửa', async () => {
+  const view = await twoVerseSong(VERSE_1_ONLY)
+  const note = uncoveredNote(view)
+  assert.ok(note, 'có cảnh báo')
+  assert.match(note.textContent ?? '', /Lời chưa có vạch nhịp đã lưu: dòng 4–5 \(15 chữ\)/)
+  assert.ok(view.getByRole('button', { name: 'Sửa vạch nhịp thủ công' }), 'vẫn sửa được')
+  assert.ok(view.getByLabelText('Vạch nhịp theo ô'), 'vẫn xem được vạch đã có')
+})
+
+test('vạch đã phủ cả lời 2 → hết cảnh báo', async () => {
+  const view = await twoVerseSong([...VERSE_1_ONLY, ...VERSE_2])
+  assert.equal(uncoveredNote(view), null)
+})
+
+test('đề xuất của máy chỉ phủ lời 1 → trình sửa cảnh báo ngay; thầy thêm vạch lời 2 (thêm vào cuối) → cảnh báo biến mất; đề xuất phủ cả hai lời thì không có cảnh báo', async () => {
+  const library = createMockChordLibrary({ storage: memoryStorage() })
+  const versionId = library.newVersionId()
+  const path = sourcePath(MOCK_OWNER_ID, versionId, 0, 'image/png')
+  const file = new Blob(['sheet-bytes'], { type: 'image/png' })
+  await library.sources.upload(path, file, 'image/png')
+  const created = await library.createChordSheet({ title: 'Bài hai lời', composer: '', meter: { beats: 4, beatType: 4 }, suggestedBpm: 80, text: TWO_VERSE_TEXT },
+    { versionId, sources: [{ path, mime: 'image/png', sha256: await sha256Hex(await file.arrayBuffer()), sizeBytes: file.size, page: 1 }] })
+  await library.approveChordSheetVersion(created.versionId)
+  const open = async (measures: typeof VERSE_1_ONLY) => {
+    goto('?muc=hopam')
+    const view = render(<ChordLibraryPage library={library} analyzer={fakeAnalyzer(proposal(measures, [], false)).analyzer} readSource={async () => new Blob(['sheet-bytes'])} />)
+    await settle()
+    fireEvent.click(view.getByRole('button', { name: 'Mở bài Bài hai lời' }))
+    await settle(60)
+    fireEvent.click(analyzeButton(view))
+    await settle(60)
+    return view
+  }
+  const partial = await open(VERSE_1_ONLY)
+  const editor = partial.getByRole('group', { name: 'Trình sửa vạch nhịp' })
+  assert.match(editor.querySelector('.cl-uncovered')?.textContent ?? '', /\(theo dòng thời gian hiện tại\): dòng 4–5/)
+  assert.equal((partial.getByRole('button', { name: 'Chấp nhận vạch nhịp' }) as HTMLButtonElement).disabled, false, 'cảnh báo KHÔNG chặn việc chấp nhận')
+  fireEvent.click(partial.getByRole('radio', { name: /Thêm vào cuối/ }))
+  fireEvent.click(partial.getByRole('button', { name: /^Khe trước “Chiều” — dòng 4/ }))
+  assert.match(editor.querySelector('.cl-uncovered')?.textContent ?? '', /dòng 5 \(6 chữ\)/, 'đã phủ dòng 4, còn dòng 5')
+  fireEvent.click(partial.getByRole('button', { name: /^Khe trước “Gió” — dòng 5/ }))
+  assert.equal(editor.querySelector('.cl-uncovered'), null, 'phủ đủ cả lời 2 → hết cảnh báo')
+  cleanup()
+  const full = await open([...VERSE_1_ONLY, ...VERSE_2])
+  assert.equal(full.container.querySelector('.cl-uncovered'), null)
+})

@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { after, test } from 'node:test'
 import { fileURLToPath } from 'node:url'
+import { anchorLines } from '../../src/thuvien/chordAnchors.ts'
 import { analysisLineCounts, analysisTokenLengths, createHttpMeasureAnalyzer, createWorkerMeasureAnalyzer, parseAnalysisResult, productionMeasureAnalyzer } from '../../src/thuvien/measureAnalysis.ts'
 import { runAnalyzer, runAnalyzerRaw } from './harness.ts'
 
@@ -301,4 +302,118 @@ test('GOLD 4 câu (ngoài git): Chuyến Tàu Hoàng Hôn — lấy đà đúng,
     for (const no of gold.mustNot) assert.ok(!r.anchors.measures.some(m => m.line === no.line && m.token === no.token), 'ô đo xuyên dòng lời: không mở ô ở chữ đầu dòng')
     for (const yes of gold.must) assert.ok(r.anchors.measures.some(m => m.line === yes.line && m.token === yes.token))
   }
+})
+
+// ── Nhiều lời dưới một khuông (Multi-verse anchors V1) ───────────────────────────────────────────────────────
+// Sheet tổng hợp: 2 khuông, bố cục như TEXT_5_4 (lấy đà + vạch). Lời 2 là hàng OCR thứ hai dưới mỗi khuông, số âm tiết KHÁC lời 1
+// và rải đều nên vạch rơi vào token khác lời 1 — kiểm chứng "token riêng", không mặc định cùng vị trí.
+const TEXT_2_VERSES = '1. Một [C] hai ba bốn năm\nĐK: [G] sáu bảy tám [Am] chín\n2. Xanh đỏ tím vàng nâu hồng\nĐK: Lam [G] lục cam'
+const WORDS_2_VERSES = [['Một', 'hai', 'ba', 'bốn', 'năm'], ['sáu', 'bảy', 'tám', 'chín'], ['Xanh', 'đỏ', 'tím', 'vàng', 'nâu', 'hồng'], ['Lam', 'lục', 'cam']]
+const V_SYSTEMS = [['w', '|', 'w', 'w', '|', 'w', 's', 'w'], ['w', 'w', '|', '|', 'w', 'w']]
+const SW = 900, SH = 352, SGAP = 8, SLEFT = 60, SRIGHT = SW - 40
+const barX = (items: string[], k: number) => SLEFT + 3 * SGAP + (k + 1) * ((SRIGHT - SLEFT - 4 * SGAP) / (items.length + 1))
+
+/** Hàng OCR của một khuông: chữ rải đều giữa lề trái và phải; `y0` = đáy khuông + dải lời (px), `row` = 0 lời 1, 1 lời 2. */
+function ocrRow(words: string[], si: number, row: number, x0 = 80, x1 = 820) {
+  const y = 60 + si * 136 + 7 * SGAP + row * 18
+  const xs = words.map((_, i) => x0 + ((i + 0.5) * (x1 - x0)) / words.length)
+  return { xs, line: { role: 'lyric', bbox: [0.1, y / SH, 0.8, 0.03], tokens: words.map((text, i) => ({ text, bbox: [(xs[i] - 12) / SW, y / SH, 24 / SW, 10 / SH] })) } }
+}
+const ocrDoc = (lines: unknown[]) => ({ pages: [{ regions: [{ kind: 'lyric_block', lines }] }] })
+/** Token đứng đầu sau vạch x theo hàng chữ `xs` (chữ đầu có tâm ≥ x); hết hàng → số chữ. Tính độc lập, không dùng code của analyzer. */
+const tokenAfter = (xs: number[], x: number) => { const k = xs.findIndex(v => v >= x); return k < 0 ? xs.length : k }
+
+type VerseOut = {
+  ok: boolean; anchors: { pickup?: { line: number; token: number }; measures: { line: number; token: number }[] }
+  review: { needsReview: boolean; notes: string[] }; confidence: { measures: { measure: number; verse?: number }[] }
+  diagnostics: { alignment?: { verses: { built: { verse: number; measures: number }[]; withheld: { verse: number; reason: string }[] } }; warnings: { code: string }[] }
+  error?: { code: string }
+}
+const verseBase = () => ({ sources: [png(sheet(V_SYSTEMS))], lineTokenCounts: analysisLineCounts(TEXT_2_VERSES), lineTokenLengths: analysisTokenLengths(TEXT_2_VERSES), lineWords: WORDS_2_VERSES })
+
+test('hai lời dưới một khuông: lời 1 giữ NGUYÊN, lời 2 nối tiếp với token RIÊNG (số âm tiết khác lời 1)', async () => {
+  const v1 = V_SYSTEMS.map((_, si) => ocrRow(WORDS_2_VERSES[si], si, 0))
+  const v2 = V_SYSTEMS.map((_, si) => ocrRow(WORDS_2_VERSES[si + 2], si, 1))
+  const only1 = await runAnalyzerRaw({ ...verseBase(), ocrDocs: [ocrDoc(v1.map(r => r.line))] }) as VerseOut
+  const raw = await runAnalyzerRaw({ ...verseBase(), ocrDocs: [ocrDoc([...v1, ...v2].map(r => r.line))] }) as VerseOut
+  assert.equal(raw.ok, true)
+  assert.equal(only1.diagnostics.alignment?.verses.built.length, 0, 'một hàng lời → không có lượt phụ')
+  const head = only1.anchors.measures
+  assert.deepEqual(raw.anchors.measures.slice(0, head.length), head, 'lời 1 không đổi so với khi chỉ có một hàng lời')
+  assert.deepEqual(raw.anchors.pickup, only1.anchors.pickup, 'nhịp lấy đà không đổi')
+  // Đáp án lời 2 tính ĐỘC LẬP (không dùng code analyzer): vạch ở mục 1,4 (khuông 1) và 2,3 (khuông 2); chữ đầu có tâm ≥ vạch.
+  // Vạch phải của khuông 1 hết hàng → chữ đầu hàng lời 2 của khuông 2. Lấy đà → ô mở đầu lời 2 ở chữ đầu hàng.
+  const expectedTail = [
+    { line: 2, token: 0 },
+    { line: 2, token: tokenAfter(v2[0].xs, barX(V_SYSTEMS[0], 1)) },
+    { line: 2, token: tokenAfter(v2[0].xs, barX(V_SYSTEMS[0], 4)) },
+    { line: 3, token: 0 },
+    { line: 3, token: tokenAfter(v2[1].xs, barX(V_SYSTEMS[1], 2)) },
+    { line: 3, token: tokenAfter(v2[1].xs, barX(V_SYSTEMS[1], 3)) },
+  ]
+  assert.deepEqual(expectedTail.map(a => a.token), [0, 1, 3, 0, 1, 2], 'đáp án tính tay')
+  assert.deepEqual(raw.anchors.measures.slice(head.length), expectedTail)
+  // token RIÊNG: ô thứ 5 và 6 của lời 1 đều ở chữ 2 của "ĐK" (4 chữ); lời 2 chỉ có 3 chữ nên rơi ở chữ 1 và 2
+  assert.deepEqual(head.slice(-2), [A(1, 2), A(1, 2)])
+  assert.deepEqual(raw.anchors.measures.slice(-2), [A(3, 1), A(3, 2)], 'lời 2 không mặc định cùng vị trí token với lời 1')
+  assert.deepEqual(raw.diagnostics.alignment?.verses, { built: [{ verse: 2, measures: expectedTail.length }], withheld: [] })
+  assert.ok(raw.confidence.measures.slice(head.length).every(m => m.verse === 2))
+  assert.ok(raw.review.notes.some(n => n.includes('hàng lời thứ 2')))
+})
+
+test('hàng lời 2 chỉ có ở một số khuông → KHÔNG dựng lời 2 (không đoán), bắt buộc duyệt, ghi rõ khuông nào', async () => {
+  const v1 = V_SYSTEMS.map((_, si) => ocrRow(WORDS_2_VERSES[si], si, 0))
+  const v2first = ocrRow(WORDS_2_VERSES[2], 0, 1)
+  const full = await runAnalyzerRaw({ ...verseBase(), ocrDocs: [ocrDoc(v1.map(r => r.line))] }) as VerseOut
+  const raw = await runAnalyzerRaw({ ...verseBase(), ocrDocs: [ocrDoc([...v1.map(r => r.line), v2first.line])] }) as VerseOut
+  assert.equal(raw.ok, true)
+  assert.deepEqual(raw.anchors.measures, full.anchors.measures, 'chỉ còn lượt 1')
+  assert.deepEqual(raw.diagnostics.alignment?.verses.built, [])
+  assert.deepEqual(raw.diagnostics.alignment?.verses.withheld.map(w => [w.verse, w.reason]), [[2, 'missing_row']])
+  assert.equal(raw.review.needsReview, true)
+  assert.ok(raw.review.notes.some(n => n.includes('KHÔNG dựng lời 2') && n.includes('khuông 2')))
+})
+
+test('sheet nhiều lời mà không có OCR: căn chỉnh theo độ rộng KHÔNG tự dựng vạch (lỗi có mã); sheet một lời không đổi', async () => {
+  const noOcr = await runAnalyzerRaw({ ...verseBase(), lineWords: undefined }) as VerseOut
+  assert.equal(noOcr.ok, false)
+  assert.equal(noOcr.error?.code, 'width_only_incomplete_lyrics')
+  const dead = await runAnalyzerRaw({ ...verseBase(), ocr: { tessdataDir: '/khong/ton/tai' } }) as VerseOut
+  assert.equal(dead.ok, false, 'engine OCR không chạy được + nhiều lời → không rơi về width-only sai')
+  assert.equal(dead.error?.code, 'width_only_incomplete_lyrics')
+  const single = await runAnalyzerRaw({ sources: [png(sheet(V_SYSTEMS))], lineTokenCounts: analysisLineCounts(TEXT_5_4), lineTokenLengths: analysisTokenLengths(TEXT_5_4) }) as VerseOut
+  assert.equal(single.ok, true, 'bài một lời vẫn chạy width-only như cũ')
+  assert.deepEqual(single.anchors, { pickup: A(0, 0), measures: [A(0, 1), A(0, 3), A(1, 0), A(1, 2), A(1, 2)] })
+})
+
+// ── Tình ca thật (2 lời dưới mỗi khuông). Ảnh + lời CÓ BẢN QUYỀN → NGOÀI git: chạy khi có MEASURE_TINHCA_DIR (tinh-ca.pdf, text.txt = lời chuẩn
+// v7, anchors.json = 40 ô thầy đặt tay cho lời 1) và MEASURE_TESSDATA (thư mục có vie.traineddata). Không có → SKIP, KHÔNG tính là PASS gate ảnh thật.
+const tinhCaDir = process.env.MEASURE_TINHCA_DIR
+const tessdata = process.env.MEASURE_TESSDATA
+test('GOLD Tình ca (ngoài git): 80 ô — lời 1 đúng 40/40 như thầy đặt tay; lời 2 đúng 40 ô nằm trong lời 2/ĐK 2, token riêng', { skip: (!tinhCaDir || !tessdata) && 'thiếu MEASURE_TINHCA_DIR / MEASURE_TESSDATA' }, async () => {
+  const text = readFileSync(join(tinhCaDir!, 'text.txt'), 'utf8')
+  const manual = JSON.parse(readFileSync(join(tinhCaDir!, 'anchors.json'), 'utf8')).measures as { line: number; token: number }[]
+  const counts = analysisLineCounts(text)
+  const raw = await runAnalyzerRaw({ sources: [{ path: join(tinhCaDir!, 'tinh-ca.pdf'), mime: 'application/pdf' }], lineTokenCounts: counts, lineTokenLengths: analysisTokenLengths(text),
+    lineWords: anchorLines(text).map(line => line.tokens.map(token => token.word)), ocr: { tessdataDir: tessdata } }) as VerseOut
+  assert.equal(raw.ok, true)
+  const ms = raw.anchors.measures
+  assert.equal(ms.length, 80, '40 ô lời 1 + 40 ô lời 2')
+  assert.deepEqual(raw.diagnostics.alignment?.verses, { built: [{ verse: 2, measures: 40 }], withheld: [] })
+  // Lời 1: so với bộ vạch thầy đặt. Vạch cuối dòng (token = số chữ) và đầu dòng kế là CÙNG một chỗ nghe → so theo dạng chuẩn hoá.
+  const norm = (a: { line: number; token: number }) => a.token >= counts[a.line] ? { line: nextSung(a.line), token: 0 } : a
+  const nextSung = (line: number) => { let l = line + 1; while (l < counts.length && counts[l] === 0) l += 1; return l }
+  assert.deepEqual(ms.slice(0, 40).map(norm), manual.map(norm), 'lời 1: 40/40 không đổi')
+  // Lời 2: mọi ô nằm trong lời 2 (dòng 15–21) hoặc ĐK 2 (23–28); cùng giai điệu nên mỗi ô ở cùng chỗ với ô lời 1 (cộng 123 chữ), TRỪ nơi lời 2
+  // được hát lệch một âm tiết — token RIÊNG theo hàng chữ của lời 2, không mặc định bằng lời 1.
+  const tail = ms.slice(40)
+  assert.ok(tail.every(a => (a.line >= 15 && a.line <= 21) || (a.line >= 23 && a.line <= 28)), 'không ô nào rơi ngoài lời 2 / ĐK 2')
+  const flat = (a: { line: number; token: number }) => counts.slice(0, a.line).reduce((sum, c) => sum + c, 0) + a.token
+  const verse1Chars = counts.slice(0, 15).reduce((sum, c) => sum + c, 0)
+  assert.equal(counts.slice(0, 14).join(), counts.slice(15).join(), 'fixture: lời 2 được soạn cùng số chữ mỗi dòng với lời 1')
+  const shifts = tail.map((a, i) => flat(a) - (flat(ms[i]) + verse1Chars))
+  assert.ok(shifts.every(d => Math.abs(d) <= 1), `mọi ô lời 2 trong phạm vi một âm tiết của ô lời 1: ${shifts.join()}`)
+  assert.ok(shifts.some(d => d !== 0), 'ít nhất một ô lời 2 lệch một âm tiết so với lời 1 → token riêng, không sao chép')
+  assert.ok(shifts.filter(d => d !== 0).length <= 3, `chỉ vài ô lệch (phụ thuộc mô hình OCR): ${shifts.join()}`)
+  assert.equal(raw.review.needsReview, true, 'bắt buộc thầy kiểm thứ tự hát')
 })

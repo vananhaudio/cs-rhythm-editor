@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
-  addSilent, addSustain, anchorLines, anchorWord, anchorsPayload, buildMeasureDisplay, firstLyricAnchor, moveMeasure, removeMeasure, toggleGap,
+  addSilent, addSustain, anchorLines, anchorWord, anchorsPayload, buildMeasureDisplay, firstLyricAnchor, moveMeasure, removeMeasure, toggleGap, uncoveredLines,
 } from './chordAnchors.ts'
 import type { ChordAnchors, MeasureAnchor } from './chordAnchors.ts'
 import MeasureSheet from './MeasureSheet.tsx'
+import UncoveredNotice from './UncoveredNotice.tsx'
 
 // Trình sửa vạch nhịp THỦ CÔNG. Thầy bấm vào khe giữa hai chữ để đặt / bỏ vạch; dòng thời gian bên dưới là
 // thứ tự hát (sửa được: lên/xuống, ô ngân, ô không lời, xoá). Không nhập JSON, không thấy line/token.
@@ -40,6 +41,7 @@ export default function AnchorEditor({ text, initial, busy, onAccept, onCancel, 
     return map
   }, [measures])
   const live = useMemo(() => (measures.length ? anchorsPayload(measures, pickup) : null), [measures, pickup])
+  const uncovered = useMemo(() => (live ? uncoveredLines(text, live) : []), [text, live])
   const preview = useMemo(() => (live ? buildMeasureDisplay(text, live) : []), [text, live])
   useEffect(() => { onChange?.(live) }, [live, onChange])
   const pickupClash = !!pickup && measures.length > 0 && measures[0].line === pickup.line && measures[0].token === pickup.token
@@ -78,6 +80,8 @@ export default function AnchorEditor({ text, initial, busy, onAccept, onCancel, 
       {flagged.length > 0 && <p><strong>⚠ Cần kiểm: ô {flagged.join(', ')}</strong> — máy chưa chắc ở các ô này (theo đề xuất ban đầu).</p>}
       {notes.map(note => <p key={note}>{note}</p>)}
     </div>}
+
+    <UncoveredNotice ranges={uncovered} where="(theo dòng thời gian hiện tại)" />
 
     <div className="cl-anchor-timeline">
       <div className="cl-anchor-timeline-head">

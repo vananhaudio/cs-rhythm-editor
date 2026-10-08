@@ -7,7 +7,8 @@ import type { ChordDraft, ChordDraftErrors } from './chordText.ts'
 import { NEW_CHORD_SHEET, chordSheetFromSearch, sectionUrl } from './sections.ts'
 import { MAX_SOURCE_FILES, SOURCE_ACCEPT, formatBytes, nextFreeIndex, parseSourcePath, sha256Hex, sourceErrorMessage, sourceFileProblem, sourceKindLabel, sourceMimeOf, sourcePath } from './chordSources.ts'
 import type { ChordSource } from './chordSources.ts'
-import { ANCHORS_STATUS_LABEL, buildMeasureDisplay } from './chordAnchors.ts'
+import { ANCHORS_STATUS_LABEL, buildMeasureDisplay, uncoveredLines } from './chordAnchors.ts'
+import UncoveredNotice from './UncoveredNotice.tsx'
 import MeasureSheet from './MeasureSheet.tsx'
 import type { ChordAnchors } from './chordAnchors.ts'
 import AnchorEditor from './AnchorEditor.tsx'
@@ -626,6 +627,7 @@ function AnchorSection({ detail, willReset, sourceCount, sourcesSaved, editing, 
   const status = willReset || !detail ? 'none' : detail.anchorsStatus
   const anchors = willReset ? null : detail?.anchors ?? null
   const lines = anchors && detail ? buildMeasureDisplay(detail.text, anchors) : []
+  const uncovered = anchors && detail ? uncoveredLines(detail.text, anchors) : []
   const canEdit = !!detail && !dirty && detail.status !== 'discarded'
   return <section className="cl-card" aria-label="Vạch nhịp">
     <h2>Vạch nhịp</h2>
@@ -645,6 +647,7 @@ function AnchorSection({ detail, willReset, sourceCount, sourcesSaved, editing, 
     {analysis.state === 'choose' && analysis.result && <div className="cl-analysis-choice" role="group" aria-label="Kết quả phân tích">
       <p className="cl-warn" role="note"><strong>{analysis.result.review.needsReview ? 'Phân tích cần kiểm tra' : 'Đã có đề xuất mới'}</strong> — máy đề xuất {analysis.result.anchors.measures.length} ô{analysis.result.anchors.pickup ? ' + nhịp lấy đà' : ''}.
         {analysis.result.review.measures.length > 0 && ` Cần kiểm: ô ${analysis.result.review.measures.join(', ')}.`} Vạch hiện tại chưa bị thay đổi.</p>
+      {detail && <UncoveredNotice ranges={uncoveredLines(detail.text, analysis.result.anchors)} where="trong đề xuất" />}
       {analysis.result.review.notes.map(note => <p key={note} className="cl-help">{note}</p>)}
       <div className="cl-anchor-buttons">
         <button type="button" className="cl-secondary cl-approve" onClick={onUseProposal}>Dùng đề xuất</button>
@@ -656,7 +659,7 @@ function AnchorSection({ detail, willReset, sourceCount, sourcesSaved, editing, 
           busy={busy} onAccept={onAccept} onCancel={onCancel} onChange={onLive} />
       : <div className="cl-anchor-view" aria-label="Xem vạch nhịp">
         {lines.length
-          ? <MeasureSheet rows={lines} label="Vạch nhịp theo ô" />
+          ? <><UncoveredNotice ranges={uncovered} where="đã lưu" /><MeasureSheet rows={lines} label="Vạch nhịp theo ô" /></>
           : <p className="cl-placeholder">{willReset ? 'Lời đã đổi — vạch nhịp cũ không còn khớp, cần đặt lại sau khi lưu.' : detail?.hasAnchors && !anchors ? 'Dữ liệu vạch nhịp không đọc được theo lời hiện tại.' : 'Chưa có dữ liệu vạch nhịp.'}</p>}
       </div>}
   </section>

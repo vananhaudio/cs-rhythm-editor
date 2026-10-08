@@ -193,6 +193,28 @@ class PlanMultiRow(unittest.TestCase):
         self.assertEqual(cands[0][0]["anchor"], {"line": 0, "token": 3})
         self.assertEqual(cands[1][0]["anchor"]["line"], 3)
 
+    def test_match_rows_system_row_system_bar_theo_luot_hat(self):
+        """Lượt 0 = hàng chính (giữ nguyên hành vi cũ); lượt 1 = hàng MATCH thứ hai, token RIÊNG theo hàng đó."""
+        rows_by_page = [[
+            {"y": 190, "tokens": row("zzqx wwkv yypt".split())},                      # nhiễu (UNMATCHED) nằm trên cùng
+            {"y": 210, "tokens": row("Sáng nay mình cùng đi qua bao con phố".split())},
+            {"y": 235, "tokens": row("Hát lên tiếng ca của lòng mình".split(), x0=100, step=60)},   # thưa hơn → vạch rơi vào token khác
+        ]]
+        geos = [[{"y1": 100, "y5": 180, "gap": 10, "bars": [220, 400]}]]
+        sy = oa.plan_alignment(CANON, rows_by_page, geos)[(0, 0)]
+        self.assertEqual([r["status"] for r in sy["rows"]], ["UNMATCHED", "MATCH", "MATCH"])
+        self.assertEqual(oa.match_rows(sy), [1, 2])
+        self.assertEqual(sy["primary"], oa.match_rows(sy)[0])                         # hàng chính == lượt 0
+        self.assertIs(oa.system_row(sy, 0), sy["rows"][1])
+        self.assertIs(oa.system_row(sy, 1), sy["rows"][2])
+        self.assertIsNone(oa.system_row(sy, 2))
+        self.assertEqual(oa.system_bar(CANON, sy, 220), oa.system_bar(CANON, sy, 220, rank=0), "rank mặc định = hàng chính")
+        i0, _ = oa.system_bar(CANON, sy, 220, rank=0)
+        i1, _ = oa.system_bar(CANON, sy, 220, rank=1)
+        self.assertEqual(CANON.at(i0), {"line": 0, "token": 3})
+        self.assertEqual(CANON.at(i1)["line"], 3)                                     # lượt 1 trỏ vào lời của hàng thứ hai
+        self.assertEqual(oa.system_bar(CANON, sy, 220, rank=2), (None, "no_row"))
+
     def test_page_order_theo_noi_dung(self):
         r_early = {"y": 210, "tokens": row("Sáng nay mình cùng đi qua bao con phố".split())}
         r_late = {"y": 210, "tokens": row("Em ơi em ơi hãy về đây".split())}
