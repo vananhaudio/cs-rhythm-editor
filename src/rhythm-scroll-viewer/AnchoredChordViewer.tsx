@@ -22,8 +22,10 @@ const keyOf = (anchor: MeasureAnchor) => `${anchor.line}:${anchor.token}`
  * Ball đi từ chữ neo của ô hiện tại tới chữ neo của ô kế theo đường đọc và nảy đúng MỘT lần mỗi ô.
  * Không karaoke, không phách 1/2/3/4. Các dòng vẽ theo thứ tự văn bản (prototype: bài chạy thẳng một lượt).
  */
-export default function AnchoredChordViewer({ text, data, measurePosition, labels, reducedMotion = false, showAnchors = false }: {
+export default function AnchoredChordViewer({ text, lines: givenLines, data, measurePosition, labels, reducedMotion = false, showAnchors = false, activeChord = null }: {
   text: string
+  /** Dòng đã dựng sẵn (production: từ tokenizer của Hợp âm chuẩn hóa, nhãn "1."/"ĐK:" đã tách khỏi chữ). Vắng → tách `text`. */
+  lines?: ChordLine[]
   data: RhythmScrollAnchoredData
   measurePosition: number
   /** Nhãn đoạn theo dòng (chỉ trình bày). */
@@ -31,9 +33,11 @@ export default function AnchoredChordViewer({ text, data, measurePosition, label
   reducedMotion?: boolean
   /** Soi: hiện vạch "|" nhỏ tại mỗi chữ neo. */
   showAnchors?: boolean
+  /** Hợp âm đang vang trên timeline (dòng + chữ mang hợp âm đó) — chỉ để sáng lên, không ảnh hưởng ball. */
+  activeChord?: { line: number; token: number } | null
 }) {
   const scroll = useMemo(() => createAnchoredScroll(data), [data])
-  const lines = useMemo(() => parseChordLines(text), [text])
+  const lines = useMemo(() => givenLines ?? parseChordLines(text), [givenLines, text])
   const issues = useMemo(() => anchorTextIssues(data, lines.map(line => line.words.length)), [data, lines])
   const anchorKeys = useMemo(() => new Set((data.pickup ? [data.pickup] : []).concat(data.measures).map(keyOf)), [data])
   const position = scroll.locate(measurePosition)
@@ -94,6 +98,7 @@ export default function AnchoredChordViewer({ text, data, measurePosition, label
         <div ref={contentRef} data-testid="scroll-content"
           style={{ ...S.content, transform: `translate3d(0, ${(-shift).toFixed(2)}px, 0)` }}>
           <Lines lines={lines} labels={labels} anchorKeys={showAnchors ? anchorKeys : null}
+            activeChord={activeChord ? `${activeChord.line}:${activeChord.token}` : null}
             activeFrom={position.state === 'ended' ? -1 : position.current.line ?? -1}
             activeTo={position.state === 'ended' ? -1 : position.next.line ?? position.current.line ?? -1} />
           {ball && (
@@ -107,12 +112,13 @@ export default function AnchoredChordViewer({ text, data, measurePosition, label
 }
 
 /** Memo: mỗi khung hình chỉ đổi transform và vị trí ball; cây lời chỉ vẽ lại khi đổi dòng đang hát. */
-const Lines = memo(function Lines({ lines, labels, anchorKeys, activeFrom, activeTo }: {
+const Lines = memo(function Lines({ lines, labels, anchorKeys, activeFrom, activeTo, activeChord }: {
   lines: readonly ChordLine[]
   labels?: Record<number, string>
   anchorKeys: Set<string> | null
   activeFrom: number
   activeTo: number
+  activeChord: string | null
 }) {
   return <>
     {lines.filter(line => line.words.length).map(line => {
@@ -125,7 +131,8 @@ const Lines = memo(function Lines({ lines, labels, anchorKeys, activeFrom, activ
             {line.words.map((word, token) => (
               <span key={token} data-word={`${line.index}:${token}`} style={S.word}>
                 {anchorKeys?.has(`${line.index}:${token}`) && <span data-anchor-mark="" aria-hidden="true" style={S.barMark} />}
-                <span data-chord={word.chord ?? undefined} style={S.chord}>{word.chord ?? ' '}</span>
+                <span data-chord={word.chord ?? undefined} data-active-chord={activeChord === `${line.index}:${token}` ? '' : undefined}
+                  style={activeChord === `${line.index}:${token}` ? S.chordActive : S.chord}>{word.chord ?? ' '}</span>
                 <span style={S.lyric}>{word.text}</span>
               </span>
             ))}
@@ -155,5 +162,6 @@ const S: Record<string, CSSProperties> = {
   word: { position: 'relative', display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-start', paddingTop: BALL_LANE },
   barMark: { position: 'absolute', left: -4, top: BALL_LANE - 2, bottom: 2, width: 1, background: '#38BDF8', opacity: 0.7 },
   chord: { fontSize: 'clamp(14px, 3.6vw, 18px)', fontWeight: 700, color: '#FBBF24', lineHeight: 1.25, minHeight: '1.25em', whiteSpace: 'pre' },
+  chordActive: { fontSize: 'clamp(14px, 3.6vw, 18px)', fontWeight: 800, color: '#0F1117', background: '#FBBF24', borderRadius: 4, padding: '0 5px', marginLeft: -5, lineHeight: 1.25, minHeight: '1.25em', whiteSpace: 'pre' },
   lyric: { fontSize: 'clamp(19px, 5vw, 26px)', lineHeight: 1.3 },
 }

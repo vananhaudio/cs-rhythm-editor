@@ -22,8 +22,22 @@ export function sectionUrl(href: string, section: ThuVienSection, chordSheet: st
   const url = new URL(href)
   url.searchParams.delete('bai')
   url.searchParams.delete('hopam')
+  url.searchParams.delete('chay')
   if (section === 'chords') url.searchParams.set('muc', 'hopam')
   else url.searchParams.delete('muc')
   if (section === 'chords' && chordSheet) url.searchParams.set('hopam', chordSheet)
+  return url.pathname + url.search
+}
+
+/** `?muc=hopam&hopam=<id>&chay=1` → mở Rhythm Scroll của phiên bản đó (thay cho trình sửa). */
+export function rhythmFromSearch(search: string): boolean {
+  const params = new URLSearchParams(search)
+  return params.get('muc') === 'hopam' && !!params.get('hopam')?.trim() && params.get('chay') === '1'
+}
+
+/** Địa chỉ trang Rhythm Scroll của một phiên bản; `on = false` → về trình sửa của chính phiên bản đó. */
+export function rhythmUrl(href: string, versionId: string, on = true): string {
+  const url = new URL(sectionUrl(href, 'chords', versionId), href)
+  if (on) url.searchParams.set('chay', '1')
   return url.pathname + url.search
 }

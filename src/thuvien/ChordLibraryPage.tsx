@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { DISABLED_MESSAGE, getChordLibrary } from './chordLibrary.ts'
 import type { ChordLibrary, ChordSheetDetail, ChordSheetSummary } from './chordLibrary.ts'
 import { BPM_RANGE, METER_CHOICES, canonicalChordText, chordTextIssues, formatMeter, listChords, parseBpm, parseChordText, parseMeter, validateChordDraft } from './chordText.ts'
 import type { ChordDraft, ChordDraftErrors } from './chordText.ts'
-import { NEW_CHORD_SHEET, chordSheetFromSearch, sectionUrl } from './sections.ts'
+import { NEW_CHORD_SHEET, chordSheetFromSearch, rhythmFromSearch, rhythmUrl, sectionUrl } from './sections.ts'
 import { MAX_SOURCE_FILES, SOURCE_ACCEPT, formatBytes, nextFreeIndex, parseSourcePath, sha256Hex, sourceErrorMessage, sourceFileProblem, sourceKindLabel, sourceMimeOf, sourcePath } from './chordSources.ts'
 import type { ChordSource } from './chordSources.ts'
 import { ANCHORS_STATUS_LABEL, buildMeasureDisplay, uncoveredLines } from './chordAnchors.ts'
@@ -17,6 +17,9 @@ import type { ContentExtractor, ExtractionTarget } from './contentExtractor.ts'
 import { applyProposal, buildProposal, hasSubstantialText } from './extractionProposal.ts'
 import type { ExtractionProposal } from './extractionProposal.ts'
 
+// Rhythm Scroll (dựng timeline hợp âm theo phách) chỉ tải khi mở — không làm nặng trình sửa.
+const RhythmScrollPage = lazy(() => import('./RhythmScrollPage.tsx'))
+
 // Mục "Hợp âm chuẩn hóa" của /thuvien — bàn làm việc của thầy: tìm, thêm, sửa lời + hợp âm.
 // Mọi đọc/ghi đi qua `library` (src/thuvien/chordLibrary.ts); component không biết Supabase.
 // CSS: ./ChordLibrary.css, nạp ở ThuVienPage.
@@ -28,11 +31,12 @@ const readViaViewUrl: SourceReader = async (library, path) => (await fetch(await
 
 export default function ChordLibraryPage({ tabs, library = getChordLibrary(), analyzer, extractor, readSource = readViaViewUrl }: Props) {
   const [open, setOpen] = useState<string | null>(() => chordSheetFromSearch(window.location.search))
+  const [rhythm, setRhythm] = useState(() => rhythmFromSearch(window.location.search))
   const [notice, setNotice] = useState('')
 
   // Nút Back của trình duyệt đóng/mở bài theo `?hopam=`.
   useEffect(() => {
-    const sync = () => setOpen(chordSheetFromSearch(window.location.search))
+    const sync = () => { setOpen(chordSheetFromSearch(window.location.search)); setRhythm(rhythmFromSearch(window.location.search)) }
     window.addEventListener('popstate', sync)
     return () => window.removeEventListener('popstate', sync)
   }, [])
@@ -40,7 +44,13 @@ export default function ChordLibraryPage({ tabs, library = getChordLibrary(), an
   function go(target: string | null) {
     window.history.pushState({ thuvienChord: true }, '', sectionUrl(window.location.href, 'chords', target))
     setOpen(target)
+    setRhythm(false)
     window.scrollTo(0, 0)
+  }
+
+  function goRhythm(versionId: string, on: boolean) {
+    window.history.pushState({ thuvienChord: true }, '', rhythmUrl(window.location.href, versionId, on))
+    setRhythm(on)
   }
 
   // Bản production mà backend chưa bật: nói thẳng, không cho nhập — không bao giờ lặng lẽ lưu vào trình duyệt.
@@ -52,10 +62,16 @@ export default function ChordLibraryPage({ tabs, library = getChordLibrary(), an
     </div>
   </main>
 
+  if (open && open !== NEW_CHORD_SHEET && rhythm) {
+    return <Suspense fallback={<main className="tv-chords"><p className="cl-empty">Đang mở Rhythm Scroll…</p></main>}>
+      <RhythmScrollPage library={library} versionId={open} onBack={() => goRhythm(open, false)} />
+    </Suspense>
+  }
+
   return <main className="tv-chords">
     {open
       ? <ChordEditor key={open} library={library} analyzer={analyzer} extractor={extractor} readSource={readSource} versionId={open === NEW_CHORD_SHEET ? null : open}
-          onOpenVersion={id => go(id)}
+          onOpenVersion={id => go(id)} onRhythm={id => goRhythm(id, true)}
           onClose={message => { setNotice(message ?? ''); go(null) }}
           // Lưu xong chỉ đổi địa chỉ (để tải lại trang vẫn mở đúng bài) — KHÔNG dựng lại editor, kẻo mất thông báo "Đã lưu".
           onSaved={detail => window.history.replaceState(window.history.state, '', sectionUrl(window.location.href, 'chords', detail.versionId))} />
@@ -141,7 +157,7 @@ const draftOf = (form: Form): ChordDraft => ({
   title: form.title, composer: form.composer, meter: parseMeter(form.meter), suggestedBpm: parseBpm(form.bpm), text: form.text,
 })
 
-function ChordEditor({ library, analyzer, extractor, readSource, versionId, onClose, onSaved, onOpenVersion }: {
+function ChordEditor({ library, analyzer, extractor, readSource, versionId, onClose, onSaved, onOpenVersion, onRhythm }: {
   library: ChordLibrary
   analyzer: MeasureAnalyzer | undefined
   extractor: ContentExtractor | undefined
@@ -150,6 +166,7 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
   onClose: (message?: string) => void
   onSaved: (detail: ChordSheetDetail) => void
   onOpenVersion: (versionId: string) => void
+  onRhythm: (versionId: string) => void
 }) {
   const [detail, setDetail] = useState<ChordSheetDetail | null>(null)
   const [saved, setSaved] = useState<Form>(EMPTY)
@@ -475,6 +492,7 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
     <header className="cl-editor-head">
       <button type="button" className="cl-back" onClick={close}>← Danh sách</button>
       <h1>{detail ? detail.title : 'Thêm bài'}</h1>
+      {detail?.anchors && <button type="button" className="cl-secondary" disabled={busy || dirty} title={dirty ? 'Lưu thay đổi trước' : 'Chạy lời + hợp âm theo nhịp'} onClick={() => onRhythm(detail.versionId)}>▶ Rhythm Scroll</button>}
       <button type="button" className="cl-primary" onClick={() => void save()} disabled={busy || sourceBusy}>{busy ? 'Đang lưu…' : 'Lưu'}</button>
     </header>
     <MockBanner library={library} />
