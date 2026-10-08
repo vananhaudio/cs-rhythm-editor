@@ -63,6 +63,42 @@ export function parseAnchors(raw: unknown, text: string): ChordAnchors | null {
   return { pickup: data.pickup as MeasureAnchor | undefined, measures: data.measures as MeasureAnchor[] }
 }
 
+/** Dòng không hát dù có chữ: chú thích trong ngoặc, capo, "x2", "điệp khúc"… (so trên dạng bỏ dấu + thường hoá). */
+const NOT_SUNG = /^\s*(?:\(|\[?capo\b|x\d|\d+\s*x\b|diep khuc|lap lai)/
+/** Dòng ngắn hơn ngưỡng này (nhãn "ĐK 1:", "Dạo", "Capo 2"…) không bao giờ bị tính là thiếu vạch. */
+export const MIN_SUNG_TOKENS = 3
+
+export type UncoveredRange = { from: number; to: number; tokens: number }
+
+/**
+ * Các đoạn dòng LỜI HÁT chưa có vạch nhịp nào (0-based, gộp dòng liền kề; dòng trống/nhãn/chú thích đứng giữa không cắt đoạn).
+ * Dòng được phủ khi có ô bắt đầu trong dòng đó, hoặc nằm giữa hai ô liên tiếp đi xuôi (line trước < dòng < line sau).
+ * Chỉ để CẢNH BÁO — không bao giờ chặn lưu hay tự thêm ô.
+ */
+export function uncoveredLines(text: string, anchors: ChordAnchors): UncoveredRange[] {
+  const raw = canonicalChordText(text).split('\n')
+  const lines = raw.map(lyricTokens)
+  const covered = new Set<number>()
+  const timeline = [...(anchors.pickup ? [anchors.pickup] : []), ...anchors.measures]
+  timeline.forEach((anchor, at) => {
+    if (anchor.line === null) return
+    if ((anchor.token as number) < lines[anchor.line].tokens.length) covered.add(anchor.line)
+    const next = timeline.slice(at + 1).find(item => item.line !== null)
+    if (next && (next.line as number) > anchor.line) for (let line = anchor.line + 1; line < (next.line as number); line += 1) covered.add(line)
+  })
+  const needs = (index: number) => lines[index].tokens.length >= MIN_SUNG_TOKENS && !NOT_SUNG.test(foldVi(raw[index].trim())) && !covered.has(index)
+  const out: UncoveredRange[] = []
+  let open: UncoveredRange | null = null
+  lines.forEach((line, index) => {
+    if (needs(index)) {
+      if (!open) { open = { from: index, to: index, tokens: 0 }; out.push(open) }
+      open.to = index
+      open.tokens += line.tokens.length
+    } else if (line.tokens.length >= MIN_SUNG_TOKENS) open = null     // dòng hát đã được phủ cắt đoạn; dòng trống / nhãn / chú thích thì không
+  })
+  return out
+}
+
 export type AnchorLine = { label: string | null; text: string; bars: number }
 
 /**

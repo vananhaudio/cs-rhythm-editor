@@ -45,6 +45,7 @@ DEFAULTS = {
     "pdfStaffGap": 10.0,       # PDF vector: render lại ở DPI cho khoảng cách dòng kẻ ≈ giá trị này
     "pickupRatio": 0.75,       # ô đầu ngắn hơn tỉ lệ này × độ rộng ô trung vị → nhịp lấy đà
     "letterGapRatio": 0.3,     # khe ≤ tỉ lệ này × chiều cao dải chữ = cùng một từ
+    "widthOnlyMaxUnmatchedRatio": 0.3,   # căn chỉnh theo độ rộng (không OCR): token chuẩn không thấy trên sheet ≥ tỉ lệ này → không tự dựng
     "gapCost": 1.0,            # căn chỉnh: giá bỏ qua một cụm chữ / một token
     "maxMatchCost": 2.0,       # căn chỉnh: trần chi phí khớp một cặp
     "maxSkewDegrees": 2.0,     # xoay thẳng ảnh nghiêng tối đa ± độ (0 = tắt)
@@ -647,7 +648,8 @@ def analyze(payload):
             # OCR/lời chuẩn hỏng ở bất kỳ bước nào: KHÔNG được làm hỏng analyzer cũ → bỏ OCR, giữ căn chỉnh theo độ rộng
             ocr_plan = canon = None
             ocr_warning = {"code": "OCR_ERROR", "message": "Ghép OCR gặp lỗi — dùng căn chỉnh theo độ rộng."}
-    how_of = {}
+    how_by_rank = {}                                 # lượt hát (0 = hàng chính) → {(khuông, x): cách xác định chữ sau vạch}
+    how_of = how_by_rank.setdefault(0, {})
     unresolved_bars = []
     if ocr_plan is not None:
         order = tuple(ocr_align.page_order(ocr_plan, len(pages)))
@@ -680,29 +682,30 @@ def analyze(payload):
         count_match = unmatched_sheet == 0 and unmatched_canon == 0
         cost = (1.0 - sum(r["best"] / (2 * r["n"]) for r in primaries) / len(primaries)) if primaries else 1.0
 
-        def token_after(gi, x):
-            idx, how = ocr_align.system_bar(canon, sys_of[gi], x)
+        def token_after(gi, x, rank=0):
+            """Chữ chuẩn hát đầu tiên sau vạch theo lượt hát `rank` (0 = hàng chính, 1 = hàng lời thứ hai dưới khuông…)."""
+            how_r = how_by_rank.setdefault(rank, {})
+            idx, how = ocr_align.system_bar(canon, sys_of[gi], x, rank)
             if how == "row_end":
-                # hết hàng: chữ hát đầu tiên của khuông kế (có hàng chính), như bản cũ; không còn → vạch kết bài
+                # hết hàng: chữ hát đầu tiên của khuông kế (có hàng của lượt này), như bản cũ; không còn → vạch kết bài
                 for gj in range(gi + 1, len(geos)):
-                    sj = sys_of[gj]
-                    if sj["primary"] is None:
+                    row_j = ocr_align.system_row(sys_of[gj], rank)
+                    if row_j is None:
                         continue
-                    row_j = sj["rows"][sj["primary"]]
                     first_k = next((k for k, (r_idx, _) in enumerate(row_j["resolved"]) if r_idx is not None), None)
                     if first_k is not None:
                         first = row_j["resolved"][first_k][0]
                         skipped = sum(1 for k in range(first_k) if row_j["resolved"][k] == (None, None))
                         if skipped:
                             ambiguities.append({"page": geos[gj]["page"], "system": gj, "bar": round(x, 1), "skippedUnassigned": skipped,
-                                                "reason": "next_system_skipped_unassigned_leading_token"})
-                        if first_k in row_j.get("repairs", {}):
+                                                "reason": "next_system_skipped_unassigned_leading_token", **({"verse": rank + 1} if rank else {})})
+                        if rank == 0 and first_k in row_j.get("repairs", {}):
                             repair_of[(gi, x)] = row_j["repairs"][first_k]
-                        how_of[(gi, x)] = "next_system"
+                        how_r[(gi, x)] = "next_system"
                         return canon.snap(first), gj, None
-                how_of[(gi, x)] = "end"
+                how_r[(gi, x)] = "end"
                 return total, gi, None
-            how_of[(gi, x)] = how
+            how_r[(gi, x)] = how
             return idx, gi, None
 
     def token_after_width(gi, x):
@@ -718,6 +721,14 @@ def analyze(payload):
 
     if ocr_plan is None:
         token_after = token_after_width
+        # Căn chỉnh theo độ rộng chỉ thấy MỘT hàng lời mỗi khuông. Lời chuẩn dài hơn sheet nhiều (nhiều lời) → không tự dựng: kết quả
+        # sẽ rải ô sang lời 2 (Tình ca: 5/40 ô đúng). Thà trả lỗi rõ để thầy bật OCR hoặc đặt vạch tay.
+        if total and unmatched_canon / total >= opts["widthOnlyMaxUnmatchedRatio"]:
+            if ocr_warning:
+                warnings = warnings + [ocr_warning]
+            return fail("width_only_incomplete_lyrics",
+                        f"Lời chuẩn có {total} chữ nhưng sheet chỉ khớp {total - unmatched_canon} (thiếu {round(100 * unmatched_canon / total)}%) — "
+                        "có thể sheet có nhiều lời. Không có OCR nên máy không tự dựng vạch; bật OCR tiếng Việt hoặc đặt vạch tay.", warnings)
 
     boundaries = []
     for gi, g in enumerate(geos):
@@ -793,6 +804,47 @@ def analyze(payload):
         measure_conf.append({"measure": len(measure_conf) + 1, "confidence": b["confidence"], "score": b["score"], "reasons": list(b["reasons"]), "boundary": b["index"]})
     # Ô trùng vị trí lời với ô liền trước (measures[i] == measures[i-1]) là biểu diễn HỢP LỆ của ô ngân (contract Rhythm Scroll):
     # KHÔNG tham gia confidence — không nâng, không hạ, không bật review. Confidence của ô chỉ do bằng chứng của chính vạch mở ô.
+    # ── Nhiều lời dưới cùng một khuông: mỗi hàng MATCH thứ k là một LƯỢT hát. Lượt k dùng lại đúng các vạch của lượt 0 (cùng giai điệu)
+    # nhưng chữ sau vạch lấy từ HÀNG LỜI của lượt k (token riêng — số âm tiết mỗi lời có thể khác). Chỉ dựng khi lượt đầy đủ và rõ;
+    # thiếu hàng / vạch không xác định được → KHÔNG dựng lượt đó (không đoán) và bắt buộc duyệt.
+    verse_passes, verse_withheld = [], []
+    if ocr_plan is not None:
+        base_systems = [gi for gi, sy in enumerate(sys_of) if ocr_align.system_row(sy, 0) is not None]
+        n_rank = max((len(ocr_align.match_rows(sy)) for sy in sys_of), default=1)
+        for rank in range(1, n_rank):
+            lacking = [gi for gi in base_systems if ocr_align.system_row(sys_of[gi], rank) is None]
+            if lacking:
+                verse_withheld.append({"verse": rank + 1, "reason": "missing_row", "systems": lacking})
+                break
+            ms, cs, bad = [], [], []
+            if implicit_first or pickup:
+                row0 = ocr_align.system_row(sys_of[first["system"]], rank)
+                idx0 = next((i for i, _ in row0["resolved"] if i is not None), None)
+                if idx0 is None:
+                    bad.append({"system": first["system"], "x": None, "how": "no_first_token"})
+                else:
+                    ms.append(canon.at(canon.snap(idx0)))
+                    cs.append({"confidence": "MEDIUM", "score": 0.6, "reasons": [f"ô mở đầu lời {rank + 1} (lấy đà / không có vạch) — suy ra từ chữ đầu hàng lời"]})
+            for b in measure_bounds:
+                tok, _, _ = token_after(b["system"], b["x"], rank)
+                how = how_by_rank[rank].get((b["system"], b["x"]))
+                if tok is None or tok >= total and how == "end":
+                    bad.append({"system": b["system"], "x": b["x"], "how": how})
+                    continue
+                score, reasons = b["score"], list(b["reasons"])
+                if how not in (None, "direct"):
+                    score = min(score, 0.6)
+                    reasons.append(f"lời {rank + 1}: chữ sau vạch xác định bằng '{how}', không đọc trực tiếp")
+                ms.append(at(tok))
+                cs.append({"confidence": level(score), "score": score, "reasons": reasons, "boundary": b["index"]})
+            if bad:
+                verse_withheld.append({"verse": rank + 1, "reason": "unresolved_bars", "bars": bad})
+                break
+            verse_passes.append({"verse": rank + 1, "measures": ms, "confidence": cs})
+        for vp in verse_passes:
+            measures += vp["measures"]
+            for c in vp["confidence"]:
+                measure_conf.append({"measure": len(measure_conf) + 1, "verse": vp["verse"], **c})
     review = [m["measure"] for m in measure_conf if m["confidence"] == "LOW"]
     notes = []
     if unmatched_sheet:
@@ -807,9 +859,13 @@ def analyze(payload):
     if ocr_plan is not None:
         if ocr_warning:
             diagnostics_warn.append(ocr_warning)
-        multi_rows = any(sum(1 for r in sy["rows"] if r["status"] == "MATCH") > 1 for sy in sys_of)
-        if multi_rows:
-            notes.append("Sheet có nhiều hàng lời dưới một khuông (nhiều khổ): anchors theo hàng TRÊN CÙNG; các hàng còn lại ở diagnostics.alignment — máy không tự dựng khổ sau.")
+        for vp in verse_passes:
+            notes.append(f"Sheet có hàng lời thứ {vp['verse']} dưới mỗi khuông: đã dựng {len(vp['measures'])} ô nối tiếp sau lượt trước (lời {vp['verse']} dùng lại vạch, token riêng) — cần thầy kiểm thứ tự hát.")
+        for vw in verse_withheld:
+            if vw["reason"] == "missing_row":
+                notes.append(f"Có hàng lời thứ {vw['verse']} ở một số khuông nhưng thiếu/không khớp ở khuông {', '.join(str(g + 1) for g in vw['systems'])} — KHÔNG dựng lời {vw['verse']} (không đoán); cần thầy đặt vạch tay.")
+            else:
+                notes.append(f"Lời {vw['verse']}: {len(vw['bars'])} vạch chưa xác định được chữ hát ngay sau — KHÔNG dựng lời {vw['verse']} (không đoán); cần thầy đặt vạch tay.")
         if unresolved_bars:
             notes.append(f"{len(unresolved_bars)} vạch chưa xác định được chữ hát ngay sau (OCR hỏng/thiếu) — không đưa vào dòng thời gian, cần thầy thêm tay.")
         if any(r["status"] == "AMBIGUOUS" for sy in sys_of for r in sy["rows"]):
@@ -819,6 +875,7 @@ def analyze(payload):
             "coverage": {"canonicalTokens": len(canon.stream), "located": len(covered)},
             "repairs": repairs, "ambiguities": ambiguities,
             "unresolvedBars": unresolved_bars,
+            "verses": {"built": [{"verse": vp["verse"], "measures": len(vp["measures"])} for vp in verse_passes], "withheld": verse_withheld},
             "systems": [{"page": g["page"], "system": gi, "primaryRow": sy["primary"],
                          "rows": [{"row": ri, "status": r["status"], "best": r["best"], "second": r["second"],
                                    "span": ({"start": canon.at(r["span"][0]), "end": canon.at(r["span"][1])} if r["span"] else None),
@@ -840,7 +897,7 @@ def analyze(payload):
         "anchors": {**({"pickup": pickup} if pickup else {}), "measures": measures},
         "confidence": {"overall": level(min([m["score"] for m in measure_conf] or [0]) if not review else 0.3),
                        "measures": measure_conf},
-        "review": {"needsReview": bool(review) or not count_match or reordered or any(b["repeat"] for b in boundaries) or bool(unresolved_bars),
+        "review": {"needsReview": bool(review) or not count_match or reordered or any(b["repeat"] for b in boundaries) or bool(unresolved_bars) or bool(verse_withheld),
                    "measures": review, "notes": notes},
         "diagnostics": {
             "engine": "numpy-pillow-v2-align", "generator": GENERATOR,

@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import {
-  addSilent, addSustain, anchorLines, anchorWord, anchorsPayload, buildMeasureDisplay, firstLyricAnchor, measureDisplayText, moveMeasure, parseAnchors, removeMeasure, renderAnchors, toggleGap,
+  addSilent, addSustain, anchorLines, anchorWord, anchorsPayload, buildMeasureDisplay, firstLyricAnchor, measureDisplayText, moveMeasure, parseAnchors, removeMeasure, renderAnchors, toggleGap, uncoveredLines,
 } from '../../src/thuvien/chordAnchors.ts'
 import type { MeasureAnchor } from '../../src/thuvien/chordAnchors.ts'
 import { MOCK_OWNER_ID, createMockChordLibrary, createRpcChordLibrary } from '../../src/thuvien/chordLibrary.ts'
@@ -169,4 +169,27 @@ test('I. dòng thời gian dài (>100 ô): số 3 chữ số, liền mạch, kh�
   assert.deepEqual(bars(ordered, text), Array.from({ length: 120 }, (_, i) => i + 1))
   assert.ok(measureDisplayText(buildMeasureDisplay(text, ordered)).at(-1)!.includes('|¹²⁰'))
   assert.deepEqual(Object.keys(anchorsPayload(ordered.measures, null).measures[0]), ['line', 'token'], 'không có measureNumber trong JSON')
+})
+
+// ── Multi-verse anchors V1: uncoveredLines ──
+const TWO_VERSES = '1. Sáng [Am] nay, mình cùng đi qua bao con phố\nNắng vàng rơi trên vai người\n\nĐK: La la la\n2. Chiều qua ta cùng về bên con đường cũ\nGió mây bay trên đồi cao\n(Lặp lại 2 lần)\nCapo 2\nx2\nĐiệp khúc'
+const FIRST_VERSE = [{ line: 0, token: 0 }, { line: 0, token: 4 }, { line: 1, token: 0 }, { line: 3, token: 0 }]
+
+test('uncoveredLines: lời 2 chưa có vạch → báo đúng đoạn; dòng trống / nhãn / chú thích / capo / x2 / "Điệp khúc" không bao giờ bị báo', () => {
+  assert.deepEqual(uncoveredLines(TWO_VERSES, { measures: FIRST_VERSE }), [{ from: 4, to: 5, tokens: 9 + 6 }])
+  assert.deepEqual(uncoveredLines(TWO_VERSES, { measures: [] }).map(r => [r.from, r.to]), [[0, 5]], 'chưa có ô nào → báo mọi dòng hát; dòng trống ở giữa không cắt đoạn')
+})
+
+test('uncoveredLines: hết báo khi đã phủ — kể cả dòng nằm giữa hai ô liên tiếp; ô không lời không phá phủ; thứ tự hát quay lại dòng cũ không phủ nhầm', () => {
+  const full = [...FIRST_VERSE, { line: 4, token: 0 }, { line: 5, token: 0 }]
+  assert.deepEqual(uncoveredLines(TWO_VERSES, { measures: full }), [])
+  assert.deepEqual(uncoveredLines(TWO_VERSES, { pickup: { line: 0, token: 0 }, measures: [{ line: 0, token: 5 }, { line: null, token: null }, { line: 4, token: 0 }, { line: 5, token: 0 }] }), [],
+    'ô ở dòng 0 rồi nhảy tới dòng 4: các dòng 1–3 nằm giữa hai ô liên tiếp xuôi chiều nên được phủ; ô không lời bị bỏ qua')
+  const back = [{ line: 5, token: 0 }, { line: 0, token: 0 }]
+  assert.deepEqual(uncoveredLines(TWO_VERSES, { measures: back }).map(r => [r.from, r.to]), [[1, 4]], 'đi từ dòng 5 quay lại dòng 0: KHÔNG phủ nhầm các dòng 1–4 ở giữa')
+})
+
+test('uncoveredLines: một lời hát đủ vạch (bài một lời) không báo gì', () => {
+  const one = '1. Chiều [Am] nao, tiễn nhau [E7] đi khi trời\nXe lăn trong [F] tim khuất xa rồi'
+  assert.deepEqual(uncoveredLines(one, { measures: [{ line: 0, token: 0 }, { line: 0, token: 4 }, { line: 1, token: 0 }] }), [])
 })

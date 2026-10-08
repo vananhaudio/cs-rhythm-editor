@@ -300,11 +300,23 @@ def page_order(systems, n_pages):
     return [pi for _, pi in sorted(keys)]
 
 
-def system_bar(canon, system, bar_x):
-    """Vạch → chữ chuẩn hát đầu tiên sau nó theo HÀNG CHÍNH của khuông. (chỉ số phẳng | None, cách)."""
-    if system["primary"] is None:
+def match_rows(system):
+    """Chỉ số các hàng đã MATCH của khuông, từ trên xuống. Phần tử 0 chính là hàng chính (`primary`); phần tử k = lượt hát thứ k+1
+    (khổ 2, 3…) khi nhiều hàng lời nằm dưới cùng một khuông."""
+    return [i for i, r in enumerate(system["rows"]) if r["status"] == "MATCH"]
+
+
+def system_row(system, rank=0):
+    """Hàng MATCH thứ `rank` của khuông (0 = hàng chính) | None."""
+    rows = match_rows(system)
+    return system["rows"][rows[rank]] if rank < len(rows) else None
+
+
+def system_bar(canon, system, bar_x, rank=0):
+    """Vạch → chữ chuẩn hát đầu tiên sau nó theo hàng MATCH thứ `rank` của khuông (0 = HÀNG CHÍNH). (chỉ số phẳng | None, cách)."""
+    row = system_row(system, rank)
+    if row is None:
         return None, "no_row"
-    row = system["rows"][system["primary"]]
     idx, how = bar_token(row["resolved"], row["xs"], bar_x)
     if idx is not None:
         idx = canon.snap(idx) if how in ("direct", "interpolated", "edge") else idx
