@@ -41,7 +41,9 @@ export const ROUTE_CLASSES: readonly RouteClass[] = [
   ...pages('private', true,
     '/me/bands', '/me/chat', '/me/friends', '/me/queue', '/me/t', '/me/tools',
     '/admin', '/course', '/course-editor', '/editor', '/editorial', '/gp-editor', '/import', '/flow-migrate',
-    '/students', '/student', '/delete-account'),
+    '/students', '/student', '/delete-account',
+    // Trang thử Rhythm Scroll — chỉ có ở `npm run dev` (import.meta.env.DEV), không vào bundle production.
+    '/dev/rhythm-scroll', '/dev/rhythm-scroll-v1'),
 
   ...pages('proxy', true, '/teamlab', '/azz', '/khobaigiang', '/login', '/api', '/_next', '/privacy', '/tvaprivacy'),
 ]

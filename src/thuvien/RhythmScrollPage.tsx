@@ -25,11 +25,11 @@ const parseMeterKey = (key: string): TimelineMeter | null => {
 
 type Load = { state: 'loading' } | { state: 'error'; message: string } | { state: 'ready'; detail: ChordSheetDetail }
 
+/** Gắn `key={versionId}` ở nơi dùng: đổi phiên bản = dựng lại, nên chỉ cần nạp một lần. */
 export default function RhythmScrollPage({ library, versionId, onBack }: { library: ChordLibrary; versionId: string; onBack: () => void }) {
   const [load, setLoad] = useState<Load>({ state: 'loading' })
   useEffect(() => {
     let active = true
-    setLoad({ state: 'loading' })
     library.getChordSheet(versionId)
       .then(detail => { if (active) setLoad({ state: 'ready', detail }) })
       .catch(error => { if (active) setLoad({ state: 'error', message: error instanceof Error ? error.message : 'Không mở được bài.' }) })

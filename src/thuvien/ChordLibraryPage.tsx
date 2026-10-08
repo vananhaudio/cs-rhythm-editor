@@ -64,7 +64,7 @@ export default function ChordLibraryPage({ tabs, library = getChordLibrary(), an
 
   if (open && open !== NEW_CHORD_SHEET && rhythm) {
     return <Suspense fallback={<main className="tv-chords"><p className="cl-empty">Đang mở Rhythm Scroll…</p></main>}>
-      <RhythmScrollPage library={library} versionId={open} onBack={() => goRhythm(open, false)} />
+      <RhythmScrollPage key={open} library={library} versionId={open} onBack={() => goRhythm(open, false)} />
     </Suspense>
   }
 
