@@ -40,7 +40,6 @@ export default function ChordSheetEditor({ text, onChange }: { text: string; onC
   const more = COMMON.filter(chord => !songChords.includes(chord))
 
   return <div className="cl-sheet cl-sheet-edit">
-    <p className="cl-help">Chạm vào một chữ để thêm hoặc đổi hợp âm trên chữ đó.</p>
     {lines.map(({ line, cells }, index) => {
       if (!line.trim()) return <p key={index} className="cl-line cl-line-gap" aria-hidden="true" />
       const hasChords = cells.some(cell => (cell.kind === 'word' && cell.chord) || cell.kind === 'chord')

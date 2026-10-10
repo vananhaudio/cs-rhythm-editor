@@ -185,6 +185,9 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
   const [sourceBusy, setSourceBusy] = useState(false)
   const [sourceError, setSourceError] = useState('')
   const [anchorEditing, setAnchorEditing] = useState(false)
+  // Bài mới: mở sẵn ô dán lời. Bài có sẵn: thu gọn, vùng làm việc chính là bản nhạc.
+  const [pasteOpen, setPasteOpen] = useState(!versionId)
+  const [advancedOpen, setAdvancedOpen] = useState(false)
   // Bài đã có vạch nhịp thì Xem thử hiện bản đánh số ô (chỉ đọc); bật chế độ này để chạm chữ sửa hợp âm.
   const [chordEdit, setChordEdit] = useState(false)
   const [liveAnchors, setLiveAnchors] = useState<ChordAnchors | null>(null)
@@ -495,38 +498,29 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
     <header className="cl-editor-head">
       <button type="button" className="cl-back" onClick={close}>← Danh sách</button>
       <h1>{detail ? detail.title : 'Thêm bài'}</h1>
-      {detail?.anchors && <button type="button" className="cl-secondary" disabled={busy || dirty} title={dirty ? 'Lưu thay đổi trước' : 'Chạy lời + hợp âm theo nhịp'} onClick={() => onRhythm(detail.versionId)}>▶ Rhythm Scroll</button>}
       <button type="button" className="cl-primary" onClick={() => void save()} disabled={busy || sourceBusy}>{busy ? 'Đang lưu…' : 'Lưu'}</button>
     </header>
     <MockBanner library={library} />
-    {detail && <div className="cl-state" data-status={detail.status} role="group" aria-label="Trạng thái phiên bản">
-      <p>
-        {detail.status === 'current' && <><strong>Bản đang dùng</strong> · phiên bản {detail.versionNumber}.</>}
-        {detail.status === 'draft' && <><strong>Bản nháp</strong> · phiên bản {detail.versionNumber} — chưa duyệt, chưa phải bản đang dùng.</>}
-        {detail.status === 'old' && <><strong>Bản cũ</strong> · phiên bản {detail.versionNumber} — đã duyệt trước đây, hiện không dùng.</>}
-        {detail.status === 'discarded' && <><strong>Bản nháp đã bỏ</strong> · phiên bản {detail.versionNumber}.</>}
-        {detail.draftVersionId && <> Bài này có bản nháp mới hơn chưa duyệt.</>}
-        {(detail.status === 'draft' || detail.status === 'old') && dirty && <> Lưu thay đổi trước khi duyệt.</>}
-      </p>
-      <div className="cl-state-actions">
-        {detail.draftVersionId && <button type="button" className="cl-secondary" disabled={busy} onClick={() => void leave(() => onOpenVersion(detail.draftVersionId!))}>Mở bản nháp</button>}
-        {(detail.status === 'draft' || detail.status === 'old') && <button type="button" className="cl-secondary cl-approve" disabled={busy || dirty} onClick={() => void approve()}>{detail.status === 'draft' ? 'Duyệt bản này' : 'Dùng lại bản này'}</button>}
-        {detail.status === 'draft' && <button type="button" className="cl-secondary" disabled={busy} onClick={() => void discard()}>Bỏ bản nháp</button>}
-      </div>
-    </div>}
+    {detail && <button type="button" className="cl-status-chip" data-status={detail.status} onClick={() => setAdvancedOpen(true)}
+      title="Mở mục Nâng cao để xem / duyệt phiên bản">
+      {detail.status === 'current' && (detail.draftVersionId ? 'Đang dùng · có bản nháp mới hơn' : 'Đang dùng')}
+      {detail.status === 'draft' && 'Bản nháp — chưa dùng chính thức'}
+      {detail.status === 'old' && 'Bản cũ — hiện không dùng'}
+      {detail.status === 'discarded' && 'Bản nháp đã bỏ'}
+      <span aria-hidden="true"> ›</span>
+    </button>}
     {message && <p role="status" className="cl-notice">{message}</p>}
     {failed && <p role="alert" className="cl-notice cl-notice-bad">{failed}</p>}
 
     <div className="cl-editor">
       <div className="cl-col">
         <section className="cl-card" aria-label="Thông tin bài">
-          <h2>Hợp âm chuẩn hóa</h2>
-          <div className="cl-fields">
+          <div className="cl-fields cl-fields-3">
             <label className="cl-field cl-field-wide">Tên bài *
               <input value={form.title} onChange={event => set({ title: event.target.value })} aria-invalid={!!errors.title} maxLength={220} />
               {errors.title && <span className="cl-error">{errors.title}</span>}
             </label>
-            <label className="cl-field cl-field-wide">Tác giả
+            <label className="cl-field">Tác giả
               <input value={form.composer} onChange={event => set({ composer: event.target.value })} aria-invalid={!!errors.composer} maxLength={220} />
               {errors.composer && <span className="cl-error">{errors.composer}</span>}
             </label>
@@ -543,78 +537,8 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
           </div>
         </section>
 
-        <section className="cl-card" aria-label="Lời và hợp âm">
-          <h2>Lời + hợp âm *</h2>
-          <p className="cl-lead"><strong>Dán lời và hợp âm chuẩn của bài hát</strong> (từ Hợp Âm Việt hoặc nguồn tương đương). Đây là lời và hợp âm cuối cùng của bài — sheet chỉ dùng để xác định ô nhịp.</p>
-          <p className="cl-help">Đặt hợp âm trong ngoặc vuông, ngay trước chữ đổi hợp âm: <code>Chiều [Am] nao, tiễn nhau [E7] đi</code>. Mỗi câu một dòng. Nhãn như <code>1.</code> hay <code>ĐK:</code> viết ở đầu dòng.</p>
-          <textarea value={form.text} onChange={event => set({ text: event.target.value })} aria-label="Ô soạn lời và hợp âm" aria-invalid={!!errors.text}
-            spellCheck={false} rows={14} placeholder={'1. [C] Câu hát đầu [Am] tiên\n[F] Câu tiếp [G] theo'} />
-          {errors.text && <span className="cl-error">{errors.text}</span>}
-          {issues.length > 0 && <p className="cl-warn" role="note">Dòng {issues.join(', ')}: còn ngoặc vuông chưa thành hợp âm (thiếu ngoặc đóng, hoặc để trống).</p>}
-          {anchorsWillReset && <p className="cl-warn" role="note">Bài này đã có vạch nhịp theo lời cũ. Lưu lời mới thì vạch nhịp phải làm lại.</p>}
-        </section>
-
-        <section className="cl-card" aria-label="Nguồn sheet">
-          <h2>Nguồn sheet</h2>
-          <p className="cl-help">PDF, JPEG, PNG hoặc WebP · tối đa 20 MB/file · tối đa {MAX_SOURCE_FILES} file. File gắn với phiên bản khi bấm <strong>Lưu</strong>; phiên bản đã lưu thì bộ nguồn không đổi được nữa — thay nguồn là lưu thành phiên bản mới.</p>
-          {plan.length > 0
-            ? <ol className="cl-sources" aria-label="Danh sách file nguồn">
-              {plan.map((item, at) => <li key={item.key} className="cl-src" data-kind={item.kind}>
-                <div className="cl-src-main">
-                  <strong>{item.source.mime === 'application/pdf' ? `PDF ${at + 1}` : `Trang ${at + 1}`}</strong>
-                  <span>{item.name} · {sourceKindLabel(item.source.mime)} · {formatBytes(item.source.sizeBytes)}</span>
-                  <em className="cl-src-tag">{item.kind === 'attached' ? `Đã gắn với phiên bản ${detail?.versionNumber}` : 'Chưa lưu'}</em>
-                </div>
-                <div className="cl-src-actions">
-                  <button type="button" className="cl-secondary" onClick={() => void viewItem(item)}>Xem</button>
-                  <button type="button" className="cl-secondary" disabled={sourceBusy || busy} onClick={() => void removeItem(item)}
-                    aria-label={`${item.kind === 'attached' ? 'Bỏ khỏi phiên bản mới' : 'Xoá'} ${item.name}`}>{item.kind === 'attached' ? 'Bỏ khỏi bản mới' : 'Xoá'}</button>
-                </div>
-              </li>)}
-            </ol>
-            : <p className="cl-placeholder">{detail?.sources.length ? 'Đã bỏ hết file nguồn khỏi phiên bản mới.' : 'Chưa có file nguồn.'}</p>}
-          {detail && detail.sources.length > 0 && sourcesChanged && <p className="cl-warn" role="note">Phiên bản {detail.versionNumber} giữ nguyên bộ nguồn cũ (đã gắn, không sửa được). Bấm Lưu để tạo phiên bản mới với bộ nguồn này.</p>}
-          {detail && detail.sources.length > 0 && !sourcesChanged && <p className="cl-placeholder">File đã gắn với phiên bản — muốn thay nguồn: thêm/bỏ file rồi Lưu thành phiên bản mới.</p>}
-          <label className="cl-secondary cl-upload" data-disabled={sourceBusy || busy || plan.length >= MAX_SOURCE_FILES || library.mode === 'disabled'}>
-            {sourceBusy ? 'Đang nạp…' : '+ Nạp PDF / ảnh'}
-            <input type="file" multiple accept={SOURCE_ACCEPT} aria-label="Chọn file PDF hoặc ảnh sheet"
-              disabled={sourceBusy || busy || plan.length >= MAX_SOURCE_FILES || library.mode === 'disabled'}
-              onChange={event => { const files = [...(event.target.files ?? [])]; event.target.value = ''; void addFiles(files) }} />
-          </label>
-          {sourceError && <p className="cl-error" role="alert">{sourceError}</p>}
-          <p className="cl-help">Sheet dùng để xác định <strong>khuông và ô nhịp</strong>. Sau khi <strong>Lưu</strong>, bấm <strong>Phân tích vạch nhịp</strong> ở mục bên dưới.</p>
-          {extractor && plan.length > 0 && <details className="cl-advanced">
-            <summary>Công cụ nâng cao</summary>
-            <p className="cl-help">OCR dùng để kiểm tra kỹ thuật, không phải nguồn lời chuẩn. Kết quả không thay thế ô Lời + hợp âm trừ khi thầy tự bấm “Dùng kết quả này”.</p>
-            {!extractorReady && <p className="cl-help">Máy phân tích chưa chạy trên máy này.</p>}
-            <div className="cl-src-actions">
-              {plan.map(item => <button key={item.key} type="button" className="cl-secondary" disabled={!extractorReady || extraction.state === 'running' || sourceBusy || busy}
-                title={extractorReady ? 'Đọc chữ trên file này (tham khảo)' : 'Máy phân tích chưa chạy.'}
-                aria-label={`Phân tích nội dung sheet (tham khảo): ${item.name}`} onClick={() => void runExtraction([item], item.name)}>Phân tích nội dung sheet (tham khảo): {item.name}</button>)}
-              {plan.length > 1 && <button type="button" className="cl-secondary" disabled={!extractorReady || extraction.state === 'running' || sourceBusy || busy}
-                onClick={() => void runExtraction(plan, `${plan.length} file`)}>Phân tích nội dung cả {plan.length} file (tham khảo)</button>}
-            </div>
-            <ExtractionPanel state={extraction} onUse={useExtraction} onDismiss={() => setExtraction({ state: 'idle' })} />
-          </details>}
-        </section>
-
-        <AnchorSection detail={detail} willReset={anchorsWillReset} sourceCount={plan.length} sourcesSaved={!sourcesChanged}
-          editing={anchorEditing} dirty={dirty} onLive={setLiveAnchors} busy={busy || sourceBusy}
-          onEdit={() => { setMessage(''); setFailed(''); setSeed(current => ({ anchors: null, flagged: [], notes: [], key: current.key + 1 })); setAnchorEditing(true) }}
-          onCancel={() => { setAnchorEditing(false); setSeed(current => ({ ...current, anchors: null, flagged: [], notes: [] })) }} onAccept={anchors => void acceptAnchors(anchors)}
-          analyzer={!hasText ? { enabled: false, reason: 'Cần dán lời + hợp âm trước.' }
-            : !analyzer ? { enabled: false, reason: 'Chưa bật ở bản này.' }
-            : !analyzerReady ? { enabled: false, reason: 'Máy phân tích chưa chạy trên máy này.' }
-            : !detail ? { enabled: false, reason: 'Lưu bài (kèm sheet) trước, rồi phân tích vạch nhịp.' }
-            : !detail.sources.length ? { enabled: false, reason: 'Cần sheet nguồn (đã lưu) để phân tích.' }
-            : dirty ? { enabled: false, reason: 'Lưu các thay đổi trước, rồi mới phân tích.' }
-            : { enabled: true, reason: '' }}
-          analysis={analysis} seed={seed} onAnalyze={() => void analyze()}
-          onUseProposal={() => analysis.result && adoptProposal(analysis.result)} onKeepCurrent={() => setAnalysis({ state: 'idle' })} />
-      </div>
-
-      <section className="cl-card cl-preview" aria-label="Xem thử">
-        <h2>Xem thử</h2>
+        <section className="cl-card cl-preview" aria-label="Xem thử">
+        <h2>Bản nhạc <span className="cl-h2-note">— chạm vào chữ để đặt hợp âm</span></h2>
         {hasText
           ? <>
             {chords.length > 0 && <p className="cl-chordset">Hợp âm trong bài: {chords.map(chord => <span key={chord}>{chord}</span>)}</p>}
@@ -629,8 +553,99 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
                 <ChordSheetEditor text={form.text} onChange={text => set({ text })} />
               </>}
           </>
-          : <p className="cl-placeholder">Nhập lời + hợp âm để xem thử.</p>}
-      </section>
+          : <p className="cl-placeholder">Chưa có lời. Bấm “Sửa lời / Dán bài hát” bên dưới để dán lời và hợp âm.</p>}
+        </section>
+        <details className="cl-fold" open={pasteOpen || !!errors.text} onToggle={event => setPasteOpen(event.currentTarget.open)}>
+          <summary>Sửa lời / Dán bài hát</summary>
+          <section className="cl-card cl-paste" aria-label="Lời và hợp âm">
+            <p className="cl-lead"><strong>Dán lời và hợp âm chuẩn của bài hát</strong> (từ Hợp Âm Việt hoặc nguồn tương đương). Đây là lời và hợp âm cuối cùng của bài — sheet chỉ dùng để xác định ô nhịp.</p>
+            <p className="cl-help">Đặt hợp âm trong ngoặc vuông, ngay trước chữ đổi hợp âm: <code>Chiều [Am] nao, tiễn nhau [E7] đi</code>. Mỗi câu một dòng. Nhãn như <code>1.</code> hay <code>ĐK:</code> viết ở đầu dòng.</p>
+            <textarea value={form.text} onChange={event => set({ text: event.target.value })} aria-label="Ô soạn lời và hợp âm" aria-invalid={!!errors.text}
+              spellCheck={false} rows={14} placeholder={'1. [C] Câu hát đầu [Am] tiên\n[F] Câu tiếp [G] theo'} />
+            {errors.text && <span className="cl-error">{errors.text}</span>}
+            {issues.length > 0 && <p className="cl-warn" role="note">Dòng {issues.join(', ')}: còn ngoặc vuông chưa thành hợp âm (thiếu ngoặc đóng, hoặc để trống).</p>}
+            {anchorsWillReset && <p className="cl-warn" role="note">Bài này đã có vạch nhịp theo lời cũ. Lưu lời mới thì vạch nhịp phải làm lại.</p>}
+          </section>
+
+        </details>
+
+        <details className="cl-fold cl-fold-advanced" open={advancedOpen} onToggle={event => setAdvancedOpen(event.currentTarget.open)}>
+          <summary>Nâng cao <span className="cl-h2-note">— file sheet, vạch nhịp, phiên bản</span></summary>
+          {detail?.anchors && <p><button type="button" className="cl-secondary" disabled={busy || dirty} title={dirty ? 'Lưu thay đổi trước' : 'Chạy lời + hợp âm theo nhịp'} onClick={() => onRhythm(detail.versionId)}>▶ Rhythm Scroll</button></p>}
+        {detail && <div className="cl-state" data-status={detail.status} role="group" aria-label="Trạng thái phiên bản">
+      <p>
+        {detail.status === 'current' && <><strong>Bản đang dùng</strong> · phiên bản {detail.versionNumber}.</>}
+        {detail.status === 'draft' && <><strong>Bản nháp</strong> · phiên bản {detail.versionNumber} — chưa duyệt, chưa phải bản đang dùng.</>}
+        {detail.status === 'old' && <><strong>Bản cũ</strong> · phiên bản {detail.versionNumber} — đã duyệt trước đây, hiện không dùng.</>}
+        {detail.status === 'discarded' && <><strong>Bản nháp đã bỏ</strong> · phiên bản {detail.versionNumber}.</>}
+        {detail.draftVersionId && <> Bài này có bản nháp mới hơn chưa duyệt.</>}
+        {(detail.status === 'draft' || detail.status === 'old') && dirty && <> Lưu thay đổi trước khi duyệt.</>}
+      </p>
+      <div className="cl-state-actions">
+        {detail.draftVersionId && <button type="button" className="cl-secondary" disabled={busy} onClick={() => void leave(() => onOpenVersion(detail.draftVersionId!))}>Mở bản nháp</button>}
+        {(detail.status === 'draft' || detail.status === 'old') && <button type="button" className="cl-secondary cl-approve" disabled={busy || dirty} onClick={() => void approve()}>{detail.status === 'draft' ? 'Duyệt bản này' : 'Dùng lại bản này'}</button>}
+        {detail.status === 'draft' && <button type="button" className="cl-secondary" disabled={busy} onClick={() => void discard()}>Bỏ bản nháp</button>}
+      </div>
+    </div>}
+          <section className="cl-card" aria-label="Nguồn sheet">
+            <h2>Nguồn sheet</h2>
+            <p className="cl-help">PDF, JPEG, PNG hoặc WebP · tối đa 20 MB/file · tối đa {MAX_SOURCE_FILES} file. File gắn với phiên bản khi bấm <strong>Lưu</strong>; phiên bản đã lưu thì bộ nguồn không đổi được nữa — thay nguồn là lưu thành phiên bản mới.</p>
+            {plan.length > 0
+              ? <ol className="cl-sources" aria-label="Danh sách file nguồn">
+                {plan.map((item, at) => <li key={item.key} className="cl-src" data-kind={item.kind}>
+                  <div className="cl-src-main">
+                    <strong>{item.source.mime === 'application/pdf' ? `PDF ${at + 1}` : `Trang ${at + 1}`}</strong>
+                    <span>{item.name} · {sourceKindLabel(item.source.mime)} · {formatBytes(item.source.sizeBytes)}</span>
+                    <em className="cl-src-tag">{item.kind === 'attached' ? `Đã gắn với phiên bản ${detail?.versionNumber}` : 'Chưa lưu'}</em>
+                  </div>
+                  <div className="cl-src-actions">
+                    <button type="button" className="cl-secondary" onClick={() => void viewItem(item)}>Xem</button>
+                    <button type="button" className="cl-secondary" disabled={sourceBusy || busy} onClick={() => void removeItem(item)}
+                      aria-label={`${item.kind === 'attached' ? 'Bỏ khỏi phiên bản mới' : 'Xoá'} ${item.name}`}>{item.kind === 'attached' ? 'Bỏ khỏi bản mới' : 'Xoá'}</button>
+                  </div>
+                </li>)}
+              </ol>
+              : <p className="cl-placeholder">{detail?.sources.length ? 'Đã bỏ hết file nguồn khỏi phiên bản mới.' : 'Chưa có file nguồn.'}</p>}
+            {detail && detail.sources.length > 0 && sourcesChanged && <p className="cl-warn" role="note">Phiên bản {detail.versionNumber} giữ nguyên bộ nguồn cũ (đã gắn, không sửa được). Bấm Lưu để tạo phiên bản mới với bộ nguồn này.</p>}
+            {detail && detail.sources.length > 0 && !sourcesChanged && <p className="cl-placeholder">File đã gắn với phiên bản — muốn thay nguồn: thêm/bỏ file rồi Lưu thành phiên bản mới.</p>}
+            <label className="cl-secondary cl-upload" data-disabled={sourceBusy || busy || plan.length >= MAX_SOURCE_FILES || library.mode === 'disabled'}>
+              {sourceBusy ? 'Đang nạp…' : '+ Nạp PDF / ảnh'}
+              <input type="file" multiple accept={SOURCE_ACCEPT} aria-label="Chọn file PDF hoặc ảnh sheet"
+                disabled={sourceBusy || busy || plan.length >= MAX_SOURCE_FILES || library.mode === 'disabled'}
+                onChange={event => { const files = [...(event.target.files ?? [])]; event.target.value = ''; void addFiles(files) }} />
+            </label>
+            {sourceError && <p className="cl-error" role="alert">{sourceError}</p>}
+            <p className="cl-help">Sheet dùng để xác định <strong>khuông và ô nhịp</strong>. Sau khi <strong>Lưu</strong>, bấm <strong>Phân tích vạch nhịp</strong> ở mục bên dưới.</p>
+            {extractor && plan.length > 0 && <details className="cl-advanced">
+              <summary>Công cụ nâng cao</summary>
+              <p className="cl-help">OCR dùng để kiểm tra kỹ thuật, không phải nguồn lời chuẩn. Kết quả không thay thế ô Lời + hợp âm trừ khi thầy tự bấm “Dùng kết quả này”.</p>
+              {!extractorReady && <p className="cl-help">Máy phân tích chưa chạy trên máy này.</p>}
+              <div className="cl-src-actions">
+                {plan.map(item => <button key={item.key} type="button" className="cl-secondary" disabled={!extractorReady || extraction.state === 'running' || sourceBusy || busy}
+                  title={extractorReady ? 'Đọc chữ trên file này (tham khảo)' : 'Máy phân tích chưa chạy.'}
+                  aria-label={`Phân tích nội dung sheet (tham khảo): ${item.name}`} onClick={() => void runExtraction([item], item.name)}>Phân tích nội dung sheet (tham khảo): {item.name}</button>)}
+                {plan.length > 1 && <button type="button" className="cl-secondary" disabled={!extractorReady || extraction.state === 'running' || sourceBusy || busy}
+                  onClick={() => void runExtraction(plan, `${plan.length} file`)}>Phân tích nội dung cả {plan.length} file (tham khảo)</button>}
+              </div>
+              <ExtractionPanel state={extraction} onUse={useExtraction} onDismiss={() => setExtraction({ state: 'idle' })} />
+            </details>}
+          </section>
+
+          <AnchorSection detail={detail} willReset={anchorsWillReset} sourceCount={plan.length} sourcesSaved={!sourcesChanged}
+            editing={anchorEditing} dirty={dirty} onLive={setLiveAnchors} busy={busy || sourceBusy}
+            onEdit={() => { setMessage(''); setFailed(''); setSeed(current => ({ anchors: null, flagged: [], notes: [], key: current.key + 1 })); setAnchorEditing(true) }}
+            onCancel={() => { setAnchorEditing(false); setSeed(current => ({ ...current, anchors: null, flagged: [], notes: [] })) }} onAccept={anchors => void acceptAnchors(anchors)}
+            analyzer={!hasText ? { enabled: false, reason: 'Cần dán lời + hợp âm trước.' }
+              : !analyzer ? { enabled: false, reason: 'Chưa bật ở bản này.' }
+              : !analyzerReady ? { enabled: false, reason: 'Máy phân tích chưa chạy trên máy này.' }
+              : !detail ? { enabled: false, reason: 'Lưu bài (kèm sheet) trước, rồi phân tích vạch nhịp.' }
+              : !detail.sources.length ? { enabled: false, reason: 'Cần sheet nguồn (đã lưu) để phân tích.' }
+              : dirty ? { enabled: false, reason: 'Lưu các thay đổi trước, rồi mới phân tích.' }
+              : { enabled: true, reason: '' }}
+            analysis={analysis} seed={seed} onAnalyze={() => void analyze()}
+            onUseProposal={() => analysis.result && adoptProposal(analysis.result)} onKeepCurrent={() => setAnalysis({ state: 'idle' })} />
+        </details>
+      </div>
     </div>
   </div>
 }

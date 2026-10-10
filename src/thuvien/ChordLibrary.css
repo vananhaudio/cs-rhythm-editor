@@ -106,10 +106,8 @@
 .tv-chords .cl-lyric { white-space: pre-wrap; overflow-wrap: anywhere; }
 
 @media (min-width: 1024px) {
-  /* Cột soạn rộng hơn cột xem thử: một câu hát kèm hợp âm thường dài 50–70 ký tự. */
-  .tv-chords .cl-editor { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 24px; }
+  /* Một cột: bản nhạc là vùng làm việc chính. */
   .tv-chords textarea { font-size: 15px; }
-  .tv-chords .cl-preview { position: sticky; top: 76px; max-height: calc(100vh - 96px); overflow: auto; }
 }
 @media (max-width: 640px) {
   .tv-chords { padding: 24px 16px 48px; }
@@ -202,3 +200,31 @@
 .tv-chords .cl-chip-soft { border-color: #ccd5ca; color: #26352d; font-weight: 600; }
 .tv-chords .cl-picker-custom { display: flex; flex-wrap: wrap; gap: 8px; }
 .tv-chords .cl-picker-custom input { flex: 1 1 140px; min-width: 0; min-height: 40px; }
+
+/* ── Slice 2: một cột, bản nhạc ở giữa, công cụ kỹ thuật trong "Nâng cao" ── */
+.tv-chords .cl-wrap-wide { max-width: 880px; }
+.tv-chords .cl-fields-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.tv-chords .cl-fields-3 .cl-field-wide { grid-column: 1 / -1; }
+.tv-chords .cl-h2-note { font-size: 13px; font-weight: 500; color: #526456; text-transform: none; letter-spacing: 0; }
+.tv-chords .cl-status-chip { justify-self: start; margin: 0 0 14px; padding: 6px 12px; border: 1px solid #ccd5ca; border-radius: 999px; background: #fff; color: #26352d; font-size: 13px; font-weight: 600; }
+.tv-chords .cl-status-chip[data-status=draft] { border-color: #e3c98b; background: #fffaf0; }
+.tv-chords .cl-status-chip[data-status=current] { border-color: #b9d6c2; background: #f1f8f3; }
+.tv-chords .cl-fold { border: 1px solid #d8dfd6; border-radius: 12px; background: #fff; }
+.tv-chords .cl-fold > summary { min-height: 48px; padding: 12px 20px; cursor: pointer; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.tv-chords .cl-fold[open] > summary { border-bottom: 1px solid #e6ebe4; }
+.tv-chords .cl-fold > .cl-card, .tv-chords .cl-fold > .cl-state { margin: 16px; }
+.tv-chords .cl-fold > .cl-card { border-color: #e6ebe4; }
+.tv-chords .cl-fold > p { margin: 16px; }
+.tv-chords .cl-fold-advanced > * + * { margin-top: 0; }
+.tv-chords .cl-paste textarea { width: 100%; }
+/* Bảng chọn hợp âm nổi ngay dưới dòng đang chọn — không đẩy các dòng khác. */
+.tv-chords .cl-edit-row { position: relative; }
+.tv-chords .cl-picker { position: absolute; left: 0; right: 0; top: calc(100% - 4px); z-index: 4; margin: 0; box-shadow: 0 8px 24px rgba(30, 45, 35, 0.18); }
+.tv-chords .cl-sheet-edit { padding-bottom: 8px; }
+@media (max-width: 640px) {
+  .tv-chords .cl-fields-3 { grid-template-columns: 1fr 1fr; }
+  .tv-chords .cl-fields-3 .cl-field:nth-child(2) { grid-column: 1 / -1; }
+  .tv-chords .cl-fold > summary { padding: 12px 16px; }
+  .tv-chords .cl-fold > .cl-card, .tv-chords .cl-fold > .cl-state, .tv-chords .cl-fold > p { margin: 12px; }
+  .tv-chords .cl-sheet { font-size: 17px; }
+}

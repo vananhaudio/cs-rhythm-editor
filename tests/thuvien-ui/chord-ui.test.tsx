@@ -104,7 +104,7 @@ test('xem thử: hợp âm nằm trên chữ; cảnh báo ngoặc hỏng', async
   fireEvent.click(view.getByRole('button', { name: '+ Thêm bài' }))
   await settle()
   const preview = view.getByRole('region', { name: 'Xem thử' })
-  assert.match(preview.textContent ?? '', /Nhập lời \+ hợp âm để xem thử/)
+  assert.match(preview.textContent ?? '', /Chưa có lời\. Bấm “Sửa lời \/ Dán bài hát”/)
   type(view.getByLabelText('Ô soạn lời và hợp âm'), 'Chiều [Am] nao, tiễn nhau [E7] đi\nĐK: chỉ lời\nlỡ [G quên')
   // Mỗi chữ hát là một ô chạm được; hợp âm nằm ngay trên chữ nó thuộc về.
   const segments = [...preview.querySelectorAll('.cl-line')[0].querySelectorAll('.cl-seg')].map(node => [node.querySelector('.cl-chord')?.textContent, node.querySelector('.cl-word')?.textContent])
@@ -1198,4 +1198,28 @@ test('bài đã có vạch nhịp: Xem thử giữ bản có số ô; bật "Ch�
   assert.match(preview.textContent ?? '', /vạch nhịp của bài phải đặt lại/)
   fireEvent.click(view.getByRole('button', { name: /Xong — xem bản có số ô/ }))
   assert.equal(preview.querySelector('.cl-word'), null)
+})
+
+test('bố cục một cột: bài mới mở sẵn ô dán lời; bài có sẵn thu gọn ô dán lời và mục Nâng cao; Nâng cao chứa nguồn sheet, vạch nhịp, phiên bản', async () => {
+  const view = await openList()
+  fireEvent.click(view.getByRole('button', { name: 'Mở bài Bài thử 01' }))
+  await settle()
+  const folds = [...view.container.querySelectorAll('details.cl-fold')] as HTMLDetailsElement[]
+  assert.equal(folds.length, 2)
+  const [paste, advanced] = folds
+  assert.match(paste.querySelector('summary')?.textContent ?? '', /Sửa lời \/ Dán bài hát/)
+  assert.equal(paste.open, false, 'bài có sẵn: ô dán lời thu gọn')
+  assert.equal(advanced.open, false)
+  assert.ok(paste.querySelector('textarea'), 'ô nhập mã nằm trong "Sửa lời / Dán bài hát"')
+  for (const label of ['Nguồn sheet', 'Vạch nhịp']) assert.ok(advanced.querySelector(`section[aria-label="${label}"]`), label)
+  assert.ok(advanced.querySelector('[role=group][aria-label="Trạng thái phiên bản"]'), 'phiên bản nằm trong Nâng cao')
+  assert.equal(view.container.querySelector('.cl-preview'), view.getByRole('region', { name: 'Xem thử' }), 'bản nhạc là vùng chính, ngoài các mục gập')
+  fireEvent.click(view.container.querySelector('.cl-status-chip')!)
+  assert.equal((view.container.querySelectorAll('details.cl-fold')[1] as HTMLDetailsElement).open, true, 'bấm nhãn trạng thái mở Nâng cao')
+  // bài mới
+  fireEvent.click(view.getByRole('button', { name: '← Danh sách' }))
+  await settle()
+  fireEvent.click(view.getByRole('button', { name: '+ Thêm bài' }))
+  await settle()
+  assert.equal((view.container.querySelector('details.cl-fold') as HTMLDetailsElement).open, true, 'bài mới: mở sẵn ô dán lời')
 })
