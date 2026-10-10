@@ -5,6 +5,7 @@ import { readFileSync } from 'node:fs'
 import { resolveShare } from '../../netlify/og/registry.ts'
 import { renderShareMeta } from '../../netlify/og/render.ts'
 import ogTeamlab from '../../netlify/edge-functions/og-teamlab.ts'
+import { resetShareMemo } from '../../netlify/og/adapter.ts'
 import { DB, INDEX, mockCtx, ORIGIN, tag, title, type Db } from './fixtures.ts'
 
 const SHELL = readFileSync(new URL('./fixtures-html/teamlab-shell.html', import.meta.url), 'utf8')
@@ -71,6 +72,7 @@ test('RPC chỉ nhận p_slug; lỗi DB → throw (edge fail closed)', async () 
 const FB = 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)'
 const CHROME = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
 async function edge(ua: string | null, slug = SLUG, opts: { fail?: boolean } = {}) {
+  resetShareMemo()
   const calls: string[] = []; const realFetch = globalThis.fetch
   globalThis.fetch = (async (input: RequestInfo | URL) => { calls.push(String(input)); if (opts.fail) throw new Error('network'); return new Response(JSON.stringify(slug === SLUG ? band() : null), { status: 200, headers: { 'content-type': 'application/json' } }) }) as typeof fetch
   let nextCalls = 0; const upstream = new Response(SHELL, { status: 200, headers: { 'content-type': 'text/html; charset=UTF-8' } })
@@ -117,6 +119,7 @@ test('Slice E PRIVACY: id Band con / id bài KHÔNG vào RPC, tiêu đề, mô t
   const log: string[] = []; const seen: Record<string, unknown>[] = []
   const ctx = mockCtx(dbWith(b => { seen.push(b); return b.p_slug === SLUG ? band() : null }), { log })
   for (const p of ROOM_PATHS) {
+    resetShareMemo()   // đếm RPC theo từng path, không bị cache che
     const o = await share(p, SHELL, ctx)
     for (const v of [BAND_ID, SONG_ID, 'studio', 'group']) for (const t of [o.t, o.d, o.img, o.url, tag(o.out, 'twitter:title'), tag(o.out, 'twitter:description')]) assert.ok(!String(t).includes(v), `${p}: "${v}" lọt vào thẻ`)
   }
@@ -148,7 +151,7 @@ test('Slice E: dạng hỏng/lạ dưới /room không được nhận (không R
 test('Slice E edge: /room… → OG Team công khai với MỌI User-Agent (kể cả người thường / không UA)', async () => {
   const ua = ['facebookexternalhit/1.1', 'Zalo', 'Twitterbot/1.0', 'WhatsApp/2.23', 'Slackbot-LinkExpanding 1.0', CHROME, 'Viber', '']
   for (const path of ROOM_PATHS.slice(0, 1).concat(ROOM_PATHS.slice(2, 4))) for (const u of ua) {   // Studio có test riêng bên dưới
-    const calls: string[] = []; const realFetch = globalThis.fetch
+    resetShareMemo(); const calls: string[] = []; const realFetch = globalThis.fetch
     globalThis.fetch = (async (input: RequestInfo | URL) => { calls.push(String(input)); return new Response(JSON.stringify(band()), { status: 200, headers: { 'content-type': 'application/json' } }) }) as typeof fetch
     try {
       const res = await ogTeamlab(new Request(`${ORIGIN}${path}`, { headers: { 'user-agent': u } }), { next: async () => new Response(SHELL, { status: 200, headers: { 'content-type': 'text/html; charset=UTF-8' } }) })
@@ -230,7 +233,7 @@ test('Studio: group/<bandId> và room giữ thẻ Team (Band con chưa có metad
 
 test('Studio edge: thẻ BÀI với MỌI User-Agent (kể cả người thường / không UA)', async () => {
   for (const u of ['facebookexternalhit/1.1', 'Zalo', 'Twitterbot/1.0', 'WhatsApp/2.23', CHROME, 'Viber', '']) {
-    const realFetch = globalThis.fetch; const calls: string[] = []
+    resetShareMemo(); const realFetch = globalThis.fetch; const calls: string[] = []
     globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => { calls.push(String(input)); const b = JSON.parse(String(init?.body ?? '{}'))
       const r = String(input).endsWith('teamlab_public_workspace_song') ? SONGS[`${b.p_slug}|${b.p_song_id}`] ?? null : band()
       return new Response(JSON.stringify(r), { status: 200, headers: { 'content-type': 'application/json' } }) }) as typeof fetch

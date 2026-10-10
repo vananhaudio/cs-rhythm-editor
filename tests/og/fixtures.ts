@@ -1,6 +1,6 @@
 // Dữ liệu mẫu ĐÚNG dạng PostgREST/RPC trả về (giá trị giống production 05/10, id giả) + ctx giả cho adapter.
 import { readFileSync } from 'node:fs'
-import type { Ctx } from '../../netlify/og/adapter.ts'
+import { resetShareMemo, type Ctx } from '../../netlify/og/adapter.ts'
 import { resetToolIndex } from '../../netlify/og/adapters/tool.ts'
 
 export const ORIGIN = 'https://class.vananhaudio.com'
@@ -68,7 +68,7 @@ function query(db: Db, path: string): unknown {
 }
 
 export function mockCtx(db: Db = DB, opts: { fail?: boolean; log?: string[] } = {}): Ctx {
-  resetToolIndex()
+  resetToolIndex(); resetShareMemo()
   return {
     origin: ORIGIN,
     get: async p => { opts.log?.push(p); if (opts.fail) throw new Error('db-500'); return query(db, p) },

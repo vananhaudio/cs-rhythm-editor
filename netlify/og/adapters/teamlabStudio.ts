@@ -14,6 +14,7 @@ type Key = { slug: string; songId: string }
 
 export const teamlabStudioAdapter = defineAdapter<Key>({
   type: 'teamlab-studio',
+  cacheTtlMs: 60_000,   // mọi lượt xem trang TeamLab qua OG: nhớ 60 s để không thêm RPC vào mỗi lượt tải
   fallthrough: true,
   match(path) {
     if (!path.startsWith('/teamlab/band/')) return null

@@ -27,6 +27,13 @@ URL → Registry (netlify/og/registry.ts) → Resource Adapter → ShareMeta →
 
 Landing hiện có: `/solo01` → khoá `SOLO`; `/hanhtrinh2027` → chương trình `HT2027`. `/thuvien` không gắn entity → mặc định.
 
+## TeamLab (`/teamlab/band/*`, `/teamlab/song/*`)
+- Ngoại lệ hẹp của proxy `/teamlab`: `netlify/edge-functions/og-teamlab.ts` chuyển thẳng sang `og.ts` — **không đoán User-Agent**
+  (trước đây allowlist crawler làm Zalo/Viber/Skype/Line… nhận thẻ TeamLab mặc định).
+- 3 adapter TeamLab (`teamlab-band`, `teamlab-song`, `teamlab-studio`) opt-in `cacheTtlMs: 60_000` → `loadMemo` (adapter.ts): nhớ kết quả
+  theo (loại, origin, khoá) trong isolate, tối đa 200 mục. Chỉ nhớ `public` hoặc "không có"; lỗi và private không bao giờ được nhớ.
+  Đổi tên/ảnh bìa Band hiện sau tối đa 60 s. Adapter Class không dùng cache.
+
 ## Nội dung mới
 - Band / Lớp / Buổi / Story / Showcase / Tool mới: **không sửa code** — tạo nội dung + ảnh trong Admin là có preview.
 - Loại resource mới: thêm MỘT adapter vào `ADAPTERS` + phân loại route ở `netlify/og/routes.ts`.

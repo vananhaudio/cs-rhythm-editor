@@ -17,6 +17,7 @@ const teamImage = (path: unknown, re: RegExp): string | null =>
 
 export const teamlabSongAdapter = defineAdapter<string>({
   type: 'teamlab-song',
+  cacheTtlMs: 60_000,   // mọi lượt xem trang TeamLab qua OG: nhớ 60 s để không thêm RPC vào mỗi lượt tải
   match(path) {
     if (!path.startsWith('/teamlab/song/')) return null
     const slug = path.slice('/teamlab/song/'.length)

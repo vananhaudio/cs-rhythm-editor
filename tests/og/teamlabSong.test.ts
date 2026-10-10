@@ -5,6 +5,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { resolveShare } from '../../netlify/og/registry.ts'
 import { renderShareMeta } from '../../netlify/og/render.ts'
 import ogTeamlab from '../../netlify/edge-functions/og-teamlab.ts'
+import { resetShareMemo } from '../../netlify/og/adapter.ts'
 import { INDEX, mockCtx, ORIGIN, tag, title, type Db } from './fixtures.ts'
 
 const SHELL = readFileSync(new URL('./fixtures-html/teamlab-shell.html', import.meta.url), 'utf8')   // HTML production của TeamLab (/teamlab/song/* trả shell này)
@@ -90,6 +91,7 @@ test('RPC chỉ nhận p_slug; lỗi DB → throw (edge fail closed, không meta
 const FB = 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)'
 const CHROME = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
 async function edge(ua: string | null, slug = SLUG, opts: { method?: string; rpc?: () => unknown; fail?: boolean } = {}) {
+  resetShareMemo()
   const calls: string[] = []
   const realFetch = globalThis.fetch
   globalThis.fetch = (async (input: RequestInfo | URL) => {
