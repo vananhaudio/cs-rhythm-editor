@@ -350,7 +350,7 @@ fi
 echo "── End-to-end: adapter RPC thật (src/thuvien/chordLibrary.ts) ↔ SQL thật"
 CHORD_PSQL="$PGBIN/psql" CHORD_PGHOST="$TMP" CHORD_PGPORT="$PORT" CHORD_PGDATABASE=tva_chord \
   node --experimental-strip-types --no-warnings --test "$SRC/tests/thuvien-db/e2e.test.ts" "$SRC/tests/thuvien-db/sources-e2e.test.ts" > "$TMP/e2e.log" 2>&1 || { cat "$TMP/e2e.log"; fail "end-to-end adapter ↔ DB"; }
-[ "$(sed -n 's/^# pass //p' "$TMP/e2e.log")" = "4" ] && [ "$(sed -n 's/^# skipped //p' "$TMP/e2e.log")" = "0" ] \
+[ "$(sed -n 's/^# pass //p' "$TMP/e2e.log")" = "5" ] && [ "$(sed -n 's/^# skipped //p' "$TMP/e2e.log")" = "0" ] \
   && ok "E2E qua adapter thật: bàn biên tập (tạo → sửa → chỉ đổi BPM/nhịp → bỏ nháp → duyệt → tìm lại; quyền học viên) + FILE NGUỒN (mô hình Storage API: nạp → lưu kèm nguồn → thư mục đã ghi đóng băng → thay nguồn = phiên bản mới; link ký có hạn; học viên bị chặn)" \
   || { cat "$TMP/e2e.log"; fail "end-to-end không chạy đủ"; }
 
@@ -370,27 +370,37 @@ mig tva_rb "$ROLLBACK" >/dev/null || fail "rollback lần 2"; ok "rollback lần
 [ "$(mxl tva_rb)" = "$MXL1" ] && [ "$(others tva_rb)" = "$OTH1" ] && ok "sau rollback: MusicXML Library + mọi object sẵn có nguyên vẹn" || fail "rollback đụng object khác"
 mig tva_rb "$SETUP" >/dev/null && [ "$(q tva_rb "select count(*) from pg_class where relname in ('chord_sheets', 'chord_sheet_versions')")" = "2" ] && ok "cài lại sau rollback" || fail "cài lại"
 
-echo "── Delta: V1 (59de4cd) → +V1.1 → +V1.2 = cài mới; rollback V1.2 → đúng V1.1 (a26f172); rollback V1.1 → đúng V1"
+echo "── Delta: V1 (59de4cd) → +V1.1 → +V1.2 → +V1.4 (một lần lưu) = cài mới; rollback V1.4 → đúng V1.2; rollback V1.2 → đúng V1.1 (a26f172); rollback V1.1 → đúng V1"
 DELTA="$SRC/db/chord_library_v1_1_sources_setup.sql"; DELTA_RB="$SRC/db/chord_library_v1_1_sources_rollback.sql"
 D12="$SRC/db/chord_library_v1_2_anchors_setup.sql"; D12_RB="$SRC/db/chord_library_v1_2_anchors_rollback.sql"
-if [ -f "$DELTA" ] && [ -f "$D12" ] && git -C "$ROOT" cat-file -e a26f172:db/chord_library_v1_setup.sql 2>/dev/null; then
+D14="$SRC/db/chord_library_v1_4_one_save_setup.sql"; D14_RB="$SRC/db/chord_library_v1_4_one_save_rollback.sql"
+if [ -f "$DELTA" ] && [ -f "$D12" ] && [ -f "$D14" ] && git -C "$ROOT" cat-file -e a26f172:db/chord_library_v1_setup.sql 2>/dev/null && git -C "$ROOT" cat-file -e 92004d51:db/chord_library_v1_setup.sql 2>/dev/null; then
   git -C "$ROOT" show 59de4cd:db/chord_library_v1_setup.sql > "$TMP/v1_setup.sql"
   git -C "$ROOT" show a26f172:db/chord_library_v1_setup.sql > "$TMP/v11_setup.sql"
+  git -C "$ROOT" show 92004d51:db/chord_library_v1_setup.sql > "$TMP/v12_setup.sql"
   fnsig() { q "$1" "select md5(string_agg(p.oid::regprocedure::text || md5(p.prosrc) || coalesce(p.proacl::text, '') || coalesce(obj_description(p.oid, 'pg_proc'), ''), '|' order by p.oid::regprocedure::text)) from pg_proc p where p.pronamespace = 'public'::regnamespace and (p.proname like 'chord%' or p.proname = 'my_chordlib_caps')"; }
   baseline tva_dnew; mig tva_dnew "$SETUP" >/dev/null; NEW=$(fnsig tva_dnew)
   baseline tva_d11; mig tva_d11 "$TMP/v11_setup.sql" >/dev/null; V11=$(fnsig tva_d11)
+  baseline tva_d12; mig tva_d12 "$TMP/v12_setup.sql" >/dev/null; V12=$(fnsig tva_d12)
   baseline tva_d1; mig tva_d1 "$TMP/v1_setup.sql" >/dev/null; V1SIG=$(fnsig tva_d1); MX0=$(mxl tva_d1); OT0=$(others tva_d1)
   mig tva_d1 "$DELTA" >/dev/null || fail "delta V1.1"
   [ "$(fnsig tva_d1)" = "$V11" ] && ok "V1 + delta V1.1 = cài V1.1 (a26f172) — md5 thân hàm, quyền, nhãn khớp" || fail "V1 + V1.1 lệch a26f172"
   mig tva_d1 "$DELTA" >/dev/null && [ "$(fnsig tva_d1)" = "$V11" ] && ok "delta V1.1 chạy lại: không đổi gì" || fail "delta V1.1 chạy lại"
   mig tva_d1 "$D12" >/dev/null || fail "delta V1.2"
-  [ "$(fnsig tva_d1)" = "$NEW" ] && ok "V1 + V1.1 + delta V1.2 = cài mới (production hiện tại + V1.2 = fresh install)" || fail "chuỗi delta lệch bản cài mới"
-  mig tva_d1 "$D12" >/dev/null && [ "$(fnsig tva_d1)" = "$NEW" ] && ok "delta V1.2 chạy lại: không đổi gì (idempotent)" || fail "delta V1.2 chạy lại"
-  [ "$(mxl tva_d1)" = "$MX0" ] && [ "$(others tva_d1)" = "$OT0" ] && ok "delta V1.1 + V1.2 không đụng MusicXML Library, không đổi object ngoài chord_*" || fail "delta đụng object ngoài phạm vi"
+  [ "$(fnsig tva_d1)" = "$V12" ] && ok "V1 + V1.1 + delta V1.2 = cài V1.2 (92004d51)" || fail "chuỗi delta lệch bản V1.2"
+  mig tva_d1 "$D12" >/dev/null && [ "$(fnsig tva_d1)" = "$V12" ] && ok "delta V1.2 chạy lại: không đổi gì (idempotent)" || fail "delta V1.2 chạy lại"
+  mig tva_d1 "$D14" >/dev/null || fail "delta V1.4"
+  [ "$(fnsig tva_d1)" = "$NEW" ] && ok "V1.2 + delta V1.4 = cài mới (một lần lưu): md5 thân hàm, quyền, nhãn khớp bản cài mới" || fail "V1.2 + V1.4 lệch bản cài mới"
+  mig tva_d1 "$D14" >/dev/null && [ "$(fnsig tva_d1)" = "$NEW" ] && ok "delta V1.4 chạy lại: không đổi gì, không để lại overload thứ hai" || fail "delta V1.4 chạy lại"
+  [ "$(q tva_d1 "select count(*) from pg_proc where proname = 'chord_sheet_contribute'")" = "1" ] && ok "chỉ MỘT chữ ký chord_sheet_contribute (không overload mơ hồ)" || fail "còn nhiều chữ ký contribute"
+  [ "$(mxl tva_d1)" = "$MX0" ] && [ "$(others tva_d1)" = "$OT0" ] && ok "delta V1.1 + V1.2 + V1.4 không đụng MusicXML Library, không đổi object ngoài chord_*" || fail "delta đụng object ngoài phạm vi"
+  mig tva_d1 "$D14_RB" >/dev/null && [ "$(fnsig tva_d1)" = "$V12" ] && ok "rollback V1.4 → đúng V1.2 (92004d51, md5 khớp, một chữ ký)" || fail "rollback V1.4 lệch V1.2"
+  mig tva_d1 "$D14_RB" >/dev/null && [ "$(fnsig tva_d1)" = "$V12" ] && ok "rollback V1.4 chạy lại: không đổi gì" || fail "rollback V1.4 lần 2"
   mig tva_d1 "$D12_RB" >/dev/null && [ "$(fnsig tva_d1)" = "$V11" ] && ok "rollback V1.2 → đúng V1.1 (a26f172, md5 khớp)" || fail "rollback V1.2 lệch V1.1"
   mig tva_d1 "$DELTA_RB" >/dev/null && [ "$(fnsig tva_d1)" = "$V1SIG" ] && ok "rollback V1.1 → hàm về NGUYÊN VĂN V1 (md5 khớp)" || fail "rollback V1.1 lệch V1"
   baseline tva_dx; if mig tva_dx "$DELTA" >/dev/null 2>&1; then fail "delta V1.1 lẽ ra phải dừng khi chưa có V1"; fi; ok "delta V1.1 DỪNG khi DB chưa có Thư viện hợp âm V1"
   mig tva_dx "$TMP/v1_setup.sql" >/dev/null; if mig tva_dx "$D12" >/dev/null 2>&1; then fail "delta V1.2 lẽ ra phải dừng khi chưa có V1.1"; fi; ok "delta V1.2 DỪNG khi DB chưa có V1.1"
+  baseline tva_dy; mig tva_dy "$TMP/v11_setup.sql" >/dev/null; if mig tva_dy "$D14" >/dev/null 2>&1; then fail "delta V1.4 lẽ ra phải dừng khi chưa có V1.2"; fi; ok "delta V1.4 DỪNG khi DB chưa có V1.2 (vạch nhịp)"
 fi
 
 echo "── Cổng drift"

@@ -1525,36 +1525,35 @@ test('xoá vị trí nghỉ: bình thường xoá ngay; nếu (-) đang là CẢ
   assert.equal(lyricsOf(view), 'Chiều một')
 })
 
-test('Lưu: lời → "Lưu"; vạch chưa lưu → nút đổi thành "Lưu vạch nhịp"; hai bước đều CHỦ ĐỘNG, không phiên bản trung gian; tải lại đúng', async () => {
+test('MỘT lần Lưu: lời + hợp âm + (-) + vạch nhịp → đúng MỘT phiên bản mới; không còn bước "Lưu vạch nhịp"; tải lại đúng', async () => {
   const view = await openNewWithText('[Am]Chiều một mình qua phố')
   type(view.getByLabelText(/Tên bài/), 'Bài bản nhạc duy nhất')
   fireEvent.change(view.getByLabelText(/Nhịp/), { target: { value: '4/4' } })
   tap(view, 'Lưu'); await settle(60)
   let v = await savedVersion(view, 'ban nhac duy nhat')
   assert.equal(v.versionNumber, 1)
-  // thêm hợp âm không lời + 2 vạch → lời đổi → "Lưu"
+  // thêm hợp âm không lời + 2 vạch → bấm Lưu ĐÚNG MỘT LẦN
   fireEvent.click(slotOf(view, 0, 2)); chip(view, 'E7')
   fireEvent.click(slotOf(view, 0, 0)); tap(view, '｜ Đặt vạch nhịp tại đây')
   fireEvent.click(slotOf(view, 0, 4)); tap(view, '｜ Đặt vạch nhịp tại đây')   // token 4 = "qua" sau khi chèn (-)
-  assert.ok(view.getByRole('button', { name: 'Lưu' }))
+  assert.equal(view.queryByRole('button', { name: 'Lưu vạch nhịp' }), null, 'chỉ có MỘT nút Lưu')
   tap(view, 'Lưu'); await settle(60)
   v = await savedVersion(view, 'ban nhac duy nhat')
-  assert.equal(v.versionNumber, 2, 'đúng MỘT phiên bản mới cho phần lời')
-  assert.equal(v.anchors, null, 'bản lưu lời chưa có vạch (giới hạn M3) — nói rõ')
-  assert.match(view.getByRole('status').textContent ?? '', /Vạch nhịp CHƯA được lưu theo bản này/)
-  assert.deepEqual(barNums(view), ['¹', '²'], 'vạch vẫn hiện trên bản nhạc, không bị mất')
-  const saveBars = view.getByRole('button', { name: 'Lưu vạch nhịp' })
-  assert.ok(saveBars)
-  fireEvent.click(saveBars); await settle(60)
-  v = await savedVersion(view, 'ban nhac duy nhat')
-  assert.equal(v.versionNumber, 3)
-  assert.deepEqual(v.anchors?.measures, [{ line: 0, token: 0 }, { line: 0, token: 4 }])
+  assert.equal(v.versionNumber, 2, 'đúng MỘT phiên bản mới sau một lần lưu — không có bản trung gian')
+  assert.deepEqual(v.anchors?.measures, [{ line: 0, token: 0 }, { line: 0, token: 4 }], 'vạch lưu cùng lời')
   assert.equal(v.text, '[Am]Chiều một [E7](-) mình qua phố', 'lời + hợp âm lưu nguyên văn')
   assert.equal(view.queryByRole('button', { name: 'Lưu vạch nhịp' }), null)
-  assert.ok(view.getByRole('button', { name: 'Lưu' }))
+  assert.deepEqual(barNums(view), ['¹', '²'], 'vạch vẫn hiện sau khi lưu')
+  assert.doesNotMatch(view.getByRole('status').textContent ?? '', /CHƯA/, 'không nói "chưa lưu vạch"')
   // Case 9 — timeline từ dữ liệu ĐÃ LƯU: E7 trên (-) có mặt đúng ô
   const tl = buildChordTimeline(v.text, v.anchors!, v.meter)
   assert.deepEqual(tl.events.map(e => [e.chord, e.line, e.token]), [['Am', 0, 0], ['E7', 0, 2]])
+  // Sửa MỘT vạch rồi Lưu một lần → đúng một phiên bản tiếp theo
+  fireEvent.click(slotOf(view, 0, 4)); tap(view, 'Xóa vạch ô 2')
+  tap(view, 'Lưu'); await settle(60)
+  const next = await savedVersion(view, 'ban nhac duy nhat')
+  assert.equal(next.versionNumber, 3)
+  assert.deepEqual(next.anchors?.measures, [{ line: 0, token: 0 }])
 })
 
 test('Bảo vệ chỉnh sửa chưa lưu: có thay đổi → beforeunload bị chặn; rời trong app thì hỏi', async () => {
@@ -1590,16 +1589,44 @@ test('Case 12 — bài cũ không có (-): hiển thị như trước, vạch c�
   assert.equal(view.container.querySelectorAll('.cl-edit-row').length, lyricsOf(view).split('\n').filter(Boolean).length, 'một hàng cho mỗi dòng lời')
 })
 
-test('Bài MỚI: đặt vạch rồi Lưu lần đầu → vạch KHÔNG bị bỏ ngầm; nút đổi thành "Lưu vạch nhịp"; bấm → bản có vạch', async () => {
+test('Bài MỚI: đặt vạch rồi Lưu MỘT lần → một phiên bản có đủ lời + vạch (không bản trung gian)', async () => {
   const view = await openNewWithText('Chiều một mình qua phố')
   type(view.getByLabelText(/Tên bài/), 'Bài mới có vạch')
   fireEvent.click(slotOf(view, 0, 2)); tap(view, '｜ Đặt vạch nhịp tại đây')
   assert.deepEqual(barNums(view), ['¹'])
   tap(view, 'Lưu'); await settle(60)
   assert.deepEqual(barNums(view), ['¹'], 'vạch vẫn hiện sau lần lưu đầu')
-  assert.match(view.getByRole('status').textContent ?? '', /Vạch nhịp CHƯA được lưu theo bản này/)
-  tap(view, 'Lưu vạch nhịp'); await settle(60)
+  assert.equal(view.queryByRole('button', { name: 'Lưu vạch nhịp' }), null)
   const v = await savedVersion(view, 'bai moi co vach')
-  assert.equal(v.versionNumber, 2)
+  assert.equal(v.versionNumber, 1, 'một lần lưu = phiên bản 1 (đủ vạch)')
   assert.deepEqual(v.anchors?.measures, [{ line: 0, token: 2 }])
+})
+
+test('Lưu bài mới KHÔNG vạch: được (bản nháp chưa có vạch), không bắt buộc đủ vạch', async () => {
+  const view = await openNewWithText('Chiều một mình')
+  type(view.getByLabelText(/Tên bài/), 'Bài không vạch')
+  tap(view, 'Lưu'); await settle(60)
+  const v = await savedVersion(view, 'bai khong vach')
+  assert.deepEqual([v.versionNumber, v.anchors], [1, null])
+})
+
+test('Lưu thất bại (thiếu quyền vạch / RPC lỗi): KHÔNG báo thành công, giữ nguyên lời + vạch đang soạn; lần Lưu sau thử lại được', async () => {
+  const view = await openNewWithText('Chiều một mình')
+  type(view.getByLabelText(/Tên bài/), 'Bài lỗi lưu')
+  fireEvent.click(slotOf(view, 0, 1)); tap(view, '｜ Đặt vạch nhịp tại đây')
+  const original = view.library.createChordSheet.bind(view.library)
+  let fail = true
+  view.library.createChordSheet = async (draft, options) => {
+    if (fail) throw new Error('Chưa lưu được: tài khoản này chưa có quyền lưu vạch nhịp, nên chưa có gì được lưu. Dữ liệu bạn đang soạn vẫn còn nguyên.')
+    return original(draft, options)
+  }
+  tap(view, 'Lưu'); await settle(60)
+  assert.match(view.getByRole('alert').textContent ?? '', /chưa có quyền lưu vạch nhịp.*chưa có gì được lưu.*vẫn còn nguyên/s)
+  assert.equal(view.queryByRole('status'), null, 'không có thông báo thành công')
+  assert.deepEqual(barNums(view), ['¹'], 'vạch đang soạn còn nguyên')
+  assert.equal(lyricsOf(view), 'Chiều một mình')
+  assert.equal((await view.library.searchChordSheets('bai loi luu')).length, 0, 'chưa có gì được ghi')
+  fail = false
+  tap(view, 'Lưu'); await settle(60)
+  assert.equal((await savedVersion(view, 'bai loi luu')).anchors?.measures.length, 1)
 })

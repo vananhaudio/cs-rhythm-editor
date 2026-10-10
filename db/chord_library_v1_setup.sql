@@ -351,13 +351,16 @@ create or replace function public.chord_sheet_contribute(
   p_sources jsonb default '[]'::jsonb,
   p_version_id uuid default null,
   p_sheet_id uuid default null,
-  p_parent_version_id uuid default null
+  p_parent_version_id uuid default null,
+  p_anchors jsonb default null
 ) returns jsonb language plpgsql security definer set search_path = '' as $$
 declare
   v_uid uuid := auth.uid();
   v_review boolean;
   v_text text := public.chord_canonical_text(p_text);
   v_hash text;
+  v_anchors jsonb := case when p_anchors is null or jsonb_typeof(p_anchors) = 'null' then null else p_anchors end;
+  v_problem text;
   v_title text := btrim(coalesce(p_title, ''));
   v_composer text := nullif(btrim(coalesce(p_composer, '')), '');
   v_vid uuid := coalesce(p_version_id, gen_random_uuid());
@@ -396,6 +399,21 @@ begin
     raise exception 'CHORDLIB_INVALID: BPM gợi ý phải trong khoảng 20–300' using errcode = '22023';
   end if;
   v_hash := encode(sha256(convert_to(v_text, 'UTF8')), 'hex');
+
+  -- V1.4 MỘT LẦN LƯU: vạch nhịp đi CÙNG lời trong cùng giao dịch (không cần phiên bản trung gian rồi accept_anchors).
+  --   • Có vạch mà người gọi không có quyền review → TỪ CHỐI CẢ LẦN LƯU (không lưu lời rồi bỏ vạch).
+  --   • Vạch phải khớp số chữ của lời này (cùng chord_anchors_problem với chord_sheet_accept_anchors).
+  --   • Không có vạch (null) → bản nháp chưa có vạch như trước (anchors none).
+  if v_anchors is not null then
+    if not v_review then
+      raise exception 'CHORDLIB_FORBIDDEN: lưu vạch nhịp cần quyền review — toàn bộ lần lưu bị từ chối, chưa có gì được lưu'
+        using errcode = '42501';
+    end if;
+    v_problem := public.chord_anchors_problem(v_anchors, public.chord_lyric_token_counts(v_text));
+    if v_problem is not null then
+      raise exception 'CHORDLIB_INVALID: vạch nhịp không hợp lệ — %', v_problem using errcode = '22023';
+    end if;
+  end if;
 
   -- File nguồn. Mỗi mục CHỈ gồm {path, mime, sha256, page?, size_bytes?}:
   --   path        {uid của người gọi}/{version_id này}/{0-9}.{pdf|jpg|jpeg|png|webp}, không lặp
@@ -471,13 +489,14 @@ begin
       raise exception 'CHORDLIB_INVALID: bài mới không có phiên bản cha' using errcode = '22023';
     end if;
     -- Gửi lại y hệt (cùng người, cùng tên bài, cùng NỘI DUNG, chưa bị từ chối) → trả bản đã có.
-    -- Nội dung = lời + nhịp + BPM + bộ file nguồn. text_hash vẫn CHỈ băm lời (neo ô nhịp bám theo lời) — nên
+    -- Nội dung = lời + nhịp + BPM + bộ file nguồn + bộ vạch nhịp. text_hash vẫn CHỈ băm lời (neo ô nhịp bám theo lời) — nên
     -- trùng text_hash chưa đủ để gọi là trùng: đổi riêng nhịp, BPM, hay sheet nguồn là một phiên bản mới hợp lệ.
     select v.id, v.sheet_id into v_dup, v_dup_sheet
       from public.chord_sheet_versions v join public.chord_sheets s on s.id = v.sheet_id
      where v.contributed_by = v_uid and v.text_hash = v_hash and v.review_status <> 'rejected'
        and v.meter is not distinct from p_meter and v.suggested_bpm is not distinct from p_suggested_bpm
        and public.chord_source_key(v.sources) = public.chord_source_key(v_sources)
+       and v.anchors is not distinct from v_anchors
        and s.title_key = public.chord_fold_vi(v_title)
      order by v.created_at limit 1;
     if v_dup is not null then
@@ -497,6 +516,7 @@ begin
      where v.sheet_id = p_sheet_id and v.text_hash = v_hash
        and v.meter is not distinct from p_meter and v.suggested_bpm is not distinct from p_suggested_bpm
        and public.chord_source_key(v.sources) = public.chord_source_key(v_sources)
+       and v.anchors is not distinct from v_anchors
        and (v.id = v_sheet.canonical_version_id or (v.contributed_by = v_uid and v.review_status <> 'rejected'))
      order by (v.id = v_sheet.canonical_version_id) desc nulls last, v.created_at limit 1;
     if v_dup is not null then
@@ -521,16 +541,22 @@ begin
   end if;
   insert into public.chord_sheet_versions
     (id, sheet_id, version_number, parent_version_id, text, text_hash, meter, suggested_bpm, sources,
-     generator, contributed_by, review_status, anchors_status)
+     anchors, anchor_review, generator, contributed_by, review_status, anchors_status)
   values
     (v_vid, v_sheet.id, v_num, v_parent, v_text, v_hash, p_meter, p_suggested_bpm, v_sources,
-     'manual', v_uid, 'private', 'none');
+     v_anchors,
+     case when v_anchors is null then null
+          else jsonb_build_object('mode', 'manual', 'reviewedBy', v_uid, 'reviewedAt', now(),
+                 'measureCount', jsonb_array_length(v_anchors -> 'measures'), 'hasPickup', v_anchors ? 'pickup') end,
+     case when v_anchors is null then 'manual' else 'manual-anchors' end,
+     v_uid, 'private', case when v_anchors is null then 'none' else 'ready' end);
 
   return jsonb_build_object('ok', true, 'duplicate', false, 'sheet_id', v_sheet.id, 'version_id', v_vid,
-    'version_number', v_num, 'text_hash', v_hash, 'review_status', 'private', 'anchors_status', 'none');
+    'version_number', v_num, 'text_hash', v_hash, 'review_status', 'private',
+    'anchors_status', case when v_anchors is null then 'none' else 'ready' end);
 end $$;
-comment on function public.chord_sheet_contribute(text, text, text, jsonb, integer, jsonb, uuid, uuid, uuid)
-  is 'chord_library_v1: đóng góp bài mới / phiên bản mới (private, anchors none)';
+comment on function public.chord_sheet_contribute(text, text, text, jsonb, integer, jsonb, uuid, uuid, uuid, jsonb)
+  is 'chord_library_v1: đóng góp bài mới / phiên bản mới (private; anchors none, hoặc ready khi kèm vạch nhịp — chỉ người review)';
 
 -- 6c) ĐỌC một phiên bản. approved (kể cả bản đã duyệt cũ, để consumer giữ snapshot kiểm lại được): mọi
 -- người có quyền search. private/rejected: người đóng góp + người review. File nguồn, lý do từ chối,
@@ -998,7 +1024,7 @@ revoke all on function
   public.chord_fold_vi(text), public.chord_canonical_text(text), public.chord_meter_ok(jsonb), public.chord_source_key(jsonb),
   public.chord_sheet_versions_guard(), public.chordlib_can(text), public.my_chordlib_caps(),
   public.chord_sheet_search(text, integer),
-  public.chord_sheet_contribute(text, text, text, jsonb, integer, jsonb, uuid, uuid, uuid),
+  public.chord_sheet_contribute(text, text, text, jsonb, integer, jsonb, uuid, uuid, uuid, jsonb),
   public.chord_sheet_get(uuid), public.chord_sheet_approve(uuid, uuid), public.chord_sheet_reject(uuid, text),
   public.chord_sheet_update_info(uuid, text, text), public.chord_source_can_write(text, text),
   public.chord_source_rule(uuid, text, text), public.chord_source_guard()
@@ -1006,7 +1032,7 @@ from public, anon, authenticated;
 grant execute on function
   public.chord_fold_vi(text), public.chordlib_can(text), public.my_chordlib_caps(),
   public.chord_sheet_search(text, integer),
-  public.chord_sheet_contribute(text, text, text, jsonb, integer, jsonb, uuid, uuid, uuid),
+  public.chord_sheet_contribute(text, text, text, jsonb, integer, jsonb, uuid, uuid, uuid, jsonb),
   public.chord_sheet_get(uuid), public.chord_sheet_approve(uuid, uuid), public.chord_sheet_reject(uuid, text),
   public.chord_sheet_update_info(uuid, text, text), public.chord_source_can_write(text, text)
 to authenticated;

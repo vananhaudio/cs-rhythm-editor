@@ -27,6 +27,7 @@ drop function if exists public.chord_sheet_reject(uuid, text);
 drop function if exists public.chord_sheet_approve(uuid, uuid);
 drop function if exists public.chord_sheet_get(uuid);
 drop function if exists public.chord_sheet_contribute(text, text, text, jsonb, integer, jsonb, uuid, uuid, uuid);
+drop function if exists public.chord_sheet_contribute(text, text, text, jsonb, integer, jsonb, uuid, uuid, uuid, jsonb);
 drop function if exists public.chord_sheet_search(text, integer);
 drop trigger if exists chord_source_guard_trg on storage.objects;
 drop function if exists public.chord_source_guard();

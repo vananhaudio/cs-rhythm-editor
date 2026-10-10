@@ -669,6 +669,66 @@ select t.fails(format('select public.chord_sheet_reject(%L, %L)', t.id('a3'), 'x
   'V1.2: không gắn vạch nhịp vào bản đã bỏ', 'không gắn vạch nhịp vào bản đã bỏ');
 select t.reset();
 
+-- ── V1.4) MỘT LẦN LƯU: chord_sheet_contribute nhận p_anchors — lời + hợp âm + vạch nhịp trong MỘT giao dịch / MỘT phiên bản ──
+select t.reset();
+select t.put('m3', jsonb_build_object('text', E'Chiều [Am] nao tiễn nhau\n[E7](-) đi', 'a', '{"measures": [{"line": 0, "token": 0}, {"line": 1, "token": 0}]}'::jsonb,
+  'b', '{"measures": [{"line": 0, "token": 0}, {"line": 0, "token": 2}, {"line": 1, "token": 0}]}'::jsonb));
+select t.ok((select count(*) = 1 from pg_proc where proname = 'chord_sheet_contribute'), 'V1.4: chỉ MỘT chữ ký chord_sheet_contribute (không overload mơ hồ)');
+select t.as_user('T');
+select t.put('o1', public.chord_sheet_contribute(p_text => (select v ->> 'text' from t.kv where k = 'm3'), p_title => 'Bài một lần lưu',
+  p_meter => '{"beats": 4, "beatType": 4}', p_anchors => (select v -> 'a' from t.kv where k = 'm3')));
+select t.ok((select v ->> 'duplicate' = 'false' and v ->> 'version_number' = '1' and v ->> 'anchors_status' = 'ready' and v ->> 'review_status' = 'private' from t.kv where k = 'o1'),
+  'V1.4: MỘT lần gọi → phiên bản 1 MỚI, private, anchors_status = ready (không cần accept_anchors)');
+select t.reset();
+select t.ok((select count(*) = 1 from public.chord_sheet_versions where sheet_id = t.id('o1', 'sheet_id')), 'V1.4: đúng MỘT phiên bản được ghi (không có bản trung gian chỉ có lời)');
+select t.as_user('T');
+select t.ok((select g ->> 'anchors_status' = 'ready' and g -> 'anchors' = (select v -> 'a' from t.kv where k = 'm3')
+                     and g -> 'anchor_review' ->> 'mode' = 'manual' and g -> 'anchor_review' ->> 'reviewedBy' = t.u('T')::text
+                     and g ->> 'text' = (select v ->> 'text' from t.kv where k = 'm3') and g ->> 'parent_version_id' is null
+               from (select public.chord_sheet_get(t.id('o1')) g) x),
+  'V1.4: đọc lại — lời nguyên văn (kể cả (-)), vạch đúng, anchor_review do MÁY CHỦ dựng');
+-- gửi lại y hệt (lời + vạch) → trùng; chỉ khác vạch → phiên bản MỚI; không vạch → bản nháp chưa có vạch (không trả bản có vạch)
+select t.ok(public.chord_sheet_contribute(p_text => (select v ->> 'text' from t.kv where k = 'm3'), p_title => 'Bài một lần lưu',
+  p_meter => '{"beats": 4, "beatType": 4}', p_anchors => (select v -> 'a' from t.kv where k = 'm3'), p_sheet_id => t.id('o1', 'sheet_id')) ->> 'duplicate' = 'true',
+  'V1.4: cùng lời + cùng vạch → trả bản đã có (không tạo bản rác)');
+select t.put('o2', public.chord_sheet_contribute(p_text => (select v ->> 'text' from t.kv where k = 'm3'), p_meter => '{"beats": 4, "beatType": 4}',
+  p_anchors => (select v -> 'b' from t.kv where k = 'm3'), p_sheet_id => t.id('o1', 'sheet_id'), p_parent_version_id => t.id('o1')));
+select t.ok((select v ->> 'duplicate' = 'false' and v ->> 'version_number' = '2' from t.kv where k = 'o2')
+  and public.chord_sheet_get(t.id('o1')) -> 'anchors' = (select v -> 'a' from t.kv where k = 'm3')
+  and public.chord_sheet_get(t.id('o2')) -> 'anchors' = (select v -> 'b' from t.kv where k = 'm3'),
+  'V1.4: cùng lời, KHÁC vạch → phiên bản 2 mới (luật chống trùng tính cả vạch); phiên bản 1 giữ nguyên');
+select t.put('o3', public.chord_sheet_contribute(p_text => (select v ->> 'text' from t.kv where k = 'm3'), p_meter => '{"beats": 4, "beatType": 4}',
+  p_sheet_id => t.id('o1', 'sheet_id')));
+select t.ok((select v ->> 'duplicate' = 'false' and v ->> 'version_number' = '3' and v ->> 'anchors_status' = 'none' from t.kv where k = 'o3')
+  and public.chord_sheet_get(t.id('o3')) -> 'anchors' = 'null',
+  'V1.4: lưu CHỦ ĐỘNG không có vạch → bản nháp chưa có vạch (anchors none) — không bắt buộc đủ vạch, không trả nhầm bản có vạch');
+-- vạch sai / quyền → CẢ LẦN LƯU bị từ chối, không ghi gì
+select t.reset();
+select t.put('cnt', jsonb_build_object('s', (select count(*) from public.chord_sheets), 'v', (select count(*) from public.chord_sheet_versions)));
+select t.as_user('T');
+select t.fails(format($q$select public.chord_sheet_contribute(p_text => %L, p_title => 'Sai vạch', p_anchors => %L)$q$, 'Chiều nao', '{"measures": [{"line": 0, "token": 9}]}'),
+  'V1.4: vạch vượt số chữ → CHORDLIB_INVALID, không ghi lời', 'chỉ có 2 chữ');
+select t.fails(format($q$select public.chord_sheet_contribute(p_text => %L, p_title => 'Sai vạch', p_anchors => %L)$q$, 'Chiều nao', '{"measures": []}'),
+  'V1.4: bộ vạch rỗng (không phải null) → chặn', 'chưa có vạch nhịp nào');
+select t.as_user('A');
+select t.fails(format($q$select public.chord_sheet_contribute(p_text => %L, p_title => 'Học viên có vạch', p_anchors => %L)$q$, 'Chiều nao', '{"measures": [{"line": 0, "token": 0}]}'),
+  'V1.4: người chỉ có contribute gửi kèm vạch → TỪ CHỐI CẢ LẦN LƯU (không lưu lời rồi bỏ vạch)', 'CHORDLIB_FORBIDDEN');
+select t.reset();
+select t.ok((select (v ->> 's')::int = (select count(*) from public.chord_sheets) and (v ->> 'v')::int = (select count(*) from public.chord_sheet_versions) from t.kv where k = 'cnt'),
+  'V1.4: mọi lượt bị từ chối không tạo bài/phiên bản nào (không lưu một phần)');
+select t.as_user('A');
+select t.ok(public.chord_sheet_contribute(p_text => 'Chiều [Am] nao', p_title => 'Học viên không vạch') ->> 'anchors_status' = 'none',
+  'V1.4: người chỉ có contribute vẫn lưu được bản nháp KHÔNG vạch');
+select t.as_anon();
+select t.fails(format($q$select public.chord_sheet_contribute(p_text => %L, p_title => 'Khách', p_anchors => %L)$q$, 'a', '{"measures": [{"line": 0, "token": 0}]}'),
+  'V1.4: khách vẫn không gọi được', 'permission denied');
+-- client CŨ (9 tham số, theo vị trí và theo tên) vẫn chạy trên chữ ký mới
+select t.as_user('T');
+select t.ok(public.chord_sheet_contribute('[C] Client cũ', 'Bài client cũ', null, null, null, '[]'::jsonb, null, null, null) ->> 'anchors_status' = 'none'
+  and public.chord_sheet_contribute(p_text => '[G] Client cũ 2', p_title => 'Bài client cũ 2', p_meter => '{"beats": 3, "beatType": 4}') ->> 'anchors_status' = 'none',
+  'V1.4: client cũ (9 tham số, theo vị trí / theo tên) vẫn chạy — không overload mơ hồ');
+select t.reset();
+
 -- ── Xoá tài khoản: đóng góp ở lại, không còn tên ──────────────────────────────
 select t.reset();
 delete from public.app_users where id = t.u('N');

@@ -48,7 +48,12 @@ export type ChordSheetDetail = ChordSheetSummary & {
 }
 
 /** Phiên bản sắp ghi: version_id đã dùng để tải file nguồn, và danh sách file (đã nằm trong bucket). */
-export type ChordSaveOptions = { versionId?: string; sources?: ChordSource[] }
+export type ChordSaveOptions = {
+  versionId?: string
+  sources?: ChordSource[]
+  /** Vạch nhịp đang hiển thị — đi CÙNG lời trong MỘT lần lưu (một phiên bản). null/thiếu = bản nháp chưa có vạch. */
+  anchors?: ChordAnchors | null
+}
 
 /** Phần NỘI DUNG của một phiên bản (không gồm tên bài/tác giả — hai thứ đó thuộc về bài). */
 export type ChordContent = Pick<ChordDraft, 'text' | 'meter' | 'suggestedBpm'>
@@ -83,6 +88,14 @@ const firstError = (draft: ChordDraft) => Object.values(validateChordDraft(draft
 const sameMeter = (a: ChordMeter | null, b: ChordMeter | null) => (a?.beats ?? null) === (b?.beats ?? null) && (a?.beatType ?? null) === (b?.beatType ?? null)
 /** Như chord_source_key ở máy chủ: bộ file nguồn so theo sha256 đã sắp xếp. */
 const sourceKey = (sources: ChordSource[] | undefined) => (sources ?? []).map(source => source.sha256).sort().join(',')
+
+/** Như máy chủ: vạch phải khớp số chữ của lời; không hợp lệ → từ chối CẢ lần lưu. null/rỗng = không có vạch. */
+function mockAnchors(anchors: ChordAnchors | null | undefined, text: string): ChordAnchors | null {
+  if (!anchors) return null
+  const clean = parseAnchors(anchors, text)
+  if (!clean) throw new Error('CHORDLIB_INVALID: vạch nhịp không hợp lệ với lời này')
+  return clean
+}
 
 // ── MOCK ────────────────────────────────────────────────────────────────────────────────────
 type MockVersion = {
@@ -210,7 +223,9 @@ export function createMockChordLibrary(options: MockOptions = {}): ChordLibrary 
       if (error) throw new Error(error)
       const versionId = saveOptions.versionId ?? newId()
       checkSources(versionId, saveOptions.sources ?? [])
-      const version: MockVersion = { versionId, versionNumber: 1, text: canonicalChordText(draft.text), meter: draft.meter, suggestedBpm: draft.suggestedBpm, hasAnchors: false, createdAt: now(), review: 'private', sources: saveOptions.sources ?? [] }
+      const text = canonicalChordText(draft.text)
+      const anchors = mockAnchors(saveOptions.anchors, text)
+      const version: MockVersion = { versionId, versionNumber: 1, text, meter: draft.meter, suggestedBpm: draft.suggestedBpm, hasAnchors: !!anchors, anchors, createdAt: now(), review: 'private', sources: saveOptions.sources ?? [] }
       const sheet: MockSheet = { sheetId: newId(), title: draft.title.trim(), composer: draft.composer.trim() || null, currentVersionId: null, versions: [version] }
       sheets = [sheet, ...sheets]
       persist()
@@ -223,18 +238,18 @@ export function createMockChordLibrary(options: MockOptions = {}): ChordLibrary 
       const text = canonicalChordText(content.text)
       const versionId = saveOptions.versionId ?? newId()
       checkSources(versionId, saveOptions.sources ?? [])
-      // Như máy chủ: trùng = cùng lời + nhịp + BPM + bộ file nguồn với bản đang dùng hoặc một bản nháp còn hiệu lực.
+      // Như máy chủ (V1.4): vạch nhịp đi cùng lời trong MỘT lần lưu; trùng = cùng lời + nhịp + BPM + bộ file nguồn + bộ vạch
+      // với bản đang dùng hoặc một bản nháp còn hiệu lực.
+      void fromVersionId
+      const anchors = mockAnchors(saveOptions.anchors, text)
       const same = sheet.versions.find(entry => entry.review !== 'rejected' && (entry.review === 'private' || entry.versionId === sheet.currentVersionId)
         && entry.text === text && sameMeter(entry.meter, content.meter) && entry.suggestedBpm === content.suggestedBpm
-        && sourceKey(entry.sources) === sourceKey(saveOptions.sources))
+        && sourceKey(entry.sources) === sourceKey(saveOptions.sources) && JSON.stringify(entry.anchors ?? null) === JSON.stringify(anchors))
       if (same) return detail(sheet, same)
-      const from = sheet.versions.find(entry => entry.versionId === fromVersionId)
-      // Vạch nhịp neo theo từng chữ của lời: đổi lời là neo cũ hết hiệu lực. Chỉ đổi nhịp/BPM/nguồn thì giữ.
-      const keepAnchors = !!from?.hasAnchors && from.text === text
       const version: MockVersion = {
         versionId, versionNumber: Math.max(...sheet.versions.map(entry => entry.versionNumber)) + 1,
         text, meter: content.meter, suggestedBpm: content.suggestedBpm,
-        hasAnchors: keepAnchors, anchors: keepAnchors ? from?.anchors ?? null : null, createdAt: now(), review: 'private',
+        hasAnchors: !!anchors, anchors, createdAt: now(), review: 'private',
         sources: saveOptions.sources ?? [],
       }
       sheet.versions.push(version)
@@ -296,7 +311,12 @@ const hasAnchorsStatus = (status: unknown) => status === 'ready' || status === '
 const statusOfRow = (row: Row): ChordVersionStatus =>
   row.is_canonical ? 'current' : row.review_status === 'private' ? 'draft' : row.review_status === 'approved' ? 'old' : 'discarded'
 
+/** Lý do hiện cho người dùng khi lưu kèm vạch nhịp bị từ chối vì thiếu quyền (toàn bộ lần lưu không ghi gì). */
+export const VANH_FORBIDDEN = 'Chưa lưu được: tài khoản này chưa có quyền lưu vạch nhịp, nên chưa có gì được lưu. Dữ liệu bạn đang soạn vẫn còn nguyên.'
+
 function rpcError(message: string): Error {
+  // V1.4: có vạch mà không có quyền review → máy chủ từ chối CẢ lần lưu; nói đúng lý do.
+  if (message.includes('CHORDLIB_FORBIDDEN') && message.includes('vạch nhịp')) return new Error(VANH_FORBIDDEN)
   if (message.includes('CHORDLIB_FORBIDDEN')) return new Error('Tài khoản không có quyền với Thư viện hợp âm.')
   if (message.includes('CHORDLIB_NOT_FOUND')) return new Error('Không tìm thấy bài này.')
   if (message.includes('CHORDLIB_RETRY')) return new Error('Bài vừa được thay đổi ở nơi khác — tải lại rồi thử lại.')
@@ -341,6 +361,8 @@ export function createRpcChordLibrary(rpc: RpcCall, sourceStore: ChordSourceStor
   async function contribute(args: Record<string, unknown>, saveOptions: ChordSaveOptions = {}): Promise<ChordSheetDetail> {
     if (saveOptions.versionId) args.p_version_id = saveOptions.versionId
     if (saveOptions.sources?.length) args.p_sources = sourcesPayload(saveOptions.sources)
+    // V1.4: vạch nhịp đi cùng lời trong MỘT lời gọi (máy chủ từ chối cả lần lưu nếu thiếu quyền / vạch sai).
+    if (saveOptions.anchors) args.p_anchors = { ...(saveOptions.anchors.pickup ? { pickup: saveOptions.anchors.pickup } : {}), measures: saveOptions.anchors.measures }
     const result = await call('chord_sheet_contribute', args) as Row
     return get(String(result.version_id))
   }

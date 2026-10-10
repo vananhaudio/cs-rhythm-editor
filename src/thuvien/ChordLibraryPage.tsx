@@ -316,12 +316,6 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
   }
   const close = () => void leave(() => onClose())
 
-  /** Lưu bộ vạch đang hiện lên phiên bản đã lưu (phiên bản MỚI theo luật hiện hành, qua chord_sheet_accept_anchors). */
-  function saveBars() {
-    if (!detail || !bars) { setFailed('Cần giữ ít nhất một vạch nhịp để lưu (bộ vạch rỗng không lưu được).'); return }
-    void acceptAnchors(bars)
-  }
-
   // Bảo vệ chỉnh sửa chưa lưu khi đóng tab / tải lại (điều hướng trong app đã có `leave`).
   useEffect(() => {
     if (!unsaved) return
@@ -366,25 +360,22 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
     setErrors(found)
     setMessage(''); setFailed('')
     if (Object.keys(found).length) { setFailed('Chưa lưu được — xem các ô được đánh dấu.'); return }
-    if (detail && !dirty) { setMessage('Chưa có thay đổi nào để lưu.'); return }
-    const keep = bars   // vạch đang hiện — nếu bản lưu ra chưa có vạch thì giữ lại để người dùng bấm "Lưu vạch nhịp"
+    if (detail && !unsaved) { setMessage('Chưa có thay đổi nào để lưu.'); return }
     setBusy(true)
     try {
-      const needsVersion = !detail || contentChanged || sourcesChanged
+      // MỘT lần lưu: lời + hợp âm + vạch nhịp đang hiện đi cùng nhau trong một lời gọi → một phiên bản.
+      const needsVersion = !detail || contentChanged || sourcesChanged || barsDirty
       let sources: ChordSource[] = []
       if (needsVersion && plan.length) {
         const owner = await library.sources.ownerId()
         sources = (await carryAttached(owner)).map((item, at) => ({ ...item.source, page: at + 1 }))
       }
-      const options = { versionId: draftId, sources }
+      const options = { versionId: draftId, sources, anchors: bars }
       if (!detail) {
         const next = await library.createChordSheet(draft, options)
         await afterVersion(next, sources)
         adopt(next); onSaved(next)
-        // Bài mới cũng vậy: bản lưu chưa có vạch (giới hạn M3) — vạch đang hiện KHÔNG được âm thầm bỏ.
-        const lostFirst = !!keep && !next.anchors && sameLyricStructure(next.text, form.text)
-        if (lostFirst) setBars(keep)
-        setMessage(`Đã lưu bản nháp (phiên bản ${next.versionNumber}${sources.length ? `, ${sources.length} file nguồn` : ''}) — bấm “Duyệt bản này” để đặt làm bản đang dùng.${suffix}${lostFirst ? ' Vạch nhịp CHƯA được lưu theo bản này — bấm “Lưu vạch nhịp”.' : ''}`)
+        setMessage(`Đã lưu bản nháp (phiên bản ${next.versionNumber}${sources.length ? `, ${sources.length} file nguồn` : ''}) — bấm “Duyệt bản này” để đặt làm bản đang dùng.${suffix}`)
         return
       }
       if (infoChanged) {
@@ -399,17 +390,15 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
       const duplicate = needsVersion && next.versionId !== draftId
       if (needsVersion) await afterVersion(next, sources)
       adopt(next); onSaved(next)
-      // Giới hạn đã biết (M3): máy chủ luôn tạo bản nháp CHƯA có vạch nhịp. Không tạo thêm phiên bản trung gian để che —
-      // vạch vẫn hiện trên bản nhạc (chưa lưu) và nút Lưu đổi thành "Lưu vạch nhịp".
-      const lostBars = !!keep && !next.anchors && needsVersion && sameLyricStructure(next.text, form.text)
-      if (lostBars) setBars(keep)
       setMessage((needsVersion
         ? !duplicate
           ? `Đã lưu bản nháp (phiên bản ${next.versionNumber}${sources.length ? `, ${sources.length} file nguồn` : ''}). Bản đang dùng chưa đổi — bấm “Duyệt bản này” để dùng bản mới.`
           : `Nội dung này trùng phiên bản ${next.versionNumber} đã có — đã mở phiên bản đó, không tạo thêm.`
-        : 'Đã lưu tên bài / tác giả.') + suffix + (lostBars ? ' Vạch nhịp CHƯA được lưu theo bản này — bấm “Lưu vạch nhịp”.' : ''))
+        : 'Đã lưu tên bài / tác giả.') + suffix)
     } catch (cause) {
-      setFailed(cause instanceof Error ? sourceErrorMessage(cause.message) : 'Không lưu được.')
+      const text = cause instanceof Error ? cause.message : ''
+      // Có vạch mà không đủ quyền → máy chủ từ chối CẢ lần lưu (adapter đã đổi thành VANH_FORBIDDEN); giữ nguyên mọi thứ đang soạn.
+      setFailed(cause instanceof Error ? sourceErrorMessage(text) : 'Không lưu được.')
     } finally { setBusy(false) }
   }
 
@@ -630,8 +619,7 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
     <header className="cl-editor-head">
       <button type="button" className="cl-back" onClick={close}>← Danh sách</button>
       {form.title.trim() && <h1>{form.title.trim()}</h1>}
-      <button type="button" className="cl-primary" onClick={() => (!dirty && barsDirty ? void saveBars() : void save())} disabled={busy || sourceBusy}>
-        {busy ? 'Đang lưu…' : !dirty && barsDirty ? 'Lưu vạch nhịp' : 'Lưu'}</button>
+      <button type="button" className="cl-primary" onClick={() => void save()} disabled={busy || sourceBusy}>{busy ? 'Đang lưu…' : 'Lưu'}</button>
     </header>
     <MockBanner library={library} />
     {detail && <button type="button" className="cl-status-chip" data-status={detail.status} onClick={() => setAdvancedOpen(true)}
@@ -687,9 +675,7 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
               {anchorsWillReset && <p className="cl-warn" role="note">Bài này đã có vạch nhịp theo lời cũ. Lưu lời mới thì vạch nhịp phải làm lại.</p>}
               {layoutNote && <p className="cl-warn" role="note">{layoutNote}</p>}
               <ChordSheetEditor text={form.text} bars={bars} onBars={setBars} onChange={text => changeText(text)} onStructure={edit => changeText(edit.text, edit)} />
-              {barsDirty && bars && <p className="cl-sheet-note" role="note">{dirty
-                ? 'Vạch nhịp chưa lưu. Bấm Lưu để lưu lời, rồi bấm “Lưu vạch nhịp”.'
-                : 'Vạch nhịp chưa lưu — bấm “Lưu vạch nhịp”.'}</p>}
+              {barsDirty && !dirty && <p className="cl-sheet-note" role="note">Vạch nhịp chưa lưu — bấm Lưu.</p>}
             </>
             : <p className="cl-placeholder">Chưa có lời. Dùng “⋯ → Dán lại lời & hợp âm”.</p>}
         </section>

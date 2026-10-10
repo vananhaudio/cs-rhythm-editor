@@ -159,17 +159,17 @@ test('mock: lưu bài kèm nguồn → nguồn gắn với phiên bản; thư m�
   await assert.rejects(library.sources.remove(a.path), /phiên bản đã ghi/, 'phiên bản đã ghi → không xoá nguồn')
 })
 
-test('mock: chỉ thay nguồn = phiên bản mới (giữ vạch nhịp); nguồn y hệt (cùng sha256) = trùng', async () => {
+test('mock: chỉ thay nguồn = phiên bản mới (vạch đang hiện đi kèm); nguồn y hệt (cùng sha256) = trùng', async () => {
   const library = createMockChordLibrary()
   const [first] = await library.searchChordSheets('bai thu 01')
   const v1 = await library.getChordSheet(first.versionId)
   const v2 = library.newVersionId()
   const s = await upload(library, v2, 0, 'sheet mới')
-  const next = await library.createChordSheetVersion(first.sheetId, { text: v1.text, meter: v1.meter, suggestedBpm: v1.suggestedBpm }, v1.versionId, { versionId: v2, sources: [s] })
-  assert.deepEqual([next.versionId, next.versionNumber, next.hasAnchors, next.anchors !== null], [v2, 2, true, true], 'lời không đổi → vạch nhịp được giữ')
+  const next = await library.createChordSheetVersion(first.sheetId, { text: v1.text, meter: v1.meter, suggestedBpm: v1.suggestedBpm }, v1.versionId, { versionId: v2, sources: [s], anchors: v1.anchors })
+  assert.deepEqual([next.versionId, next.versionNumber, next.hasAnchors, next.anchors !== null], [v2, 2, true, true], 'vạch client gửi kèm được lưu cùng phiên bản')
   const v3 = library.newVersionId()
   const copy = await upload(library, v3, 0, 'sheet mới')
-  const same = await library.createChordSheetVersion(first.sheetId, { text: v1.text, meter: v1.meter, suggestedBpm: v1.suggestedBpm }, v2, { versionId: v3, sources: [copy] })
+  const same = await library.createChordSheetVersion(first.sheetId, { text: v1.text, meter: v1.meter, suggestedBpm: v1.suggestedBpm }, v2, { versionId: v3, sources: [copy], anchors: v1.anchors })
   assert.equal(same.versionId, v2, 'cùng lời + nhịp + BPM + cùng sha256 nguồn → trả bản đã có')
 })
 

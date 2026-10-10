@@ -170,19 +170,19 @@ test('mock: sửa nội dung = bản nháp MỚI; bản đang dùng không đổ
   assert.equal((await library.searchChordSheets('bai thu 01'))[0].versionId, next.versionId)
 })
 
-test('mock: chỉ đổi nhịp / chỉ đổi BPM cũng là phiên bản mới (giữ vạch nhịp); nội dung y hệt thì KHÔNG tạo phiên bản rác', async () => {
+test('mock: chỉ đổi nhịp / chỉ đổi BPM cũng là phiên bản mới (client gửi kèm vạch đang hiện → vạch đi cùng, một lần lưu); nội dung y hệt thì KHÔNG tạo phiên bản rác', async () => {
   const library = createMockChordLibrary()
   const [first] = (await library.searchChordSheets('bai thu 01'))
   const before = await library.getChordSheet(first.versionId)
-  const same = await library.createChordSheetVersion(first.sheetId, { text: before.text + '  \n', meter: { beats: 4, beatType: 4 }, suggestedBpm: 80 }, before.versionId)
+  const same = await library.createChordSheetVersion(first.sheetId, { text: before.text + '  \n', meter: { beats: 4, beatType: 4 }, suggestedBpm: 80 }, before.versionId, { anchors: before.anchors })
   assert.equal(same.versionId, before.versionId, 'y hệt bản đang dùng → trả chính nó')
-  const meterOnly = await library.createChordSheetVersion(first.sheetId, { text: before.text, meter: { beats: 2, beatType: 4 }, suggestedBpm: 80 }, before.versionId)
+  const meterOnly = await library.createChordSheetVersion(first.sheetId, { text: before.text, meter: { beats: 2, beatType: 4 }, suggestedBpm: 80 }, before.versionId, { anchors: before.anchors })
   assert.deepEqual([meterOnly.versionNumber, meterOnly.hasAnchors, meterOnly.status], [2, true, 'draft'])
-  const bpmOnly = await library.createChordSheetVersion(first.sheetId, { text: before.text, meter: { beats: 4, beatType: 4 }, suggestedBpm: 100 }, before.versionId)
+  const bpmOnly = await library.createChordSheetVersion(first.sheetId, { text: before.text, meter: { beats: 4, beatType: 4 }, suggestedBpm: 100 }, before.versionId, { anchors: before.anchors })
   assert.equal(bpmOnly.versionNumber, 3)
-  const bpmNull = await library.createChordSheetVersion(first.sheetId, { text: before.text, meter: { beats: 4, beatType: 4 }, suggestedBpm: null }, before.versionId)
+  const bpmNull = await library.createChordSheetVersion(first.sheetId, { text: before.text, meter: { beats: 4, beatType: 4 }, suggestedBpm: null }, before.versionId, { anchors: before.anchors })
   assert.equal(bpmNull.versionNumber, 4)
-  const again = await library.createChordSheetVersion(first.sheetId, { text: before.text, meter: { beats: 4, beatType: 4 }, suggestedBpm: 100 }, before.versionId)
+  const again = await library.createChordSheetVersion(first.sheetId, { text: before.text, meter: { beats: 4, beatType: 4 }, suggestedBpm: 100 }, before.versionId, { anchors: before.anchors })
   assert.equal(again.versionId, bpmOnly.versionId, 'y hệt một bản nháp đang chờ → trả bản nháp đó')
 })
 

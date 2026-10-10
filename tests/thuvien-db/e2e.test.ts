@@ -94,3 +94,37 @@ test('quyền qua adapter: học viên không sửa tên, không duyệt, không
   await admin.approveChordSheetVersion(sheet.versionId)
   await assert.rejects(admin.discardChordSheetVersion(sheet.versionId), /bản đã duyệt không từ chối được/, 'bản đã duyệt không bỏ được, kể cả admin')
 })
+
+test('MỘT lần lưu qua adapter thật: lời + (-) + vạch trong MỘT lời gọi → một phiên bản; khác vạch = bản mới; không có vạch = bản nháp; học viên gửi vạch bị từ chối cả lần', { skip: !target && 'không có cluster tạm' }, async () => {
+  const admin = createRpcChordLibrary(psqlRpc(target!, ADMIN))
+  const student = createRpcChordLibrary(psqlRpc(target!, STUDENT))
+  const text = '[Am]Chiều một [E7](-) mình qua phố\n[Dm](-) [G](-) [C](-) [Am](-)'
+  const anchors = { measures: [{ line: 0, token: 0 }, { line: 0, token: 3 }, { line: 1, token: 0 }, { line: 1, token: 2 }] }
+  const title = `Một lần lưu ${TAG}`
+
+  const v1 = await admin.createChordSheet({ title, composer: '', meter: { beats: 4, beatType: 4 }, suggestedBpm: 72, text }, { anchors })
+  assert.deepEqual([v1.versionNumber, v1.status, v1.hasAnchors, v1.anchorsStatus], [1, 'draft', true, 'ready'])
+  assert.deepEqual(v1.anchors?.measures, anchors.measures, 'đọc lại đúng bộ vạch')
+  assert.equal(v1.text, text, 'lời + hợp âm + (-) nguyên văn')
+  // đúng MỘT phiên bản được ghi cho bài này
+  assert.equal((await admin.searchChordSheets(title.toLowerCase())).length, 1)
+
+  // gửi lại y hệt → trả bản đã có
+  const same = await admin.createChordSheetVersion(v1.sheetId, { text, meter: v1.meter, suggestedBpm: 72 }, v1.versionId, { anchors })
+  assert.equal(same.versionId, v1.versionId)
+  // chỉ khác vạch → phiên bản MỚI
+  const v2 = await admin.createChordSheetVersion(v1.sheetId, { text, meter: v1.meter, suggestedBpm: 72 }, v1.versionId, { anchors: { measures: [{ line: 0, token: 0 }] } })
+  assert.equal(v2.versionNumber, 2)
+  assert.deepEqual(v2.anchors?.measures, [{ line: 0, token: 0 }])
+  assert.deepEqual((await admin.getChordSheet(v1.versionId)).anchors?.measures, anchors.measures, 'phiên bản 1 giữ nguyên')
+  // cùng lời, KHÔNG vạch → bản nháp chưa có vạch (không bị trả nhầm bản có vạch)
+  const v3 = await admin.createChordSheetVersion(v1.sheetId, { text, meter: v1.meter, suggestedBpm: 72 }, v2.versionId)
+  assert.deepEqual([v3.versionNumber, v3.hasAnchors, v3.anchors], [3, false, null])
+
+  // học viên (chỉ contribute): gửi kèm vạch → TỪ CHỐI CẢ LẦN LƯU; không vạch → lưu được
+  const before = (await student.searchChordSheets('')).length
+  await assert.rejects(student.createChordSheet({ title: `HV ${TAG}`, composer: '', meter: null, suggestedBpm: null, text: 'Chiều nao' }, { anchors: { measures: [{ line: 0, token: 0 }] } }), /chưa có quyền lưu vạch nhịp/)
+  assert.equal((await student.searchChordSheets('')).length, before, 'không ghi gì')
+  const plain = await student.createChordSheet({ title: `HV ${TAG}`, composer: '', meter: null, suggestedBpm: null, text: 'Chiều nao' })
+  assert.deepEqual([plain.versionNumber, plain.hasAnchors], [1, false])
+})
