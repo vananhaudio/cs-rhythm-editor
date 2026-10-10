@@ -76,7 +76,7 @@ export default function ChordLibraryPage({ tabs, canEdit = true, library = getCh
   if (library.mode === 'disabled') return <main className="tv-chords">
     {tabs}
     <div className="cl-wrap">
-      <header className="cl-head"><h1>HỢP ÂM CHUẨN HÓA</h1><a href="/admin">Quản trị</a></header>
+      <header className="cl-head"><h1>HỢP ÂM CHUẨN HÓA</h1></header>
       <p className="cl-notice cl-notice-bad" role="alert">{DISABLED_MESSAGE}</p>
     </div>
   </main>
@@ -155,7 +155,6 @@ function ChordList({ library, notice, onView, onEdit, canEdit }: { library: Chor
     <div className="cl-wrap">
       <header className="cl-head">
         <h1>HỢP ÂM CHUẨN HÓA</h1>
-        <a href="/admin">Quản trị</a>
       </header>
       <MockBanner library={library} onReset={() => { library.resetMock?.(); setQuery(''); setState('loading'); setReload(n => n + 1) }} />
       <div className="cl-actions">
@@ -606,23 +605,23 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
 
     <div className="cl-editor">
       <div className="cl-col">
-        <section className="cl-card" aria-label="Thông tin bài">
-          <div className="cl-fields cl-fields-3">
-            <label className="cl-field cl-field-wide">Tên bài *
+        <section className="cl-info" aria-label="Thông tin bài">
+          <div className="cl-info-grid">
+            <label className="cl-field cl-field-title">Tên bài *
               <input value={form.title} onChange={event => set({ title: event.target.value })} aria-invalid={!!errors.title} maxLength={220} />
               {errors.title && <span className="cl-error">{errors.title}</span>}
             </label>
-            <label className="cl-field">Tác giả
+            <label className="cl-field cl-field-author">Tác giả
               <input value={form.composer} onChange={event => set({ composer: event.target.value })} aria-invalid={!!errors.composer} maxLength={220} />
               {errors.composer && <span className="cl-error">{errors.composer}</span>}
             </label>
-            <label className="cl-field">Nhịp
+            <label className="cl-field cl-field-meter">Nhịp
               <select value={form.meter} onChange={event => set({ meter: event.target.value })}>
                 <option value="">— Chưa rõ</option>
                 {meterChoices.map(meter => <option key={meter} value={meter}>{meter}</option>)}
               </select>
             </label>
-            <label className="cl-field">BPM gợi ý
+            <label className="cl-field cl-field-bpm">BPM gợi ý
               <input value={form.bpm} onChange={event => set({ bpm: event.target.value })} inputMode="numeric" placeholder={`${BPM_RANGE.min}–${BPM_RANGE.max}`} aria-invalid={!!errors.suggestedBpm} />
               {errors.suggestedBpm && <span className="cl-error">{errors.suggestedBpm}</span>}
             </label>

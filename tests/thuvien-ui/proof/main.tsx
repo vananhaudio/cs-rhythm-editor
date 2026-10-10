@@ -1,11 +1,12 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import '../../../src/index.css'
-import ThuVienPage from '../../../src/thuvien/ThuVienPage.tsx'
+import { ThuVienPageView } from '../../../src/thuvien/ThuVienPage.tsx'
+import type { ClassSession } from '../../../src/class-social/useClassSession.ts'
 import { createRpcChordLibrary } from '../../../src/thuvien/chordLibrary.ts'
 import { createBridgeSourceStore } from './bridgeStore.ts'
 import { createHttpMeasureAnalyzer } from '../../../src/thuvien/measureAnalysis.ts'
-import { installMusicXmlStandIn } from './musicxmlStandIn.ts'
+import { LOCAL_TEST_USER, installMusicXmlStandIn } from './musicxmlStandIn.ts'
 
 // Trang thử — CHỈ chạy với dev server, bỏ qua cổng admin của AppRouter.
 //   (mặc định)       → dữ liệu thử trong trình duyệt (mock), có băng cảnh báo.
@@ -29,9 +30,16 @@ if (local) await installMusicXmlStandIn()
 
 const analyzer = params.get('analyzer') === 'off' ? undefined : createHttpMeasureAnalyzer('http://127.0.0.1:54398')
 
+// Phiên Class GIẢ cho trang thử (không gọi Supabase): người dùng thử cục bộ, vai thầy.
+const session: ClassSession = {
+  status: 'ready',
+  me: { role: 'teacher', userId: LOCAL_TEST_USER.id, studentId: null, name: 'Thầy Văn Anh (thử)', email: LOCAL_TEST_USER.email, avatarUrl: null,
+    level: null, enrolledAt: null, htMember: false, isTeacher: true, coverUrl: null },
+}
+
 createRoot(document.getElementById('root')!).render(<StrictMode>
   {local && <div style={{ position: 'fixed', right: 8, bottom: 8, zIndex: 9, padding: '4px 10px', borderRadius: 6, background: '#1f4a33', color: '#fff', font: '600 12px system-ui' }}>
     DB TẠM (local) · vai: {as} · kho MusicXML = bản thử trong trình duyệt · không phải production
   </div>}
-  <ThuVienPage chordLibrary={local} measureAnalyzer={analyzer} />
+  <ThuVienPageView chordLibrary={local} measureAnalyzer={analyzer} session={session} />
 </StrictMode>)

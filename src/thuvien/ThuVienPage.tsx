@@ -1,19 +1,22 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
-import type { ChangeEvent, ReactNode } from 'react'
+import type { ChangeEvent } from 'react'
 import { importMusicXml, listLibrary, matchesQuery, prepareMusicXml } from './masterLibrary.ts'
 import type { LibraryItem } from './masterLibrary.ts'
 import { scoreIdFromSearch } from './viewScore.ts'
-import { NEW_CHORD_SHEET, sectionFromSearch, sectionUrl, uploadFromSearch, uploadUrl } from './sections.ts'
-import type { ThuVienSection } from './sections.ts'
+import { NEW_CHORD_SHEET, activeNavItem, sectionFromSearch, sectionUrl, uploadFromSearch, uploadUrl } from './sections.ts'
+import type { NavId } from './sections.ts'
 import type { ChordLibrary } from './chordLibrary.ts'
 import { productionMeasureAnalyzer } from './measureAnalysis.ts'
 import type { MeasureAnalyzer } from './measureAnalysis.ts'
 import { createContentExtractor, extractorUrlsFrom } from './contentExtractor.ts'
 import type { ContentExtractor } from './contentExtractor.ts'
-import ThuVienHeader, { activeHeaderItem } from './ThuVienHeader.tsx'
-import type { HeaderAccount, HeaderItem } from './ThuVienHeader.tsx'
+import ThuVienShell from './ThuVienShell.tsx'
+import { useClassSession } from '../class-social/useClassSession'
+import type { ClassSession } from '../class-social/useClassSession'
 import './ThuVienPage.css'
 import './ChordLibrary.css'
+import '../class-social/classSocial.css'
+import './ThuVienShell.css'
 
 // Verovio (wasm) chỉ tải khi mở một bản nhạc, không làm chậm danh sách.
 const ScoreViewer = lazy(() => import('./ScoreViewer.tsx'))
@@ -43,26 +46,14 @@ const PRODUCTION_EXTRACTOR = extractorUrls && import.meta.env.VITE_CHORD_LIBRARY
   })
   : undefined
 
-/** Tên hiển thị của người đang đăng nhập — dùng chính phiên Supabase hiện có, không có hệ đăng nhập riêng. */
-function useAccount(): HeaderAccount {
-  const [account, setAccount] = useState<HeaderAccount>({ state: 'loading' })
-  useEffect(() => {
-    let active = true
-    import('../supabase.ts').then(({ supabase }) => supabase.auth.getSession())
-      .then(({ data }) => {
-        if (!active) return
-        const user = data.session?.user
-        setAccount(user ? { state: 'in', label: user.email ?? 'Tài khoản' } : { state: 'out' })
-      })
-      .catch(() => { if (active) setAccount({ state: 'out' }) })
-    return () => { active = false }
-  }, [])
-  return account
-}
+type PageProps = { chordLibrary?: ChordLibrary; measureAnalyzer?: MeasureAnalyzer; contentExtractor?: ContentExtractor }
 
-export default function ThuVienPage({ chordLibrary, measureAnalyzer = PRODUCTION_ANALYZER, contentExtractor = PRODUCTION_EXTRACTOR }: { chordLibrary?: ChordLibrary; measureAnalyzer?: MeasureAnalyzer; contentExtractor?: ContentExtractor } = {}) {
+/**
+ * Trang /thuvien: nằm trong KHUNG CỦA CLASS (ThuVienShell) — top bar, sidebar/menu sheet, tài khoản dùng chung với Class.
+ * `ThuVienPageView` nhận phiên từ ngoài (trang thử / test truyền sẵn); mặc định xuất ra bản dùng phiên Class thật.
+ */
+export function ThuVienPageView({ chordLibrary, measureAnalyzer = PRODUCTION_ANALYZER, contentExtractor = PRODUCTION_EXTRACTOR, session }: PageProps & { session: ClassSession }) {
   const [search, setSearch] = useState(() => window.location.search)
-  const account = useAccount()
   const section = sectionFromSearch(search)
 
   useEffect(() => {
@@ -71,8 +62,8 @@ export default function ThuVienPage({ chordLibrary, measureAnalyzer = PRODUCTION
     return () => window.removeEventListener('popstate', sync)
   }, [])
 
-  /** Header điều hướng bằng địa chỉ; báo `popstate` để trang đích (đang mở sẵn) đọc lại địa chỉ. */
-  function navigate(item: HeaderItem) {
+  /** Menu điều hướng bằng địa chỉ; báo `popstate` để trang đích (đang mở sẵn) đọc lại địa chỉ. */
+  function navigate(item: NavId) {
     const href = window.location.href
     const target = item === 'chords' ? sectionUrl(href, 'chords')
       : item === 'new-chords' ? sectionUrl(href, 'chords', NEW_CHORD_SHEET)
@@ -83,14 +74,17 @@ export default function ThuVienPage({ chordLibrary, measureAnalyzer = PRODUCTION
     window.scrollTo(0, 0)
   }
 
-  const tabs = <ThuVienHeader active={activeHeaderItem(search)} onNavigate={navigate} account={account} />
-  if (section === 'chords') {
-    return <Suspense fallback={<main className="tv-chords">{tabs}<p className="cl-empty">Đang mở Hợp âm chuẩn hóa…</p></main>}><ChordLibraryPage tabs={tabs} library={chordLibrary} analyzer={measureAnalyzer} extractor={contentExtractor} /></Suspense>
-  }
-  return <MusicXmlLibrary tabs={tabs} />
+  const content = section === 'chords'
+    ? <Suspense fallback={<main className="tv-chords"><p className="cl-empty">Đang mở Hợp âm chuẩn hóa…</p></main>}><ChordLibraryPage library={chordLibrary} analyzer={measureAnalyzer} extractor={contentExtractor} /></Suspense>
+    : <MusicXmlLibrary />
+  return <ThuVienShell active={activeNavItem(search)} onNavigate={navigate} session={session}>{content}</ThuVienShell>
 }
 
-function MusicXmlLibrary({ tabs }: { tabs: ReactNode }) {
+export default function ThuVienPage(props: PageProps = {}) {
+  return <ThuVienPageView {...props} session={useClassSession()} />
+}
+
+function MusicXmlLibrary() {
   const [items, setItems] = useState<LibraryItem[]>([])
   const [listState, setListState] = useState<'loading' | 'ready' | 'error'>('loading')
   const [listError, setListError] = useState('')
@@ -178,8 +172,7 @@ function MusicXmlLibrary({ tabs }: { tabs: ReactNode }) {
   if (openId) {
     const item = items.find(entry => entry.id === openId)
     return <main className="thu-vien">
-      {tabs}
-      <Suspense fallback={<p className="tv-view-note">Đang mở bản nhạc…</p>}>
+        <Suspense fallback={<p className="tv-view-note">Đang mở bản nhạc…</p>}>
         <ScoreViewer key={openId} id={openId} initial={item ? { title: item.title, composer: item.composer } : null} onClose={closeScore}
           onSaved={saved => setItems(current => current.map(entry => entry.id === saved.id ? saved : entry))} />
       </Suspense>
@@ -203,8 +196,7 @@ function MusicXmlLibrary({ tabs }: { tabs: ReactNode }) {
 
   if (upload) {
     return <main className="thu-vien min-h-screen bg-[#f7f5ef] px-4 py-8 text-[#26352d] sm:px-8">
-      {tabs}
-      <div className="mx-auto max-w-4xl">
+        <div className="mx-auto max-w-4xl">
         <div className="mb-7 flex items-center justify-between gap-4">
           <h1 className="text-2xl font-bold sm:text-3xl">NẠP BẢN NHẠC MỚI</h1>
         </div>
@@ -223,11 +215,9 @@ function MusicXmlLibrary({ tabs }: { tabs: ReactNode }) {
 
   const shown = items.filter(item => matchesQuery(item, query))
   return <main className="thu-vien min-h-screen bg-[#f7f5ef] px-4 py-8 text-[#26352d] sm:px-8">
-    {tabs}
     <div className="mx-auto max-w-4xl">
       <div className="mb-7 flex items-center justify-between gap-4">
         <h1 className="text-2xl font-bold sm:text-3xl">THƯ VIỆN BẢN NHẠC</h1>
-        <a href="/admin" className="text-sm underline">Quản trị</a>
       </div>
       <div className="mb-6 flex flex-col gap-3 sm:flex-row">
         <input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Tìm tên bài hoặc tác giả..." aria-label="Tìm tên bài hoặc tác giả"

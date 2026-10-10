@@ -1,0 +1,16 @@
+/* Khung Class cho Thư viện — chỉ những chỗ Thư viện phải nhường cho khung (nền, khoảng đệm, sticky header). Token + class chính lấy từ classSocial.css. */
+/* ── Khung Class (ThuVienShell): nội dung Thư viện nằm trong .cs-main, không tự dựng nền/khoảng đệm toàn trang ── */
+.cs-tv-main .tv-chords, .cs-tv-main .thu-vien { min-height: 0; padding: 0; background: transparent; }
+.cs-tv-main .tv-chords .cl-wrap, .cs-tv-main .tv-chords .cl-wrap-wide { max-width: 960px; margin: 0 auto; }
+.cs-tv-main .thu-vien > div { max-width: 960px; }
+.cs-tv-main .cl-editor-head { top: var(--cs-topbar-h); margin: 0 0 12px; padding: 8px 0; background: var(--cs-bg); }
+.cs-tv-main .tv-chords .cl-card, .cs-tv-main .tv-chords .cl-fold { background: var(--cs-surface); }
+.cs-tv-site { margin-left: 4px; padding-left: 12px; border-left: 1px solid var(--cs-border); color: var(--cs-muted); font-size: 14px; font-weight: 700; white-space: nowrap; }
+.cs-tv-login { height: 36px; padding: 0 14px; text-decoration: none; }
+.cs-tv-root .cs-nav-item .cs-nav-text { white-space: normal; line-height: 1.3; }
+@media (max-width: 1023px) {
+  .cs-tv-main .cl-editor-head { margin-bottom: 8px; }
+}
+@media (max-width: 640px) {
+  .cs-tv-site { display: none; }       /* điện thoại: nhường chỗ cho logo + Trang Class + tài khoản (như Class) */
+}

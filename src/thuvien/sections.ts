@@ -69,3 +69,12 @@ export function uploadUrl(href: string): string {
   url.searchParams.set('nap', 'nhac')
   return url.pathname + url.search
 }
+
+// ── Mục điều hướng của website THƯ VIỆN ÂM NHẠC (menu nằm trong khung Class: ThuVienShell) ──
+export type NavId = 'chords' | 'musicxml' | 'new-chords' | 'upload-musicxml' | 'advanced'
+
+/** Mục đang mở, suy ra từ địa chỉ (thuần, test được). "Nâng cao" là liên kết ra /admin nên không bao giờ là mục đang mở. */
+export function activeNavItem(search: string): NavId {
+  if (sectionFromSearch(search) === 'chords') return chordSheetFromSearch(search) === NEW_CHORD_SHEET ? 'new-chords' : 'chords'
+  return uploadFromSearch(search) ? 'upload-musicxml' : 'musicxml'
+}

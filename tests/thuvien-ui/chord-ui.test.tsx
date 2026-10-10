@@ -23,7 +23,7 @@ globalThis.fetch = (() => { network += 1; return Promise.reject(new Error('khôn
 
 const { render, act, cleanup, fireEvent } = await import('@testing-library/react')
 const { default: ChordLibraryPage } = await import('../../src/thuvien/ChordLibraryPage')
-const { default: ThuVienHeader } = await import('../../src/thuvien/ThuVienHeader')
+const { default: ThuVienShell } = await import('../../src/thuvien/ThuVienShell')
 const { createDisabledChordLibrary, createMockChordLibrary, createRpcChordLibrary, MOCK_STORAGE_KEY } = await import('../../src/thuvien/chordLibrary')
 type RpcCall = import('../../src/thuvien/chordLibrary').RpcCall
 void React
@@ -738,28 +738,45 @@ test('production chưa bật backend (disabled): báo rõ, không có ô nhập,
   assert.equal(view.queryByRole('note'), null, 'không giả làm dữ liệu thử')
 })
 
-test('Header website: tên, 4 mục điều hướng + Nâng cao + tài khoản; mục đang mở được đánh dấu; bấm mục khác thì báo đổi', async () => {
+const SESSION_READY = { status: 'ready', me: { role: 'teacher', userId: 'u', studentId: null, name: 'Thầy Văn Anh', email: 't@x.vn', avatarUrl: null, level: null, enrolledAt: null, htMember: false, isTeacher: true, coverUrl: null } } as const
+
+test('Khung Class cho Thư viện: dùng đúng cấu trúc/class của Class (topbar, sidebar, nav-item), 5 mục đã chốt, mục đang mở đánh dấu, bấm mục khác thì báo đổi', async () => {
   const changes: string[] = []
-  const view = render(<ThuVienHeader active="chords" onNavigate={item => changes.push(item)} account={{ state: 'in', label: 'thay@vananhaudio.com' }} />)
-  assert.ok(view.getByText('THƯ VIỆN ÂM NHẠC'))
-  const nav = view.getByRole('navigation', { name: 'Điều hướng thư viện' })
-  const labels = [...nav.querySelectorAll('button')].map(node => node.textContent)
-  assert.deepEqual(labels, ['Danh sách bài hát có hợp âm', 'Danh sách bản nhạc MusicXML', 'Nạp hợp âm mới', 'Nạp bản nhạc mới'])
-  assert.ok(view.getByRole('button', { name: 'Nâng cao' }), 'Nâng cao nằm cạnh tài khoản')
-  const current = [...nav.querySelectorAll('[aria-current=page]')]
+  const view = render(<ThuVienShell active="chords" onNavigate={id => changes.push(id)} session={SESSION_READY}><p>nội dung</p></ThuVienShell>)
+  const root = view.container.querySelector('.cs-root')!
+  assert.ok(root, 'cùng khung .cs-root với Class')
+  assert.ok(root.querySelector('header.cs-topbar .cs-brand .cs-brand-logo'), 'logo + chữ như Class')
+  assert.equal(root.querySelector('.cs-brand-text')?.textContent, 'Thầy Văn Anh Guitar')
+  assert.ok(root.querySelector('.cs-topbar .cs-classhome'), 'có nút "Trang Class" như Class')
+  assert.ok(root.querySelector('.cs-sidebar .cs-nav-group .cs-nav-title'), 'sidebar nhóm mục như Class')
+  const items = [...root.querySelectorAll('.cs-sidebar .cs-nav-item')].map(node => node.textContent)
+  assert.deepEqual(items, ['Danh sách bài hát có hợp âm', 'Danh sách bản nhạc MusicXML', 'Nạp hợp âm mới', 'Nạp bản nhạc mới', 'Nâng cao'])
+  const current = [...root.querySelectorAll('.cs-sidebar [aria-current=page]')]
   assert.deepEqual(current.map(node => node.textContent), ['Danh sách bài hát có hợp âm'])
-  fireEvent.click(view.getByRole('button', { name: 'Danh sách bài hát có hợp âm' }))
+  assert.ok(current[0].classList.contains('is-active'), 'trạng thái đang chọn dùng đúng class của Class')
+  const sidebar = root.querySelector('.cs-sidebar')!
+  const click = (name: string) => fireEvent.click([...sidebar.querySelectorAll('button')].find(b => b.textContent === name)!)
+  click('Danh sách bài hát có hợp âm')
   assert.deepEqual(changes, [], 'bấm đúng mục đang mở thì không điều hướng')
-  fireEvent.click(view.getByRole('button', { name: 'Nạp bản nhạc mới' }))
-  fireEvent.click(view.getByRole('button', { name: 'Danh sách bản nhạc MusicXML' }))
-  fireEvent.click(view.getByRole('button', { name: 'Nạp hợp âm mới' }))
-  assert.deepEqual(changes, ['upload-musicxml', 'musicxml', 'new-chords'])
-  assert.equal(view.getByRole('link', { name: 'thay@vananhaudio.com' }).getAttribute('href'), '/me', 'đã đăng nhập → tài khoản')
-  fireEvent.click(view.getByRole('button', { name: 'Nâng cao' }))
-  assert.equal(view.getByRole('menuitem', { name: 'Quản trị' }).getAttribute('href'), '/admin')
+  click('Nạp bản nhạc mới'); click('Danh sách bản nhạc MusicXML'); click('Nạp hợp âm mới')
+  assert.deepEqual(changes.slice(-3), ['upload-musicxml', 'musicxml', 'new-chords'])
+  assert.equal([...sidebar.querySelectorAll('a')].find(a => a.textContent === 'Nâng cao')!.getAttribute('href'), '/admin')
+  assert.ok(view.getByText('nội dung'))
+})
+
+test('Khung Class: tài khoản như Class (avatar + menu; chưa đăng nhập → nút Đăng nhập về /me); mobile có ☰ mở menu dạng sheet, Esc đóng', async () => {
+  const view = render(<ThuVienShell active="musicxml" onNavigate={() => {}} session={SESSION_READY}><p>x</p></ThuVienShell>)
+  fireEvent.click(view.getByRole('button', { name: 'Tài khoản: Thầy Văn Anh' }))
+  assert.ok(view.getByRole('menuitem', { name: 'Đăng xuất' }))
+  fireEvent.click(view.getByRole('button', { name: 'Mở menu' }))
+  const sheet = view.getByRole('dialog', { name: 'Menu' })
+  assert.ok(sheet.querySelector('.cs-sheet-grip'))
+  assert.equal(sheet.querySelectorAll('.cs-nav-item').length, 5)
+  fireEvent.keyDown(window, { key: 'Escape' })
+  assert.equal(view.queryByRole('dialog', { name: 'Menu' }), null)
   cleanup()
-  const out = render(<ThuVienHeader active={null} onNavigate={() => {}} account={{ state: 'out' }} />)
-  assert.equal(out.getByRole('link', { name: 'Đăng nhập' }).getAttribute('href'), '/start', 'chưa đăng nhập → dùng trang đăng nhập có sẵn')
+  const out = render(<ThuVienShell active={null} onNavigate={() => {}} session={{ status: 'signed-out' }}><p>x</p></ThuVienShell>)
+  assert.equal(out.getByRole('link', { name: 'Đăng nhập' }).getAttribute('href'), '/me', 'đăng nhập qua trang của Class, không có hệ riêng')
 })
 
 // ── Rào chắn: /thuvien vẫn chỉ admin đang hoạt động; mục MusicXML không bị đổi hành vi ──
@@ -774,9 +791,10 @@ test('mục MusicXML: vẫn là mặc định, vẫn gọi đúng các hàm cũ;
   const page = readFileSync(new URL('../../src/thuvien/ThuVienPage.tsx', import.meta.url), 'utf8')
   for (const piece of ['listLibrary()', 'importMusicXml(prepared, title, composer)', 'prepareMusicXml(file.name, await file.text())', '<ScoreViewer key={openId}', 'accept=".musicxml,.xml"'])
     assert.ok(page.includes(piece), piece)
-  assert.match(page, /<main className="thu-vien[^"]*">\s*\{tabs\}\s*<div className="mx-auto max-w-4xl">/)
-  assert.match(page, /return <MusicXmlLibrary tabs=\{tabs\} \/>/)
-  assert.ok(!page.includes('ThuVienTabs'), 'thanh mục cũ đã được Header thay thế')
+  assert.match(page, /<main className="thu-vien[^"]*">\s*<div className="mx-auto max-w-4xl">/)
+  assert.match(page, /<MusicXmlLibrary \/>/)
+  assert.match(page, /<ThuVienShell active=\{activeNavItem\(search\)\}/, 'toàn bộ trang nằm trong khung Class')
+  assert.ok(!page.includes('ThuVienTabs') && !page.includes('ThuVienHeader'), 'thanh mục cũ đã được khung Class thay thế')
   assert.ok(!page.includes('+ Thêm bản nhạc'), 'danh sách MusicXML không còn nút tạo mới trùng với Header')
   assert.equal(page.match(/accept="\.musicxml,\.xml"/g)?.length, 1, 'chỉ MỘT đường chọn file MusicXML (trang Nạp bản nhạc mới)')
   assert.equal(page.match(/importMusicXml\(/g)?.length, 1)
@@ -1288,8 +1306,8 @@ test('Nạp ảnh/PDF tham khảo từ thanh công cụ dùng lại đường t�
 })
 
 // ── Website THƯ VIỆN ÂM NHẠC: trang XEM tách khỏi khu vực NẠP/BIÊN TẬP ─────────────────────────
-const { chordViewFromSearch, chordViewUrl, uploadFromSearch, uploadUrl, sectionUrl, sectionFromSearch, chordSheetFromSearch } = await import('../../src/thuvien/sections')
-const { activeHeaderItem } = await import('../../src/thuvien/ThuVienHeader')
+const { chordViewFromSearch, chordViewUrl, uploadFromSearch, uploadUrl, sectionUrl, sectionFromSearch, chordSheetFromSearch, activeNavItem } = await import('../../src/thuvien/sections')
+const activeHeaderItem = activeNavItem
 
 test('địa chỉ: xem / sửa / nạp tách nhau, đổi mục thì bỏ tham số của mục kia', () => {
   const base = 'https://class.vananhaudio.com/thuvien'
