@@ -321,3 +321,11 @@
   .tv-site-top .tv-site-more { order: 3; }
   .tv-site-account { order: 4; flex: 1 1 0; max-width: none; text-align: right; }
 }
+
+/* ── M1/M2: vị trí nghỉ (-), thanh công cụ vạch nhịp ── */
+.tv-chords .cl-word[data-rest=true] { color: #6b7a70; font-style: italic; }
+.tv-chords .cl-rest-add { min-height: 36px; padding: 0 10px; border: 1px dashed #b9c4b7; border-radius: 8px; background: transparent; color: #526456; font-size: 13px; cursor: pointer; }
+.tv-chords .cl-rest-add:hover { background: #eef1eb; }
+.tv-chords .cl-edit-row-empty .cl-line { align-items: center; gap: 8px; min-height: 36px; }
+.tv-chords .cl-sheet-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 0 12px; }
+.tv-chords .cl-sheet-tools .cl-help { margin: 0; }

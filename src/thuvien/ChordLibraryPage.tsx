@@ -15,6 +15,8 @@ import AnchorEditor from './AnchorEditor.tsx'
 import ChordSheetEditor from './ChordSheetEditor.tsx'
 import ChordLyricsModal from './ChordLyricsModal.tsx'
 import ChordSheetView from './ChordSheetView.tsx'
+import { remapAnchorsForInsert, remapAnchorsForRemove, sameLyricStructure } from './chordEdit.ts'
+import type { StructureEdit } from './ChordSheetEditor.tsx'
 import type { MeasureAnalysisResult, MeasureAnalyzer } from './measureAnalysis.ts'
 import type { ContentExtractor, ExtractionTarget } from './contentExtractor.ts'
 import { applyProposal, buildProposal, hasSubstantialText } from './extractionProposal.ts'
@@ -224,6 +226,12 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
   const [extractorReady, setExtractorReady] = useState(false)
   const [extraction, setExtraction] = useState<{ state: 'idle' | 'running' | 'failed' | 'done'; label?: string; message?: string; proposal?: ExtractionProposal }>({ state: 'idle' })
   const [seed, setSeed] = useState<{ anchors: ChordAnchors | null; flagged: number[]; notes: string[]; key: number }>({ anchors: null, flagged: [], notes: [], key: 0 })
+  // Vạch nhịp "mang theo" khi đang soạn: hợp lệ cho `form.text` hiện tại (đã được ánh xạ qua các lần chèn/xoá (-) hay đổi hợp âm).
+  // Chỉ nằm trong bộ nhớ trang — KHÔNG ghi DB; Lưu vẫn tạo bản nháp chưa có vạch nhịp (giới hạn M3).
+  const [carried, setCarried] = useState<ChordAnchors | null>(null)
+  // Sau khi Lưu: vạch đã mang theo, chờ người dùng bấm "Chỉnh vạch nhịp" → "Chấp nhận" để gắn vào phiên bản mới.
+  const [carriedSeed, setCarriedSeed] = useState<ChordAnchors | null>(null)
+  const [layoutNote, setLayoutNote] = useState('')
 
   useEffect(() => {
     let active = true
@@ -261,10 +269,38 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
   const issues = useMemo(() => chordTextIssues(form.text), [form.text])
   const hasText = canonicalChordText(form.text).trim().length > 0
   // Sửa lời là neo vạch nhịp cũ hết hiệu lực — báo trước khi lưu, không để mất trong im lặng.
-  const anchorsWillReset = !!detail?.hasAnchors && canonicalChordText(form.text) !== canonicalChordText(saved.text)
-  // Bản bên phải: khi đang sửa → bộ vạch đang soạn (đánh số lại ngay); không thì vạch đã lưu, nếu lời chưa đổi.
-  const shownAnchors = anchorEditing ? liveAnchors : anchorsWillReset ? null : detail?.anchors ?? null
-  const measureRows = useMemo(() => (shownAnchors && detail ? buildMeasureDisplay(detail.text, shownAnchors) : null), [shownAnchors, detail])
+  const textChanged = canonicalChordText(form.text) !== canonicalChordText(saved.text)
+  // Vạch hợp lệ cho lời đang soạn: bản đã lưu (lời chưa đổi), hoặc bộ đã mang theo qua các chỉnh sửa giữ nguyên cấu trúc chữ.
+  const formAnchors = !textChanged ? detail?.anchors ?? null : carried
+  const anchorsWillReset = !!detail?.hasAnchors && textChanged && !carried
+  const anchorsCarried = !!detail?.hasAnchors && textChanged && !!carried
+  // Bản bên phải: khi đang sửa → bộ vạch đang soạn (đánh số lại ngay); không thì vạch hợp lệ cho lời đang soạn.
+  const shownAnchors = anchorEditing ? liveAnchors : formAnchors
+  const anchorsText = anchorEditing || !textChanged ? detail?.text ?? form.text : form.text
+  const measureRows = useMemo(() => (shownAnchors && detail ? buildMeasureDisplay(anchorsText, shownAnchors) : null), [shownAnchors, detail, anchorsText])
+  const canEditBars = !!detail && !dirty && detail.status !== 'discarded' && !busy && !sourceBusy
+
+  /**
+   * MỌI thay đổi lời đi qua đây: giữ vạch nhịp đúng chỗ nếu cấu trúc chữ không đổi (chỉ đổi hợp âm), ánh xạ qua việc
+   * chèn/xoá "(-)", còn lại (đổi lời thật) thì bỏ — và báo, không âm thầm làm sai.
+   */
+  function changeText(next: string, structure?: StructureEdit) {
+    const base = formAnchors
+    let nextCarried: ChordAnchors | null = null
+    let note = ''
+    if (base && structure) {
+      const remap = structure.kind === 'insert' ? remapAnchorsForInsert(base, structure.line, structure.at, structure.side) : remapAnchorsForRemove(base, structure.line, structure.at)
+      nextCarried = remap.anchors
+      const notes: string[] = []
+      if (remap.atGap.length) notes.push(`Có vạch nhịp ngay chỗ này (ô ${remap.atGap.map(i => i + 1).join(', ')}): vị trí nghỉ nằm ${structure.kind === 'insert' && structure.side === 'after' ? 'trước' : 'sau'} vạch — hãy xem lại.`)
+      if (remap.merged.length) notes.push(`Ô ${remap.merged.map(i => i + 1).join(', ')} giờ trùng vị trí ô liền trước (thành ô ngân) — hãy xem lại.`)
+      note = notes.join(' ')
+    } else if (base && sameLyricStructure(form.text, next)) nextCarried = base
+    setCarried(nextCarried)
+    setLayoutNote(note)
+    setAnchorEditing(false)
+    set({ text: next })
+  }
   const mock = library.mode === 'mock'
 
   /** Rời bài: còn thay đổi → hỏi; file đã nạp mà chưa lưu → xoá luôn (không để file mồ côi chiếm hạn mức). */
@@ -278,9 +314,19 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
   }
   const close = () => void leave(() => onClose())
 
+  /** Mở trình chỉnh vạch nhịp (đặt ngay trên Bản nhạc). Có vạch đã mang theo sau khi Lưu thì nạp sẵn làm điểm xuất phát. */
+  function startBars() {
+    setMessage(''); setFailed('')
+    const from = carriedSeed
+    setSeed(current => ({ anchors: from, flagged: [], notes: from ? ['Vạch nhịp cũ đã được ánh xạ sang lời mới — kiểm tra rồi bấm “Chấp nhận vạch nhịp”.'] : [], key: current.key + 1 }))
+    setCarriedSeed(null)
+    setAnchorEditing(true)
+  }
+
   const adopt = (next: ChordSheetDetail) => {
     setDetail(next); setSaved(formOf(next)); setForm(formOf(next)); setPlan(planOf(next)); setSourceError('')
     setDraftId(library.newVersionId())
+    setCarried(null); setLayoutNote('')
   }
   const suffix = mock ? ' (Dữ liệu thử — chưa lưu production.)' : ''
 
@@ -314,6 +360,7 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
     setMessage(''); setFailed('')
     if (Object.keys(found).length) { setFailed('Chưa lưu được — xem các ô được đánh dấu.'); return }
     if (detail && !dirty) { setMessage('Chưa có thay đổi nào để lưu.'); return }
+    const keep = formAnchors   // vạch hợp lệ cho lời đang soạn — để báo/giữ lại nếu bản lưu ra chưa có vạch
     setBusy(true)
     try {
       const needsVersion = !detail || contentChanged || sourcesChanged
@@ -342,11 +389,15 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
       const duplicate = needsVersion && next.versionId !== draftId
       if (needsVersion) await afterVersion(next, sources)
       adopt(next); onSaved(next)
+      // Giới hạn đã biết (M3): máy chủ luôn tạo bản nháp CHƯA có vạch nhịp. Không tạo thêm phiên bản trung gian để che —
+      // chỉ giữ vạch cũ trong trang, người dùng chủ động bấm "Chỉnh vạch nhịp" → "Chấp nhận".
+      const lostBars = !!keep && !next.anchors && needsVersion && sameLyricStructure(next.text, form.text)
+      setCarriedSeed(lostBars ? keep : null)
       setMessage((needsVersion
         ? !duplicate
           ? `Đã lưu bản nháp (phiên bản ${next.versionNumber}${sources.length ? `, ${sources.length} file nguồn` : ''}). Bản đang dùng chưa đổi — bấm “Duyệt bản này” để dùng bản mới.`
           : `Nội dung này trùng phiên bản ${next.versionNumber} đã có — đã mở phiên bản đó, không tạo thêm.`
-        : 'Đã lưu tên bài / tác giả.') + suffix)
+        : 'Đã lưu tên bài / tác giả.') + suffix + (lostBars ? ' Bản vừa lưu CHƯA có vạch nhịp — vạch cũ đã được giữ sẵn: bấm “Chỉnh vạch nhịp” rồi “Chấp nhận vạch nhịp”.' : ''))
     } catch (cause) {
       setFailed(cause instanceof Error ? sourceErrorMessage(cause.message) : 'Không lưu được.')
     } finally { setBusy(false) }
@@ -580,8 +631,22 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
           ? <>
             {issues.length > 0 && <p className="cl-warn" role="note">Dòng {issues.join(', ')}: còn ngoặc vuông chưa thành hợp âm (thiếu ngoặc đóng, hoặc để trống).</p>}
             {anchorsWillReset && <p className="cl-warn" role="note">Bài này đã có vạch nhịp theo lời cũ. Lưu lời mới thì vạch nhịp phải làm lại.</p>}
+            {anchorsCarried && <p className="cl-warn" role="note">Vạch nhịp vẫn đúng chỗ theo lời đang soạn (chỉ trong trang này). Lưu sẽ tạo bản nháp CHƯA có vạch nhịp — sau khi lưu, bấm “Chỉnh vạch nhịp” rồi “Chấp nhận vạch nhịp” để gắn lại.</p>}
+            {layoutNote && <p className="cl-warn" role="note">{layoutNote}</p>}
+            {!anchorEditing && <div className="cl-sheet-tools">
+              <button type="button" className="cl-secondary" disabled={!canEditBars} onClick={startBars}
+                title={canEditBars ? 'Đặt, bỏ, dịch vạch nhịp ngay trên bản nhạc — không cần ảnh/PDF' : 'Lưu bài và các thay đổi trước, rồi chỉnh vạch nhịp.'}>Chỉnh vạch nhịp</button>
+              {!canEditBars && <span className="cl-help">Lưu các thay đổi trước, rồi chỉnh vạch nhịp.</span>}
+              {carriedSeed && canEditBars && <span className="cl-help">Vạch cũ đã được giữ sẵn — bấm “Chỉnh vạch nhịp”.</span>}
+            </div>}
             {chords.length > 0 && <p className="cl-chordset">Hợp âm trong bài: {chords.map(chord => <span key={chord}>{chord}</span>)}</p>}
-            {measureRows && !chordEdit
+            {anchorEditing && detail
+              ? <>
+                {measureRows && <MeasureSheet rows={measureRows} label="Bản hợp âm có số ô" />}
+                <AnchorEditor key={seed.key} text={detail.text} initial={seed.anchors ?? detail.anchors} flagged={seed.anchors ? seed.flagged : []} notes={seed.anchors ? seed.notes : []} showReview={false}
+                  busy={busy} onAccept={anchors => void acceptAnchors(anchors)} onCancel={() => { setAnchorEditing(false); setSeed(current => ({ ...current, anchors: null, flagged: [], notes: [] })) }} onChange={setLiveAnchors} />
+              </>
+              : measureRows && !chordEdit
               ? <>
                 <button type="button" className="cl-secondary" onClick={() => setChordEdit(true)}>✎ Chỉnh hợp âm trên bản nhạc</button>
                 <MeasureSheet rows={measureRows} label="Bản hợp âm có số ô" />
@@ -589,7 +654,7 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
               : <>
                 {measureRows && <button type="button" className="cl-secondary" onClick={() => setChordEdit(false)}>Xong — xem bản có số ô</button>}
                 {detail?.hasAnchors && <p className="cl-warn" role="note">Lưu thay đổi sẽ tạo bản nháp mới; vạch nhịp của bài phải đặt lại sau khi lưu.</p>}
-                <ChordSheetEditor text={form.text} onChange={text => set({ text })} />
+                <ChordSheetEditor text={form.text} onChange={text => changeText(text)} onStructure={edit => changeText(edit.text, edit)} />
               </>}
           </>
           : <p className="cl-placeholder">Chưa có lời. Bấm “Nạp lời & hợp âm” để dán lời và hợp âm.</p>}
@@ -657,8 +722,8 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
           </section>
 
           <AnchorSection detail={detail} willReset={anchorsWillReset} sourceCount={plan.length} sourcesSaved={!sourcesChanged}
-            editing={anchorEditing} dirty={dirty} onLive={setLiveAnchors} busy={busy || sourceBusy}
-            onEdit={() => { setMessage(''); setFailed(''); setSeed(current => ({ anchors: null, flagged: [], notes: [], key: current.key + 1 })); setAnchorEditing(true) }}
+            editing={anchorEditing} editorOutside dirty={dirty} onLive={setLiveAnchors} busy={busy || sourceBusy}
+            onEdit={startBars}
             onCancel={() => { setAnchorEditing(false); setSeed(current => ({ ...current, anchors: null, flagged: [], notes: [] })) }} onAccept={anchors => void acceptAnchors(anchors)}
             analyzer={!hasText ? { enabled: false, reason: 'Cần dán lời + hợp âm trước.' }
               : !analyzer ? { enabled: false, reason: 'Chưa bật ở bản này.' }
@@ -673,7 +738,7 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
       </div>
     </div>
     {lyricsOpen && <ChordLyricsModal initial={form.text} onClose={() => setLyricsOpen(false)}
-      onApply={text => { if (text !== form.text) set({ text }); setLyricsOpen(false) }} />}
+      onApply={text => { if (text !== form.text) changeText(text); setLyricsOpen(false) }} />}
   </div>
 }
 
@@ -682,8 +747,8 @@ const planOf = (detail: ChordSheetDetail): PlanItem[] =>
   detail.sources.map(source => ({ key: source.path, kind: 'attached', name: `sheet-${String(source.page).padStart(2, '0')}.${source.path.split('.').pop()}`, source }))
 
 /** Vạch nhịp — trạng thái, nút Phân tích (CHƯA bật), trình sửa thủ công, xem lại vạch nhịp đã có. */
-function AnchorSection({ detail, willReset, sourceCount, sourcesSaved, editing, dirty, busy, onEdit, onCancel, onAccept, onLive, analyzer, analysis, seed, onAnalyze, onUseProposal, onKeepCurrent }: {
-  detail: ChordSheetDetail | null; willReset: boolean; sourceCount: number; sourcesSaved: boolean
+function AnchorSection({ detail, willReset, sourceCount, sourcesSaved, editing, editorOutside, dirty, busy, onEdit, onCancel, onAccept, onLive, analyzer, analysis, seed, onAnalyze, onUseProposal, onKeepCurrent }: {
+  detail: ChordSheetDetail | null; willReset: boolean; sourceCount: number; sourcesSaved: boolean; editorOutside?: boolean
   editing: boolean; dirty: boolean; busy: boolean; onEdit: () => void; onCancel: () => void; onAccept: (anchors: ChordAnchors) => void
   onLive: (anchors: ChordAnchors | null) => void
   analyzer: { enabled: boolean; reason: string }
@@ -721,7 +786,9 @@ function AnchorSection({ detail, willReset, sourceCount, sourcesSaved, editing, 
         <button type="button" className="cl-secondary" onClick={onKeepCurrent}>Giữ vạch hiện tại</button>
       </div>
     </div>}
-    {editing && detail
+    {editing && detail && editorOutside
+      ? <p className="cl-placeholder">Đang chỉnh vạch nhịp ngay trên Bản nhạc (phía trên).</p>
+      : editing && detail
       ? <AnchorEditor key={seed.key} text={detail.text} initial={seed.anchors ?? detail.anchors} flagged={seed.anchors ? seed.flagged : []} notes={seed.anchors ? seed.notes : []}
           busy={busy} onAccept={onAccept} onCancel={onCancel} onChange={onLive} />
       : <div className="cl-anchor-view" aria-label="Xem vạch nhịp">

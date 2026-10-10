@@ -4,6 +4,7 @@ import {
 } from './chordAnchors.ts'
 import type { ChordAnchors, MeasureAnchor } from './chordAnchors.ts'
 import MeasureSheet from './MeasureSheet.tsx'
+import { nudgeMeasure } from './chordEdit.ts'
 import UncoveredNotice from './UncoveredNotice.tsx'
 
 // Trình sửa vạch nhịp THỦ CÔNG. Thầy bấm vào khe giữa hai chữ để đặt / bỏ vạch; dòng thời gian bên dưới là
@@ -21,9 +22,11 @@ type Props = {
   /** Ô máy phân tích chưa chắc (số ô theo đề xuất ban đầu) — đánh dấu nhẹ ⚠ trong dòng thời gian, KHÔNG đụng bản bên phải. */
   flagged?: number[]
   notes?: string[]
+  /** false: bản có số ô đã hiện ngay phía trên (Bản nhạc) nên bỏ khung "Xem lại" trùng lặp. */
+  showReview?: boolean
 }
 
-export default function AnchorEditor({ text, initial, busy, onAccept, onCancel, onChange, flagged = [], notes = [] }: Props) {
+export default function AnchorEditor({ text, initial, busy, onAccept, onCancel, onChange, flagged = [], notes = [], showReview = true }: Props) {
   const lines = useMemo(() => anchorLines(text), [text])
   const [measures, setMeasures] = useState<MeasureAnchor[]>(() => initial?.measures.map(anchor => ({ ...anchor })) ?? [])
   const [pickup, setPickup] = useState<MeasureAnchor | null>(() => initial?.pickup ?? null)
@@ -46,11 +49,13 @@ export default function AnchorEditor({ text, initial, busy, onAccept, onCancel, 
   useEffect(() => { onChange?.(live) }, [live, onChange])
   const pickupClash = !!pickup && measures.length > 0 && measures[0].line === pickup.line && measures[0].token === pickup.token
 
+  const tokenCounts = useMemo(() => lines.map(line => line.tokens.length), [lines])
+  const nudge = (index: number, delta: -1 | 1) => setMeasures(current => nudgeMeasure(current, index, delta, tokenCounts) ?? current)
   const click = (line: number, token: number) => { setMeasures(current => toggleGap(current, { line, token }, mode)); setSelected(null) }
   const at = (index: number) => setSelected(current => (current === index ? null : index))
 
   return <div className="cl-anchor-editor" role="group" aria-label="Trình sửa vạch nhịp">
-    <p className="cl-help">Bấm vào <strong>khe giữa hai chữ</strong> để đặt vạch nhịp ở đó; bấm lại để bỏ. Vạch đặt TRƯỚC chữ hát đầu tiên của ô nhịp. Khe cuối dòng = vạch sau chữ cuối.</p>
+    <p className="cl-help">Bấm vào <strong>khe giữa hai chữ</strong> (kể cả cạnh vị trí nghỉ <strong>(-)</strong>) để đặt vạch nhịp ở đó; bấm lại để bỏ; ◀ ▶ ở dòng thời gian dịch vạch sang khe kề bên. Không cần ảnh/PDF. Vạch đặt TRƯỚC chữ hát đầu tiên của ô nhịp. Khe cuối dòng = vạch sau chữ cuối.</p>
     <div className="cl-anchor-modes" role="radiogroup" aria-label="Cách thêm vạch">
       <label><input type="radio" name="anchor-mode" checked={mode === 'order'} onChange={() => setMode('order')} /> Theo thứ tự lời</label>
       <label><input type="radio" name="anchor-mode" checked={mode === 'append'} onChange={() => setMode('append')} /> Thêm vào cuối (đoạn hát lại)</label>
@@ -99,6 +104,10 @@ export default function AnchorEditor({ text, initial, busy, onAccept, onCancel, 
               {index > 0 && anchor.line !== null && measures[index - 1].line === anchor.line && measures[index - 1].token === anchor.token && <em> (ngân)</em>}
             </button>
             <span className="cl-anchor-actions">
+              {anchor.line !== null && <>
+                <button type="button" aria-label={`Dịch vạch ô ${index + 1} sang trái`} title="Dịch vạch về khe liền trước" disabled={busy || !nudgeMeasure(measures, index, -1, tokenCounts)} onClick={() => nudge(index, -1)}>◀</button>
+                <button type="button" aria-label={`Dịch vạch ô ${index + 1} sang phải`} title="Dịch vạch sang khe liền sau" disabled={busy || !nudgeMeasure(measures, index, 1, tokenCounts)} onClick={() => nudge(index, 1)}>▶</button>
+              </>}
               <button type="button" aria-label={`Đưa ô ${index + 1} lên`} disabled={busy || index === 0} onClick={() => { setMeasures(current => moveMeasure(current, index, -1)); setSelected(index - 1) }}>↑</button>
               <button type="button" aria-label={`Đưa ô ${index + 1} xuống`} disabled={busy || index === measures.length - 1} onClick={() => { setMeasures(current => moveMeasure(current, index, 1)); setSelected(index + 1) }}>↓</button>
               {anchor.line !== null && <button type="button" disabled={busy} onClick={() => setMeasures(current => addSustain(current, index))}>+ Ô ngân</button>}
@@ -108,12 +117,12 @@ export default function AnchorEditor({ text, initial, busy, onAccept, onCancel, 
         </ol>}
     </div>
 
-    <div className="cl-anchor-review" aria-label="Xem lại vạch nhịp">
+    {showReview && <div className="cl-anchor-review" aria-label="Xem lại vạch nhịp">
       <h3>Xem lại</h3>
       {preview.length
         ? <MeasureSheet rows={preview} label="Bản xem lại có số ô" />
         : <p className="cl-placeholder">Chưa có vạch nhịp.</p>}
-    </div>
+    </div>}
 
     <div className="cl-anchor-buttons">
       <button type="button" className="cl-secondary cl-approve" disabled={busy || measures.length === 0} onClick={() => onAccept(anchorsPayload(measures, pickup))}>
@@ -129,7 +138,8 @@ function Gap({ line, token, numbers, pickup, word, disabled, onClick }: {
   line: number; token: number; numbers: number[] | undefined; pickup: boolean; word: string | null; disabled: boolean
   onClick: (line: number, token: number) => void
 }) {
-  const label = word === null ? `Khe cuối dòng ${line + 1}` : `Khe trước “${word}” — dòng ${line + 1}`
+  // Vị trí nghỉ "(-)" lặp lại nhiều lần trong bài: thêm số thứ tự để mỗi khe có tên riêng.
+  const label = word === null ? `Khe cuối dòng ${line + 1}` : word === '(-)' ? `Khe trước “(-)” thứ ${token + 1} — dòng ${line + 1}` : `Khe trước “${word}” — dòng ${line + 1}`
   return <button type="button" className="cl-gap" data-on={!!numbers} data-pickup={pickup} disabled={disabled}
     aria-pressed={!!numbers} aria-label={numbers ? `${label}: vạch ô ${numbers.join(', ')}` : label} title={numbers ? `Ô ${numbers.join(', ')}` : 'Đặt vạch nhịp ở đây'}
     onClick={() => onClick(line, token)}>

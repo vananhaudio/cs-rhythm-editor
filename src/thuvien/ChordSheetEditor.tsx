@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { chordLineCells, normalizeChord, setChordAtToken } from './chordEdit.ts'
+import { appendRestToEmptyLine, chordLineCells, insertRest, isRest, normalizeChord, removeRest, setChordAtToken } from './chordEdit.ts'
+import type { RestEdit } from './chordEdit.ts'
 import { canonicalChordText, listChords } from './chordText.ts'
 
 // Vùng "Xem thử" có thể chạm: hợp âm hiện phía trên lời, chạm một chữ để thêm / đổi / xoá hợp âm.
@@ -11,7 +12,10 @@ const COMMON = ['C', 'D', 'E', 'F', 'G', 'A', 'Am', 'Dm', 'Em', 'Bm', 'G7', 'E7'
 
 type Selected = { line: number; token: number }
 
-export default function ChordSheetEditor({ text, onChange }: { text: string; onChange: (text: string) => void }) {
+/** Thêm / xoá vị trí nghỉ "(-)": đổi cấu trúc dòng nên cần báo `line`/`at`/`side` để trang đồng bộ vạch nhịp. */
+export type StructureEdit = { text: string; line: number; at: number; kind: 'insert' | 'remove'; side: 'before' | 'after' }
+
+export default function ChordSheetEditor({ text, onChange, onStructure }: { text: string; onChange: (text: string) => void; onStructure: (edit: StructureEdit) => void }) {
   const [selected, setSelected] = useState<Selected | null>(null)
   const [custom, setCustom] = useState('')
   const [problem, setProblem] = useState('')
@@ -28,6 +32,13 @@ export default function ChordSheetEditor({ text, onChange }: { text: string; onC
     pick(null)
   }
 
+  function rest(edit: RestEdit, side: 'before' | 'after') {
+    if (!edit.ok) { setProblem(edit.reason); return }
+    onStructure({ text: edit.text, line: edit.line, at: edit.at, kind: edit.kind, side })
+    // Giữ chọn "(-)" vừa tạo để đặt hợp âm ngay; xoá thì đóng bảng.
+    if (edit.kind === 'insert') { setSelected({ line: edit.line, token: edit.at }); setProblem('') } else pick(null)
+  }
+
   const submitCustom = () => {
     if (normalizeChord(custom) === null) { setProblem('Nhập tên hợp âm, ví dụ Am, F#m7, C/G (tối đa 16 ký tự, không có [ ]).'); return }
     apply(custom)
@@ -41,7 +52,13 @@ export default function ChordSheetEditor({ text, onChange }: { text: string; onC
 
   return <div className="cl-sheet cl-sheet-edit">
     {lines.map(({ line, cells }, index) => {
-      if (!line.trim()) return <p key={index} className="cl-line cl-line-gap" aria-hidden="true" />
+      // Dòng chưa có chữ nào (trống, hay chỉ có nhãn như "Dạo:"): cho thêm vị trí nghỉ để đặt hợp âm / vạch nhịp ở đoạn không lời.
+      const noWords = !cells.some(cell => cell.kind === 'word' || cell.kind === 'chord')
+      if (noWords) return <div key={index} className="cl-edit-row cl-edit-row-empty">
+        <p className="cl-line" data-chords="false">{cells.map((cell, at) => cell.kind === 'label' && <span key={at} className="cl-seg cl-label"><span className="cl-lyric">{cell.text}</span></span>)}
+          <button type="button" className="cl-rest-add" aria-label={`Thêm vị trí nghỉ vào dòng ${index + 1}`}
+            onClick={() => rest(appendRestToEmptyLine(text, index), 'after')}>＋ vị trí nghỉ (-)</button></p>
+      </div>
       const hasChords = cells.some(cell => (cell.kind === 'word' && cell.chord) || cell.kind === 'chord')
       const open = selected?.line === index
       return <div key={index} className="cl-edit-row">
@@ -54,8 +71,8 @@ export default function ChordSheetEditor({ text, onChange }: { text: string; onC
             const active = open && selected.token === cell.token
             return <span key={at} className="cl-seg" data-tight={tight}>
               <span className="cl-chord">{cell.chord ?? ' '}</span>
-              <button type="button" className="cl-word" data-active={active} data-has-chord={cell.chord !== null} aria-pressed={active}
-                aria-label={cell.chord ? `Đổi hợp âm ${cell.chord} trên chữ ${cell.word}` : `Thêm hợp âm cho chữ ${cell.word}`}
+              <button type="button" className="cl-word" data-active={active} data-has-chord={cell.chord !== null} data-rest={isRest(cell.word)} aria-pressed={active}
+                aria-label={`${cell.chord ? `Đổi hợp âm ${cell.chord} trên chữ ${cell.word}` : `Thêm hợp âm cho chữ ${cell.word}`}${isRest(cell.word) ? ` (dòng ${index + 1}, vị trí ${cell.token + 1})` : ''}`}
                 onClick={() => pick(active ? null : { line: index, token: cell.token })}>{cell.word}</button>
             </span>
           })}
@@ -70,6 +87,12 @@ export default function ChordSheetEditor({ text, onChange }: { text: string; onC
           </div>}
           <div className="cl-picker-row" aria-label="Hợp âm thông dụng">
             {more.map(chord => <button key={chord} type="button" className="cl-chip cl-chip-soft" onClick={() => apply(chord)}>{chord}</button>)}
+          </div>
+          <div className="cl-picker-row" aria-label="Vị trí nghỉ">
+            <button type="button" className="cl-chip cl-chip-soft" onClick={() => rest(insertRest(text, selected!.line, selected!.token, 'before'), 'before')}>(-) Thêm nghỉ trước</button>
+            <button type="button" className="cl-chip cl-chip-soft" onClick={() => rest(insertRest(text, selected!.line, selected!.token, 'after'), 'after')}>Thêm nghỉ sau (-)</button>
+            {isRest(current.word) && <button type="button" className="cl-chip cl-chip-soft" onClick={() => rest(removeRest(text, selected!.line, selected!.token), 'before')}>
+              Xóa vị trí nghỉ{currentChord ? ` (và hợp âm ${currentChord})` : ''}</button>}
           </div>
           <form className="cl-picker-custom" onSubmit={event => { event.preventDefault(); submitCustom() }}>
             <input value={custom} onChange={event => { setCustom(event.target.value); setProblem('') }} placeholder="Hợp âm khác, ví dụ F#m7" aria-label="Nhập hợp âm khác" maxLength={16} />

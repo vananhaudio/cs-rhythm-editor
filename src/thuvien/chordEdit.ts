@@ -131,3 +131,166 @@ export function setChordAtToken(text: string, line: number, token: number, chord
   const joined = out.join('\n')
   return { ok: true, text: joined, changed: joined !== lines.join('\n') }
 }
+
+// ── Vị trí nghỉ "(-)" ───────────────────────────────────────────────────────────────────────────
+// "(-)" là MỘT chữ giữ chỗ: không có khoảng trắng bên trong nên parser TS (`lyricTokens`) và SQL
+// (`chord_lyric_token_counts`) cùng đếm nó là đúng một token — hai bên được đối chiếu trong test.
+// Nó không là dấu nghỉ MusicXML và không mang trường độ: chỉ là một vị trí để đặt hợp âm / vạch nhịp.
+// Các hàm dưới đây CHỈ chèn / xoá đúng token "(-)" (cùng hợp âm gắn trên nó), không đụng lời thật.
+
+export const REST = '(-)'
+export const isRest = (word: string) => word === REST
+
+export type RestEdit =
+  | { ok: true; text: string; line: number; /** vị trí token của "(-)" vừa chèn / vừa xoá */ at: number; kind: 'insert' | 'remove' }
+  | { ok: false; reason: string }
+
+type Tokens = ReturnType<typeof lyricTokens>
+const words = (view: Tokens) => view.tokens.map(token => token.word)
+
+/** Kiểm bất biến sau khi chèn/xoá: cùng nhãn; dãy chữ = dãy cũ có thêm/bớt đúng một "(-)" ở vị trí `at`. */
+function restOk(before: string, after: string, at: number, kind: 'insert' | 'remove'): boolean {
+  const a = lyricTokens(before)
+  const b = lyricTokens(after)
+  if (a.label !== b.label) return false
+  const expected = words(a)
+  if (kind === 'insert') expected.splice(at, 0, REST)
+  else { if (expected[at] !== REST) return false; expected.splice(at, 1) }
+  const got = words(b)
+  return expected.length === got.length && expected.every((word, index) => word === got[index])
+}
+
+function splice(source: string, from: number, to: number, insert: string): string {
+  return source.slice(0, from) + insert + source.slice(to)
+}
+
+/** Thêm "(-)" liền TRƯỚC hoặc liền SAU chữ thứ `token` (chữ thật hay "(-)" khác — nên tạo được nhiều vị trí nghỉ liên tiếp). */
+export function insertRest(text: string, line: number, token: number, side: 'before' | 'after'): RestEdit {
+  const lines = canonicalChordText(text).split('\n')
+  if (!Number.isInteger(line) || line < 0 || line >= lines.length) return { ok: false, reason: 'Không tìm thấy dòng này.' }
+  const source = lines[line]
+  const cells = scan(source).cells
+  const target = cells.find(cell => cell.token === token)
+  if (!target) return { ok: false, reason: 'Không tìm thấy chữ này trong dòng.' }
+  // Chữ dính liền chữ bên cạnh ("ti[Am]ễn"): chèn vào giữa sẽ tách đôi cách viết — từ chối, không tự ý đổi lời.
+  const glued = side === 'before' ? target.joined : !!cells.find(cell => cell.token === token + 1)?.joined
+  if (glued) return { ok: false, reason: 'Chữ này dính liền chữ bên cạnh (ví dụ ti[Am]ễn) — hãy chèn nghỉ ở chữ khác, hoặc sửa trong ô văn bản.' }
+  // "before": đặt trước cả ngoặc hợp âm của chữ → hợp âm vẫn ở lại với chữ cũ, "(-)" không mang hợp âm.
+  const index = side === 'before' ? (target.marker ? target.marker.start : target.start) : target.end
+  const left = index > 0 && !/\s/.test(source[index - 1]) ? ' ' : ''
+  const right = index < source.length && !/\s/.test(source[index]) ? ' ' : ''
+  const next = splice(source, index, index, `${left}${REST}${right}`)
+  const at = side === 'before' ? token : token + 1
+  if (!restOk(source, next, at, 'insert')) return { ok: false, reason: 'Không chèn được vị trí nghỉ ở đây mà không làm đổi cách tách chữ.' }
+  const out = [...lines]
+  out[line] = next
+  return { ok: true, text: out.join('\n'), line, at, kind: 'insert' }
+}
+
+/** Thêm "(-)" vào dòng CHƯA có chữ nào (dòng trống, dòng chỉ có nhãn như "Dạo:") — nghỉ trong đoạn không lời. */
+export function appendRestToEmptyLine(text: string, line: number): RestEdit {
+  const lines = canonicalChordText(text).split('\n')
+  if (!Number.isInteger(line) || line < 0 || line >= lines.length) return { ok: false, reason: 'Không tìm thấy dòng này.' }
+  const source = lines[line]
+  if (lyricTokens(source).tokens.length > 0) return { ok: false, reason: 'Dòng này đã có chữ — hãy thêm nghỉ trước/sau một chữ.' }
+  const next = source.trim() ? `${source.trimEnd()} ${REST}` : REST
+  if (!restOk(source, next, 0, 'insert')) return { ok: false, reason: 'Không thêm được vị trí nghỉ vào dòng này.' }
+  const out = [...lines]
+  out[line] = next
+  return { ok: true, text: out.join('\n'), line, at: 0, kind: 'insert' }
+}
+
+/** Xoá một vị trí nghỉ — kèm hợp âm đang đặt trên nó (người dùng được báo trước ở nút). Lời thật không bị đụng. */
+export function removeRest(text: string, line: number, token: number): RestEdit {
+  const lines = canonicalChordText(text).split('\n')
+  if (!Number.isInteger(line) || line < 0 || line >= lines.length) return { ok: false, reason: 'Không tìm thấy dòng này.' }
+  const source = lines[line]
+  const target = scan(source).cells.find(cell => cell.token === token)
+  if (!target || !isRest(target.word)) return { ok: false, reason: 'Chữ này không phải vị trí nghỉ.' }
+  let from = target.marker ? target.marker.start : target.start
+  let to = target.end
+  if (source[to] === ' ' && (from === 0 || /\s/.test(source[from - 1]))) to += 1
+  else if (to === source.length && from > 0 && source[from - 1] === ' ') from -= 1
+  const next = splice(source, from, to, '')
+  if (!restOk(source, next, token, 'remove')) return { ok: false, reason: 'Không xoá được vị trí nghỉ này mà không làm đổi cách tách chữ.' }
+  const out = [...lines]
+  out[line] = next
+  return { ok: true, text: out.join('\n'), line, at: token, kind: 'remove' }
+}
+
+/** Hai văn bản có CÙNG nhãn + CÙNG dãy chữ ở mọi dòng (chỉ khác hợp âm / khoảng trắng) → vạch nhịp vẫn đúng chỗ. */
+export function sameLyricStructure(a: string, b: string): boolean {
+  const left = canonicalChordText(a).split('\n')
+  const right = canonicalChordText(b).split('\n')
+  if (left.length !== right.length) return false
+  return left.every((line, index) => {
+    const x = lyricTokens(line)
+    const y = lyricTokens(right[index])
+    return x.label === y.label && x.tokens.length === y.tokens.length && x.tokens.every((token, at) => token.word === y.tokens[at].word)
+  })
+}
+
+// ── Đồng bộ vạch nhịp khi chèn / xoá "(-)" ──────────────────────────────────────────────────────
+// Vạch = (line, token). Chèn/xoá một token ở dòng L chỉ dịch các vạch CÙNG dòng L (và cùng nhịp lấy đà); dòng khác,
+// ô không lời (line null) giữ nguyên. Quy ước khi vạch đứng đúng ở khe chèn:
+//   • chèn "trước chữ p": vạch tại p ở lại TRƯỚC "(-)" → "(-)" thuộc ô bắt đầu ở vạch đó;
+//   • chèn "sau chữ k":  vạch tại k+1 dời ra SAU "(-)" → "(-)" ở lại cuối ô chứa chữ k.
+// Đó là ánh xạ xác định nhưng vẫn là một lựa chọn: các vạch này được liệt kê trong `atGap` để giao diện CẢNH BÁO.
+import type { ChordAnchors, MeasureAnchor } from './chordAnchors.ts'
+
+export type AnchorRemap = {
+  anchors: ChordAnchors
+  /** Chỉ số (0-based, theo dòng thời gian) các ô có vạch đúng ở khe chèn — cần người dùng xem lại. */
+  atGap: number[]
+  /** Chỉ số các ô bị trùng vị trí với ô liền trước sau khi xoá (thành "ô ngân") — cần xem lại. */
+  merged: number[]
+}
+
+function mapAnchors(anchors: ChordAnchors, f: (anchor: MeasureAnchor) => MeasureAnchor, ids: (anchor: MeasureAnchor) => boolean): AnchorRemap {
+  const atGap: number[] = []
+  const merged: number[] = []
+  const measures = anchors.measures.map((anchor, index) => { if (ids(anchor)) atGap.push(index); return f(anchor) })
+  measures.forEach((anchor, index) => {
+    const previous = measures[index - 1]
+    const was = anchors.measures[index - 1]
+    if (previous && anchor.line !== null && previous.line === anchor.line && previous.token === anchor.token
+      && !(was && was.line === anchors.measures[index].line && was.token === anchors.measures[index].token)) merged.push(index)
+  })
+  return { anchors: { ...(anchors.pickup ? { pickup: f(anchors.pickup) } : {}), measures }, atGap, merged }
+}
+
+export function remapAnchorsForInsert(anchors: ChordAnchors, line: number, at: number, side: 'before' | 'after'): AnchorRemap {
+  // `at` = vị trí token của "(-)" mới. 'before': vạch tại `at` ở lại; 'after': vạch tại `at` dời +1.
+  const moves = (anchor: MeasureAnchor) => anchor.line === line && anchor.token !== null && (side === 'after' ? anchor.token >= at : anchor.token > at)
+  return mapAnchors(anchors, anchor => (moves(anchor) ? { line: anchor.line, token: (anchor.token as number) + 1 } : anchor),
+    anchor => anchor.line === line && anchor.token === at)
+}
+
+export function remapAnchorsForRemove(anchors: ChordAnchors, line: number, at: number): AnchorRemap {
+  // Vạch tại `at` (trước "(-)") đứng nguyên; vạch sau token bị xoá lùi 1.
+  return mapAnchors(anchors, anchor => (anchor.line === line && anchor.token !== null && anchor.token > at ? { line: anchor.line, token: anchor.token - 1 } : anchor),
+    anchor => anchor.line === line && (anchor.token === at || anchor.token === at + 1))
+}
+
+/**
+ * Dịch vạch của ô `index` sang khe liền trước / liền sau CÙNG dòng. Ở mép dòng thì sang mép của dòng kế có chữ.
+ * Trả null nếu không dịch được (ô không lời, hay hết bài). Không đụng các ô khác.
+ */
+export function nudgeMeasure(measures: MeasureAnchor[], index: number, delta: -1 | 1, tokenCounts: number[]): MeasureAnchor[] | null {
+  const anchor = measures[index]
+  if (!anchor || anchor.line === null || anchor.token === null) return null
+  let line = anchor.line
+  let token = anchor.token + delta
+  if (token < 0) {
+    line -= 1
+    while (line >= 0 && tokenCounts[line] === 0) line -= 1
+    if (line < 0) return null
+    token = tokenCounts[line]
+  } else if (token > tokenCounts[line]) {
+    line += 1
+    while (line < tokenCounts.length && tokenCounts[line] === 0) line += 1
+    if (line >= tokenCounts.length) return null
+    token = 0
+  }
+  return measures.map((entry, at) => (at === index ? { line, token } : entry))
+}
