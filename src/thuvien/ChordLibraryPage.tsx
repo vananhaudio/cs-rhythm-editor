@@ -146,7 +146,6 @@ function ChordList({ library, notice, onView, onEdit, canEdit }: { library: Chor
       </header>
       <MockBanner library={library} onReset={() => { library.resetMock?.(); setQuery(''); setState('loading'); setReload(n => n + 1) }} />
       <div className="cl-actions">
-        {canEdit && <button type="button" className="cl-primary" onClick={() => onEdit(NEW_CHORD_SHEET)}>+ Thêm bài</button>}
         <input type="search" value={query} onChange={event => setQuery(event.target.value)}
           placeholder="Tìm tên bài hoặc tác giả..." aria-label="Tìm tên bài hoặc tác giả" />
       </div>
@@ -168,7 +167,7 @@ function ChordList({ library, notice, onView, onEdit, canEdit }: { library: Chor
         </li>)}
         {state === 'loading' && <li className="cl-empty" aria-live="polite">Đang tải danh sách…</li>}
         {state === 'error' && <li className="cl-empty" role="alert">{error} <button type="button" className="cl-link" onClick={() => { setState('loading'); setReload(n => n + 1) }}>Thử lại</button></li>}
-        {state === 'ready' && !items.length && <li className="cl-empty">{query.trim() ? 'Không tìm thấy bài phù hợp. Bấm “+ Thêm bài” để thêm.' : 'Chưa có bài nào.'}</li>}
+        {state === 'ready' && !items.length && <li className="cl-empty">{query.trim() ? 'Không tìm thấy bài phù hợp. Muốn thêm bài, dùng “Nạp hợp âm mới” trên thanh Header.' : 'Chưa có bài nào.'}</li>}
       </ul>
     </div>
   </>
@@ -528,18 +527,18 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
       <div className="cl-toolbar" role="toolbar" aria-label="Công cụ của bài">
         <button type="button" className={hasText ? 'cl-secondary' : 'cl-primary'} onClick={() => setLyricsOpen(true)}>Nạp lời &amp; hợp âm</button>
         <label className="cl-secondary cl-upload" data-disabled={sourceBusy || busy || plan.length >= MAX_SOURCE_FILES || library.mode === 'disabled'}>
-          {sourceBusy ? 'Đang nạp…' : 'Nạp bản nhạc'}
-          <input type="file" multiple accept={SOURCE_ACCEPT} aria-label="Nạp bản nhạc (PDF hoặc ảnh)"
+          {sourceBusy ? 'Đang nạp…' : 'Nạp ảnh/PDF tham khảo'}
+          <input type="file" multiple accept={SOURCE_ACCEPT} aria-label="Nạp ảnh hoặc PDF tham khảo"
             disabled={sourceBusy || busy || plan.length >= MAX_SOURCE_FILES || library.mode === 'disabled'}
             onChange={event => { const files = [...(event.target.files ?? [])]; event.target.value = ''; void addFiles(files).then(() => setAdvancedOpen(true)) }} />
         </label>
-        <button type="button" className="cl-secondary" aria-expanded={advancedOpen} onClick={() => setAdvancedOpen(open => !open)}>Nâng cao</button>
+        <button type="button" className="cl-secondary" aria-expanded={advancedOpen} onClick={() => setAdvancedOpen(open => !open)}>Thiết lập bài hát</button>
       </div>
       <button type="button" className="cl-primary" onClick={() => void save()} disabled={busy || sourceBusy}>{busy ? 'Đang lưu…' : 'Lưu'}</button>
     </header>
     <MockBanner library={library} />
     {detail && <button type="button" className="cl-status-chip" data-status={detail.status} onClick={() => setAdvancedOpen(true)}
-      title="Mở mục Nâng cao để xem / duyệt phiên bản">
+      title="Mở mục Thiết lập bài hát để xem / duyệt phiên bản">
       {detail.status === 'current' && (detail.draftVersionId ? 'Đang dùng · có bản nháp mới hơn' : 'Đang dùng')}
       {detail.status === 'draft' && 'Bản nháp — chưa dùng chính thức'}
       {detail.status === 'old' && 'Bản cũ — hiện không dùng'}
@@ -596,7 +595,7 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
           : <p className="cl-placeholder">Chưa có lời. Bấm “Nạp lời & hợp âm” để dán lời và hợp âm.</p>}
         </section>
         <details className="cl-fold cl-fold-advanced" open={advancedOpen} onToggle={event => setAdvancedOpen(event.currentTarget.open)}>
-          <summary>Nâng cao <span className="cl-h2-note">— file sheet, vạch nhịp, phiên bản</span></summary>
+          <summary>Thiết lập bài hát <span className="cl-h2-note">— file sheet, vạch nhịp, phiên bản</span></summary>
           {detail?.anchors && <p><button type="button" className="cl-secondary" disabled={busy || dirty} title={dirty ? 'Lưu thay đổi trước' : 'Chạy lời + hợp âm theo nhịp'} onClick={() => onRhythm(detail.versionId)}>▶ Rhythm Scroll</button></p>}
         {detail && <div className="cl-state" data-status={detail.status} role="group" aria-label="Trạng thái phiên bản">
       <p>

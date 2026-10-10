@@ -5,6 +5,7 @@ import ThuVienPage from '../../../src/thuvien/ThuVienPage.tsx'
 import { createRpcChordLibrary } from '../../../src/thuvien/chordLibrary.ts'
 import { createBridgeSourceStore } from './bridgeStore.ts'
 import { createHttpMeasureAnalyzer } from '../../../src/thuvien/measureAnalysis.ts'
+import { installMusicXmlStandIn } from './musicxmlStandIn.ts'
 
 // Trang thử — CHỈ chạy với dev server, bỏ qua cổng admin của AppRouter.
 //   (mặc định)       → dữ liệu thử trong trình duyệt (mock), có băng cảnh báo.
@@ -23,11 +24,14 @@ const local = params.get('db') === 'local'
     }, createBridgeSourceStore('http://127.0.0.1:54399', as))
   : undefined
 
+// ?db=local: kho MusicXML thế thân trong trình duyệt (xem musicxmlStandIn.ts) — để thử luồng Xem / Nạp MusicXML mà không chạm production.
+if (local) await installMusicXmlStandIn()
+
 const analyzer = params.get('analyzer') === 'off' ? undefined : createHttpMeasureAnalyzer('http://127.0.0.1:54398')
 
 createRoot(document.getElementById('root')!).render(<StrictMode>
   {local && <div style={{ position: 'fixed', right: 8, bottom: 8, zIndex: 9, padding: '4px 10px', borderRadius: 6, background: '#1f4a33', color: '#fff', font: '600 12px system-ui' }}>
-    DB TẠM (local) · vai: {as} · không phải production
+    DB TẠM (local) · vai: {as} · kho MusicXML = bản thử trong trình duyệt · không phải production
   </div>}
   <ThuVienPage chordLibrary={local} measureAnalyzer={analyzer} />
 </StrictMode>)

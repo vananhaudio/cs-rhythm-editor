@@ -104,6 +104,7 @@ function MusicXmlLibrary({ tabs }: { tabs: ReactNode }) {
   const [composer, setComposer] = useState('')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
+  const [saved, setSaved] = useState(false)
   const fileInput = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -146,6 +147,7 @@ function MusicXmlLibrary({ tabs }: { tabs: ReactNode }) {
     if (!file) return
     setBusy(true)
     setMessage('')
+    setSaved(false)
     setPrepared(null)
     try {
       if (file.size > 5 * 1024 * 1024) throw new Error('File phải có dung lượng từ 1 byte đến 5 MB.')
@@ -166,6 +168,7 @@ function MusicXmlLibrary({ tabs }: { tabs: ReactNode }) {
       const item = await importMusicXml(prepared, title, composer)
       setItems(current => [item, ...current])
       setPrepared(null)
+      setSaved(true)
       setMessage(`Đã thêm “${item.title}” vào thư viện.`)
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Không thêm được bản nhạc.')
@@ -175,6 +178,7 @@ function MusicXmlLibrary({ tabs }: { tabs: ReactNode }) {
   if (openId) {
     const item = items.find(entry => entry.id === openId)
     return <main className="thu-vien">
+      {tabs}
       <Suspense fallback={<p className="tv-view-note">Đang mở bản nhạc…</p>}>
         <ScoreViewer key={openId} id={openId} initial={item ? { title: item.title, composer: item.composer } : null} onClose={closeScore}
           onSaved={saved => setItems(current => current.map(entry => entry.id === saved.id ? saved : entry))} />
@@ -211,6 +215,8 @@ function MusicXmlLibrary({ tabs }: { tabs: ReactNode }) {
         </div>
         {message && <p role="status" className="mb-5 rounded-lg bg-white p-3">{message}</p>}
         {preparedForm}
+        {saved && <button type="button" onClick={() => { window.history.pushState(null, '', sectionUrl(window.location.href, 'musicxml')); window.dispatchEvent(new PopStateEvent('popstate')) }}
+          className="rounded-lg px-4 py-2 font-semibold underline">Xem trong danh sách bản nhạc</button>}
       </div>
     </main>
   }
@@ -224,14 +230,9 @@ function MusicXmlLibrary({ tabs }: { tabs: ReactNode }) {
         <a href="/admin" className="text-sm underline">Quản trị</a>
       </div>
       <div className="mb-6 flex flex-col gap-3 sm:flex-row">
-        <button type="button" onClick={() => fileInput.current?.click()} disabled={busy}
-          className="rounded-lg bg-[#32664a] px-5 py-3 font-semibold text-white disabled:opacity-50">+ Thêm bản nhạc</button>
-        <input ref={fileInput} type="file" accept=".musicxml,.xml" onChange={event => void chooseFile(event)} className="sr-only" aria-label="Chọn file MusicXML" />
         <input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Tìm tên bài hoặc tác giả..." aria-label="Tìm tên bài hoặc tác giả"
           className="min-w-0 flex-1 rounded-lg border border-[#ccd5ca] bg-white px-4 py-3" />
       </div>
-      {message && <p role="status" className="mb-5 rounded-lg bg-white p-3">{message}</p>}
-      {preparedForm}
       <div className="overflow-hidden rounded-xl border border-[#d8dfd6] bg-white">
         <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-3 bg-[#e9eee7] px-4 py-3 text-sm font-semibold sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_8rem]"><span>Tên bài</span><span>Tác giả</span><span className="hidden sm:block">Ngày thêm</span></div>
         {listState === 'ready' && shown.map(item => <button type="button" key={item.id} className="tv-row" onClick={() => openScore(item.id)} aria-label={`Mở bản nhạc ${item.title}`}>

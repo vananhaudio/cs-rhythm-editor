@@ -51,6 +51,12 @@ function lyricsOf(view: View) {
   return value
 }
 
+/** Header → "Nạp hợp âm mới": đổi địa chỉ rồi báo popstate; trang hợp âm đang mở đọc lại địa chỉ và dựng trình sửa bài mới. */
+async function openNewChord() {
+  dom.window.history.pushState(null, '', '/thuvien?muc=hopam&hopam=moi')
+  await act(async () => { dom.window.dispatchEvent(new dom.window.PopStateEvent('popstate')) })
+}
+
 afterEach(() => { cleanup(); confirmAnswer = true; confirmAsked = 0 })
 
 async function openList(library = createMockChordLibrary({ storage: memoryStorage() })) {
@@ -63,7 +69,7 @@ async function openList(library = createMockChordLibrary({ storage: memoryStorag
 test('danh sách: tiêu đề, nút thêm, ô tìm, trạng thái từng bài, nhãn dữ liệu thử', async () => {
   const view = await openList()
   assert.ok(view.getByRole('heading', { name: 'HỢP ÂM CHUẨN HÓA' }))
-  assert.ok(view.getByRole('button', { name: '+ Thêm bài' }))
+  assert.equal(view.queryByRole('button', { name: '+ Thêm bài' }), null, 'tạo bài mới đã có ở Header — không còn nút trùng trong danh sách')
   assert.ok(view.getByLabelText('Tìm tên bài hoặc tác giả'))
   assert.ok(view.getByTestId('tabs'), 'thanh chuyển mục hiện ở danh sách')
   assert.match(view.getByRole('note').textContent ?? '', /Dữ liệu thử — chưa lưu production/)
@@ -86,9 +92,9 @@ test('tìm không dấu, không phân biệt hoa thường; không thấy thì g
   assert.match(view.getByRole('list').textContent ?? '', /Không tìm thấy bài phù hợp/)
 })
 
-test('+ Thêm bài mở editor; thiếu tên bài / lời thì không lưu và chỉ rõ ô sai', async () => {
+test('Nạp hợp âm mới (Header) mở editor; thiếu tên bài / lời thì không lưu và chỉ rõ ô sai', async () => {
   const view = await openList()
-  fireEvent.click(view.getByRole('button', { name: '+ Thêm bài' }))
+  await openNewChord()
   await settle()
   assert.equal(dom.window.location.search, '?muc=hopam&hopam=moi')
   assert.ok(view.getByRole('heading', { name: 'Thêm bài' }))
@@ -119,7 +125,7 @@ test('+ Thêm bài mở editor; thiếu tên bài / lời thì không lưu và c
 
 test('xem thử: hợp âm nằm trên chữ; cảnh báo ngoặc hỏng', async () => {
   const view = await openList()
-  fireEvent.click(view.getByRole('button', { name: '+ Thêm bài' }))
+  await openNewChord()
   await settle()
   const preview = view.getByRole('region', { name: 'Xem thử' })
   assert.match(preview.textContent ?? '', /Chưa có lời\. Bấm “Nạp lời & hợp âm”/)
@@ -135,7 +141,7 @@ test('xem thử: hợp âm nằm trên chữ; cảnh báo ngoặc hỏng', async
 test('lưu mock → BẢN NHÁP, báo rõ chưa lưu production → duyệt → quay lại danh sách → mở lại đúng nội dung (kể cả sau khi tải lại trang)', async () => {
   const storage = memoryStorage()
   const view = await openList(createMockChordLibrary({ storage }))
-  fireEvent.click(view.getByRole('button', { name: '+ Thêm bài' }))
+  await openNewChord()
   await settle()
   assert.equal(view.queryByRole('group', { name: 'Trạng thái phiên bản' }), null, 'bài chưa lưu thì chưa có trạng thái phiên bản')
   type(view.getByLabelText(/Tên bài/), 'Khúc Hát Thử')
@@ -275,7 +281,7 @@ test('bỏ bản nháp: hỏi lại → bỏ → về danh sách, bản đang d�
 
 test('rời editor khi còn thay đổi dở → hỏi lại; chọn ở lại thì không mất gì', async () => {
   const view = await openList()
-  fireEvent.click(view.getByRole('button', { name: '+ Thêm bài' }))
+  await openNewChord()
   await settle()
   type(view.getByLabelText(/Tên bài/), 'Đang gõ dở')
   confirmAnswer = false
@@ -323,7 +329,7 @@ const rows = (view: ReturnType<typeof render>) => [...view.container.querySelect
 test('nạp nguồn cho bài MỚI: 2 ảnh + 1 PDF → "Chưa lưu"; HEIC/rỗng bị từ chối với lời dễ hiểu; Lưu → gắn với phiên bản 1; mở lại vẫn gắn; Xem mở link riêng', async () => {
   opened = []
   const view = await openList()
-  fireEvent.click(view.getByRole('button', { name: '+ Thêm bài' }))
+  await openNewChord()
   await settle()
   type(view.getByLabelText(/Tên bài/), 'Bài có sheet')
   setLyrics(view, '[C] một dòng')
@@ -360,7 +366,7 @@ test('nạp nguồn cho bài MỚI: 2 ảnh + 1 PDF → "Chưa lưu"; HEIC/rỗn
 
 test('thay nguồn bài đã lưu = phiên bản MỚI: bỏ 1 file đã gắn + nạp 1 file → Lưu → v2 có bản CHÉP + file mới; v1 giữ nguyên bộ nguồn cũ', async () => {
   const view = await openList()
-  fireEvent.click(view.getByRole('button', { name: '+ Thêm bài' }))
+  await openNewChord()
   await settle()
   type(view.getByLabelText(/Tên bài/), 'Bài thay nguồn')
   setLyrics(view, '[G] dòng')
@@ -406,7 +412,7 @@ test('rời bài khi còn file đã nạp chưa lưu → hỏi; đồng ý → f
 test('lưu thất bại → báo lỗi, KHÔNG báo đã lưu; file đã nạp vẫn còn, xoá được', async () => {
   const library = createMockChordLibrary({ storage: memoryStorage() })
   const view = await openList(library)
-  fireEvent.click(view.getByRole('button', { name: '+ Thêm bài' }))
+  await openNewChord()
   await settle()
   setLyrics(view, '[C] lời')
   await pick(view, [pngFile('x.png')])
@@ -422,7 +428,7 @@ test('lưu thất bại → báo lỗi, KHÔNG báo đã lưu; file đã nạp v
 
 test('đủ 10 file → nút nạp khoá; file > 20 MB bị từ chối trước khi tải', async () => {
   const view = await openList()
-  fireEvent.click(view.getByRole('button', { name: '+ Thêm bài' }))
+  await openNewChord()
   await settle()
   await pick(view, Array.from({ length: 11 }, (_, n) => pngFile(`p${n}.png`, `n${n}`)))
   assert.equal(rows(view).length, 10)
@@ -430,7 +436,7 @@ test('đủ 10 file → nút nạp khoá; file > 20 MB bị từ chối trước
   assert.equal((view.getByLabelText('Chọn file PDF hoặc ảnh sheet') as HTMLInputElement).disabled, true)
   cleanup()
   const again = await openList()
-  fireEvent.click(again.getByRole('button', { name: '+ Thêm bài' }))
+  await openNewChord()
   await settle()
   const big = pngFile('to.png')
   Object.defineProperty(big, 'size', { value: 20 * 1024 * 1024 + 1 })
@@ -571,7 +577,7 @@ test('còn thay đổi chưa lưu → chưa sửa vạch nhịp được; Huỷ 
 
 test('bài MỚI chưa lưu: nút Sửa vạch nhịp khoá, có lời nhắc lưu trước', async () => {
   const view = await openList()
-  fireEvent.click(view.getByRole('button', { name: '+ Thêm bài' }))
+  await openNewChord()
   await settle()
   assert.equal((view.getByRole('button', { name: 'Sửa vạch nhịp thủ công' }) as HTMLButtonElement).disabled, true)
   assert.match(view.getByRole('region', { name: 'Vạch nhịp' }).textContent ?? '', /Lưu bài trước/)
@@ -629,7 +635,7 @@ test('rpc: KHÔNG có băng "Dữ liệu thử"; danh sách + tạo bài + sửa
   assert.match(view.getByRole('list').textContent ?? '', /Chưa có bài nào\./)
   assert.deepEqual(server.calls, ['chord_sheet_search'])
 
-  fireEvent.click(view.getByRole('button', { name: '+ Thêm bài' }))
+  await openNewChord()
   await settle()
   assert.equal(view.queryByRole('note'), null)
   type(view.getByLabelText(/Tên bài/), 'Bài thử RPC')
@@ -773,6 +779,9 @@ test('mục MusicXML: vẫn là mặc định, vẫn gọi đúng các hàm cũ;
   assert.match(page, /<main className="thu-vien[^"]*">\s*\{tabs\}\s*<div className="mx-auto max-w-4xl">/)
   assert.match(page, /return <MusicXmlLibrary tabs=\{tabs\} \/>/)
   assert.ok(!page.includes('ThuVienTabs'), 'thanh mục cũ đã được Header thay thế')
+  assert.ok(!page.includes('+ Thêm bản nhạc'), 'danh sách MusicXML không còn nút tạo mới trùng với Header')
+  assert.equal(page.match(/accept="\.musicxml,\.xml"/g)?.length, 1, 'chỉ MỘT đường chọn file MusicXML (trang Nạp bản nhạc mới)')
+  assert.equal(page.match(/importMusicXml\(/g)?.length, 1)
   const css = readFileSync(new URL('../../src/thuvien/ChordLibrary.css', import.meta.url), 'utf8')
   assert.equal(css.replace(/\/\*[\s\S]*?\*\//g, '').match(/\.thu-vien/g), null, 'CSS mới không có luật nào nhắm vào .thu-vien của mục MusicXML')
   const master = readFileSync(new URL('../../src/thuvien/masterLibrary.ts', import.meta.url), 'utf8')
@@ -924,7 +933,7 @@ async function openNew(library: ReturnType<typeof createMockChordLibrary>, extra
   goto('?muc=hopam')
   const view = render(<ChordLibraryPage library={library} extractor={extractor} />)
   await settle()
-  fireEvent.click(view.getByRole('button', { name: '+ Thêm bài' }))
+  await openNewChord()
   await settle()
   return view
 }
@@ -1055,7 +1064,7 @@ test('luồng chính: canonical trống → "Phân tích vạch nhịp" KHOÁ + 
   goto('?muc=hopam')
   const v = render(<ChordLibraryPage library={newLibrary()} analyzer={fake.analyzer} />)
   await settle()
-  fireEvent.click(v.getByRole('button', { name: '+ Thêm bài' }))
+  await openNewChord()
   await settle()
   assert.equal(analyzeButton(v).disabled, true)
   assert.equal(analyzeButton(v).title, 'Cần dán lời + hợp âm trước.')
@@ -1175,7 +1184,7 @@ test('đề xuất của máy chỉ phủ lời 1 → trình sửa cảnh báo n
 // ── Chạm chữ để chỉnh hợp âm (Slice 1) ──────────────────────────────────────────────────────────
 async function openNewWithText(text: string) {
   const view = await openList()
-  fireEvent.click(view.getByRole('button', { name: '+ Thêm bài' }))
+  await openNewChord()
   await settle()
   setLyrics(view, text)
   return view
@@ -1229,19 +1238,20 @@ test('bài đã có vạch nhịp: Xem thử giữ bản có số ô; bật "Ch�
   assert.equal(preview.querySelector('.cl-word'), null)
 })
 
-test('bố cục một cột: thanh công cụ 3 nút; ô nhập mã chỉ có trong cửa sổ; Nâng cao chứa nguồn sheet, vạch nhịp, phiên bản', async () => {
+test('bố cục một cột: thanh công cụ 3 nút; ô nhập mã chỉ có trong cửa sổ; Thiết lập bài hát chứa nguồn sheet, vạch nhịp, phiên bản', async () => {
   const view = await openList()
   fireEvent.click(view.getByRole('button', { name: 'Sửa bài Bài thử 01' }))
   await settle()
   const bar = view.getByRole('toolbar', { name: 'Công cụ của bài' })
-  assert.deepEqual([...bar.querySelectorAll('button, label')].map(node => node.textContent?.trim()), ['Nạp lời & hợp âm', 'Nạp bản nhạc', 'Nâng cao'])
+  assert.deepEqual([...bar.querySelectorAll('button, label')].map(node => node.textContent?.trim()), ['Nạp lời & hợp âm', 'Nạp ảnh/PDF tham khảo', 'Thiết lập bài hát'])
   assert.equal(view.queryByLabelText('Ô soạn lời và hợp âm'), null, 'ô nhập mã không nằm sẵn trong trang')
   const advanced = view.container.querySelector('details.cl-fold-advanced') as HTMLDetailsElement
   assert.equal(advanced.open, false)
   for (const label of ['Nguồn sheet', 'Vạch nhịp']) assert.ok(advanced.querySelector(`section[aria-label="${label}"]`), label)
-  assert.ok(advanced.querySelector('[role=group][aria-label="Trạng thái phiên bản"]'), 'phiên bản nằm trong Nâng cao')
-  fireEvent.click(view.getByRole('button', { name: 'Nâng cao' }))
-  assert.equal(advanced.open, true, 'nút Nâng cao mở mục Nâng cao')
+  assert.ok(advanced.querySelector('[role=group][aria-label="Trạng thái phiên bản"]'), 'phiên bản nằm trong Thiết lập bài hát')
+  assert.equal(view.queryByRole('button', { name: 'Nạp bản nhạc' }), null, 'trong trình sửa không còn nút tên "Nạp bản nhạc" (dễ nhầm với MusicXML)')
+  fireEvent.click(view.getByRole('button', { name: 'Thiết lập bài hát' }))
+  assert.equal(advanced.open, true, 'nút Thiết lập bài hát mở mục cùng tên')
   fireEvent.click(view.container.querySelector('.cl-status-chip')!)
   assert.equal(advanced.open, true)
 })
@@ -1277,9 +1287,9 @@ test('cửa sổ Nạp lời: Áp dụng đổi bản nhạc (chưa ghi DB); H�
   assert.equal(lyricsOf(view), '[Am] Khói thuốc đợi chờ\nAi về [G] trong chiều')
 })
 
-test('nạp bản nhạc từ thanh công cụ dùng lại đường tải PDF/ảnh hiện có và mở Nâng cao', async () => {
+test('Nạp ảnh/PDF tham khảo từ thanh công cụ dùng lại đường tải PDF/ảnh hiện có và mở Thiết lập bài hát', async () => {
   const view = await openNewWithText('[C] Có lời')
-  const input = view.getByLabelText('Nạp bản nhạc (PDF hoặc ảnh)') as HTMLInputElement
+  const input = view.getByLabelText('Nạp ảnh hoặc PDF tham khảo') as HTMLInputElement
   assert.equal(input.getAttribute('accept'), view.getByLabelText('Chọn file PDF hoặc ảnh sheet').getAttribute('accept'))
   const file = new dom.window.File([new Uint8Array([37, 80, 68, 70, 45, 49, 46, 52, 10])], 'bai.pdf', { type: 'application/pdf' })
   Object.defineProperty(input, 'files', { configurable: true, value: [file] })
