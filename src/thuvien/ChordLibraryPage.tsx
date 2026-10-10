@@ -499,6 +499,16 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
     <header className="cl-editor-head">
       <button type="button" className="cl-back" onClick={close}>← Danh sách</button>
       <h1>{detail ? detail.title : 'Thêm bài'}</h1>
+      <div className="cl-toolbar" role="toolbar" aria-label="Công cụ của bài">
+        <button type="button" className={hasText ? 'cl-secondary' : 'cl-primary'} onClick={() => setLyricsOpen(true)}>Nạp lời &amp; hợp âm</button>
+        <label className="cl-secondary cl-upload" data-disabled={sourceBusy || busy || plan.length >= MAX_SOURCE_FILES || library.mode === 'disabled'}>
+          {sourceBusy ? 'Đang nạp…' : 'Nạp bản nhạc'}
+          <input type="file" multiple accept={SOURCE_ACCEPT} aria-label="Nạp bản nhạc (PDF hoặc ảnh)"
+            disabled={sourceBusy || busy || plan.length >= MAX_SOURCE_FILES || library.mode === 'disabled'}
+            onChange={event => { const files = [...(event.target.files ?? [])]; event.target.value = ''; void addFiles(files).then(() => setAdvancedOpen(true)) }} />
+        </label>
+        <button type="button" className="cl-secondary" aria-expanded={advancedOpen} onClick={() => setAdvancedOpen(open => !open)}>Nâng cao</button>
+      </div>
       <button type="button" className="cl-primary" onClick={() => void save()} disabled={busy || sourceBusy}>{busy ? 'Đang lưu…' : 'Lưu'}</button>
     </header>
     <MockBanner library={library} />
@@ -538,16 +548,6 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
           </div>
         </section>
 
-        <div className="cl-toolbar" role="toolbar" aria-label="Công cụ của bài">
-          <button type="button" className={hasText ? 'cl-secondary' : 'cl-primary'} onClick={() => setLyricsOpen(true)}>Nạp lời &amp; hợp âm</button>
-          <label className="cl-secondary cl-upload" data-disabled={sourceBusy || busy || plan.length >= MAX_SOURCE_FILES || library.mode === 'disabled'}>
-            {sourceBusy ? 'Đang nạp…' : 'Nạp bản nhạc'}
-            <input type="file" multiple accept={SOURCE_ACCEPT} aria-label="Nạp bản nhạc (PDF hoặc ảnh)"
-              disabled={sourceBusy || busy || plan.length >= MAX_SOURCE_FILES || library.mode === 'disabled'}
-              onChange={event => { const files = [...(event.target.files ?? [])]; event.target.value = ''; void addFiles(files).then(() => setAdvancedOpen(true)) }} />
-          </label>
-          <button type="button" className="cl-secondary" aria-expanded={advancedOpen} onClick={() => setAdvancedOpen(open => !open)}>Nâng cao</button>
-        </div>
         {errors.text && <p className="cl-error">{errors.text}</p>}
         <section className="cl-card cl-preview" aria-label="Xem thử">
         <h2>Bản nhạc <span className="cl-h2-note">— chạm vào chữ để đặt hợp âm</span></h2>

@@ -248,3 +248,24 @@
   .cl-modal-foot { flex-wrap: wrap; }
   .cl-modal-foot .cl-help { flex: 1 1 100%; }
 }
+
+/* ── Thanh công cụ nằm trên Header: Danh sách → Tên bài → 3 nút → Lưu ── */
+.tv-chords .cl-wrap-wide { max-width: 980px; }
+.tv-chords .cl-editor-head { grid-template-columns: auto minmax(0, 1fr) auto auto; }
+.tv-chords .cl-editor-head h1 { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tv-chords .cl-editor-head .cl-toolbar { flex-wrap: nowrap; gap: 8px; }
+.tv-chords .cl-editor-head .cl-toolbar .cl-secondary, .tv-chords .cl-editor-head .cl-toolbar .cl-primary { min-height: 44px; padding: 8px 12px; }
+@media (max-width: 860px) {
+  /* Hẹp: hàng 1 = Danh sách · Tên bài · Lưu; hàng 2 = 3 nút công cụ (cuộn ngang trong thanh nếu thiếu chỗ, trang không tràn). */
+  .tv-chords .cl-editor-head { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "back title save" "tools tools tools"; row-gap: 8px; }
+  .tv-chords .cl-editor-head > .cl-back { grid-area: back; }
+  .tv-chords .cl-editor-head > h1 { grid-area: title; }
+  .tv-chords .cl-editor-head > .cl-primary { grid-area: save; }
+  .tv-chords .cl-editor-head > .cl-toolbar { grid-area: tools; overflow-x: auto; }
+}
+@media (max-width: 480px) {
+  /* Điện thoại: 3 nút chia đều một hàng, chữ được xuống dòng — không cuộn ngang, không bị cắt. */
+  .tv-chords .cl-editor-head > .cl-toolbar { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); overflow: visible; gap: 6px; }
+  .tv-chords .cl-editor-head .cl-toolbar .cl-secondary, .tv-chords .cl-editor-head .cl-toolbar .cl-primary {
+    justify-content: center; min-width: 0; padding: 6px 4px; font-size: 13px; line-height: 1.2; text-align: center; white-space: normal; }
+}
