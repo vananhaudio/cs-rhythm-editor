@@ -5,7 +5,7 @@
 // nhận thẻ TeamLab mặc định. Lỗi/quá giờ/không phải resource công khai → thẻ mặc định, SPA chạy như cũ (og.ts fail closed).
 import ogHandler from './og.ts'
 
-export default async function handler(req: Request, context: { next: () => Promise<Response> }) {
+export default async function handler(req: Request, context: { next: (request?: Request) => Promise<Response> }) {
   return ogHandler(req, context)
 }
 
