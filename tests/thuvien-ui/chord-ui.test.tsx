@@ -36,6 +36,21 @@ const settle = (ms = 30) => act(async () => { await new Promise(resolve => setTi
 const goto = (search: string) => dom.window.history.replaceState(null, '', '/thuvien' + search)
 const type = (element: Element, value: string) => fireEvent.change(element, { target: { value } })
 
+
+// Lời + hợp âm nằm trong cửa sổ "Nạp lời & hợp âm": soạn ở đó, "Áp dụng" mới đổi bản nhạc (chưa ghi DB).
+type View = ReturnType<typeof render>
+function setLyrics(view: View, text: string) {
+  fireEvent.click(view.getByRole('button', { name: 'Nạp lời & hợp âm' }))
+  type(view.getByLabelText('Ô soạn lời và hợp âm'), text)
+  fireEvent.click(view.getByRole('button', { name: 'Áp dụng' }))
+}
+function lyricsOf(view: View) {
+  fireEvent.click(view.getByRole('button', { name: 'Nạp lời & hợp âm' }))
+  const value = (view.getByLabelText('Ô soạn lời và hợp âm') as HTMLTextAreaElement).value
+  fireEvent.click(view.getByRole('button', { name: 'Hủy' }))
+  return value
+}
+
 afterEach(() => { cleanup(); confirmAnswer = true; confirmAsked = 0 })
 
 async function openList(library = createMockChordLibrary({ storage: memoryStorage() })) {
@@ -78,12 +93,15 @@ test('+ Thêm bài mở editor; thiếu tên bài / lời thì không lưu và c
   assert.equal(dom.window.location.search, '?muc=hopam&hopam=moi')
   assert.ok(view.getByRole('heading', { name: 'Thêm bài' }))
   assert.equal(view.queryByTestId('tabs'), null, 'trong editor không có thanh chuyển mục')
-  for (const label of ['Thông tin bài', 'Lời và hợp âm', 'Vạch nhịp', 'Nguồn sheet', 'Xem thử']) assert.ok(view.getByRole('region', { name: label }), label)
+  for (const label of ['Thông tin bài', 'Vạch nhịp', 'Nguồn sheet', 'Xem thử']) assert.ok(view.getByRole('region', { name: label }), label)
   assert.match(view.getByRole('region', { name: 'Vạch nhịp' }).textContent ?? '', /Chưa phân tích.*Chưa có dữ liệu vạch nhịp\./)
   assert.equal((view.getByRole('button', { name: 'Phân tích vạch nhịp' }) as HTMLButtonElement).disabled, true, 'nút Phân tích có mặt nhưng chưa bật')
   assert.match(view.getByRole('region', { name: 'Nguồn sheet' }).textContent ?? '', /Chưa có file nguồn\./)
   assert.equal(view.getByLabelText('Chọn file PDF hoặc ảnh sheet').getAttribute('accept'), 'application/pdf,image/jpeg,image/png,image/webp,.pdf,.jpg,.jpeg,.png,.webp')
-  assert.match(view.getByRole('region', { name: 'Lời và hợp âm' }).textContent ?? '', /\[Am\]/, 'có gợi ý định dạng')
+  fireEvent.click(view.getByRole('button', { name: 'Nạp lời & hợp âm' }))
+  assert.match(view.getByRole('dialog').textContent ?? '', /\[Am\]/, 'cửa sổ nạp lời có gợi ý định dạng')
+  fireEvent.click(view.getByRole('button', { name: 'Hủy' }))
+  assert.equal(view.queryByRole('dialog'), null)
   fireEvent.click(view.getByRole('button', { name: 'Lưu' }))
   await settle()
   assert.match(view.getByRole('alert').textContent ?? '', /Chưa lưu được/)
@@ -92,7 +110,7 @@ test('+ Thêm bài mở editor; thiếu tên bài / lời thì không lưu và c
   assert.equal((await view.library.searchChordSheets('')).length, 3, 'chưa có gì được lưu')
   type(view.getByLabelText(/BPM gợi ý/), '999')
   type(view.getByLabelText(/Tên bài/), 'Bài UI')
-  type(view.getByLabelText('Ô soạn lời và hợp âm'), '[C] có lời')
+  setLyrics(view, '[C] có lời')
   fireEvent.click(view.getByRole('button', { name: 'Lưu' }))
   await settle()
   assert.match(view.container.textContent ?? '', /BPM là số nguyên từ 20 đến 300\./)
@@ -104,14 +122,14 @@ test('xem thử: hợp âm nằm trên chữ; cảnh báo ngoặc hỏng', async
   fireEvent.click(view.getByRole('button', { name: '+ Thêm bài' }))
   await settle()
   const preview = view.getByRole('region', { name: 'Xem thử' })
-  assert.match(preview.textContent ?? '', /Chưa có lời\. Bấm “Sửa lời \/ Dán bài hát”/)
-  type(view.getByLabelText('Ô soạn lời và hợp âm'), 'Chiều [Am] nao, tiễn nhau [E7] đi\nĐK: chỉ lời\nlỡ [G quên')
+  assert.match(preview.textContent ?? '', /Chưa có lời\. Bấm “Nạp lời & hợp âm”/)
+  setLyrics(view, 'Chiều [Am] nao, tiễn nhau [E7] đi\nĐK: chỉ lời\nlỡ [G quên')
   // Mỗi chữ hát là một ô chạm được; hợp âm nằm ngay trên chữ nó thuộc về.
   const segments = [...preview.querySelectorAll('.cl-line')[0].querySelectorAll('.cl-seg')].map(node => [node.querySelector('.cl-chord')?.textContent, node.querySelector('.cl-word')?.textContent])
   assert.deepEqual(segments, [['\u00a0', 'Chiều'], ['Am', 'nao,'], ['\u00a0', 'tiễn'], ['\u00a0', 'nhau'], ['E7', 'đi']])
   assert.equal(preview.querySelectorAll('.cl-line')[1].getAttribute('data-chords'), 'false')
   assert.match(preview.querySelector('.cl-chordset')?.textContent ?? '', /AmE7$/)
-  assert.match(view.getByRole('region', { name: 'Lời và hợp âm' }).textContent ?? '', /Dòng 3: còn ngoặc vuông/)
+  assert.match(preview.textContent ?? '', /Dòng 3: còn ngoặc vuông/)
 })
 
 test('lưu mock → BẢN NHÁP, báo rõ chưa lưu production → duyệt → quay lại danh sách → mở lại đúng nội dung (kể cả sau khi tải lại trang)', async () => {
@@ -124,7 +142,7 @@ test('lưu mock → BẢN NHÁP, báo rõ chưa lưu production → duyệt → 
   type(view.getByLabelText(/Tác giả/), 'Thầy')
   fireEvent.change(view.getByLabelText(/Nhịp/), { target: { value: '6/8' } })
   type(view.getByLabelText(/BPM gợi ý/), '72')
-  type(view.getByLabelText('Ô soạn lời và hợp âm'), '[C] Một dòng  \n[G] Hai dòng\n')
+  setLyrics(view, '[C] Một dòng  \n[G] Hai dòng\n')
   fireEvent.click(view.getByRole('button', { name: 'Lưu' }))
   await settle()
   assert.match(view.getByRole('status').textContent ?? '', /Đã lưu bản nháp \(phiên bản 1\).*Dữ liệu thử — chưa lưu production/)
@@ -155,14 +173,14 @@ test('lưu mock → BẢN NHÁP, báo rõ chưa lưu production → duyệt → 
   assert.equal((view.getByLabelText(/Tác giả/) as HTMLInputElement).value, 'Thầy')
   assert.equal((view.getByLabelText(/Nhịp/) as HTMLSelectElement).value, '6/8')
   assert.equal((view.getByLabelText(/BPM gợi ý/) as HTMLInputElement).value, '72')
-  assert.equal((view.getByLabelText('Ô soạn lời và hợp âm') as HTMLTextAreaElement).value, '[C] Một dòng\n[G] Hai dòng')
+  assert.equal(lyricsOf(view), '[C] Một dòng\n[G] Hai dòng')
 
   // Tải lại trang: thư viện mới đọc cùng storage, mở thẳng bằng địa chỉ.
   cleanup()
   goto(`?muc=hopam&hopam=${saved.versionId}`)
   const again = render(<ChordLibraryPage library={createMockChordLibrary({ storage })} />)
   await settle()
-  assert.equal((again.getByLabelText('Ô soạn lời và hợp âm') as HTMLTextAreaElement).value, '[C] Một dòng\n[G] Hai dòng')
+  assert.equal(lyricsOf(again), '[C] Một dòng\n[G] Hai dòng')
   assert.ok(storage.data.has(MOCK_STORAGE_KEY))
   assert.equal(network, 0, 'chế độ thử không gọi mạng')
 })
@@ -176,8 +194,7 @@ test('sửa bài đang dùng: lưu → bản nháp v2, bản đang dùng chưa �
   assert.deepEqual(sheetText(view.getByLabelText('Vạch nhịp theo ô')).slice(0, 2), ['1. ¹ [C] Một câu hát mẫu cho |² [Am] buổi chiều', '|³ [F] Dòng tiếp theo đi |⁴ [G] thật chậm'],
     'vạch nhịp đã có được hiện lại kèm số ô; ô 1 mở đầu bài chỉ có số, không vạch giả')
   assert.deepEqual(sheetText(view.getByLabelText('Bản hợp âm có số ô')), sheetText(view.getByLabelText('Vạch nhịp theo ô')), 'bản bên phải dùng cùng mô hình')
-  const text = view.getByLabelText('Ô soạn lời và hợp âm') as HTMLTextAreaElement
-  type(text, text.value + '\n[C] Thêm một dòng')
+  setLyrics(view, lyricsOf(view) + '\n[C] Thêm một dòng')
   assert.match(view.container.textContent ?? '', /Lưu lời mới thì vạch nhịp phải làm lại/)
   assert.match(view.getByRole('region', { name: 'Vạch nhịp' }).textContent ?? '', /— Chưa phân tích.*Lời đã đổi — vạch nhịp cũ không còn khớp/)
   type(view.getByLabelText(/Tên bài/), 'Bài thử 01 (đã sửa)')
@@ -198,11 +215,11 @@ test('sửa bài đang dùng: lưu → bản nháp v2, bản đang dùng chưa �
   await settle()
   const state = view.getByRole('group', { name: 'Trạng thái phiên bản' })
   assert.match(state.textContent ?? '', /Bản đang dùng · phiên bản 1\. Bài này có bản nháp mới hơn chưa duyệt\./, 'mở từ danh sách = mở bản đang dùng')
-  assert.doesNotMatch((view.getByLabelText('Ô soạn lời và hợp âm') as HTMLTextAreaElement).value, /Thêm một dòng/)
+  assert.doesNotMatch(lyricsOf(view), /Thêm một dòng/)
   fireEvent.click(view.getByRole('button', { name: 'Mở bản nháp' }))
   await settle()
   assert.equal(dom.window.location.search, `?muc=hopam&hopam=${item.draftVersionId}`)
-  assert.match((view.getByLabelText('Ô soạn lời và hợp âm') as HTMLTextAreaElement).value, /Thêm một dòng$/)
+  assert.match(lyricsOf(view), /Thêm một dòng$/)
   fireEvent.click(view.getByRole('button', { name: 'Duyệt bản này' }))
   await settle()
   const detail = await view.library.getChordSheet(item.draftVersionId!)
@@ -309,7 +326,7 @@ test('nạp nguồn cho bài MỚI: 2 ảnh + 1 PDF → "Chưa lưu"; HEIC/rỗn
   fireEvent.click(view.getByRole('button', { name: '+ Thêm bài' }))
   await settle()
   type(view.getByLabelText(/Tên bài/), 'Bài có sheet')
-  type(view.getByLabelText('Ô soạn lời và hợp âm'), '[C] một dòng')
+  setLyrics(view, '[C] một dòng')
   await pick(view, [pngFile('sheet-01.png'), pngFile('sheet-02.jpg', 'b', 'image/jpeg'), pngFile('anh.heic', 'h', 'image/heic'), pngFile('rong.png', '')])
   assert.deepEqual(rows(view), ['pending|Trang 1|Chưa lưu', 'pending|Trang 2|Chưa lưu'])
   assert.match(view.getByRole('region', { name: 'Nguồn sheet' }).querySelector('[role=alert]')?.textContent ?? '', /“anh\.heic”: chỉ nhận PDF, JPEG, PNG hoặc WebP.*“rong\.png”: file rỗng/)
@@ -346,7 +363,7 @@ test('thay nguồn bài đã lưu = phiên bản MỚI: bỏ 1 file đã gắn +
   fireEvent.click(view.getByRole('button', { name: '+ Thêm bài' }))
   await settle()
   type(view.getByLabelText(/Tên bài/), 'Bài thay nguồn')
-  type(view.getByLabelText('Ô soạn lời và hợp âm'), '[G] dòng')
+  setLyrics(view, '[G] dòng')
   await pick(view, [pngFile('a.png'), pngFile('b.png', 'bb')])
   fireEvent.click(view.getByRole('button', { name: 'Lưu' }))
   await settle(80)
@@ -391,7 +408,7 @@ test('lưu thất bại → báo lỗi, KHÔNG báo đã lưu; file đã nạp v
   const view = await openList(library)
   fireEvent.click(view.getByRole('button', { name: '+ Thêm bài' }))
   await settle()
-  type(view.getByLabelText('Ô soạn lời và hợp âm'), '[C] lời')
+  setLyrics(view, '[C] lời')
   await pick(view, [pngFile('x.png')])
   fireEvent.click(view.getByRole('button', { name: 'Lưu' }))
   await settle()
@@ -616,7 +633,7 @@ test('rpc: KHÔNG có băng "Dữ liệu thử"; danh sách + tạo bài + sửa
   await settle()
   assert.equal(view.queryByRole('note'), null)
   type(view.getByLabelText(/Tên bài/), 'Bài thử RPC')
-  type(view.getByLabelText('Ô soạn lời và hợp âm'), '[C] lời một')
+  setLyrics(view, '[C] lời một')
   server.calls.length = 0
   fireEvent.click(view.getByRole('button', { name: 'Lưu' }))
   await settle()
@@ -628,7 +645,7 @@ test('rpc: KHÔNG có băng "Dữ liệu thử"; danh sách + tạo bài + sửa
   // sửa tên + tác giả + lời + BPM trong một lần lưu
   type(view.getByLabelText(/Tên bài/), 'Bài thử RPC (đổi tên)')
   type(view.getByLabelText(/Tác giả/), 'Thầy')
-  type(view.getByLabelText('Ô soạn lời và hợp âm'), '[C] lời một\n[G] lời hai')
+  setLyrics(view, '[C] lời một\n[G] lời hai')
   type(view.getByLabelText(/BPM gợi ý/), '88')
   server.calls.length = 0
   fireEvent.click(view.getByRole('button', { name: 'Lưu' }))
@@ -666,14 +683,14 @@ test('rpc: máy chủ lỗi khi lưu → hiện lỗi, KHÔNG báo "đã lưu", 
   const view = render(<ChordLibraryPage library={library} />)
   await settle()
   type(view.getByLabelText(/Tên bài/), 'Bài lỗi (tên mới)')
-  type(view.getByLabelText('Ô soạn lời và hợp âm'), '[C] gốc\n[G] thêm')
+  setLyrics(view, '[C] gốc\n[G] thêm')
   server.fail('chord_sheet_contribute')
   server.calls.length = 0
   fireEvent.click(view.getByRole('button', { name: 'Lưu' }))
   await settle()
   assert.match(view.getByRole('alert').textContent ?? '', /máy chủ từ chối \(thử nghiệm\)/)
   assert.equal(view.queryByRole('status'), null, 'không có thông báo thành công')
-  assert.equal((view.getByLabelText('Ô soạn lời và hợp âm') as HTMLTextAreaElement).value, '[C] gốc\n[G] thêm', 'chữ đang gõ còn nguyên')
+  assert.equal(lyricsOf(view), '[C] gốc\n[G] thêm', 'chữ đang gõ còn nguyên')
   assert.deepEqual(server.calls, ['chord_sheet_update_info', 'chord_sheet_contribute'])
   assert.equal(server.versions.length, 1, 'không có phiên bản nào được tạo')
   assert.equal(server.sheets.get('s1')!.title, 'Bài lỗi (tên mới)', 'tên đã lưu thật ở bước trước')
@@ -927,10 +944,10 @@ test('extraction UI: file CHƯA LƯU → staged (draftId + sourceIndex + mime); 
   const panel = view.getByRole('region', { name: 'Kết quả đọc nội dung sheet (tham khảo)' })
   assert.match(panel.textContent ?? '', /thấy 2 hợp âm.*Tình ca.*Hoàng Việt.*88.*Nhịp: máy không đọc được/)
   assert.equal(panel.querySelector('pre')?.textContent, '[Am] Sáng nay [E7] mình đi', 'dòng tiêu đề đã bị bỏ khỏi lời')
-  assert.equal((view.getByLabelText('Ô soạn lời và hợp âm') as HTMLTextAreaElement).value, '', 'chưa bấm Dùng → chưa đổi gì')
+  assert.equal(lyricsOf(view), '', 'chưa bấm Dùng → chưa đổi gì')
   fireEvent.click(view.getByRole('button', { name: 'Dùng kết quả này' }))
   await settle()
-  assert.equal((view.getByLabelText('Ô soạn lời và hợp âm') as HTMLTextAreaElement).value, '[Am] Sáng nay [E7] mình đi')
+  assert.equal(lyricsOf(view), '[Am] Sáng nay [E7] mình đi')
   assert.equal((view.getByLabelText(/Tên bài/) as HTMLInputElement).value, 'Tình ca')
   assert.equal((view.getByLabelText(/Tác giả/) as HTMLInputElement).value, 'Hoàng Việt')
   assert.equal((view.getByLabelText(/BPM gợi ý/) as HTMLInputElement).value, '88')
@@ -944,7 +961,7 @@ test('extraction UI: file CHƯA LƯU → staged (draftId + sourceIndex + mime); 
 test('extraction UI: ô lời đang có nội dung → hỏi trước khi thay; Từ chối giữ nguyên; tên/tác giả đã nhập không bị đè', async () => {
   const view = await openNew(newLibrary(), fakeExtractor(() => ({ ok: true, document: extDoc('[Am] Lời máy đọc', { title: 'Tên máy', author: 'Máy' }) })).extractor)
   type(view.getByLabelText(/Tên bài/), 'Tên của thầy')
-  type(view.getByLabelText('Ô soạn lời và hợp âm'), '[C] Lời thầy đã gõ rất dài ở đây rồi đó')
+  setLyrics(view, '[C] Lời thầy đã gõ rất dài ở đây rồi đó')
   await pick(view, [pngFile('s.png')])
   fireEvent.click(view.getByRole('button', { name: 'Phân tích nội dung sheet (tham khảo): s.png' }))
   await settle(60)
@@ -952,11 +969,11 @@ test('extraction UI: ô lời đang có nội dung → hỏi trước khi thay; 
   fireEvent.click(view.getByRole('button', { name: 'Dùng kết quả này' }))
   await settle()
   assert.equal(confirmAsked, 1)
-  assert.equal((view.getByLabelText('Ô soạn lời và hợp âm') as HTMLTextAreaElement).value, '[C] Lời thầy đã gõ rất dài ở đây rồi đó', 'từ chối → giữ lời cũ')
+  assert.equal(lyricsOf(view), '[C] Lời thầy đã gõ rất dài ở đây rồi đó', 'từ chối → giữ lời cũ')
   confirmAnswer = true
   fireEvent.click(view.getByRole('button', { name: 'Dùng kết quả này' }))
   await settle()
-  assert.equal((view.getByLabelText('Ô soạn lời và hợp âm') as HTMLTextAreaElement).value, '[Am] Lời máy đọc')
+  assert.equal(lyricsOf(view), '[Am] Lời máy đọc')
   assert.equal((view.getByLabelText(/Tên bài/) as HTMLInputElement).value, 'Tên của thầy', 'tên đã có không bị đè')
   assert.equal((view.getByLabelText(/Tác giả/) as HTMLInputElement).value, 'Máy', 'ô tác giả trống → điền')
 })
@@ -972,7 +989,7 @@ test('extraction UI: lỗi → báo rõ, form không đổi; KHÔNG hợp âm �
   release({ ok: false, error: { code: 'source_missing', message: 'Không tìm thấy file nguồn trên kho — nạp lại file.' } })
   await settle()
   assert.match(view.getByRole('alert').textContent ?? '', /Phân tích không thành công\. s\.png: Không tìm thấy file nguồn/)
-  assert.equal((view.getByLabelText('Ô soạn lời và hợp âm') as HTMLTextAreaElement).value, '')
+  assert.equal(lyricsOf(view), '')
   fireEvent.click(view.getByRole('button', { name: 'Đóng' }))
   cleanup()
   const nochord = await openNew(newLibrary(), fakeExtractor(() => ({ ok: true, document: extDoc('Chỉ có lời thôi', { chords: 'NO_CHORDS_DETECTED', count: 0 }) })).extractor)
@@ -1010,7 +1027,7 @@ test('extraction UI: phiên bản ĐÃ LƯU → persisted (versionId + vị trí
   fireEvent.click(view.getByRole('button', { name: 'Dùng kết quả này' }))
   await settle()
   assert.equal(confirmAsked, 1, 'đang có lời → hỏi')
-  assert.equal((view.getByLabelText('Ô soạn lời và hợp âm') as HTMLTextAreaElement).value, '[G] Lời mới từ sheet')
+  assert.equal(lyricsOf(view), '[G] Lời mới từ sheet')
   const [item] = await library.searchChordSheets('tu soan phan tich')
   assert.equal(item.versionNumber ?? 1, 1, 'chưa lưu → vẫn phiên bản 1')
   assert.equal((view.getByRole('button', { name: 'Lưu' }) as HTMLButtonElement).disabled, false, 'form dirty → Lưu sáng; thầy tự bấm')
@@ -1029,11 +1046,10 @@ test('luồng chính: canonical trống → "Phân tích vạch nhịp" KHOÁ + 
   await settle()
   assert.equal(analyzeButton(v).disabled, true)
   assert.equal(analyzeButton(v).title, 'Cần dán lời + hợp âm trước.')
-  type(v.getByLabelText('Ô soạn lời và hợp âm'), '[C] Lời chuẩn thầy dán')
+  setLyrics(v, '[C] Lời chuẩn thầy dán')
   await settle()
   assert.equal(analyzeButton(v).disabled, true)
   assert.equal(analyzeButton(v).title, 'Lưu bài (kèm sheet) trước, rồi phân tích vạch nhịp.')
-  assert.match(v.container.textContent ?? '', /Dán lời và hợp âm chuẩn của bài hát/)
   assert.equal(fake.calls.length, 0, 'không gọi analyzer khi chưa đủ điều kiện')
 })
 
@@ -1047,14 +1063,14 @@ test('luồng chính: có lời chuẩn + sheet đã lưu → nút sáng, gọi 
   await settle()
   fireEvent.click(view.getByRole('button', { name: 'Mở bài Bài tự soạn phân tích' }))
   await settle(60)
-  const before = (view.getByLabelText('Ô soạn lời và hợp âm') as HTMLTextAreaElement).value
+  const before = lyricsOf(view)
   assert.equal(analyzeButton(view).disabled, false)
   fireEvent.click(analyzeButton(view))
   await settle(80)
   assert.equal(analyzer.calls.length, 1, 'gọi đúng measure analyzer (/analyze-measures)')
   assert.equal(analyzer.calls[0].text, AUTO_TEXT)
   assert.ok(view.getByRole('group', { name: 'Trình sửa vạch nhịp' }), 'kết quả đi vào AnchorEditor')
-  assert.equal((view.getByLabelText('Ô soạn lời và hợp âm') as HTMLTextAreaElement).value, before, 'lời chuẩn giữ nguyên')
+  assert.equal(lyricsOf(view), before, 'lời chuẩn giữ nguyên')
   assert.equal(extractor.targets.length, 0, 'không chạy content extraction thay thế')
   assert.doesNotMatch(view.container.textContent ?? '', /OCR-RAC|sai chinh ta/, 'chữ OCR không xuất hiện trong luồng chính')
   assert.equal(sheetText(view.getByLabelText('Bản hợp âm có số ô'))[0].includes('Sáng'), true, 'bản xem thử vẫn là lời chuẩn')
@@ -1148,10 +1164,10 @@ async function openNewWithText(text: string) {
   const view = await openList()
   fireEvent.click(view.getByRole('button', { name: '+ Thêm bài' }))
   await settle()
-  type(view.getByLabelText('Ô soạn lời và hợp âm'), text)
+  setLyrics(view, text)
   return view
 }
-const areaOf = (view: Awaited<ReturnType<typeof openNewWithText>>) => view.getByLabelText('Ô soạn lời và hợp âm') as HTMLTextAreaElement
+const areaOf = (view: Awaited<ReturnType<typeof openNewWithText>>) => ({ get value() { return lyricsOf(view) } })
 
 test('chạm chữ → chọn hợp âm đã có trong bài → chuỗi [Am] đổi đúng một chỗ, lời không đổi', async () => {
   const view = await openNewWithText('Chiều [Am] nao, tiễn nhau [E7] đi\n[C] Khi bóng ngả')
@@ -1200,26 +1216,63 @@ test('bài đã có vạch nhịp: Xem thử giữ bản có số ô; bật "Ch�
   assert.equal(preview.querySelector('.cl-word'), null)
 })
 
-test('bố cục một cột: bài mới mở sẵn ô dán lời; bài có sẵn thu gọn ô dán lời và mục Nâng cao; Nâng cao chứa nguồn sheet, vạch nhịp, phiên bản', async () => {
+test('bố cục một cột: thanh công cụ 3 nút; ô nhập mã chỉ có trong cửa sổ; Nâng cao chứa nguồn sheet, vạch nhịp, phiên bản', async () => {
   const view = await openList()
   fireEvent.click(view.getByRole('button', { name: 'Mở bài Bài thử 01' }))
   await settle()
-  const folds = [...view.container.querySelectorAll('details.cl-fold')] as HTMLDetailsElement[]
-  assert.equal(folds.length, 2)
-  const [paste, advanced] = folds
-  assert.match(paste.querySelector('summary')?.textContent ?? '', /Sửa lời \/ Dán bài hát/)
-  assert.equal(paste.open, false, 'bài có sẵn: ô dán lời thu gọn')
+  const bar = view.getByRole('toolbar', { name: 'Công cụ của bài' })
+  assert.deepEqual([...bar.querySelectorAll('button, label')].map(node => node.textContent?.trim()), ['Nạp lời & hợp âm', 'Nạp bản nhạc', 'Nâng cao'])
+  assert.equal(view.queryByLabelText('Ô soạn lời và hợp âm'), null, 'ô nhập mã không nằm sẵn trong trang')
+  const advanced = view.container.querySelector('details.cl-fold-advanced') as HTMLDetailsElement
   assert.equal(advanced.open, false)
-  assert.ok(paste.querySelector('textarea'), 'ô nhập mã nằm trong "Sửa lời / Dán bài hát"')
   for (const label of ['Nguồn sheet', 'Vạch nhịp']) assert.ok(advanced.querySelector(`section[aria-label="${label}"]`), label)
   assert.ok(advanced.querySelector('[role=group][aria-label="Trạng thái phiên bản"]'), 'phiên bản nằm trong Nâng cao')
-  assert.equal(view.container.querySelector('.cl-preview'), view.getByRole('region', { name: 'Xem thử' }), 'bản nhạc là vùng chính, ngoài các mục gập')
+  fireEvent.click(view.getByRole('button', { name: 'Nâng cao' }))
+  assert.equal(advanced.open, true, 'nút Nâng cao mở mục Nâng cao')
   fireEvent.click(view.container.querySelector('.cl-status-chip')!)
-  assert.equal((view.container.querySelectorAll('details.cl-fold')[1] as HTMLDetailsElement).open, true, 'bấm nhãn trạng thái mở Nâng cao')
-  // bài mới
-  fireEvent.click(view.getByRole('button', { name: '← Danh sách' }))
-  await settle()
-  fireEvent.click(view.getByRole('button', { name: '+ Thêm bài' }))
-  await settle()
-  assert.equal((view.container.querySelector('details.cl-fold') as HTMLDetailsElement).open, true, 'bài mới: mở sẵn ô dán lời')
+  assert.equal(advanced.open, true)
+})
+
+test('cửa sổ Nạp lời: Áp dụng đổi bản nhạc (chưa ghi DB); Hủy giữ nguyên; đóng khi đang sửa thì hỏi, từ chối thì giữ chữ đang soạn', async () => {
+  const view = await openNewWithText('[C] Lời gốc\n[G] Dòng hai')
+  const dbBefore = (await view.library.searchChordSheets('')).length
+  const open = () => fireEvent.click(view.getByRole('button', { name: 'Nạp lời & hợp âm' }))
+  const area = () => view.getByLabelText('Ô soạn lời và hợp âm') as HTMLTextAreaElement
+  // Hủy khi chưa sửa: đóng, không hỏi
+  open(); assert.equal(area().value, '[C] Lời gốc\n[G] Dòng hai')
+  fireEvent.click(view.getByRole('button', { name: 'Hủy' }))
+  assert.equal(view.queryByRole('dialog'), null); assert.equal(confirmAsked, 0)
+  // Sửa rồi Hủy, trả lời "không" → vẫn mở, giữ chữ đang soạn
+  open(); type(area(), '[Am] Lời mới hoàn toàn')
+  confirmAnswer = false
+  fireEvent.click(view.getByRole('button', { name: 'Hủy' }))
+  assert.equal(confirmAsked, 1); assert.ok(view.getByRole('dialog'), 'từ chối → cửa sổ vẫn mở'); assert.equal(area().value, '[Am] Lời mới hoàn toàn')
+  // Esc cũng hỏi
+  fireEvent.keyDown(document, { key: 'Escape' })
+  assert.equal(confirmAsked, 2); assert.ok(view.getByRole('dialog'))
+  // đồng ý bỏ → đóng, bản nhạc không đổi
+  confirmAnswer = true
+  fireEvent.click(view.getByRole('button', { name: 'Hủy' }))
+  assert.equal(view.queryByRole('dialog'), null)
+  assert.equal(lyricsOf(view), '[C] Lời gốc\n[G] Dòng hai', 'Hủy không đổi bản nhạc')
+  // Áp dụng → bản nhạc đổi; vẫn chưa ghi DB; chạm chữ sửa hợp âm sau khi nạp
+  setLyrics(view, '[Am] Khói thuốc đợi chờ\nAi về trong chiều')
+  assert.ok(view.getByRole('region', { name: 'Xem thử' }).textContent?.includes('Khói'))
+  assert.equal((await view.library.searchChordSheets('')).length, dbBefore, 'Áp dụng chưa ghi DB')
+  fireEvent.click(view.getByRole('button', { name: 'Thêm hợp âm cho chữ trong' }))
+  fireEvent.click([...view.container.querySelectorAll('.cl-picker .cl-chip')].find(node => node.textContent === 'G')!)
+  assert.equal(lyricsOf(view), '[Am] Khói thuốc đợi chờ\nAi về [G] trong chiều')
+})
+
+test('nạp bản nhạc từ thanh công cụ dùng lại đường tải PDF/ảnh hiện có và mở Nâng cao', async () => {
+  const view = await openNewWithText('[C] Có lời')
+  const input = view.getByLabelText('Nạp bản nhạc (PDF hoặc ảnh)') as HTMLInputElement
+  assert.equal(input.getAttribute('accept'), view.getByLabelText('Chọn file PDF hoặc ảnh sheet').getAttribute('accept'))
+  const file = new dom.window.File([new Uint8Array([37, 80, 68, 70, 45, 49, 46, 52, 10])], 'bai.pdf', { type: 'application/pdf' })
+  Object.defineProperty(input, 'files', { configurable: true, value: [file] })
+  fireEvent.change(input)
+  await settle(80)
+  const advanced = view.container.querySelector('details.cl-fold-advanced') as HTMLDetailsElement
+  assert.equal(advanced.open, true)
+  assert.match(view.getByRole('region', { name: 'Nguồn sheet' }).textContent ?? '', /bai\.pdf/)
 })

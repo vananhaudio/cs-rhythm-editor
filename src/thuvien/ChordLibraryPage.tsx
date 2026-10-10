@@ -13,6 +13,7 @@ import MeasureSheet from './MeasureSheet.tsx'
 import type { ChordAnchors } from './chordAnchors.ts'
 import AnchorEditor from './AnchorEditor.tsx'
 import ChordSheetEditor from './ChordSheetEditor.tsx'
+import ChordLyricsModal from './ChordLyricsModal.tsx'
 import type { MeasureAnalysisResult, MeasureAnalyzer } from './measureAnalysis.ts'
 import type { ContentExtractor, ExtractionTarget } from './contentExtractor.ts'
 import { applyProposal, buildProposal, hasSubstantialText } from './extractionProposal.ts'
@@ -185,8 +186,8 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
   const [sourceBusy, setSourceBusy] = useState(false)
   const [sourceError, setSourceError] = useState('')
   const [anchorEditing, setAnchorEditing] = useState(false)
-  // Bài mới: mở sẵn ô dán lời. Bài có sẵn: thu gọn, vùng làm việc chính là bản nhạc.
-  const [pasteOpen, setPasteOpen] = useState(!versionId)
+  // Cửa sổ "Nạp lời & hợp âm": soạn riêng, chỉ Áp dụng mới đổi bản nhạc (chưa ghi DB).
+  const [lyricsOpen, setLyricsOpen] = useState(false)
   const [advancedOpen, setAdvancedOpen] = useState(false)
   // Bài đã có vạch nhịp thì Xem thử hiện bản đánh số ô (chỉ đọc); bật chế độ này để chạm chữ sửa hợp âm.
   const [chordEdit, setChordEdit] = useState(false)
@@ -537,10 +538,23 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
           </div>
         </section>
 
+        <div className="cl-toolbar" role="toolbar" aria-label="Công cụ của bài">
+          <button type="button" className={hasText ? 'cl-secondary' : 'cl-primary'} onClick={() => setLyricsOpen(true)}>Nạp lời &amp; hợp âm</button>
+          <label className="cl-secondary cl-upload" data-disabled={sourceBusy || busy || plan.length >= MAX_SOURCE_FILES || library.mode === 'disabled'}>
+            {sourceBusy ? 'Đang nạp…' : 'Nạp bản nhạc'}
+            <input type="file" multiple accept={SOURCE_ACCEPT} aria-label="Nạp bản nhạc (PDF hoặc ảnh)"
+              disabled={sourceBusy || busy || plan.length >= MAX_SOURCE_FILES || library.mode === 'disabled'}
+              onChange={event => { const files = [...(event.target.files ?? [])]; event.target.value = ''; void addFiles(files).then(() => setAdvancedOpen(true)) }} />
+          </label>
+          <button type="button" className="cl-secondary" aria-expanded={advancedOpen} onClick={() => setAdvancedOpen(open => !open)}>Nâng cao</button>
+        </div>
+        {errors.text && <p className="cl-error">{errors.text}</p>}
         <section className="cl-card cl-preview" aria-label="Xem thử">
         <h2>Bản nhạc <span className="cl-h2-note">— chạm vào chữ để đặt hợp âm</span></h2>
         {hasText
           ? <>
+            {issues.length > 0 && <p className="cl-warn" role="note">Dòng {issues.join(', ')}: còn ngoặc vuông chưa thành hợp âm (thiếu ngoặc đóng, hoặc để trống).</p>}
+            {anchorsWillReset && <p className="cl-warn" role="note">Bài này đã có vạch nhịp theo lời cũ. Lưu lời mới thì vạch nhịp phải làm lại.</p>}
             {chords.length > 0 && <p className="cl-chordset">Hợp âm trong bài: {chords.map(chord => <span key={chord}>{chord}</span>)}</p>}
             {measureRows && !chordEdit
               ? <>
@@ -553,22 +567,8 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
                 <ChordSheetEditor text={form.text} onChange={text => set({ text })} />
               </>}
           </>
-          : <p className="cl-placeholder">Chưa có lời. Bấm “Sửa lời / Dán bài hát” bên dưới để dán lời và hợp âm.</p>}
+          : <p className="cl-placeholder">Chưa có lời. Bấm “Nạp lời & hợp âm” để dán lời và hợp âm.</p>}
         </section>
-        <details className="cl-fold" open={pasteOpen || !!errors.text} onToggle={event => setPasteOpen(event.currentTarget.open)}>
-          <summary>Sửa lời / Dán bài hát</summary>
-          <section className="cl-card cl-paste" aria-label="Lời và hợp âm">
-            <p className="cl-lead"><strong>Dán lời và hợp âm chuẩn của bài hát</strong> (từ Hợp Âm Việt hoặc nguồn tương đương). Đây là lời và hợp âm cuối cùng của bài — sheet chỉ dùng để xác định ô nhịp.</p>
-            <p className="cl-help">Đặt hợp âm trong ngoặc vuông, ngay trước chữ đổi hợp âm: <code>Chiều [Am] nao, tiễn nhau [E7] đi</code>. Mỗi câu một dòng. Nhãn như <code>1.</code> hay <code>ĐK:</code> viết ở đầu dòng.</p>
-            <textarea value={form.text} onChange={event => set({ text: event.target.value })} aria-label="Ô soạn lời và hợp âm" aria-invalid={!!errors.text}
-              spellCheck={false} rows={14} placeholder={'1. [C] Câu hát đầu [Am] tiên\n[F] Câu tiếp [G] theo'} />
-            {errors.text && <span className="cl-error">{errors.text}</span>}
-            {issues.length > 0 && <p className="cl-warn" role="note">Dòng {issues.join(', ')}: còn ngoặc vuông chưa thành hợp âm (thiếu ngoặc đóng, hoặc để trống).</p>}
-            {anchorsWillReset && <p className="cl-warn" role="note">Bài này đã có vạch nhịp theo lời cũ. Lưu lời mới thì vạch nhịp phải làm lại.</p>}
-          </section>
-
-        </details>
-
         <details className="cl-fold cl-fold-advanced" open={advancedOpen} onToggle={event => setAdvancedOpen(event.currentTarget.open)}>
           <summary>Nâng cao <span className="cl-h2-note">— file sheet, vạch nhịp, phiên bản</span></summary>
           {detail?.anchors && <p><button type="button" className="cl-secondary" disabled={busy || dirty} title={dirty ? 'Lưu thay đổi trước' : 'Chạy lời + hợp âm theo nhịp'} onClick={() => onRhythm(detail.versionId)}>▶ Rhythm Scroll</button></p>}
@@ -647,6 +647,8 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
         </details>
       </div>
     </div>
+    {lyricsOpen && <ChordLyricsModal initial={form.text} onClose={() => setLyricsOpen(false)}
+      onApply={text => { if (text !== form.text) set({ text }); setLyricsOpen(false) }} />}
   </div>
 }
 
