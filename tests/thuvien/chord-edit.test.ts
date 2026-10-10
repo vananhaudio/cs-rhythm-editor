@@ -1,7 +1,7 @@
 // Sửa hợp âm theo chữ hát — hàm thuần: vị trí đúng, lời + vạch nhịp bất biến, từ chối khi sẽ làm lệch chữ.
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { REST, appendRestToEmptyLine, chordLineCells, insertRest, normalizeChord, nudgeMeasure, remapAnchorsForInsert, remapAnchorsForRemove, removeRest, sameLyricStructure, setChordAtToken } from '../../src/thuvien/chordEdit.ts'
+import { REST, appendRestToEmptyLine, chordLineCells, insertRest, insertRestAtGap, placeChordOnRest, normalizeChord, nudgeMeasure, remapAnchorsForInsert, remapAnchorsForRemove, removeRest, sameLyricStructure, setChordAtToken } from '../../src/thuvien/chordEdit.ts'
 import { buildMeasureDisplay, lyricTokens, parseAnchors, renderAnchors } from '../../src/thuvien/chordAnchors.ts'
 import { buildChordTimeline } from '../../src/thuvien/chordTimeline.ts'
 import { canonicalChordText, listChords } from '../../src/thuvien/chordText.ts'
@@ -303,4 +303,26 @@ test('Rhythm Scroll: timeline nhận đủ hợp âm tại các vị trí nghỉ
     [['Am', 0, 0, 0], ['E7', 1, 0, 1], ['Dm', 2, 0, 2], ['Am', 4, 1, 0], ['Dm', 5, 1, 1], ['E7', 6, 1, 2], ['Am', 7, 1, 3]],
     'ô 1 có 4 token (Chiều, (-), một, mình) → hợp âm đổi ở phách 0/1/2; ô 2 bốn nghỉ → phách 4/5/6/7; ô 3 chỉ có (-) không hợp âm nên không sinh sự kiện mới')
   assert.equal(timeline.totalBeats, 12)
+})
+
+test('insertRestAtGap + placeChordOnRest: khe đầu / giữa / cuối dòng, dòng không lời, ra đúng dạng [E7](-) và không đổi chữ nào', () => {
+  const base = 'Chiều một mình qua phố'
+  const mid = insertRestAtGap(base, 0, 2)
+  assert.equal(mid.ok && mid.text, 'Chiều một (-) mình qua phố')
+  assert.equal(mid.ok && mid.at, 2)
+  const withChord = placeChordOnRest((mid as { text: string }).text, 0, 2, 'E7')
+  assert.equal(withChord.ok && withChord.text, 'Chiều một [E7](-) mình qua phố', 'đúng ví dụ của Owner')
+  assert.equal((insertRestAtGap(base, 0, 0) as { text: string }).text, '(-) Chiều một mình qua phố', 'khe đầu dòng')
+  assert.equal((insertRestAtGap(base, 0, 5) as { text: string }).text, 'Chiều một mình qua phố (-)', 'khe cuối dòng')
+  assert.equal((insertRestAtGap('[Am]Chiều (-) một', 0, 2) as { text: string }).text, '[Am]Chiều (-) (-) một', 'cạnh (-) có sẵn')
+  assert.equal((insertRestAtGap('Dạo:', 0, 0) as { text: string }).text, 'Dạo: (-)', 'dòng chỉ có nhãn')
+  assert.equal((insertRestAtGap('A\n\nB', 1, 0) as { text: string }).text, 'A\n(-)\nB', 'dòng trống')
+  // đã có hợp âm trên (-) → đổi tên, không thêm ngoặc
+  const again = placeChordOnRest('một [E7](-) mình', 0, 1, 'F')
+  assert.equal(again.ok && again.text, 'một [F](-) mình')
+  assert.equal(placeChordOnRest('một mình', 0, 0, 'F').ok, false, 'không phải (-)')
+  assert.equal(insertRestAtGap('[Am]', 0, 0).ok, false, 'dòng chỉ có hợp âm cuối dòng: không đoán')
+  // lời thật nguyên vẹn: bỏ (-) thì còn đúng dãy chữ cũ
+  const words = (t: string) => lyricTokens(t).tokens.map(x => x.word).filter(w => w !== REST)
+  assert.deepEqual(words('Chiều một [E7](-) mình qua phố'), words(base))
 })

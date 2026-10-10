@@ -329,3 +329,41 @@
 .tv-chords .cl-edit-row-empty .cl-line { align-items: center; gap: 8px; min-height: 36px; }
 .tv-chords .cl-sheet-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 0 12px; }
 .tv-chords .cl-sheet-tools .cl-help { margin: 0; }
+
+/* ── Bản nhạc DUY NHẤT để biên tập: khe giữa hai chữ + vạch nhịp ngay trong dòng ── */
+.tv-chords .cl-sheet-edit .cl-seg, .tv-chords .cl-sheet-edit .cl-seg[data-tight=true] { padding-right: 0; }
+.tv-chords .cl-sheet-edit .cl-line { align-items: stretch; row-gap: 6px; }
+.tv-chords .cl-cell { display: inline-flex; align-items: stretch; }
+.tv-chords .cl-slot { position: relative; flex: none; align-self: stretch; width: 12px; min-height: 52px; margin: 0; padding: 0; border: 0; border-radius: 4px; background: transparent; cursor: pointer; }
+.tv-chords .cl-slot[data-tight=true] { width: 6px; }
+.tv-chords .cl-slot::after { content: ''; position: absolute; left: 50%; top: 26%; bottom: 6%; width: 0; border-left: 2px dotted transparent; transform: translateX(-50%); }
+.tv-chords .cl-slot:hover::after, .tv-chords .cl-slot:focus-visible::after, .tv-chords .cl-slot[data-active=true]::after { border-left-color: #8fa793; }
+.tv-chords .cl-slot[data-bar=true] { width: 20px; }
+.tv-chords .cl-slot[data-bar=true]::after { top: 4%; bottom: 0; border-left: 2px solid #32664a; }
+.tv-chords .cl-slot[data-pickup=true]:not([data-bar=true])::after { border-left: 2px dashed #6b8f78; }
+.tv-chords .cl-slot-num { position: absolute; top: 0; left: calc(50% + 4px); color: #32664a; font-size: 11px; font-weight: 700; line-height: 1; pointer-events: none; }
+.tv-chords .cl-slot-empty { width: auto; min-width: 48px; min-height: 40px; padding: 0 12px; border: 1px dashed #b9c4b7; color: #526456; font-size: 16px; }
+.tv-chords .cl-slot-empty::after { display: none; }
+.tv-chords .cl-slot:focus-visible { outline: 2px solid #32664a; outline-offset: 1px; }
+.tv-chords .cl-sheet-note { margin: 0 0 10px; color: #7a5a14; font-size: 13px; }
+.tv-chords .cl-picker-sub { margin: 4px 0 0; font-size: 13px; font-weight: 700; color: #26352d; }
+.tv-chords .cl-picker-bars { display: grid; gap: 8px; }
+.tv-chords .cl-picker-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.tv-chords .cl-picker-side label { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; min-height: 36px; }
+@media (pointer: coarse), (max-width: 640px) {
+  .tv-chords .cl-slot { width: 18px; min-height: 56px; }
+  .tv-chords .cl-slot[data-tight=true] { width: 10px; }
+  .tv-chords .cl-slot[data-bar=true] { width: 26px; }
+}
+
+/* Giảm nhiễu: chữ hát là chữ thường (không viền/gạch chân); chỉ hover/chọn mới nổi lên. Khe + vạch mới là vùng tương tác. */
+.tv-chords .cl-sheet-edit .cl-word { border-bottom: 0; border-radius: 6px; padding: 0 2px; }
+.tv-chords .cl-sheet-edit .cl-word[data-has-chord=true] { border-bottom: 0; }
+.tv-chords .cl-sheet-edit .cl-word:hover { background: #eef1eb; }
+.tv-chords .cl-sheet-edit .cl-word[data-active=true] { background: #dfeadf; }
+.tv-chords .cl-slot-empty { min-height: 28px; min-width: 40px; border: 0; background: transparent; color: #9aa89d; }
+.tv-chords .cl-slot-empty:hover, .tv-chords .cl-slot-empty[data-active=true] { background: #eef1eb; color: #26352d; }
+
+.tv-chords .cl-sheet-edit .cl-orphan { margin-left: 8px; }
+.tv-chords .cl-slot-num { top: -1px; font-size: 12px; background: #fff; padding: 0 2px; border-radius: 3px; }
+.tv-chords .cl-sheet-note { margin: 10px 0 0; }

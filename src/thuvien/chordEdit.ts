@@ -294,3 +294,41 @@ export function nudgeMeasure(measures: MeasureAnchor[], index: number, delta: -1
   }
   return measures.map((entry, at) => (at === index ? { line, token } : entry))
 }
+
+// ── Chèn hợp âm KHÔNG LỜI tại một KHE (một thao tác: khe → hợp âm → tự sinh "(-)") ───────────────
+/**
+ * Khe `gap` của dòng `line` (0 = đầu dòng, k = trước chữ thứ k, số chữ = cuối dòng). Chèn một "(-)" đúng khe đó.
+ * `at` trả về = vị trí token của "(-)" vừa tạo. Dòng chưa có chữ nào (trống / chỉ có nhãn) → "(-)" là token đầu.
+ * Khe nằm sau chữ cuối + hợp âm cuối dòng (không chữ) thì "(-)" đứng ngay TRƯỚC hợp âm cuối dòng đó (không đổi hợp âm ấy).
+ */
+export function insertRestAtGap(text: string, line: number, gap: number): RestEdit {
+  const lines = canonicalChordText(text).split('\n')
+  if (!Number.isInteger(line) || line < 0 || line >= lines.length) return { ok: false, reason: 'Không tìm thấy dòng này.' }
+  const real = scan(lines[line]).cells.length
+  if (!Number.isInteger(gap) || gap < 0) return { ok: false, reason: 'Khe không hợp lệ.' }
+  if (real === 0) {
+    if (lyricTokens(lines[line]).tokens.length > 0) return { ok: false, reason: 'Dòng chỉ có hợp âm cuối dòng, chưa có chữ — hãy sửa trong ô văn bản.' }
+    return appendRestToEmptyLine(text, line)
+  }
+  return gap < real ? insertRest(text, line, gap, 'before') : insertRest(text, line, real - 1, 'after')
+}
+
+/**
+ * Đặt hợp âm lên một "(-)" chưa có hợp âm theo dạng liền "[E7](-)" (đúng cách viết của bản chuẩn).
+ * Nếu "(-)" đã có hợp âm thì đổi tên như `setChordAtToken`.
+ */
+export function placeChordOnRest(text: string, line: number, token: number, chord: string): SetChordResult {
+  const name = normalizeChord(chord)
+  if (name === null) return { ok: false, reason: 'Tên hợp âm không hợp lệ (tối đa 16 ký tự, không có khoảng trắng đầu, không chứa [ ]).' }
+  const lines = canonicalChordText(text).split('\n')
+  if (!Number.isInteger(line) || line < 0 || line >= lines.length) return { ok: false, reason: 'Không tìm thấy dòng này.' }
+  const source = lines[line]
+  const target = scan(source).cells.find(cell => cell.token === token)
+  if (!target || !isRest(target.word)) return { ok: false, reason: 'Chữ này không phải vị trí nghỉ.' }
+  if (target.marker) return setChordAtToken(text, line, token, name)
+  const next = splice(source, target.start, target.start, `[${name}]`)
+  if (!sameWords(lyricTokens(source), lyricTokens(next))) return { ok: false, reason: 'Không đặt được hợp âm ở đây mà không làm đổi cách tách chữ.' }
+  const out = [...lines]
+  out[line] = next
+  return { ok: true, text: out.join('\n'), changed: true }
+}
