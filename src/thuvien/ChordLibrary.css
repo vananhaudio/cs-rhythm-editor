@@ -269,3 +269,55 @@
   .tv-chords .cl-editor-head .cl-toolbar .cl-secondary, .tv-chords .cl-editor-head .cl-toolbar .cl-primary {
     justify-content: center; min-width: 0; padding: 6px 4px; font-size: 13px; line-height: 1.2; text-align: center; white-space: normal; }
 }
+
+/* ── Website THƯ VIỆN ÂM NHẠC: Header điều hướng thống nhất (ThuVienHeader) ── */
+.tv-site { max-width: 980px; margin: 0 auto 20px; padding: 10px 14px; border: 1px solid #d8dfd6; border-radius: 12px; background: #fff; position: relative; z-index: 3; }
+.tv-site-top { display: flex; align-items: center; gap: 12px; }
+.tv-site-name { margin-right: auto; color: #26352d; font-size: 18px; font-weight: 800; letter-spacing: .02em; text-decoration: none; }
+.tv-site-account { min-width: 0; max-width: 46%; font-size: 14px; }
+.tv-site-account a { display: block; overflow: hidden; color: #32664a; text-overflow: ellipsis; white-space: nowrap; }
+.tv-site-burger { display: none; min-height: 44px; padding: 6px 14px; border: 1px solid #ccd5ca; border-radius: 9px; background: #fff; color: #26352d; font-weight: 600; }
+.tv-site-nav { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.tv-site-link { min-height: 40px; padding: 6px 12px; border: 1px solid transparent; border-radius: 9px; background: transparent; color: #526456; font-size: 14px; font-weight: 600; cursor: pointer; }
+.tv-site-link:hover { background: #f1f4ee; }
+.tv-site-link[aria-current=page] { border-color: #b9d6c2; background: #eaf3ec; color: #1f4a33; cursor: default; }
+.tv-site-more { position: relative; }
+.tv-site-top .tv-site-more { margin-left: 0; }
+.tv-site-pop { position: absolute; top: calc(100% + 4px); right: 0; z-index: 5; display: grid; min-width: 160px; padding: 6px; border: 1px solid #d8dfd6; border-radius: 10px; background: #fff; box-shadow: 0 8px 24px rgba(30, 45, 35, .16); }
+.tv-site-pop a { padding: 10px 12px; border-radius: 8px; color: #26352d; font-size: 14px; text-decoration: none; }
+.tv-site-pop a:hover { background: #f1f4ee; }
+.tv-site :is(a, button):focus-visible { outline: 2px solid #32664a; outline-offset: 2px; }
+@media (max-width: 760px) {
+  .tv-site-burger { display: inline-flex; align-items: center; }
+  .tv-site-name { font-size: 16px; }
+  .tv-site-nav { display: none; flex-direction: column; align-items: stretch; }
+  .tv-site[data-menu=true] .tv-site-nav { display: flex; }
+  .tv-site-link { width: 100%; text-align: left; min-height: 44px; }
+  .tv-site-more { position: static; }
+  .tv-site-pop { position: static; box-shadow: none; margin-top: 4px; }
+}
+
+/* ── Trang XEM hợp âm (chỉ đọc) + hai nút Xem / Sửa trong danh sách ── */
+.tv-chords .cl-item-buttons { display: flex; gap: 8px; }
+.tv-chords .cl-open-edit { background: #fff; }
+.tv-chords .cl-view-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 16px; margin-bottom: 16px; }
+.tv-chords .cl-view-title h1 { margin: 0; font-size: 24px; overflow-wrap: anywhere; }
+.tv-chords .cl-view-title p { margin: 2px 0 0; color: #526456; }
+.tv-chords .cl-view-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.tv-chords .cl-view .cl-card { margin-bottom: 16px; }
+.tv-chords .cl-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px 20px; margin: 0; padding: 0; list-style: none; }
+.tv-chords .cl-facts li { display: grid; gap: 2px; }
+.tv-chords .cl-facts span { color: #526456; font-size: 13px; }
+@media (max-width: 640px) {
+  .tv-chords .cl-view-head { grid-template-columns: 1fr auto; }
+  .tv-chords .cl-view-head .cl-back { grid-column: 1; justify-self: start; }
+  .tv-chords .cl-view-title { grid-column: 1 / -1; order: 3; }
+  .tv-chords .cl-view-actions { grid-column: 2; grid-row: 1; }
+}
+@media (max-width: 760px) {
+  /* Điện thoại: hàng 1 = tên + Menu; hàng 2 = Nâng cao + tài khoản; 4 mục điều hướng mở bằng Menu. */
+  .tv-site-top { flex-wrap: wrap; row-gap: 6px; }
+  .tv-site-name { flex: 1 1 auto; }
+  .tv-site-top .tv-site-more { order: 3; }
+  .tv-site-account { order: 4; flex: 1 1 0; max-width: none; text-align: right; }
+}

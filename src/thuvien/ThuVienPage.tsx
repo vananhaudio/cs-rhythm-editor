@@ -3,14 +3,15 @@ import type { ChangeEvent, ReactNode } from 'react'
 import { importMusicXml, listLibrary, matchesQuery, prepareMusicXml } from './masterLibrary.ts'
 import type { LibraryItem } from './masterLibrary.ts'
 import { scoreIdFromSearch } from './viewScore.ts'
-import { sectionFromSearch, sectionUrl } from './sections.ts'
+import { NEW_CHORD_SHEET, sectionFromSearch, sectionUrl, uploadFromSearch, uploadUrl } from './sections.ts'
 import type { ThuVienSection } from './sections.ts'
 import type { ChordLibrary } from './chordLibrary.ts'
 import { productionMeasureAnalyzer } from './measureAnalysis.ts'
 import type { MeasureAnalyzer } from './measureAnalysis.ts'
 import { createContentExtractor, extractorUrlsFrom } from './contentExtractor.ts'
 import type { ContentExtractor } from './contentExtractor.ts'
-import ThuVienTabs from './ThuVienTabs.tsx'
+import ThuVienHeader, { activeHeaderItem } from './ThuVienHeader.tsx'
+import type { HeaderAccount, HeaderItem } from './ThuVienHeader.tsx'
 import './ThuVienPage.css'
 import './ChordLibrary.css'
 
@@ -42,24 +43,49 @@ const PRODUCTION_EXTRACTOR = extractorUrls && import.meta.env.VITE_CHORD_LIBRARY
   })
   : undefined
 
+/** Tên hiển thị của người đang đăng nhập — dùng chính phiên Supabase hiện có, không có hệ đăng nhập riêng. */
+function useAccount(): HeaderAccount {
+  const [account, setAccount] = useState<HeaderAccount>({ state: 'loading' })
+  useEffect(() => {
+    let active = true
+    import('../supabase.ts').then(({ supabase }) => supabase.auth.getSession())
+      .then(({ data }) => {
+        if (!active) return
+        const user = data.session?.user
+        setAccount(user ? { state: 'in', label: user.email ?? 'Tài khoản' } : { state: 'out' })
+      })
+      .catch(() => { if (active) setAccount({ state: 'out' }) })
+    return () => { active = false }
+  }, [])
+  return account
+}
+
 export default function ThuVienPage({ chordLibrary, measureAnalyzer = PRODUCTION_ANALYZER, contentExtractor = PRODUCTION_EXTRACTOR }: { chordLibrary?: ChordLibrary; measureAnalyzer?: MeasureAnalyzer; contentExtractor?: ContentExtractor } = {}) {
-  const [section, setSection] = useState<ThuVienSection>(() => sectionFromSearch(window.location.search))
+  const [search, setSearch] = useState(() => window.location.search)
+  const account = useAccount()
+  const section = sectionFromSearch(search)
 
   useEffect(() => {
-    const sync = () => setSection(sectionFromSearch(window.location.search))
+    const sync = () => setSearch(window.location.search)
     window.addEventListener('popstate', sync)
     return () => window.removeEventListener('popstate', sync)
   }, [])
 
-  function change(next: ThuVienSection) {
-    window.history.pushState(null, '', sectionUrl(window.location.href, next))
-    setSection(next)
+  /** Header điều hướng bằng địa chỉ; báo `popstate` để trang đích (đang mở sẵn) đọc lại địa chỉ. */
+  function navigate(item: HeaderItem) {
+    const href = window.location.href
+    const target = item === 'chords' ? sectionUrl(href, 'chords')
+      : item === 'new-chords' ? sectionUrl(href, 'chords', NEW_CHORD_SHEET)
+      : item === 'upload-musicxml' ? uploadUrl(href)
+      : sectionUrl(href, 'musicxml')
+    window.history.pushState(null, '', target)
+    window.dispatchEvent(new PopStateEvent('popstate'))
     window.scrollTo(0, 0)
   }
 
-  const tabs = <ThuVienTabs section={section} onChange={change} />
+  const tabs = <ThuVienHeader active={activeHeaderItem(search)} onNavigate={navigate} account={account} />
   if (section === 'chords') {
-    return <Suspense fallback={<main className="tv-chords"><p className="cl-empty">Đang mở Hợp âm chuẩn hóa…</p></main>}><ChordLibraryPage tabs={tabs} library={chordLibrary} analyzer={measureAnalyzer} extractor={contentExtractor} /></Suspense>
+    return <Suspense fallback={<main className="tv-chords">{tabs}<p className="cl-empty">Đang mở Hợp âm chuẩn hóa…</p></main>}><ChordLibraryPage tabs={tabs} library={chordLibrary} analyzer={measureAnalyzer} extractor={contentExtractor} /></Suspense>
   }
   return <MusicXmlLibrary tabs={tabs} />
 }
@@ -70,6 +96,8 @@ function MusicXmlLibrary({ tabs }: { tabs: ReactNode }) {
   const [listError, setListError] = useState('')
   const [reload, setReload] = useState(0)
   const [openId, setOpenId] = useState<string | null>(() => scoreIdFromSearch(window.location.search))
+  // `?nap=nhac`: trang nạp bản nhạc mới — cùng luồng tải MusicXML, chỉ là một trang riêng (Header → "Nạp bản nhạc mới").
+  const [upload, setUpload] = useState(() => uploadFromSearch(window.location.search))
   const [query, setQuery] = useState('')
   const [prepared, setPrepared] = useState<Prepared | null>(null)
   const [title, setTitle] = useState('')
@@ -91,7 +119,7 @@ function MusicXmlLibrary({ tabs }: { tabs: ReactNode }) {
 
   // Nút Back của trình duyệt đóng/mở bản nhạc theo `?bai=`.
   useEffect(() => {
-    const sync = () => setOpenId(scoreIdFromSearch(window.location.search))
+    const sync = () => { setOpenId(scoreIdFromSearch(window.location.search)); setUpload(uploadFromSearch(window.location.search)) }
     window.addEventListener('popstate', sync)
     return () => window.removeEventListener('popstate', sync)
   }, [])
@@ -154,6 +182,39 @@ function MusicXmlLibrary({ tabs }: { tabs: ReactNode }) {
     </main>
   }
 
+  const preparedForm = (
+      prepared && <section className="mb-6 rounded-xl border border-[#ccd5ca] bg-white p-5" aria-label="Thông tin bản nhạc">
+        <h2 className="mb-4 text-lg font-semibold">Thông tin bản nhạc</h2>
+        <p className="mb-4 text-sm text-[#526456]">{prepared.filename}</p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="font-medium">Tên bài<input value={title} onChange={event => setTitle(event.target.value)} className="mt-1 block w-full rounded-lg border border-[#ccd5ca] px-3 py-2" /></label>
+          <label className="font-medium">Tác giả<input value={composer} onChange={event => setComposer(event.target.value)} className="mt-1 block w-full rounded-lg border border-[#ccd5ca] px-3 py-2" /></label>
+        </div>
+        <div className="mt-5 flex gap-3">
+          <button type="button" onClick={() => void save()} disabled={busy || !title.trim()} className="rounded-lg bg-[#32664a] px-5 py-2 font-semibold text-white disabled:opacity-50">Thêm vào thư viện</button>
+          <button type="button" onClick={() => setPrepared(null)} disabled={busy} className="rounded-lg px-4 py-2">Hủy</button>
+        </div>
+      </section>
+  )
+
+  if (upload) {
+    return <main className="thu-vien min-h-screen bg-[#f7f5ef] px-4 py-8 text-[#26352d] sm:px-8">
+      {tabs}
+      <div className="mx-auto max-w-4xl">
+        <div className="mb-7 flex items-center justify-between gap-4">
+          <h1 className="text-2xl font-bold sm:text-3xl">NẠP BẢN NHẠC MỚI</h1>
+        </div>
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row">
+          <button type="button" onClick={() => fileInput.current?.click()} disabled={busy}
+            className="rounded-lg bg-[#32664a] px-5 py-3 font-semibold text-white disabled:opacity-50">Chọn file MusicXML</button>
+          <input ref={fileInput} type="file" accept=".musicxml,.xml" onChange={event => void chooseFile(event)} className="sr-only" aria-label="Chọn file MusicXML" />
+        </div>
+        {message && <p role="status" className="mb-5 rounded-lg bg-white p-3">{message}</p>}
+        {preparedForm}
+      </div>
+    </main>
+  }
+
   const shown = items.filter(item => matchesQuery(item, query))
   return <main className="thu-vien min-h-screen bg-[#f7f5ef] px-4 py-8 text-[#26352d] sm:px-8">
     {tabs}
@@ -170,18 +231,7 @@ function MusicXmlLibrary({ tabs }: { tabs: ReactNode }) {
           className="min-w-0 flex-1 rounded-lg border border-[#ccd5ca] bg-white px-4 py-3" />
       </div>
       {message && <p role="status" className="mb-5 rounded-lg bg-white p-3">{message}</p>}
-      {prepared && <section className="mb-6 rounded-xl border border-[#ccd5ca] bg-white p-5" aria-label="Thông tin bản nhạc">
-        <h2 className="mb-4 text-lg font-semibold">Thông tin bản nhạc</h2>
-        <p className="mb-4 text-sm text-[#526456]">{prepared.filename}</p>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="font-medium">Tên bài<input value={title} onChange={event => setTitle(event.target.value)} className="mt-1 block w-full rounded-lg border border-[#ccd5ca] px-3 py-2" /></label>
-          <label className="font-medium">Tác giả<input value={composer} onChange={event => setComposer(event.target.value)} className="mt-1 block w-full rounded-lg border border-[#ccd5ca] px-3 py-2" /></label>
-        </div>
-        <div className="mt-5 flex gap-3">
-          <button type="button" onClick={() => void save()} disabled={busy || !title.trim()} className="rounded-lg bg-[#32664a] px-5 py-2 font-semibold text-white disabled:opacity-50">Thêm vào thư viện</button>
-          <button type="button" onClick={() => setPrepared(null)} disabled={busy} className="rounded-lg px-4 py-2">Hủy</button>
-        </div>
-      </section>}
+      {preparedForm}
       <div className="overflow-hidden rounded-xl border border-[#d8dfd6] bg-white">
         <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-3 bg-[#e9eee7] px-4 py-3 text-sm font-semibold sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_8rem]"><span>Tên bài</span><span>Tác giả</span><span className="hidden sm:block">Ngày thêm</span></div>
         {listState === 'ready' && shown.map(item => <button type="button" key={item.id} className="tv-row" onClick={() => openScore(item.id)} aria-label={`Mở bản nhạc ${item.title}`}>

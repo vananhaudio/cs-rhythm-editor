@@ -4,7 +4,7 @@ import { DISABLED_MESSAGE, getChordLibrary } from './chordLibrary.ts'
 import type { ChordLibrary, ChordSheetDetail, ChordSheetSummary } from './chordLibrary.ts'
 import { BPM_RANGE, METER_CHOICES, canonicalChordText, chordTextIssues, formatMeter, listChords, parseBpm, parseChordText, parseMeter, validateChordDraft } from './chordText.ts'
 import type { ChordDraft, ChordDraftErrors } from './chordText.ts'
-import { NEW_CHORD_SHEET, chordSheetFromSearch, rhythmFromSearch, rhythmUrl, sectionUrl } from './sections.ts'
+import { NEW_CHORD_SHEET, chordSheetFromSearch, chordViewFromSearch, chordViewUrl, rhythmFromSearch, rhythmUrl, sectionUrl } from './sections.ts'
 import { MAX_SOURCE_FILES, SOURCE_ACCEPT, formatBytes, nextFreeIndex, parseSourcePath, sha256Hex, sourceErrorMessage, sourceFileProblem, sourceKindLabel, sourceMimeOf, sourcePath } from './chordSources.ts'
 import type { ChordSource } from './chordSources.ts'
 import { ANCHORS_STATUS_LABEL, buildMeasureDisplay, uncoveredLines } from './chordAnchors.ts'
@@ -14,6 +14,7 @@ import type { ChordAnchors } from './chordAnchors.ts'
 import AnchorEditor from './AnchorEditor.tsx'
 import ChordSheetEditor from './ChordSheetEditor.tsx'
 import ChordLyricsModal from './ChordLyricsModal.tsx'
+import ChordSheetView from './ChordSheetView.tsx'
 import type { MeasureAnalysisResult, MeasureAnalyzer } from './measureAnalysis.ts'
 import type { ContentExtractor, ExtractionTarget } from './contentExtractor.ts'
 import { applyProposal, buildProposal, hasSubstantialText } from './extractionProposal.ts'
@@ -26,19 +27,24 @@ const RhythmScrollPage = lazy(() => import('./RhythmScrollPage.tsx'))
 // Mọi đọc/ghi đi qua `library` (src/thuvien/chordLibrary.ts); component không biết Supabase.
 // CSS: ./ChordLibrary.css, nạp ở ThuVienPage.
 
-type Props = { tabs?: ReactNode; library?: ChordLibrary; analyzer?: MeasureAnalyzer; extractor?: ContentExtractor; readSource?: SourceReader }
+type Props = { tabs?: ReactNode; canEdit?: boolean; library?: ChordLibrary; analyzer?: MeasureAnalyzer; extractor?: ContentExtractor; readSource?: SourceReader }
 /** Đọc byte một file nguồn để đưa cho analyzer (mặc định: link xem có hạn → fetch). */
 type SourceReader = (library: ChordLibrary, path: string) => Promise<Blob>
 const readViaViewUrl: SourceReader = async (library, path) => (await fetch(await library.sources.viewUrl(path))).blob()
 
-export default function ChordLibraryPage({ tabs, library = getChordLibrary(), analyzer, extractor, readSource = readViaViewUrl }: Props) {
+export default function ChordLibraryPage({ tabs, canEdit = true, library = getChordLibrary(), analyzer, extractor, readSource = readViaViewUrl }: Props) {
   const [open, setOpen] = useState<string | null>(() => chordSheetFromSearch(window.location.search))
   const [rhythm, setRhythm] = useState(() => rhythmFromSearch(window.location.search))
+  // Trang XEM chỉ-đọc (`?xem=`); khác với `open` = trình sửa (`?hopam=`).
+  const [view, setView] = useState<string | null>(() => chordViewFromSearch(window.location.search))
   const [notice, setNotice] = useState('')
 
-  // Nút Back của trình duyệt đóng/mở bài theo `?hopam=`.
+  // Nút Back của trình duyệt đóng/mở bài theo `?hopam=` / `?xem=`; Header của website cũng điều hướng bằng đường này.
   useEffect(() => {
-    const sync = () => { setOpen(chordSheetFromSearch(window.location.search)); setRhythm(rhythmFromSearch(window.location.search)) }
+    const sync = () => {
+      setOpen(chordSheetFromSearch(window.location.search)); setRhythm(rhythmFromSearch(window.location.search))
+      setView(chordViewFromSearch(window.location.search))
+    }
     window.addEventListener('popstate', sync)
     return () => window.removeEventListener('popstate', sync)
   }, [])
@@ -47,6 +53,15 @@ export default function ChordLibraryPage({ tabs, library = getChordLibrary(), an
     window.history.pushState({ thuvienChord: true }, '', sectionUrl(window.location.href, 'chords', target))
     setOpen(target)
     setRhythm(false)
+    setView(null)
+    window.scrollTo(0, 0)
+  }
+
+  function goView(versionId: string) {
+    window.history.pushState({ thuvienChord: true }, '', chordViewUrl(window.location.href, versionId))
+    setOpen(null)
+    setRhythm(false)
+    setView(versionId)
     window.scrollTo(0, 0)
   }
 
@@ -70,14 +85,23 @@ export default function ChordLibraryPage({ tabs, library = getChordLibrary(), an
     </Suspense>
   }
 
+  if (view && !open) {
+    return <main className="tv-chords">
+      {tabs}
+      <ChordSheetView key={view} library={library} versionId={view} canEdit={canEdit}
+        onBack={() => go(null)} onEdit={id => go(id)} onOpenVersion={id => goView(id)} onRhythm={id => goRhythm(id, true)} />
+    </main>
+  }
+
   return <main className="tv-chords">
+    {tabs}
     {open
       ? <ChordEditor key={open} library={library} analyzer={analyzer} extractor={extractor} readSource={readSource} versionId={open === NEW_CHORD_SHEET ? null : open}
           onOpenVersion={id => go(id)} onRhythm={id => goRhythm(id, true)}
           onClose={message => { setNotice(message ?? ''); go(null) }}
           // Lưu xong chỉ đổi địa chỉ (để tải lại trang vẫn mở đúng bài) — KHÔNG dựng lại editor, kẻo mất thông báo "Đã lưu".
           onSaved={detail => window.history.replaceState(window.history.state, '', sectionUrl(window.location.href, 'chords', detail.versionId))} />
-      : <ChordList tabs={tabs} library={library} notice={notice} onOpen={id => { setNotice(''); go(id) }} />}
+      : <ChordList library={library} notice={notice} onView={id => { setNotice(''); goView(id) }} onEdit={id => { setNotice(''); go(id) }} canEdit={canEdit} />}
   </main>
 }
 
@@ -93,7 +117,7 @@ const Status = ({ label, on, yes = 'Có', no = 'Chưa có' }: { label: string; o
   <span className="cl-status" data-on={on}><span className="cl-status-label">{label}</span><span className="cl-status-value">{on ? `✓ ${yes}` : `— ${no}`}</span></span>
 
 // ── Danh sách ───────────────────────────────────────────────────────────────────────────────
-function ChordList({ tabs, library, notice, onOpen }: { tabs?: ReactNode; library: ChordLibrary; notice: string; onOpen: (id: string) => void }) {
+function ChordList({ library, notice, onView, onEdit, canEdit }: { library: ChordLibrary; notice: string; onView: (id: string) => void; onEdit: (id: string) => void; canEdit: boolean }) {
   const [query, setQuery] = useState('')
   const [items, setItems] = useState<ChordSheetSummary[]>([])
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading')
@@ -115,7 +139,6 @@ function ChordList({ tabs, library, notice, onOpen }: { tabs?: ReactNode; librar
   }, [library, query, reload])
 
   return <>
-    {tabs}
     <div className="cl-wrap">
       <header className="cl-head">
         <h1>HỢP ÂM CHUẨN HÓA</h1>
@@ -123,7 +146,7 @@ function ChordList({ tabs, library, notice, onOpen }: { tabs?: ReactNode; librar
       </header>
       <MockBanner library={library} onReset={() => { library.resetMock?.(); setQuery(''); setState('loading'); setReload(n => n + 1) }} />
       <div className="cl-actions">
-        <button type="button" className="cl-primary" onClick={() => onOpen(NEW_CHORD_SHEET)}>+ Thêm bài</button>
+        {canEdit && <button type="button" className="cl-primary" onClick={() => onEdit(NEW_CHORD_SHEET)}>+ Thêm bài</button>}
         <input type="search" value={query} onChange={event => setQuery(event.target.value)}
           placeholder="Tìm tên bài hoặc tác giả..." aria-label="Tìm tên bài hoặc tác giả" />
       </div>
@@ -138,7 +161,10 @@ function ChordList({ tabs, library, notice, onOpen }: { tabs?: ReactNode; librar
             <Status label="Hợp âm" on />
             <Status label="Vạch nhịp" on={item.hasAnchors} yes="Đã có" />
           </div>
-          <button type="button" className="cl-open" onClick={() => onOpen(item.versionId)} aria-label={`Mở bài ${item.title}`}>Mở</button>
+          <div className="cl-item-buttons">
+            <button type="button" className="cl-open" onClick={() => onView(item.versionId)} aria-label={`Xem bài ${item.title}`}>Xem</button>
+            {canEdit && <button type="button" className="cl-open cl-open-edit" onClick={() => onEdit(item.versionId)} aria-label={`Sửa bài ${item.title}`}>Sửa</button>}
+          </div>
         </li>)}
         {state === 'loading' && <li className="cl-empty" aria-live="polite">Đang tải danh sách…</li>}
         {state === 'error' && <li className="cl-empty" role="alert">{error} <button type="button" className="cl-link" onClick={() => { setState('loading'); setReload(n => n + 1) }}>Thử lại</button></li>}
