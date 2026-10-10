@@ -1,7 +1,7 @@
 // ── Universal OG — Registry: URL → adapter đầu tiên khớp → ShareMeta ──
 // URL → Registry → Resource Adapter → ShareMeta → Renderer (render.ts) → không có / private / lỗi → thẻ mặc định Class.
 // Thêm loại resource mới = thêm MỘT adapter vào ADAPTERS + phân loại route ở routes.ts. Không khai từng URL.
-import type { Adapter, Ctx } from './adapter.ts'
+import { loadMemo, type Adapter, type Ctx } from './adapter.ts'
 import type { ShareMeta } from './contract.ts'
 import { bandAdapter } from './adapters/band.ts'
 import { classAdapter, sessionAdapter } from './adapters/classPages.ts'
@@ -41,7 +41,7 @@ export async function resolveShare(url: URL, ctx: Ctx): Promise<Resolution> {
   for (const a of ADAPTERS) {
     const key = a.match(path, url.searchParams)
     if (key === null) continue
-    const meta = await a.load(key, ctx)
+    const meta = await loadMemo(a, key, ctx)
     if (!meta) {
       if (a.fallthrough) continue
       return { type: a.type, meta: null, canonicalUrl: pageUrl, note: `${a.type}:not_found` }

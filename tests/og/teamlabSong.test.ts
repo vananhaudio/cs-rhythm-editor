@@ -1,11 +1,11 @@
-// TeamLab Public Song — adapter + cổng crawler + edge function og-teamlab (chỉ /teamlab/song/*). DB/fetch giả đúng dạng RPC thật.
+// TeamLab Public Song — adapter + edge function og-teamlab (chỉ /teamlab/song/*). DB/fetch giả đúng dạng RPC thật.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync, readdirSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { resolveShare } from '../../netlify/og/registry.ts'
 import { renderShareMeta } from '../../netlify/og/render.ts'
-import { isSocialCrawler } from '../../netlify/og/crawler.ts'
 import ogTeamlab from '../../netlify/edge-functions/og-teamlab.ts'
+import { resetShareMemo } from '../../netlify/og/adapter.ts'
 import { INDEX, mockCtx, ORIGIN, tag, title, type Db } from './fixtures.ts'
 
 const SHELL = readFileSync(new URL('./fixtures-html/teamlab-shell.html', import.meta.url), 'utf8')   // HTML production của TeamLab (/teamlab/song/* trả shell này)
@@ -87,29 +87,11 @@ test('RPC chỉ nhận p_slug; lỗi DB → throw (edge fail closed, không meta
   await assert.rejects(resolveShare(new URL(`${ORIGIN}/teamlab/song/${SLUG}`), mockCtx(published, { fail: true })))
 })
 
-test('crawler matcher: nhận crawler mạng xã hội; trình duyệt thường / UA lạ / rỗng / quá dài → KHÔNG', () => {
-  const yes = [
-    'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)', 'facebookexternalhit/1.1;line-poker/1.0',
-    'Facebot', 'Twitterbot/1.0', 'LinkedInBot/1.0 (compatible; Mozilla/5.0; Apache-HttpClient +http://www.linkedin.com)',
-    'TelegramBot (like TwitterBot)', 'WhatsApp/2.23.20.0 A', 'Slackbot-LinkExpanding 1.0 (+https://api.slack.com/robots)',
-    'Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)', 'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Zalo/23.1',
-  ]
-  const no = [
-    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
-    'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1',
-    'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36',
-    'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)', 'curl/8.7.1', 'Mozilla/5.0 something-unknown', 'face', '',
-    'x'.repeat(600) + ' facebookexternalhit',
-  ]
-  for (const ua of yes) assert.equal(isSocialCrawler(ua), true, ua)
-  for (const ua of no) assert.equal(isSocialCrawler(ua), false, ua.slice(0, 60))
-  assert.equal(isSocialCrawler(null), false); assert.equal(isSocialCrawler(undefined), false)
-})
-
 // ── edge function og-teamlab: fetch giả (không mạng) ──
 const FB = 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)'
 const CHROME = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
 async function edge(ua: string | null, slug = SLUG, opts: { method?: string; rpc?: () => unknown; fail?: boolean } = {}) {
+  resetShareMemo()
   const calls: string[] = []
   const realFetch = globalThis.fetch
   globalThis.fetch = (async (input: RequestInfo | URL) => {
@@ -126,15 +108,15 @@ async function edge(ua: string | null, slug = SLUG, opts: { method?: string; rpc
   } finally { globalThis.fetch = realFetch }
 }
 
-test('edge: người dùng bình thường / UA lạ / không UA → context.next() NGUYÊN VẸN, không đọc body, không gọi RPC', async () => {
-  for (const ua of [CHROME, 'Mozilla/5.0 something-unknown', '', null]) {
+test('edge: KHÔNG phụ thuộc User-Agent — người thường / crawler bất kỳ / UA lạ / không UA đều nhận cùng OG, đúng một RPC', async () => {
+  for (const ua of [CHROME, FB, 'Mozilla/5.0 something-unknown', 'Viber', 'Mozilla/5.0 (compatible; Applebot/0.1)', 'Skype', 'Line/12', '', null]) {
     const e = await edge(ua)
-    assert.equal(e.res, e.upstream, 'trả đúng response proxy, không bọc lại'); assert.equal(e.nextCalls, 1); assert.deepEqual(e.calls, [])
-    assert.equal(e.upstream.bodyUsed, false); assert.equal(e.res.headers.get('x-og-fn'), null)
+    assert.equal(e.nextCalls, 1, String(ua)); assert.equal(e.calls.length, 1, String(ua)); assert.equal(e.res.headers.get('x-og-fn'), 'teamlab-song:public', String(ua))
+    assert.equal(title(e.html), 'Mùa thu cho em · Lá Mùa Thu 1', String(ua)); assert.equal(tag(e.html, 'og:url'), `${ORIGIN}/teamlab/song/${SLUG}`, String(ua))
   }
 })
 
-test('edge: crawler → gọi RPC một lần (chỉ p_slug) và nhận HTML có OG đúng; header x-og-fn', async () => {
+test('edge: gọi RPC một lần (chỉ p_slug) và nhận HTML có OG đúng; header x-og-fn', async () => {
   const e = await edge(FB)
   assert.equal(e.nextCalls, 1); assert.equal(e.calls.length, 1); assert.match(e.calls[0], /\/rest\/v1\/rpc\/teamlab_public_song$/)
   assert.equal(e.res.headers.get('x-og-fn'), 'teamlab-song:public')
@@ -142,7 +124,7 @@ test('edge: crawler → gọi RPC một lần (chỉ p_slug) và nhận HTML có
   assert.equal(tag(e.html, 'og:url'), `${ORIGIN}/teamlab/song/${SLUG}`); assert.match(e.html, /<script type="module"/)   // SPA giữ nguyên
 })
 
-test('edge: crawler + slug sai / đã gỡ → thẻ TeamLab mặc định; RPC lỗi → fail closed; POST bỏ qua', async () => {
+test('edge: slug sai / đã gỡ → thẻ TeamLab mặc định; RPC lỗi → fail closed; POST bỏ qua', async () => {
   const w = await edge(FB, 'sai-slug-abcde')
   assert.equal(w.res.headers.get('x-og-fn'), 'teamlab-song:not_found'); assert.equal(title(w.html), title(SHELL)); assert.doesNotMatch(w.html, /Mùa thu/)
   const f = await edge(FB, SLUG, { fail: true })
@@ -160,6 +142,7 @@ test('cấu hình: og-teamlab CHỈ /teamlab/song/* + /teamlab/band/*; og.ts v�
   assert.ok(excluded.includes('/teamlab') && excluded.includes('/teamlab/*')); assert.ok(!excluded.some(e => e.startsWith('/teamlab/song') || e.startsWith('/teamlab/band')))
   assert.match(og, /path: '\/\*'/)
   assert.deepEqual(readdirSync(new URL('../../netlify/edge-functions/', import.meta.url)).sort(), ['og-teamlab.ts', 'og.ts'])
-  // Cổng crawler đứng TRƯỚC mọi xử lý: người thường đi thẳng context.next()
-  assert.ok(t.indexOf('isSocialCrawler(') < t.indexOf('ogHandler(req'))
+  // Không còn cổng User-Agent: mọi request đi thẳng qua Universal OG (og.ts)
+  assert.doesNotMatch(t.replace(/^\s*\/\/.*$/gm, ''), /user-agent|isSocialCrawler|crawler/i)   // chỉ kiểm code, không kiểm comment
+  assert.equal(existsSync(new URL('../../netlify/og/crawler.ts', import.meta.url)), false)
 })

@@ -20,6 +20,7 @@ export const teamPreviewImage = (coverPath: unknown, avatarPath: unknown, origin
 
 export const teamlabBandAdapter = defineAdapter<string>({
   type: 'teamlab-band',
+  cacheTtlMs: 60_000,   // mọi lượt xem trang TeamLab qua OG: nhớ 60 s để không thêm RPC vào mỗi lượt tải
   match(path) {
     if (!path.startsWith('/teamlab/band/')) return null
     const [slug, ...rest] = path.slice('/teamlab/band/'.length).split('/')

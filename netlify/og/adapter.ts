@@ -25,6 +25,30 @@ export type Adapter<K = unknown> = {
    * dùng cho adapter dò theo dữ liệu (tool: mọi path một đoạn đều "có thể" là tool).
    */
   fallthrough?: boolean
+  /**
+   * Ghi nhớ kết quả load() theo (loại, origin, khoá) trong ms này — chỉ adapter opt-in (3 adapter TeamLab, nơi mọi lượt xem trang
+   * đều qua OG). Chỉ nhớ meta 'public' hoặc null (không có resource); lỗi (throw) và private KHÔNG bao giờ được nhớ.
+   */
+  cacheTtlMs?: number
+}
+
+const MEMO_MAX = 200
+const memo = new Map<string, { at: number; meta: ShareMeta | null }>()
+export const resetShareMemo = () => memo.clear()
+
+/** Cache tối thiểu trong bộ nhớ isolate (cùng kiểu với chỉ mục tool): TTL + trần số mục, mục cũ nhất bị loại trước. */
+export async function loadMemo(a: Adapter, key: unknown, ctx: Ctx): Promise<ShareMeta | null> {
+  if (!a.cacheTtlMs) return a.load(key, ctx)
+  const id = `${a.type}|${ctx.origin}|${JSON.stringify(key)}`
+  const hit = memo.get(id)
+  if (hit && ctx.now() - hit.at < a.cacheTtlMs) return hit.meta
+  const meta = await a.load(key, ctx)          // lỗi → throw, không ghi gì
+  if (meta === null || meta.visibility === 'public') {
+    memo.delete(id)
+    memo.set(id, { at: ctx.now(), meta })
+    while (memo.size > MEMO_MAX) memo.delete(memo.keys().next().value as string)
+  }
+  return meta
 }
 
 export const defineAdapter = <K>(a: Adapter<K>): Adapter<unknown> => a as Adapter<unknown>
