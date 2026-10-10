@@ -12,6 +12,7 @@ import UncoveredNotice from './UncoveredNotice.tsx'
 import MeasureSheet from './MeasureSheet.tsx'
 import type { ChordAnchors } from './chordAnchors.ts'
 import AnchorEditor from './AnchorEditor.tsx'
+import ChordSheetEditor from './ChordSheetEditor.tsx'
 import type { MeasureAnalysisResult, MeasureAnalyzer } from './measureAnalysis.ts'
 import type { ContentExtractor, ExtractionTarget } from './contentExtractor.ts'
 import { applyProposal, buildProposal, hasSubstantialText } from './extractionProposal.ts'
@@ -184,6 +185,8 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
   const [sourceBusy, setSourceBusy] = useState(false)
   const [sourceError, setSourceError] = useState('')
   const [anchorEditing, setAnchorEditing] = useState(false)
+  // Bài đã có vạch nhịp thì Xem thử hiện bản đánh số ô (chỉ đọc); bật chế độ này để chạm chữ sửa hợp âm.
+  const [chordEdit, setChordEdit] = useState(false)
   const [liveAnchors, setLiveAnchors] = useState<ChordAnchors | null>(null)
   // Phân tích tự động (5B): analyzer chỉ có ở dev/trang thử. Đề xuất nạp VÀO trình sửa 5A — không tự lưu, không tự duyệt.
   const [analyzerReady, setAnalyzerReady] = useState(false)
@@ -615,12 +618,16 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
         {hasText
           ? <>
             {chords.length > 0 && <p className="cl-chordset">Hợp âm trong bài: {chords.map(chord => <span key={chord}>{chord}</span>)}</p>}
-            {measureRows ? <MeasureSheet rows={measureRows} label="Bản hợp âm có số ô" /> : <div className="cl-sheet">
-              {lines.map((line, index) => line.length
-                ? <p key={index} className="cl-line" data-chords={line.some(segment => segment.chord !== null)}>{line.map((segment, at) =>
-                    <span key={at} className="cl-seg"><span className="cl-chord">{segment.chord ?? '\u00a0'}</span><span className="cl-lyric">{segment.text || '\u00a0'}</span></span>)}</p>
-                : <p key={index} className="cl-line cl-line-gap" aria-hidden="true" />)}
-            </div>}
+            {measureRows && !chordEdit
+              ? <>
+                <button type="button" className="cl-secondary" onClick={() => setChordEdit(true)}>✎ Chỉnh hợp âm trên bản nhạc</button>
+                <MeasureSheet rows={measureRows} label="Bản hợp âm có số ô" />
+              </>
+              : <>
+                {measureRows && <button type="button" className="cl-secondary" onClick={() => setChordEdit(false)}>Xong — xem bản có số ô</button>}
+                {detail?.hasAnchors && <p className="cl-warn" role="note">Lưu thay đổi sẽ tạo bản nháp mới; vạch nhịp của bài phải đặt lại sau khi lưu.</p>}
+                <ChordSheetEditor text={form.text} onChange={text => set({ text })} />
+              </>}
           </>
           : <p className="cl-placeholder">Nhập lời + hợp âm để xem thử.</p>}
       </section>

@@ -106,8 +106,9 @@ test('xem thử: hợp âm nằm trên chữ; cảnh báo ngoặc hỏng', async
   const preview = view.getByRole('region', { name: 'Xem thử' })
   assert.match(preview.textContent ?? '', /Nhập lời \+ hợp âm để xem thử/)
   type(view.getByLabelText('Ô soạn lời và hợp âm'), 'Chiều [Am] nao, tiễn nhau [E7] đi\nĐK: chỉ lời\nlỡ [G quên')
-  const segments = [...preview.querySelectorAll('.cl-line')[0].querySelectorAll('.cl-seg')].map(node => [node.querySelector('.cl-chord')?.textContent, node.querySelector('.cl-lyric')?.textContent])
-  assert.deepEqual(segments, [['\u00a0', 'Chiều '], ['Am', 'nao, tiễn nhau '], ['E7', 'đi']])
+  // Mỗi chữ hát là một ô chạm được; hợp âm nằm ngay trên chữ nó thuộc về.
+  const segments = [...preview.querySelectorAll('.cl-line')[0].querySelectorAll('.cl-seg')].map(node => [node.querySelector('.cl-chord')?.textContent, node.querySelector('.cl-word')?.textContent])
+  assert.deepEqual(segments, [['\u00a0', 'Chiều'], ['Am', 'nao,'], ['\u00a0', 'tiễn'], ['\u00a0', 'nhau'], ['E7', 'đi']])
   assert.equal(preview.querySelectorAll('.cl-line')[1].getAttribute('data-chords'), 'false')
   assert.match(preview.querySelector('.cl-chordset')?.textContent ?? '', /AmE7$/)
   assert.match(view.getByRole('region', { name: 'Lời và hợp âm' }).textContent ?? '', /Dòng 3: còn ngoặc vuông/)
@@ -1140,4 +1141,48 @@ test('đề xuất của máy chỉ phủ lời 1 → trình sửa cảnh báo n
   cleanup()
   const full = await open([...VERSE_1_ONLY, ...VERSE_2])
   assert.equal(full.container.querySelector('.cl-uncovered'), null)
+})
+
+// ── Chạm chữ để chỉnh hợp âm (Slice 1) ──────────────────────────────────────────────────────────
+async function openNewWithText(text: string) {
+  const view = await openList()
+  fireEvent.click(view.getByRole('button', { name: '+ Thêm bài' }))
+  await settle()
+  type(view.getByLabelText('Ô soạn lời và hợp âm'), text)
+  return view
+}
+const areaOf = (view: Awaited<ReturnType<typeof openNewWithText>>) => view.getByLabelText('Ô soạn lời và hợp âm') as HTMLTextAreaElement
+
+test('chạm chữ → chọn hợp âm đã có trong bài → chuỗi [Am] đổi đúng một chỗ, lời không đổi', async () => {
+  const view = await openNewWithText('Chiều [Am] nao, tiễn nhau [E7] đi\n[C] Khi bóng ngả')
+  fireEvent.click(view.getByRole('button', { name: 'Thêm hợp âm cho chữ nhau' }))
+  const picker = view.getByRole('group', { name: 'Chọn hợp âm cho chữ nhau' })
+  fireEvent.click([...picker.querySelectorAll('.cl-chip')].find(node => node.textContent === 'E7')!)
+  assert.equal(areaOf(view).value, 'Chiều [Am] nao, tiễn [E7] nhau [E7] đi\n[C] Khi bóng ngả')
+  assert.equal(view.queryByRole('group', { name: /Chọn hợp âm/ }), null, 'chọn xong thì đóng bảng')
+})
+
+test('chạm chữ → nhập hợp âm khác; hợp âm sai báo lỗi tại chỗ, không đổi văn bản', async () => {
+  const view = await openNewWithText('Chiều [Am] nao')
+  fireEvent.click(view.getByRole('button', { name: 'Đổi hợp âm Am trên chữ nao' }))
+  const picker = view.getByRole('group', { name: 'Chọn hợp âm cho chữ nao' })
+  const input = picker.querySelector('input')!
+  type(input, 'A[m')
+  fireEvent.submit(input.closest('form')!)
+  assert.match(picker.textContent ?? '', /Nhập tên hợp âm/)
+  assert.equal(areaOf(view).value, 'Chiều [Am] nao')
+  type(input, 'F#m7')
+  fireEvent.submit(input.closest('form')!)
+  assert.equal(areaOf(view).value, 'Chiều [F#m7] nao')
+})
+
+test('chạm chữ → xoá hợp âm; xoá làm dính chữ (ti[Am]ễn) thì từ chối và giữ nguyên văn bản', async () => {
+  const view = await openNewWithText('Chiều [Am] nao\nti[G]ễn nhau')
+  fireEvent.click(view.getByRole('button', { name: 'Đổi hợp âm Am trên chữ nao' }))
+  fireEvent.click(view.getByRole('button', { name: 'Xoá hợp âm Am' }))
+  assert.equal(areaOf(view).value, 'Chiều nao\nti[G]ễn nhau')
+  fireEvent.click(view.getByRole('button', { name: 'Đổi hợp âm G trên chữ ễn' }))
+  fireEvent.click(view.getByRole('button', { name: 'Xoá hợp âm G' }))
+  assert.match(view.getByRole('group', { name: 'Chọn hợp âm cho chữ ễn' }).textContent ?? '', /đổi cách tách chữ/)
+  assert.equal(areaOf(view).value, 'Chiều nao\nti[G]ễn nhau')
 })
