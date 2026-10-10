@@ -14,6 +14,7 @@ import type { ChordAnchors } from './chordAnchors.ts'
 import AnchorEditor from './AnchorEditor.tsx'
 import ChordSheetEditor from './ChordSheetEditor.tsx'
 import ChordLyricsModal from './ChordLyricsModal.tsx'
+import ChordLineEditor from './ChordLineEditor.tsx'
 import ChordSheetView from './ChordSheetView.tsx'
 import { MoreMenu } from '../class-social/ui'
 import { remapAnchorsForInsert, remapAnchorsForRemove, sameLyricStructure } from './chordEdit.ts'
@@ -226,6 +227,7 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
   const [anchorEditing, setAnchorEditing] = useState(false)
   // Cửa sổ "Nạp lời & hợp âm": soạn riêng, chỉ Áp dụng mới đổi bản nhạc (chưa ghi DB).
   const [lyricsOpen, setLyricsOpen] = useState(false)
+  const [linesOpen, setLinesOpen] = useState(false)
   const [advancedOpen, setAdvancedOpen] = useState(false)
   // "Nạp hợp âm mới" = một luồng: dán lời → (tuỳ chọn) ảnh/PDF → biên tập. Bài đã có mở thẳng bước biên tập.
   const [step, setStep] = useState<'paste' | 'media' | 'edit'>(versionId ? 'edit' : 'paste')
@@ -663,6 +665,7 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
           <div className="cl-sheet-head">
             <h2>Bản nhạc <span className="cl-h2-note">— chạm chữ hoặc khe giữa hai chữ</span></h2>
             <MoreMenu className="cl-sheet-more" label="Thao tác khác của bài" items={[
+              { label: 'Chỉnh sửa lời bài hát', onSelect: () => setLinesOpen(true) },
               { label: 'Dán lại lời & hợp âm', onSelect: () => setLyricsOpen(true) },
               { label: 'Thêm ảnh/PDF tham khảo', onSelect: () => { if (!uploadLocked) fileInput.current?.click() } },
               { label: 'Phân tích vạch nhịp, phiên bản…', onSelect: () => setAdvancedOpen(true) },
@@ -760,6 +763,17 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
         </details>
       </div>
     </div>
+    {linesOpen && <ChordLineEditor text={form.text} bars={bars} onClose={() => setLinesOpen(false)}
+      onApply={(nextText, nextBars, notes) => {
+        // Chỉnh lời theo dòng đã tự ánh xạ vạch (lineEdit.ts): đặt thẳng cặp (lời, vạch) — không đi qua changeText (vốn bỏ vạch khi cấu trúc chữ đổi).
+        if (nextText !== form.text || JSON.stringify(nextBars) !== JSON.stringify(bars)) {
+          setBars(nextBars)
+          setLayoutNote(notes.join(' '))
+          setAnchorEditing(false)
+          set({ text: nextText })
+        }
+        setLinesOpen(false)
+      }} />}
     {lyricsOpen && <ChordLyricsModal initial={form.text} onClose={() => setLyricsOpen(false)}
       onApply={text => { if (text !== form.text) changeText(text); setLyricsOpen(false) }} />}
   </div>

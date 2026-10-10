@@ -369,3 +369,22 @@
 @media (max-width: 480px) {
   .tv-chords .cl-paste-step { padding: 14px; }
 }
+
+/* Chỉnh sửa lời bài hát — danh sách dòng */
+.cl-le-modal { width: min(860px, 100%); }
+.cl-le-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.cl-le-row { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 6px 10px; padding: 6px 8px; border: 1px solid #e6ebe4; border-radius: 10px; }
+.cl-le-row.is-picked { background: #f1f6ee; border-color: #9fb89a; }
+.cl-le-pick { display: inline-flex; align-items: center; gap: 6px; }
+.cl-le-no { min-width: 1.6em; text-align: right; color: #5b6b58; font-weight: 600; }
+.cl-le-text { width: 100%; min-width: 0; box-sizing: border-box; font: 15px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.cl-le-meta { grid-column: 3; font-size: 12px; color: #5b6b58; white-space: nowrap; }
+.cl-le-actions { grid-column: 1 / -1; display: flex; gap: 8px; justify-content: flex-end; }
+.cl-le-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 14px 0 6px; padding: 10px; border: 1px dashed #c9d6c6; border-radius: 10px; }
+.cl-le-tools .cl-help { flex: 1 1 100%; margin: 0; }
+.cl-warn ul { margin: 4px 0 0; padding-left: 18px; }
+@media (min-width: 720px) {
+  .cl-le-row { grid-template-columns: auto 1fr auto auto; }
+  .cl-le-meta { grid-column: auto; }
+  .cl-le-actions { grid-column: auto; }
+}

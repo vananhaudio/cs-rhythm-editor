@@ -21,7 +21,7 @@ dom.window.confirm = () => { confirmAsked += 1; return confirmAnswer }
 let network = 0
 globalThis.fetch = (() => { network += 1; return Promise.reject(new Error('không được gọi mạng')) }) as typeof fetch
 
-const { render, act, cleanup, fireEvent } = await import('@testing-library/react')
+const { render, act, cleanup, fireEvent, within } = await import('@testing-library/react')
 const { default: ChordLibraryPage } = await import('../../src/thuvien/ChordLibraryPage')
 const { default: ThuVienShell } = await import('../../src/thuvien/ThuVienShell')
 const { createDisabledChordLibrary, createMockChordLibrary, createRpcChordLibrary, MOCK_STORAGE_KEY } = await import('../../src/thuvien/chordLibrary')
@@ -1269,7 +1269,7 @@ test('bài đã có: không thanh công cụ / không "Thiết lập bài hát";
   for (const gone of ['Nạp lời & hợp âm', 'Nạp ảnh/PDF tham khảo', 'Thiết lập bài hát', 'Nạp bản nhạc']) assert.equal(view.queryByRole('button', { name: gone }), null, gone)
   assert.equal(view.queryByLabelText('Ô soạn lời và hợp âm'), null, 'ô nhập mã không nằm sẵn trong trang')
   fireEvent.click(view.getByRole('button', { name: 'Thao tác khác của bài' }))
-  assert.deepEqual(view.getAllByRole('menuitem').map(node => node.textContent), ['Dán lại lời & hợp âm', 'Thêm ảnh/PDF tham khảo', 'Phân tích vạch nhịp, phiên bản…'])
+  assert.deepEqual(view.getAllByRole('menuitem').map(node => node.textContent), ['Chỉnh sửa lời bài hát', 'Dán lại lời & hợp âm', 'Thêm ảnh/PDF tham khảo', 'Phân tích vạch nhịp, phiên bản…'])
   fireEvent.click(view.getByRole('menuitem', { name: 'Phân tích vạch nhịp, phiên bản…' }))
   const advanced = view.container.querySelector('details.cl-fold-advanced') as HTMLDetailsElement
   assert.equal(advanced.open, true, 'mở phần kỹ thuật theo yêu cầu')
@@ -1629,4 +1629,108 @@ test('Lưu thất bại (thiếu quyền vạch / RPC lỗi): KHÔNG báo thành
   fail = false
   tap(view, 'Lưu'); await settle(60)
   assert.equal((await savedVersion(view, 'bai loi luu')).anchors?.measures.length, 1)
+})
+
+// ── Chỉnh sửa lời bài hát theo dòng (sao chép đoạn hát lại trước Coda) ───────────────────────────
+const RECAP_TEXT = '1. [Am] Chiều nao tiền nhau [E7] đi\n[Dm] Mùa thu về bên [G] em\nĐK: [C] Hát lên cùng nhau\n[F] Rồi ta [G] hát lại\nCoda: [Am] Hết rồi'
+const RECAP_BARS = [{ line: 0, token: 0 }, { line: 0, token: 3 }, { line: 1, token: 0 }, { line: 1, token: 3 }, { line: 2, token: 0 }, { line: 2, token: 2 }, { line: 3, token: 0 }, { line: 3, token: 2 }, { line: 4, token: 0 }]
+async function recapSong(library = createMockChordLibrary({ storage: memoryStorage() })) {
+  let created = await library.createChordSheet({ title: 'Bài hồi tấu', composer: '', meter: { beats: 4, beatType: 4 }, suggestedBpm: 80, text: RECAP_TEXT }, { versionId: library.newVersionId(), sources: [] })
+  created = await library.acceptAnchors(created.versionId, { measures: RECAP_BARS })
+  await library.approveChordSheetVersion(created.versionId)
+  goto('?muc=hopam')
+  const view = render(<ChordLibraryPage library={library} />)
+  await settle()
+  fireEvent.click(view.getByRole('button', { name: 'Sửa bài Bài hồi tấu' }))
+  await settle(60)
+  return { view, library }
+}
+const openLineEditor = (view: ReturnType<typeof render>) => {
+  fireEvent.click(view.getByRole('button', { name: 'Thao tác khác của bài' }))
+  fireEvent.click(view.getByRole('menuitem', { name: 'Chỉnh sửa lời bài hát' }))
+  return view.getByRole('dialog', { name: 'Chỉnh sửa lời bài hát' })
+}
+const savedDetail = async (library: Awaited<ReturnType<typeof recapSong>>['library']) => {
+  const id = new URLSearchParams(dom.window.location.search).get('hopam') as string
+  return library.getChordSheet(id)
+}
+
+test('chỉnh lời: chép 2 dòng "hát lại" vào trước Coda → Áp dụng chưa ghi gì; MỘT lần Lưu = MỘT phiên bản có lời + hợp âm + vạch nhân đôi; tải lại còn nguyên', async () => {
+  const { view, library } = await recapSong()
+  const before = await savedDetail(library)
+  const dialog = openLineEditor(view)
+  fireEvent.click(within(dialog).getByRole('checkbox', { name: 'Chọn dòng 3' }))
+  fireEvent.click(within(dialog).getByRole('checkbox', { name: 'Chọn dòng 4' }))
+  fireEvent.change(within(dialog).getByLabelText('Vị trí chèn bản sao'), { target: { value: '4' } })
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Chép đoạn đã chọn' }))
+  const lines = [...dialog.querySelectorAll<HTMLInputElement>('.cl-le-text')].map(input => input.value)
+  assert.equal(lines.length, 7)
+  assert.deepEqual(lines.slice(4, 6), lines.slice(2, 4), 'bản sao giữ lời + hợp âm')
+  assert.equal(lines[6], 'Coda: [Am] Hết rồi')
+  assert.equal(within(dialog).queryByRole('status'), null, 'ranh giới trùng vạch → không cảnh báo')
+  // Hủy/chưa áp dụng thì bản nhạc chưa đổi
+  assert.equal((await savedDetail(library)).versionId, before.versionId)
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Áp dụng' }))
+  await settle()
+  assert.equal(view.queryByRole('dialog', { name: 'Chỉnh sửa lời bài hát' }), null)
+  assert.equal((await savedDetail(library)).versionId, before.versionId, 'Áp dụng chưa ghi DB')
+  fireEvent.click(view.getByRole('button', { name: 'Lưu' }))
+  await settle(80)
+  const after = await savedDetail(library)
+  assert.equal(after.versionNumber, before.versionNumber + 1, 'đúng MỘT phiên bản mới')
+  assert.equal(after.text.split('\n').length, 7)
+  assert.deepEqual(after.anchors?.measures, [...RECAP_BARS.slice(0, 8), { line: 4, token: 0 }, { line: 4, token: 2 }, { line: 5, token: 0 }, { line: 5, token: 2 }, { line: 6, token: 0 }])
+  // tải lại: mở đúng phiên bản vừa lưu → đủ dữ liệu
+  cleanup()
+  const reread = await savedDetail(library)
+  assert.equal(reread.text, after.text)
+})
+
+test('chỉnh lời: sửa chữ giữ số chữ → vạch nguyên; thêm dòng → vạch sau dời; xoá dòng có vạch → hỏi xác nhận nêu số vạch; từ chối thì không xoá', async () => {
+  const { view, library } = await recapSong()
+  const dialog = openLineEditor(view)
+  const input = within(dialog).getByLabelText('Lời dòng 2') as HTMLInputElement
+  fireEvent.change(input, { target: { value: '[Dm] Mùa đông về bên [G] anh' } })
+  fireEvent.blur(input)
+  assert.equal((within(dialog).getByLabelText('Lời dòng 2') as HTMLInputElement).value, '[Dm] Mùa đông về bên [G] anh')
+  assert.match(within(dialog).getByLabelText('Lời dòng 2').closest('li')?.textContent ?? '', /5 chữ · 2 vạch/)
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Thêm dòng trống sau dòng 2' }))
+  assert.equal(dialog.querySelectorAll('.cl-le-row').length, 6)
+  // xoá dòng 1 (2 vạch) — từ chối
+  const asked: string[] = []
+  const original = dom.window.confirm
+  dom.window.confirm = ((message?: string) => { asked.push(String(message)); return false }) as typeof dom.window.confirm
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Xoá dòng 1' }))
+  assert.match(asked[0], /2 vạch nhịp.*sẽ bị xoá/)
+  assert.equal(dialog.querySelectorAll('.cl-le-row').length, 6, 'từ chối → giữ nguyên')
+  dom.window.confirm = original
+  // Áp dụng + Lưu
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Áp dụng' }))
+  await settle()
+  fireEvent.click(view.getByRole('button', { name: 'Lưu' }))
+  await settle(80)
+  const saved = await savedDetail(library)
+  assert.deepEqual(saved.anchors?.measures, [...RECAP_BARS.slice(0, 4), ...RECAP_BARS.slice(4).map(bar => ({ line: bar.line + 1, token: bar.token }))])
+  assert.ok(saved.text.includes('Mùa đông về bên [G] anh'))
+})
+
+test('chỉnh lời: ô nhịp bắt qua ranh giới đoạn chép → cảnh báo nêu số ô, vẫn giữ toàn bộ vạch', async () => {
+  const library = createMockChordLibrary({ storage: memoryStorage() })
+  let created = await library.createChordSheet({ title: 'Bài hồi tấu', composer: '', meter: { beats: 4, beatType: 4 }, suggestedBpm: 80, text: RECAP_TEXT }, { versionId: library.newVersionId(), sources: [] })
+  created = await library.acceptAnchors(created.versionId, { measures: [{ line: 0, token: 0 }, { line: 0, token: 3 }, { line: 1, token: 3 }, { line: 2, token: 0 }] })
+  await library.approveChordSheetVersion(created.versionId)
+  goto('?muc=hopam')
+  const view = render(<ChordLibraryPage library={library} />)
+  await settle()
+  fireEvent.click(view.getByRole('button', { name: 'Sửa bài Bài hồi tấu' }))
+  await settle(60)
+  const dialog = openLineEditor(view)
+  fireEvent.click(within(dialog).getByRole('checkbox', { name: 'Chọn dòng 1' }))
+  fireEvent.change(within(dialog).getByLabelText('Vị trí chèn bản sao'), { target: { value: '4' } })
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Chép đoạn đã chọn' }))
+  const warn = within(dialog).getByRole('status')
+  assert.match(warn.textContent ?? '', /kéo dài sang dòng sau đoạn gốc/)
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Áp dụng' }))
+  await settle()
+  assert.match(view.container.querySelector('.cl-warn[role="note"]')?.textContent ?? '', /kéo dài sang dòng sau đoạn gốc/, 'cảnh báo còn hiện sau khi áp dụng')
 })
