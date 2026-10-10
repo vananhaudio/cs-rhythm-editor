@@ -1186,3 +1186,16 @@ test('chạm chữ → xoá hợp âm; xoá làm dính chữ (ti[Am]ễn) thì t
   assert.match(view.getByRole('group', { name: 'Chọn hợp âm cho chữ ễn' }).textContent ?? '', /đổi cách tách chữ/)
   assert.equal(areaOf(view).value, 'Chiều nao\nti[G]ễn nhau')
 })
+
+test('bài đã có vạch nhịp: Xem thử giữ bản có số ô; bật "Chỉnh hợp âm" mới chạm chữ được, kèm lưu ý vạch nhịp', async () => {
+  const view = await openList()
+  fireEvent.click(view.getByRole('button', { name: 'Mở bài Bài thử 01' }))
+  await settle()
+  const preview = view.getByRole('region', { name: 'Xem thử' })
+  assert.equal(preview.querySelector('.cl-word'), null, 'mặc định là bản chỉ đọc có số ô')
+  fireEvent.click(view.getByRole('button', { name: /Chỉnh hợp âm trên bản nhạc/ }))
+  assert.ok(preview.querySelector('.cl-word'), 'chữ chạm được')
+  assert.match(preview.textContent ?? '', /vạch nhịp của bài phải đặt lại/)
+  fireEvent.click(view.getByRole('button', { name: /Xong — xem bản có số ô/ }))
+  assert.equal(preview.querySelector('.cl-word'), null)
+})
