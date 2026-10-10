@@ -1,4 +1,4 @@
-// TeamLab Public Band — adapter /teamlab/band/<slug> + edge og-teamlab (crawler-only) + không đụng Class /band/* và /teamlab/song/*.
+// TeamLab Public Band — adapter /teamlab/band/<slug> + edge og-teamlab (không phụ thuộc User-Agent) + không đụng Class /band/* và /teamlab/song/*.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
@@ -81,12 +81,15 @@ async function edge(ua: string | null, slug = SLUG, opts: { fail?: boolean } = {
   } finally { globalThis.fetch = realFetch }
 }
 
-test('edge: người thường / UA lạ / không UA → context.next() NGUYÊN VẸN, không đọc body, không RPC', async () => {
-  for (const ua of [CHROME, 'Mozilla/5.0 something-unknown', '', null]) {
-    const e = await edge(ua); assert.equal(e.res, e.upstream); assert.equal(e.nextCalls, 1); assert.deepEqual(e.calls, []); assert.equal(e.upstream.bodyUsed, false); assert.equal(e.res.headers.get('x-og-fn'), null)
+test('edge: KHÔNG phụ thuộc User-Agent — người thường / UA lạ / không UA nhận cùng OG Band, đúng một RPC (chỉ p_slug)', async () => {
+  for (const ua of [CHROME, FB, 'Mozilla/5.0 something-unknown', 'Viber', 'Skype', '', null]) {
+    const e = await edge(ua); assert.equal(e.nextCalls, 1, String(ua)); assert.equal(e.calls.length, 1, String(ua)); assert.match(e.calls[0], /\/rest\/v1\/rpc\/teamlab_public_band$/)
+    assert.equal(e.res.headers.get('x-og-fn'), 'teamlab-band:public', String(ua)); assert.equal(title(e.html), 'Lá Mùa Thu · TeamLab', String(ua))
+    assert.equal(tag(e.html, 'og:image'), `${STORAGE}/${COVER}`, String(ua)); assert.equal(tag(e.html, 'og:url'), `${ORIGIN}/teamlab/band/${SLUG}`, String(ua))
+    assert.equal(tag(e.html, 'og:description'), 'Ban nhạc tình ca', String(ua)); assert.match(e.html, /<script type="module"/)
   }
 })
-test('edge: crawler → một RPC (chỉ p_slug) → OG Band đúng; slug sai → mặc định; lỗi → fail closed', async () => {
+test('edge: một RPC (chỉ p_slug) → OG Band đúng; slug sai → mặc định; lỗi → fail closed', async () => {
   const e = await edge(FB)
   assert.equal(e.calls.length, 1); assert.match(e.calls[0], /\/rest\/v1\/rpc\/teamlab_public_band$/); assert.equal(e.res.headers.get('x-og-fn'), 'teamlab-band:public')
   assert.equal(title(e.html), 'Lá Mùa Thu · TeamLab'); assert.equal(tag(e.html, 'og:image'), `${STORAGE}/${COVER}`); assert.equal(tag(e.html, 'og:url'), `${ORIGIN}/teamlab/band/${SLUG}`); assert.match(e.html, /<script type="module"/)
@@ -142,8 +145,8 @@ test('Slice E: dạng hỏng/lạ dưới /room không được nhận (không R
   assert.deepEqual(log.filter(l => l.includes('teamlab_public_band')), [])
 })
 
-test('Slice E edge: crawler ở /room… → OG Team công khai; người thường → context.next() nguyên vẹn; UA Zalo/Twitterbot/WhatsApp cùng kết quả', async () => {
-  const ua = ['facebookexternalhit/1.1', 'Zalo', 'Twitterbot/1.0', 'WhatsApp/2.23', 'Slackbot-LinkExpanding 1.0']
+test('Slice E edge: /room… → OG Team công khai với MỌI User-Agent (kể cả người thường / không UA)', async () => {
+  const ua = ['facebookexternalhit/1.1', 'Zalo', 'Twitterbot/1.0', 'WhatsApp/2.23', 'Slackbot-LinkExpanding 1.0', CHROME, 'Viber', '']
   for (const path of ROOM_PATHS.slice(0, 1).concat(ROOM_PATHS.slice(2, 4))) for (const u of ua) {   // Studio có test riêng bên dưới
     const calls: string[] = []; const realFetch = globalThis.fetch
     globalThis.fetch = (async (input: RequestInfo | URL) => { calls.push(String(input)); return new Response(JSON.stringify(band()), { status: 200, headers: { 'content-type': 'application/json' } }) }) as typeof fetch
@@ -154,9 +157,6 @@ test('Slice E edge: crawler ở /room… → OG Team công khai; người thư�
       assert.equal(calls.length, 1)
     } finally { globalThis.fetch = realFetch }
   }
-  const upstream = new Response(SHELL, { status: 200, headers: { 'content-type': 'text/html; charset=UTF-8' } })
-  const res = await ogTeamlab(new Request(`${ORIGIN}${ROOM_PATHS[0]}`, { headers: { 'user-agent': CHROME } }), { next: async () => upstream })
-  assert.equal(res, upstream); assert.equal(upstream.bodyUsed, false)
 })
 
 // ─── Studio: xem trước theo BÀI (teamlab_public_workspace_song) ─────────────────────────────────────────────────
@@ -228,8 +228,8 @@ test('Studio: group/<bandId> và room giữ thẻ Team (Band con chưa có metad
   }
 })
 
-test('Studio edge: crawler → thẻ BÀI; người thường → next() nguyên vẹn; Zalo/Twitterbot/WhatsApp/facebookexternalhit cùng kết quả', async () => {
-  for (const u of ['facebookexternalhit/1.1', 'Zalo', 'Twitterbot/1.0', 'WhatsApp/2.23']) {
+test('Studio edge: thẻ BÀI với MỌI User-Agent (kể cả người thường / không UA)', async () => {
+  for (const u of ['facebookexternalhit/1.1', 'Zalo', 'Twitterbot/1.0', 'WhatsApp/2.23', CHROME, 'Viber', '']) {
     const realFetch = globalThis.fetch; const calls: string[] = []
     globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => { calls.push(String(input)); const b = JSON.parse(String(init?.body ?? '{}'))
       const r = String(input).endsWith('teamlab_public_workspace_song') ? SONGS[`${b.p_slug}|${b.p_song_id}`] ?? null : band()
@@ -240,7 +240,4 @@ test('Studio edge: crawler → thẻ BÀI; người thường → next() nguyên
       assert.equal(res.headers.get('x-og-fn'), 'teamlab-studio:public', u); assert.equal(title(html), 'Khói thuốc đợi chờ · Lá Mùa Thu'); assert.equal(calls.length, 1)
     } finally { globalThis.fetch = realFetch }
   }
-  const upstream = new Response(SHELL, { status: 200, headers: { 'content-type': 'text/html; charset=UTF-8' } })
-  const res = await ogTeamlab(new Request(`${ORIGIN}/teamlab/band/${SLUG}/room/studio/${DRAFT_SONG}`, { headers: { 'user-agent': CHROME } }), { next: async () => upstream })
-  assert.equal(res, upstream); assert.equal(upstream.bodyUsed, false)
 })
