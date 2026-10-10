@@ -41,7 +41,7 @@ const type = (element: Element, value: string) => fireEvent.change(element, { ta
 // (cửa sổ, "Áp dụng" mới đổi bản nhạc, chưa ghi DB).
 type View = ReturnType<typeof render>
 function openPasteWindow(view: View) {
-  fireEvent.click(view.getByRole('button', { name: 'Thao tác khác của bài' }))
+  fireEvent.click(view.getByRole('button', { name: 'Chỉnh sửa: thao tác khác của bài' }))
   fireEvent.click(view.getByRole('menuitem', { name: 'Dán lại lời & hợp âm' }))
 }
 function setLyrics(view: View, text: string) {
@@ -1268,7 +1268,7 @@ test('bài đã có: không thanh công cụ / không "Thiết lập bài hát";
   assert.equal(view.container.querySelector('.cl-toolbar'), null)
   for (const gone of ['Nạp lời & hợp âm', 'Nạp ảnh/PDF tham khảo', 'Thiết lập bài hát', 'Nạp bản nhạc']) assert.equal(view.queryByRole('button', { name: gone }), null, gone)
   assert.equal(view.queryByLabelText('Ô soạn lời và hợp âm'), null, 'ô nhập mã không nằm sẵn trong trang')
-  fireEvent.click(view.getByRole('button', { name: 'Thao tác khác của bài' }))
+  fireEvent.click(view.getByRole('button', { name: 'Chỉnh sửa: thao tác khác của bài' }))
   assert.deepEqual(view.getAllByRole('menuitem').map(node => node.textContent), ['Chỉnh sửa lời bài hát', 'Dán lại lời & hợp âm', 'Thêm ảnh/PDF tham khảo', 'Phân tích vạch nhịp, phiên bản…'])
   fireEvent.click(view.getByRole('menuitem', { name: 'Phân tích vạch nhịp, phiên bản…' }))
   const advanced = view.container.querySelector('details.cl-fold-advanced') as HTMLDetailsElement
@@ -1332,7 +1332,7 @@ test('ảnh/PDF: bước hỏi sau khi dán — Tải ảnh/PDF dùng đường 
   await openNewChord()
   await settle()
   assert.match(again.getByRole('region', { name: 'Nguồn sheet' }).textContent ?? '', /Chưa có file nguồn\./)
-  fireEvent.click(again.getByRole('button', { name: 'Thao tác khác của bài' }))
+  fireEvent.click(again.getByRole('button', { name: 'Chỉnh sửa: thao tác khác của bài' }))
   fireEvent.click(again.getByRole('menuitem', { name: 'Thêm ảnh/PDF tham khảo' }))   // mở hộp chọn file
   const input2 = again.getByLabelText('Chọn ảnh hoặc PDF bản nhạc') as HTMLInputElement
   Object.defineProperty(input2, 'files', { configurable: true, value: [pdf('sau.pdf')] })
@@ -1646,7 +1646,7 @@ async function recapSong(library = createMockChordLibrary({ storage: memoryStora
   return { view, library }
 }
 const openLineEditor = (view: ReturnType<typeof render>) => {
-  fireEvent.click(view.getByRole('button', { name: 'Thao tác khác của bài' }))
+  fireEvent.click(view.getByRole('button', { name: 'Chỉnh sửa: thao tác khác của bài' }))
   fireEvent.click(view.getByRole('menuitem', { name: 'Chỉnh sửa lời bài hát' }))
   return view.getByRole('dialog', { name: 'Chỉnh sửa lời bài hát' })
 }

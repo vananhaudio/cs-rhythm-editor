@@ -16,6 +16,7 @@ import ChordSheetEditor from './ChordSheetEditor.tsx'
 import ChordLyricsModal from './ChordLyricsModal.tsx'
 import ChordLineEditor from './ChordLineEditor.tsx'
 import ChordSheetView from './ChordSheetView.tsx'
+import { ChevronDown, Pencil } from 'lucide-react'
 import { MoreMenu } from '../class-social/ui'
 import { remapAnchorsForInsert, remapAnchorsForRemove, sameLyricStructure } from './chordEdit.ts'
 import type { StructureEdit } from './ChordSheetEditor.tsx'
@@ -664,7 +665,8 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
         <section className="cl-card cl-preview" aria-label="Xem thử">
           <div className="cl-sheet-head">
             <h2>Bản nhạc <span className="cl-h2-note">— chạm chữ hoặc khe giữa hai chữ</span></h2>
-            <MoreMenu className="cl-sheet-more" label="Thao tác khác của bài" items={[
+            <MoreMenu className="cl-sheet-more" label="Chỉnh sửa: thao tác khác của bài"
+              trigger={<span className="cl-edit-trigger"><Pencil size={15} strokeWidth={2} aria-hidden="true" /><span>Chỉnh sửa</span><ChevronDown size={15} strokeWidth={2} aria-hidden="true" /></span>} items={[
               { label: 'Chỉnh sửa lời bài hát', onSelect: () => setLinesOpen(true) },
               { label: 'Dán lại lời & hợp âm', onSelect: () => setLyricsOpen(true) },
               { label: 'Thêm ảnh/PDF tham khảo', onSelect: () => { if (!uploadLocked) fileInput.current?.click() } },

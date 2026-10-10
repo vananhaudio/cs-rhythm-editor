@@ -388,3 +388,12 @@
   .cl-le-meta { grid-column: auto; }
   .cl-le-actions { grid-column: auto; }
 }
+
+/* Nút "Chỉnh sửa ▾" của bản nhạc (thay cho ⋯) — bút + chữ + mũi tên; gọn, đủ vùng chạm trên mobile */
+.tv-chords .cl-sheet-more .cs-more-trigger { border-radius: 999px; }
+.cl-edit-trigger { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border: 1px solid #c9d6c6; border-radius: 999px; background: #fff; color: #1f3a27; font-size: 14px; font-weight: 600; white-space: nowrap; }
+.cs-more-trigger:hover .cl-edit-trigger { background: #f1f6ee; border-color: #9fb89a; }
+.cs-more-trigger:focus-visible .cl-edit-trigger { outline: 2px solid #2f6b3f; outline-offset: 2px; }
+.cl-sheet-more .cs-more-menu { right: 0; left: auto; min-width: 240px; }
+.cl-sheet-more .cs-more-item { white-space: nowrap; padding: 11px 14px; }
+@media (max-width: 480px) { .cl-edit-trigger { min-height: 40px; padding: 0 12px; } }
