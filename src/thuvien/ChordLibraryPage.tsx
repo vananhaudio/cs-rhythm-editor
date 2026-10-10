@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { DISABLED_MESSAGE, getChordLibrary } from './chordLibrary.ts'
 import type { ChordLibrary, ChordSheetDetail, ChordSheetSummary } from './chordLibrary.ts'
@@ -15,6 +15,7 @@ import AnchorEditor from './AnchorEditor.tsx'
 import ChordSheetEditor from './ChordSheetEditor.tsx'
 import ChordLyricsModal from './ChordLyricsModal.tsx'
 import ChordSheetView from './ChordSheetView.tsx'
+import { MoreMenu } from '../class-social/ui'
 import { remapAnchorsForInsert, remapAnchorsForRemove, sameLyricStructure } from './chordEdit.ts'
 import type { StructureEdit } from './ChordSheetEditor.tsx'
 import type { MeasureAnalysisResult, MeasureAnalyzer } from './measureAnalysis.ts'
@@ -226,6 +227,9 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
   // Cửa sổ "Nạp lời & hợp âm": soạn riêng, chỉ Áp dụng mới đổi bản nhạc (chưa ghi DB).
   const [lyricsOpen, setLyricsOpen] = useState(false)
   const [advancedOpen, setAdvancedOpen] = useState(false)
+  // "Nạp hợp âm mới" = một luồng: dán lời → (tuỳ chọn) ảnh/PDF → biên tập. Bài đã có mở thẳng bước biên tập.
+  const [step, setStep] = useState<'paste' | 'media' | 'edit'>(versionId ? 'edit' : 'paste')
+  const fileInput = useRef<HTMLInputElement>(null)
   const [liveAnchors, setLiveAnchors] = useState<ChordAnchors | null>(null)
   // Phân tích tự động (5B): analyzer chỉ có ở dev/trang thử. Đề xuất nạp VÀO trình sửa 5A — không tự lưu, không tự duyệt.
   const [analyzerReady, setAnalyzerReady] = useState(false)
@@ -377,7 +381,10 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
         const next = await library.createChordSheet(draft, options)
         await afterVersion(next, sources)
         adopt(next); onSaved(next)
-        setMessage(`Đã lưu bản nháp (phiên bản ${next.versionNumber}${sources.length ? `, ${sources.length} file nguồn` : ''}) — bấm “Duyệt bản này” để đặt làm bản đang dùng.${suffix}`)
+        // Bài mới cũng vậy: bản lưu chưa có vạch (giới hạn M3) — vạch đang hiện KHÔNG được âm thầm bỏ.
+        const lostFirst = !!keep && !next.anchors && sameLyricStructure(next.text, form.text)
+        if (lostFirst) setBars(keep)
+        setMessage(`Đã lưu bản nháp (phiên bản ${next.versionNumber}${sources.length ? `, ${sources.length} file nguồn` : ''}) — bấm “Duyệt bản này” để đặt làm bản đang dùng.${suffix}${lostFirst ? ' Vạch nhịp CHƯA được lưu theo bản này — bấm “Lưu vạch nhịp”.' : ''}`)
         return
       }
       if (infoChanged) {
@@ -412,10 +419,11 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
     for (const source of sources) { try { await library.sources.remove(source.path) } catch { /* bỏ qua */ } }
   }
 
-  async function addFiles(files: File[]) {
-    if (!files.length || sourceBusy) return
+  async function addFiles(files: File[]): Promise<boolean> {
+    if (!files.length || sourceBusy) return false
     setSourceBusy(true); setSourceError(''); setMessage('')
     const problems: string[] = []
+    const before = plan.length
     let current = plan
     try {
       const owner = await library.sources.ownerId()
@@ -444,6 +452,7 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
       setSourceError(problems.join(' '))
       setSourceBusy(false)
     }
+    return current.length > before
   }
 
   async function removeItem(item: PlanItem) {
@@ -573,27 +582,60 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
   </div>
 
   const meterChoices = form.meter && !METER_CHOICES.includes(form.meter as typeof METER_CHOICES[number]) ? [form.meter, ...METER_CHOICES] : METER_CHOICES
+  const uploadLocked = sourceBusy || busy || plan.length >= MAX_SOURCE_FILES || library.mode === 'disabled'
+
+  // Chọn file (dùng chung cho bước hỏi ảnh/PDF và thao tác phụ "Thêm ảnh/PDF"): cùng đường tải nguồn sẵn có.
+  const sourcePicker = <input ref={fileInput} type="file" multiple accept={SOURCE_ACCEPT} className="cl-sr-only" aria-label="Chọn ảnh hoặc PDF bản nhạc" disabled={uploadLocked}
+    onChange={event => {
+      const files = [...(event.target.files ?? [])]
+      event.target.value = ''
+      const fromMediaStep = step === 'media'
+      void addFiles(files).then(added => {
+        if (!added) return
+        if (fromMediaStep) setStep('edit')
+        else setAdvancedOpen(true)
+        setMessage(`Đã nạp ${files.length} file. Bấm Lưu, rồi dùng “⋯ → Phân tích vạch nhịp” để máy đề xuất vạch nhịp (chỉ đề xuất, bạn kiểm tra và chỉnh lại).`)
+      })
+    }} />
+
+  // Bước 1 — dán lời + hợp âm (chính ô nhập hiện có, đặt thẳng trong trang). Không tiêu đề "Thêm bài", không thanh công cụ.
+  if (step === 'paste') {
+    return <div className="cl-wrap">
+      <header className="cl-editor-head cl-editor-head-lite"><button type="button" className="cl-back" onClick={close}>← Danh sách</button></header>
+      <MockBanner library={library} />
+      <ChordLyricsModal inline initial={form.text} onClose={() => undefined}
+        onApply={text => { changeText(text); setStep('media') }} />
+    </div>
+  }
+
+  // Bước 2 — hỏi về ảnh/PDF. Tuỳ chọn: bỏ qua là đi tiếp bình thường.
+  if (step === 'media') {
+    return <div className="cl-wrap">
+      <header className="cl-editor-head cl-editor-head-lite"><button type="button" className="cl-back" onClick={() => setStep('paste')}>← Sửa lời</button></header>
+      <MockBanner library={library} />
+      <section className="cl-card cl-media-step" aria-label="Ảnh hoặc PDF bản nhạc">
+        <h2>Bạn có ảnh chụp hoặc PDF bản nhạc không?</h2>
+        <p className="cl-lead">Hãy tải lên nếu có. Hệ thống hỗ trợ xác định vị trí vạch nhịp tạm thời (không chính xác 100%). Bạn có thể kiểm tra và chỉnh sửa lại sau.</p>
+        {sourceError && <p className="cl-error" role="alert">{sourceError}</p>}
+        <div className="cl-media-actions">
+          <button type="button" className="cl-primary" disabled={uploadLocked} onClick={() => fileInput.current?.click()}>{sourceBusy ? 'Đang nạp…' : 'Tải ảnh/PDF'}</button>
+          <button type="button" className="cl-secondary" onClick={() => setStep('edit')}>Bỏ qua, làm sau</button>
+        </div>
+        {sourcePicker}
+      </section>
+    </div>
+  }
 
   return <div className="cl-wrap cl-wrap-wide">
     <header className="cl-editor-head">
       <button type="button" className="cl-back" onClick={close}>← Danh sách</button>
-      <h1>{detail ? detail.title : 'Thêm bài'}</h1>
-      <div className="cl-toolbar" role="toolbar" aria-label="Công cụ của bài">
-        <button type="button" className={hasText ? 'cl-secondary' : 'cl-primary'} onClick={() => setLyricsOpen(true)}>Nạp lời &amp; hợp âm</button>
-        <label className="cl-secondary cl-upload" data-disabled={sourceBusy || busy || plan.length >= MAX_SOURCE_FILES || library.mode === 'disabled'}>
-          {sourceBusy ? 'Đang nạp…' : 'Nạp ảnh/PDF tham khảo'}
-          <input type="file" multiple accept={SOURCE_ACCEPT} aria-label="Nạp ảnh hoặc PDF tham khảo"
-            disabled={sourceBusy || busy || plan.length >= MAX_SOURCE_FILES || library.mode === 'disabled'}
-            onChange={event => { const files = [...(event.target.files ?? [])]; event.target.value = ''; void addFiles(files).then(() => setAdvancedOpen(true)) }} />
-        </label>
-        <button type="button" className="cl-secondary" aria-expanded={advancedOpen} onClick={() => setAdvancedOpen(open => !open)}>Thiết lập bài hát</button>
-      </div>
+      {form.title.trim() && <h1>{form.title.trim()}</h1>}
       <button type="button" className="cl-primary" onClick={() => (!dirty && barsDirty ? void saveBars() : void save())} disabled={busy || sourceBusy}>
         {busy ? 'Đang lưu…' : !dirty && barsDirty ? 'Lưu vạch nhịp' : 'Lưu'}</button>
     </header>
     <MockBanner library={library} />
     {detail && <button type="button" className="cl-status-chip" data-status={detail.status} onClick={() => setAdvancedOpen(true)}
-      title="Mở mục Thiết lập bài hát để xem / duyệt phiên bản">
+      title="Xem / duyệt phiên bản">
       {detail.status === 'current' && (detail.draftVersionId ? 'Đang dùng · có bản nháp mới hơn' : 'Đang dùng')}
       {detail.status === 'draft' && 'Bản nháp — chưa dùng chính thức'}
       {detail.status === 'old' && 'Bản cũ — hiện không dùng'}
@@ -630,7 +672,15 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
 
         {errors.text && <p className="cl-error">{errors.text}</p>}
         <section className="cl-card cl-preview" aria-label="Xem thử">
-          <h2>Bản nhạc <span className="cl-h2-note">— chạm chữ hoặc khe giữa hai chữ</span></h2>
+          <div className="cl-sheet-head">
+            <h2>Bản nhạc <span className="cl-h2-note">— chạm chữ hoặc khe giữa hai chữ</span></h2>
+            <MoreMenu className="cl-sheet-more" label="Thao tác khác của bài" items={[
+              { label: 'Dán lại lời & hợp âm', onSelect: () => setLyricsOpen(true) },
+              { label: 'Thêm ảnh/PDF tham khảo', onSelect: () => { if (!uploadLocked) fileInput.current?.click() } },
+              { label: 'Phân tích vạch nhịp, phiên bản…', onSelect: () => setAdvancedOpen(true) },
+            ]} />
+          </div>
+          {sourcePicker}
           {hasText
             ? <>
               {issues.length > 0 && <p className="cl-warn" role="note">Dòng {issues.join(', ')}: còn ngoặc vuông chưa thành hợp âm (thiếu ngoặc đóng, hoặc để trống).</p>}
@@ -641,10 +691,13 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
                 ? 'Vạch nhịp chưa lưu. Bấm Lưu để lưu lời, rồi bấm “Lưu vạch nhịp”.'
                 : 'Vạch nhịp chưa lưu — bấm “Lưu vạch nhịp”.'}</p>}
             </>
-            : <p className="cl-placeholder">Chưa có lời. Bấm “Nạp lời & hợp âm” để dán lời và hợp âm.</p>}
+            : <p className="cl-placeholder">Chưa có lời. Dùng “⋯ → Dán lại lời & hợp âm”.</p>}
         </section>
+        {/* Phần kỹ thuật (nguồn sheet, phân tích/sửa vạch theo dòng thời gian, phiên bản, Rhythm Scroll) — vẫn ở đây, chỉ hiện khi
+            người dùng chủ động mở (nhãn trạng thái, hoặc "⋯"). Không có thanh tiêu đề thường trực. */}
         <details className="cl-fold cl-fold-advanced" open={advancedOpen} onToggle={event => setAdvancedOpen(event.currentTarget.open)}>
-          <summary>Thiết lập bài hát <span className="cl-h2-note">— file sheet, vạch nhịp, phiên bản</span></summary>
+          <summary className="cl-sr-only">Nguồn sheet, vạch nhịp, phiên bản</summary>
+          <p className="cl-adv-bar"><strong>Nguồn sheet · vạch nhịp · phiên bản</strong> <button type="button" className="cl-link" onClick={() => setAdvancedOpen(false)}>Thu gọn</button></p>
           {detail?.anchors && <p><button type="button" className="cl-secondary" disabled={busy || dirty} title={dirty ? 'Lưu thay đổi trước' : 'Chạy lời + hợp âm theo nhịp'} onClick={() => onRhythm(detail.versionId)}>▶ Rhythm Scroll</button></p>}
         {detail && <div className="cl-state" data-status={detail.status} role="group" aria-label="Trạng thái phiên bản">
       <p>

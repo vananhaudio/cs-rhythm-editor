@@ -10,11 +10,13 @@ type Props = {
   initial: string
   onApply: (text: string) => void
   onClose: () => void
+  /** Bước đầu của "Nạp hợp âm mới": cùng ô dán + cùng cảnh báo, nhưng nằm thẳng trong trang (không cửa sổ), nút "Tiếp tục". */
+  inline?: boolean
 }
 
 const FOCUSABLE = 'button:not([disabled]), textarea, input, [href], select, [tabindex]:not([tabindex="-1"])'
 
-export default function ChordLyricsModal({ initial, onApply, onClose }: Props) {
+export default function ChordLyricsModal({ initial, onApply, onClose, inline = false }: Props) {
   const [draft, setDraft] = useState(initial)
   const box = useRef<HTMLDivElement>(null)
   const area = useRef<HTMLTextAreaElement>(null)
@@ -30,6 +32,7 @@ export default function ChordLyricsModal({ initial, onApply, onClose }: Props) {
   }
 
   useEffect(() => {
+    if (inline) { area.current?.focus(); return }
     const before = document.activeElement as HTMLElement | null
     area.current?.focus()
     const scroll = document.body.style.overflow
@@ -47,6 +50,19 @@ export default function ChordLyricsModal({ initial, onApply, onClose }: Props) {
     document.addEventListener('keydown', onKey)
     return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = scroll; before?.focus?.() }
   }, [])
+
+  if (inline) {
+    return <section className="cl-paste-step" aria-label="Dán lời và hợp âm">
+      <p className="cl-lead"><strong>Dán lời và hợp âm chuẩn của bài hát</strong> (từ Hợp Âm Việt hoặc nguồn tương đương).</p>
+      <p className="cl-help">Đặt hợp âm trong ngoặc vuông, ngay trước chữ đổi hợp âm: <code>Chiều [Am] nao, tiễn nhau [E7] đi</code>. Mỗi câu một dòng. Nhãn như <code>1.</code> hay <code>ĐK:</code> viết ở đầu dòng.</p>
+      <textarea ref={area} value={draft} onChange={event => setDraft(event.target.value)} aria-label="Ô soạn lời và hợp âm"
+        spellCheck={false} rows={14} placeholder={'1. [C] Câu hát đầu [Am] tiên\n[F] Câu tiếp [G] theo'} />
+      {issues.length > 0 && <p className="cl-warn" role="note">Dòng {issues.join(', ')}: còn ngoặc vuông chưa thành hợp âm (thiếu ngoặc đóng, hoặc để trống).</p>}
+      <div className="cl-paste-actions">
+        <button type="button" className="cl-primary" disabled={!canonicalChordText(draft).trim()} onClick={() => onApply(draft)}>Tiếp tục</button>
+      </div>
+    </section>
+  }
 
   return <div className="cl-modal-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) requestClose() }}>
     <div className="cl-modal" role="dialog" aria-modal="true" aria-labelledby="cl-modal-title" ref={box}>
