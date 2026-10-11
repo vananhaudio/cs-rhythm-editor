@@ -1545,3 +1545,34 @@ button.cs-subs-title:hover { color: var(--cs-accent); }
   .cs-share-foot .cs-wall-audience { flex: 1 0 100%; margin-right: 0; }
   .cs-share-foot { justify-content: flex-end; }
 }
+
+/* ── /ME HEADER MOBILE V1 — chỉ top bar /me (docs/ME-HIG-POLISH-V1.md §Header) ─────────────────────────────────
+   Avatar luôn nằm trọn trong màn hình (kể cả iPhone ngang có tai thỏ: viewport-fit=cover); logo = điểm về Trang chủ,
+   vùng chạm ≥ 44×44 + phản hồi nhấn; "Class" là nút phụ, không nổi hơn logo/avatar. */
+.cs-topbar {
+  padding-left: max(14px, env(safe-area-inset-left));
+  padding-right: max(14px, env(safe-area-inset-right));
+}
+.cs-topbar > * { flex-shrink: 0; }
+.cs-topbar > .cs-brand { flex-shrink: 1; }         /* chỉ logo/chữ co lại; nút Class + avatar không bao giờ bị đẩy ra ngoài */
+.cs-account .cs-more-trigger { position: relative; flex: none; }
+.cs-account .cs-more-trigger::after {
+  content: ''; position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; transform: translate(-50%, -50%);
+}
+
+.cs-brand {
+  position: relative; min-width: 44px; min-height: 44px; padding: 0 4px; margin-left: -2px; border-radius: 10px;
+  -webkit-tap-highlight-color: transparent; transition: opacity 0.12s ease, background-color 0.12s ease;
+}
+.cs-brand:active { opacity: 0.55; background: var(--cs-hover); }
+@media (hover: hover) { .cs-brand:hover { background: var(--cs-hover); } }
+@media (prefers-reduced-motion: reduce) { .cs-brand { transition: none; } }
+
+/* "Class": nút phụ — không viền, chữ phụ; vùng chạm cao 44 */
+.cs-classhome.is-quiet {
+  position: relative; margin-right: 0; padding: 0 8px; border-color: transparent; background: transparent;
+  color: var(--cs-muted); font-size: 14px; font-weight: 600;
+}
+.cs-classhome.is-quiet::after { content: ''; position: absolute; left: 0; right: 0; top: -4px; bottom: -4px; }
+.cs-classhome.is-quiet:hover, .cs-classhome.is-quiet:active { background: var(--cs-hover); color: var(--cs-text); }
+

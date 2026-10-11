@@ -5,12 +5,13 @@ import { ArrowLeft } from 'lucide-react'
 import { safeImageUrl } from './media/safeImageUrl'
 import { CLASS_HOME_PATH } from './resolveMeRoute'
 
-/** Link về trang Class công khai (/) — cùng tab, tải trang đầy đủ; cùng phiên đăng nhập. */
-export function ClassHomeLink() {
+/** Link về trang Class công khai (/) — cùng tab, tải trang đầy đủ; cùng phiên đăng nhập.
+ *  label: nhãn hiển thị (mặc định "Trang Class"); quiet: kiểu phụ (không viền) cho top bar /me. */
+export function ClassHomeLink({ label = 'Trang Class', quiet = false }: { label?: string; quiet?: boolean }) {
   return (
-    <a className="cs-classhome" href={CLASS_HOME_PATH} aria-label="Về Trang Class">
+    <a className={'cs-classhome' + (quiet ? ' is-quiet' : '')} href={CLASS_HOME_PATH} aria-label="Về Trang Class">
       <ArrowLeft size={17} strokeWidth={2} aria-hidden="true" />
-      <span>Trang Class</span>
+      <span>{label}</span>
     </a>
   )
 }

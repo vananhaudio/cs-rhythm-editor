@@ -15,7 +15,7 @@ function GuestFrame({ children }: { children: ReactNode }) {
           <span className="cs-brand-text">Thầy Văn Anh Guitar</span>
         </a>
         <div className="cs-topbar-spacer" />
-        <ClassHomeLink />
+        <ClassHomeLink label="Class" quiet />
       </header>
       <main className="cs-guest">
         <section className="cs-card cs-guest-card">{children}</section>
