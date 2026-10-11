@@ -1564,6 +1564,9 @@ button.cs-subs-title:hover { color: var(--cs-accent); }
   position: relative; min-width: 44px; min-height: 44px; padding: 0 4px; margin-left: -2px; border-radius: 10px;
   -webkit-tap-highlight-color: transparent; transition: opacity 0.12s ease, background-color 0.12s ease;
 }
+/* ≤440px (mọi iPhone dọc, kể cả Pro Max 430): chữ thương hiệu chỉ còn logo — không bao giờ hiện chữ bị cắt ("Thầy Văn Anh G…");
+   cần ≈ 415px cho ☰ + logo + chữ + Class + avatar, nên từ 441px chữ luôn đủ chỗ. */
+@media (max-width: 440px) { .cs-brand-text { display: none; } }
 .cs-brand:active { opacity: 0.55; background: var(--cs-hover); }
 @media (hover: hover) { .cs-brand:hover { background: var(--cs-hover); } }
 @media (prefers-reduced-motion: reduce) { .cs-brand { transition: none; } }

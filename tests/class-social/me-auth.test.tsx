@@ -54,7 +54,7 @@ test("Top bar khi đã đăng nhập có nút Trang Class", () => {
   );
   assert.match(html, /class="cs-classhome is-quiet" href="\/"/);
   assert.match(html, /<span>Class<\/span>/, "nhãn ngắn 'Class' (kiểu phụ)");
-  assert.match(html, /class="cs-brand" href="\/me" aria-label="Về trang chủ"/, "logo = về Trang chủ /me, nhãn truy cập");
+  assert.match(html, /class="cs-brand" href="\/me" aria-label="Thầy Văn Anh Guitar, về trang chủ"/, "logo = về Trang chủ /me, nhãn truy cập");
 });
 
 test("ClassSocialPage KHÔNG còn chuyển khách sang /learn hay /start; đăng xuất ở lại /me", () => {

@@ -20,4 +20,6 @@ Test: `npm run test:class-social`, `test:route-guard`, `test:og`, tsc, build, `s
 - Đã ở `/me` (không query): bấm logo = giữ nguyên trang, chỉ về đầu trang (không dựng lại Home → không mất bản nháp đang gõ).
 - Nút về Class: nhãn "Class", kiểu phụ (`.cs-classhome.is-quiet`: không viền, chữ phụ, cao 44 bằng ::after). Chỉ top bar /me (đăng nhập + khách); Thư viện/Band giữ "Trang Class".
 - Avatar không bị cắt: `.cs-topbar` đệm `max(14px, env(safe-area-inset-*))` (viewport-fit=cover → iPhone ngang bị tai thỏ che), mọi phần tử top bar `flex-shrink:0` trừ logo/chữ; avatar vùng chạm 44.
+- (v2) ≤440px chữ thương hiệu ẩn hẳn (bố cục ☰ — logo — trống — Class — avatar), từ 441px hiện đủ chữ (cần ≈415px) → không còn chữ cắt "Thầy Văn Anh G…". Nhãn truy cập logo: "Thầy Văn Anh Guitar, về trang chủ".
+- Giới hạn kiểm thử: không tái hiện được avatar bị cắt ở Chromium 280–1440px (cuộn, mở menu, nội dung tràn 700px đều giữ avatar trong màn hình); WebKit/iOS thật chưa kiểm.
 
