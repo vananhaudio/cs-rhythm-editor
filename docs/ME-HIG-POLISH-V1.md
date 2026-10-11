@@ -14,3 +14,10 @@ Test: `npm run test:class-social`, `test:route-guard`, `test:og`, tsc, build, `s
 ## Hoàn thiện (11/10, sau nghiệm thu thiết kế)
 - Placeholder ô chia sẻ ở Home: "Chia sẻ về âm nhạc…" (vừa một dòng tại 320px: 153px ≤ 178px khả dụng). Wall composer (trang cá nhân) giữ nguyên.
 - Composer đang mở ≤559px: dòng "Bạn bè và Thầy xem được" riêng; "Để sau" + "Đăng" cùng một hàng, căn phải, cách nhau 8px, vùng chạm 44px không chồng (kiểm 320/360/375/390/414).
+
+## Header mobile (11/10, nhánh feat/me-header-mobile — chưa merge)
+- Logo vốn đã là `<a href="/me">` → `onSection('home')` (về /me từ mọi trang con, kể cả `?feed=…`); KHÔNG làm lại. Bổ sung: nhãn truy cập "Về trang chủ", vùng chạm ≥44×44, phản hồi nhấn (opacity .55 + nền nhạt), focus-visible theo `.cs-root :focus-visible`.
+- Đã ở `/me` (không query): bấm logo = giữ nguyên trang, chỉ về đầu trang (không dựng lại Home → không mất bản nháp đang gõ).
+- Nút về Class: nhãn "Class", kiểu phụ (`.cs-classhome.is-quiet`: không viền, chữ phụ, cao 44 bằng ::after). Chỉ top bar /me (đăng nhập + khách); Thư viện/Band giữ "Trang Class".
+- Avatar không bị cắt: `.cs-topbar` đệm `max(14px, env(safe-area-inset-*))` (viewport-fit=cover → iPhone ngang bị tai thỏ che), mọi phần tử top bar `flex-shrink:0` trừ logo/chữ; avatar vùng chạm 44.
+

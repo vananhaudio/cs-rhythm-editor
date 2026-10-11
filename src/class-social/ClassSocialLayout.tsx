@@ -161,13 +161,18 @@ export default function ClassSocialLayout({ me, section, onSection, children, ca
           {totalBadge > 0 && <span className="cs-nav-badge is-corner" aria-hidden="true">{totalBadge > 99 ? '99+' : totalBadge}</span>}
         </button>
         {/* Logo chuẩn — cùng cặp logo + chữ mà trang tuyển sinh class.vananhaudio.com đang dùng */}
-        <a className="cs-brand" href={SECTION_PATHS.home} aria-label="Thầy Văn Anh Guitar — Trang chủ"
-          onClick={e => { e.preventDefault(); onSection('home') }}>
+        <a className="cs-brand" href={SECTION_PATHS.home} aria-label="Về trang chủ"
+          onClick={e => {
+            e.preventDefault()
+            // Đã ở /me (không ?feed=…): giữ nguyên trang — không dựng lại Home (mất bản nháp đang gõ), chỉ về đầu trang
+            if (window.location.pathname === SECTION_PATHS.home && !window.location.search) { window.scrollTo({ top: 0 }); return }
+            onSection('home')
+          }}>
           <img className="cs-brand-logo" src="/logo-green.svg" alt="" width={30} height={29} />
           <span className="cs-brand-text">Thầy Văn Anh Guitar</span>
         </a>
         <div className="cs-topbar-spacer" />
-        <ClassHomeLink />
+        <ClassHomeLink label="Class" quiet />
         <MoreMenu className="cs-account" label={`Tài khoản: ${me.name}`}
           trigger={<Avatar name={me.name} url={safeImageUrl(me.avatarUrl)} size={32} />}
           items={[
