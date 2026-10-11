@@ -1479,3 +1479,63 @@ button.cs-subs-title:hover { color: var(--cs-accent); }
   .cs-rel-sheet-title { display: block; padding: 10px 12px 6px; font-size: 13px; font-weight: 700; color: var(--cs-muted); overflow-wrap: anywhere; }
   .cs-rel-menu .cs-more-item { padding: 14px 12px; font-size: 16px; }
 }
+
+/* ── /ME HIG POLISH V1 (docs/ME-HIG-POLISH-V1.md) ────────────────────────────────────────────────────────────
+   Trau chuốt nhẹ, chỉ trình bày: composer mobile một hàng · bottom sheet · vùng chạm 44px · xám/hairline nhất quán.
+   Không đổi bố cục, header, tiêu đề nhóm sidebar, badge, chức năng. Khối này nằm CUỐI file để có thể gỡ nguyên khối. */
+.cs-root {
+  --cs-fill: #f0f2f5;                         /* nền ô nhập / bong bóng bình luận — một xám trung tính (trước: #f2f1f6 pha tím) */
+  --cs-hairline-w: 1px;
+  --cs-hairline-c: #d9dbe0;
+  --cs-grip: #c7c7cc;
+}
+@media (min-resolution: 2dppx) {
+  .cs-root { --cs-hairline-w: 0.5px; --cs-hairline-c: rgba(60, 60, 67, 0.24); }   /* màn retina: mảnh nhưng không mờ */
+}
+
+/* 4. Xám + đường kẻ: các chỗ lệch rõ */
+.cs-cmt-bubble, .cs-cmt-inputwrap { background: var(--cs-fill); }
+.cs-cmt-inputwrap:focus-within { background: var(--cs-surface); }
+.cs-nav-group + .cs-nav-group, .cs-nav-block + .cs-nav-block { border-top: var(--cs-hairline-w) solid var(--cs-hairline-c); }
+.cs-cmts { border-top: var(--cs-hairline-w) solid var(--cs-hairline-c); }
+@media (min-width: 560px) { .cs-share-prompts { border-top: var(--cs-hairline-w) solid var(--cs-hairline-c); } }
+
+/* 3. Vùng chạm ≥ 44×44: mở bằng ::after (không đổi kích thước/bố cục nhìn thấy) */
+.cs-icon-btn, .cs-more-btn, .cs-cmt-send, .cs-share-legacy, .cs-btn-sm, .cs-share-chip { position: relative; }
+.cs-icon-btn::after, .cs-more-btn::after, .cs-cmt-send::after, .cs-share-legacy::after, .cs-btn-sm::after, .cs-share-chip::after {
+  content: ''; position: absolute; left: 50%; top: 50%; width: max(100%, 44px); height: max(100%, 44px); transform: translate(-50%, -50%);
+}
+
+/* "Trả bài bằng link video" nằm ngay dưới hàng chip/nút: chỉ mở vùng chạm xuống dưới + sang hai bên (không đè lên hàng trên) */
+.cs-share-legacy::after { left: -8px; right: -8px; top: 0; bottom: -14px; width: auto; height: auto; transform: none; }
+/* Avatar dẫn tới trang cá nhân (bài đăng, bình luận): 32/40 → 44; tên inline giữ nguyên (cùng đích với avatar) */
+.cs-post-head > .cs-person-link, .cs-cmt > .cs-person-link { position: relative; }
+.cs-post-head > .cs-person-link::after, .cs-cmt > .cs-person-link::after {
+  content: ''; position: absolute; left: 50%; top: 50%; width: max(100%, 44px); height: max(100%, 44px); transform: translate(-50%, -50%);
+}
+/* khi hàng nút cuối ô chia sẻ xuống dòng (320–375px): khoảng cách dòng ≥ 12px để vùng chạm 44px của hai nút không chồng nhau */
+.cs-share-foot { row-gap: 12px; }
+/* ô nhập chia sẻ: chiều cao tối thiểu 44 (trước 42) */
+.cs-share-input { min-height: 44px; }
+/* 320px: gợi ý trong ô nhập không xuống dòng rồi bị cắt nửa chữ — một dòng, cắt gọn ở mép phải */
+.cs-share-input::placeholder { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* 1. Composer mobile: 4 hành động MỘT hàng (icon trên nhãn), vùng chạm ≥ 56px cao; 320–559px */
+@media (max-width: 559px) {
+  .cs-share-prompts {
+    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0;
+    margin-top: var(--cs-s2); padding: var(--cs-s1) 0 0; border-top: var(--cs-hairline-w) solid var(--cs-hairline-c);
+  }
+  .cs-share-chip {
+    flex-direction: column; justify-content: flex-start; align-items: center; gap: 3px;
+    min-height: 56px; padding: 8px 2px; border-radius: 10px;
+    font-size: 12px; font-weight: 600; line-height: 1.2; text-align: center; white-space: normal; overflow-wrap: anywhere;
+  }
+  .cs-share-chip .cs-uiicon, .cs-share-chip > svg { width: 22px; height: 22px; }
+}
+
+/* 2. Bottom sheet menu */
+.cs-sheet-backdrop { background: rgba(0, 0, 0, 0.4); }
+.cs-sheet { box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.16); padding-top: 8px; }
+.cs-sheet-grip { width: 36px; height: 5px; border-radius: 3px; background: var(--cs-grip); margin: 0 auto 12px; }
+.cs-sheet-head { margin-bottom: 12px; padding-left: 12px; }      /* "Menu" thẳng cột với tiêu đề nhóm và icon */
