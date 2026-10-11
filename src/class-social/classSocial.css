@@ -1539,3 +1539,9 @@ button.cs-subs-title:hover { color: var(--cs-accent); }
 .cs-sheet { box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.16); padding-top: 8px; }
 .cs-sheet-grip { width: 36px; height: 5px; border-radius: 3px; background: var(--cs-grip); margin: 0 auto 12px; }
 .cs-sheet-head { margin-bottom: 12px; padding-left: 12px; }      /* "Menu" thẳng cột với tiêu đề nhóm và icon */
+
+/* Composer đang mở (≤559px): dòng ghi chú riêng, "Để sau" + "Đăng" cùng một hàng, căn phải (vùng chạm 44px không chồng: 8px ngang, 12px dọc) */
+@media (max-width: 559px) {
+  .cs-share-foot .cs-wall-audience { flex: 1 0 100%; margin-right: 0; }
+  .cs-share-foot { justify-content: flex-end; }
+}

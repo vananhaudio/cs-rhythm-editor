@@ -60,7 +60,7 @@ export default function HomeComposer({ me, onPosted, onOpenProfile }: {
             <Avatar name={me.name} url={me.avatarUrl} size={40} />
           </PersonLink>
           <textarea ref={inputRef} className={'cs-share-input' + (open ? ' is-open' : '')} rows={open ? 3 : 1} aria-label="Chia sẻ điều gì về âm nhạc"
-            placeholder="Chia sẻ điều gì về âm nhạc…" value={body} maxLength={MAX_BODY}
+            placeholder="Chia sẻ về âm nhạc…" value={body} maxLength={MAX_BODY}
             onFocus={() => setOpen(true)} onChange={e => setBody(e.target.value)} disabled={submitting} />
         </div>
         {open && showLink && (

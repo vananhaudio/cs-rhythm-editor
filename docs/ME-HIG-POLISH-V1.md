@@ -10,3 +10,7 @@ Toàn bộ nằm trong khối "/ME HIG POLISH V1" ở CUỐI `src/class-social/c
 
 Không làm (ngoài phạm vi): header mobile, tiêu đề nhóm sidebar, mật độ badge, sheet quan hệ ở Bạn bè (backdrop còn pha tím).
 Test: `npm run test:class-social`, `test:route-guard`, `test:og`, tsc, build, `scripts/e2e-class-canonical.sh`.
+
+## Hoàn thiện (11/10, sau nghiệm thu thiết kế)
+- Placeholder ô chia sẻ ở Home: "Chia sẻ về âm nhạc…" (vừa một dòng tại 320px: 153px ≤ 178px khả dụng). Wall composer (trang cá nhân) giữ nguyên.
+- Composer đang mở ≤559px: dòng "Bạn bè và Thầy xem được" riêng; "Để sau" + "Đăng" cùng một hàng, căn phải, cách nhau 8px, vùng chạm 44px không chồng (kiểm 320/360/375/390/414).
