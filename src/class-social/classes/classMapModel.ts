@@ -78,6 +78,14 @@ export function sessionView(s: SessionState, st: Pick<Ready, 'role' | 'mode'>): 
 export const submissionsText = (x: { passed: number; total: number }, teacher = false) =>
   teacher ? `${x.total} bài trả` : `${x.passed}/${x.total} bài trả Đạt`
 
+/** Góc nhìn HỌC VIÊN của mục lục: lớp có chặng thật thì các buổi KHÔNG chặng + chưa xuất bản (lịch xoay vòng nội bộ của Thầy,
+ *  vd. CB1/CB2 44 buổi) không hiện. Chỉ trình bày: không đổi dữ liệu / quyền / mở khoá; Thầy thấy đủ; lớp không có chặng nào giữ nguyên. */
+export function learnerVisibleState<T extends Pick<Ready, 'role' | 'sessions'>>(state: T): T {
+  if (state.role === 'teacher' || !state.sessions.some(s => s.stageNo != null)) return state
+  const sessions = state.sessions.filter(s => s.stageNo != null || s.published || s.openedAt != null)
+  return sessions.length === state.sessions.length ? state : { ...state, sessions }
+}
+
 export type StageGroup = { key: string; no: number | null; title: string | null; sessions: SessionState[] }
 
 /** Gom buổi theo chặng, giữ thứ tự (buổi không có chặng → một nhóm không tiêu đề). */

@@ -1,10 +1,9 @@
 // /me/classes/<id>/space — KHÔNG GIAN LỚP (Class UX V3): Social của ĐÚNG MỘT lớp, tách khỏi trang học.
 // Hoạt động = social_class_activity (Learning Thread của lớp: trả bài / hỏi bài / Thầy phản hồi / Đạt / làm lại),
 // dòng gọn ActivityLine (không lặp tên lớp) · Thành viên = social_class_members + MemberList (kết bạn, quyền riêng tư
-// giữ nguyên — server quyết can_view_members). Không hệ Social mới. "← <tên lớp>" về đúng trang học của lớp.
+// giữ nguyên — server quyết can_view_members). Không hệ Social mới. "Giáo trình" (thanh phân đoạn) về đúng trang học của lớp.
 // Hai phạm vi rõ: Home → tab "Lớp" = hoạt động mọi lớp của tôi · Lớp → Không gian lớp = hoạt động của một lớp.
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ArrowLeft } from 'lucide-react'
 import '../../learning-thread/styles'
 import { respondFriendRequest, sendFriendRequest } from '../friends/friendsApi'
 import { programKeyOfClass } from '../identity/learningIdentity'
@@ -59,9 +58,6 @@ export default function ClassSpacePage({ classId, onBackToClass, onOpenThread, o
 
   return (
     <div className="cs-col cs-home cs-classv2 cs-classspace">
-      <button type="button" className="cs-btn cs-btn-ghost cs-btn-sm cs-profile-back cs-classspace-back" onClick={onBackToClass}>
-        <ArrowLeft size={16} /> Về lớp
-      </button>
       <header className="cs-classv2-head">
         <h1 className="cs-class-name">{c?.name ?? 'Không gian lớp'}</h1>
       </header>

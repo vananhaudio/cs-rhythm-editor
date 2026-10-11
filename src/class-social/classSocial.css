@@ -1586,3 +1586,9 @@ button.cs-subs-title:hover { color: var(--cs-accent); }
 .cs-map-learn.is-ok { color: var(--cs-ok); }
 .cs-map-learn.is-warn { color: var(--cs-warn); }
 .cs-map-learn-mark { font-weight: 700; }
+
+/* ── CLASS READING UI V1 (nghiệm thu) — Không gian lớp phẳng: tiêu đề + đường kẻ nhẹ thay cho thẻ trắng lớn trên nền xám ── */
+.cs-classspace .cs-classv2-sec { background: none; box-shadow: none; border-radius: 0; margin-top: 0; padding: var(--cs-s4) var(--cs-s1) var(--cs-s2); }
+.cs-classspace .cs-classv2-sec + .cs-classv2-sec { border-top: 1px solid var(--cs-border); margin-top: var(--cs-s3); }
+.cs-classspace .cs-classv2-h2 { text-transform: none; letter-spacing: 0; font-size: 15px; font-weight: 600; color: var(--cs-text); margin-bottom: var(--cs-s2); }
+.cs-classspace .cs-act-line:hover { border-radius: 0; }

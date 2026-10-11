@@ -8,9 +8,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { toClassLearningState, curriculumState, type ClassLearningState } from "../../src/classLearning/progress";
+import { toClassLearningState, curriculumState, currentSessionNo, type ClassLearningState } from "../../src/classLearning/progress";
 import ClassMap from "../../src/class-social/classes/ClassMap";
-import { checkpointStatus, cpLabel, sessionLearningLabel, stageGroups } from "../../src/class-social/classes/classMapModel";
+import { checkpointStatus, cpLabel, learnerVisibleState, sessionLearningLabel, stageGroups } from "../../src/class-social/classes/classMapModel";
 import ClassesPage from "../../src/class-social/classes/ClassesPage";
 import { ActivityLine, lessonLabel } from "../../src/class-social/classes/ClassActivity";
 import { toClassCards } from "../../src/class-social/classes/classModel";
@@ -52,12 +52,11 @@ test("Mục lục sống (24 buổi / 3 chặng): chặng hiện tại mở; ch�
   assert.deepEqual(stageGroups(st.sessions).map(x => [x.no, x.sessions.length]), [[1, 8], [2, 8], [3, 8]])
   const h = renderToStaticMarkup(<ClassMap state={st} current={1} onOpenSession={noop} onOpenThread={noop} />)
   assert.equal((h.match(/cs-map-stage-toggle/g) || []).length, 3)
-  assert.match(h, /cs-map-stage-text">Chặng 1 · TỪ GIAI ĐIỆU ĐẾN SOLO GUITAR<\/span>/, "Class Reading UI V1: tiêu đề chặng MỘT dòng nhẹ, không lặp số buổi")
-  assert.match(h, /cs-map-stage-text">Chặng 2 · PHÁT TRIỂN SOLO GUITAR &amp; BOLERO<\/span>/)
-  assert.doesNotMatch(h, /\d+ buổi<\/span>/, "không lặp 'N buổi' ở tiêu đề chặng")
+  assert.match(h, /cs-map-stage-text">Chặng 1 · 8 buổi · TỪ GIAI ĐIỆU ĐẾN SOLO GUITAR<\/span>/, "tiêu đề chặng MỘT dòng nhẹ: Chặng N · X buổi · tên chặng")
+  assert.match(h, /cs-map-stage-text">Chặng 2 · 8 buổi · PHÁT TRIỂN SOLO GUITAR &amp; BOLERO<\/span>/)
   assert.equal((h.match(/class="cs-map-row/g) || []).length, 8, "chỉ chặng đang học bung sẵn")
   // V3: cột số 01/02/… riêng; TÊN BUỔI là nút mở Trang Buổi; dòng phụ = bài trả của CHÍNH tôi
-  assert.match(h, /aria-current="step"><span class="cs-map-no" aria-hidden="true">01<\/span><div class="cs-map-body"><button type="button" class="cs-map-title"><span class="cs-sr-only">Buổi 01: <\/span>Bản đồ nốt giản lược C–Am<\/button><div class="cs-map-meta"><button[^>]*>0\/3 bài trả Đạt/)
+  assert.match(h, /aria-current="step"><span class="cs-map-no" aria-hidden="true">01<\/span><div class="cs-map-body"><button type="button" class="cs-map-title"><span class="cs-sr-only">Buổi 01: <\/span>Bản đồ nốt giản lược C–Am<\/button><\/div><span class="cs-map-learn is-wait">/)
   assert.doesNotMatch(h, /Đang học|Chưa học|Bạn đang ở đây/, "không nhãn vị trí")
   // Buổi khoá: thấy tên, nhạt + ổ khoá; "Chưa mở" cho trình đọc màn hình; chỉ buổi khoá ĐẦU có một câu gợi ý
   assert.match(h, /<span class="cs-map-title"><span class="cs-sr-only">Buổi 02: <\/span>Bài 2<svg[^>]*cs-map-lock[\s\S]*?<span class="cs-sr-only"> — Chưa mở<\/span>/)
@@ -75,7 +74,9 @@ test("bài trả: Đạt · Cần làm lại · Chờ thầy chấm · Chưa tr�
     { id: "1.4", title: "Bài trả 1.4 — Ghi âm", required: false, accepts: ["text"], thread: null }] } : x) }
   const st = ready(raw)
   const closed = renderToStaticMarkup(<ClassMap state={st} current={1} onOpenSession={noop} onOpenThread={noop} />)
-  assert.match(closed, /aria-expanded="false"[^>]*><span aria-hidden="true">✓ <\/span>1\/4 bài trả Đạt/)
+  assert.doesNotMatch(closed, /cs-map-subs|bài trả Đạt/, "học viên: không dòng phụ 'x/y bài trả Đạt ›' — chi tiết bài trả ở Trang Buổi")
+  const teacherView = renderToStaticMarkup(<ClassMap state={{ ...st, role: "teacher" }} current={1} onOpenSession={noop} onOpenThread={noop} />)
+  assert.match(teacherView, /aria-expanded="false"[^>]*>4 bài trả/, "Thầy: giữ lối xem nhanh bài trả (bung tại chỗ)")
   assert.doesNotMatch(closed, /cs-map-cps/, "mặc định thu gọn — tên bài là chính")
   assert.match(closed, /class="cs-map-learn is-warn"><span class="cs-map-learn-mark" aria-hidden="true">↻<\/span><span class="cs-sr-only">Trả bài: <\/span>Cần làm lại/, "nhãn cấp buổi bên phải tên buổi")
   // bung: dùng lại component với trạng thái đã bung (useState khởi tạo) — kiểm qua model + nhãn
@@ -96,7 +97,7 @@ test("V3 desktop master-detail: layout 'side' — bấm số bài trả CHỌN b
     { id: "1.2", title: "Liên thông", required: true, accepts: ["text"], thread: { id: "t12", status: "teacher_responded", visibility: "class", passed_at: null, last_event_at: null } },
     { id: "1.3", title: "Chỗ vướng", required: true, accepts: ["text"], thread: null }] } : x) }
   const st = ready(raw)
-  const map = renderToStaticMarkup(<ClassMap state={st} current={1} layout="side" selected={1} onSelect={noop} onOpenSession={noop} onOpenThread={noop} />)
+  const map = renderToStaticMarkup(<ClassMap state={{ ...st, role: "teacher" }} current={1} layout="side" selected={1} onSelect={noop} onOpenSession={noop} onOpenThread={noop} />)
   assert.match(map, /class="cs-map-row is-current is-selected"/)
   assert.match(map, /aria-pressed="true" aria-controls="cs-subs-panel"/)
   assert.doesNotMatch(map, /cs-map-cps/, "desktop: không bung trong mục lục")
@@ -209,4 +210,38 @@ test("Class Reading UI V1 — nhãn trả bài CẤP BUỔI: chỉ từ bài B�
   // chế độ giáo trình → không nhãn
   const cur = { ...ready({ ...RAW, sessions: RAW.sessions.map((x, i) => i === 0 ? { ...x, checkpoints: [cp("1.1", null)] } : x) }), mode: "curriculum" as const }
   assert.equal(sessionLearningLabel(cur.sessions[0], cur), null)
+})
+
+test("Class Reading UI V1 (nghiệm thu): học viên không thấy 44 buổi xoay vòng nội bộ; Thầy thấy đủ; lớp không chặng giữ nguyên", () => {
+  const cb2 = (role: string, over: Record<string, unknown> = {}) => ready({ ...RAW, role, class_name: "Guitar căn bản 2", sessions: Array.from({ length: 48 }, (_, i) => {
+    const n = i + 1
+    return { session_id: `s${n}`, session_no: n, title: `Buổi ${n} · Bài ${n}`, stage_no: n <= 4 ? 1 : null, stage_title: n <= 4 ? "Guitar căn bản 2" : null,
+      published: n <= 4, opened_at: n <= 2 ? "2026-10-06T13:00:00Z" : null, completed_at: null, checkpoints: [], ...(n <= 4 ? over : {}) }
+  }) })
+  const learner = cb2("learner"), teacher = cb2("teacher")
+  assert.equal(learner.sessions.length, 48, "dữ liệu server không đổi")
+  assert.deepEqual(learnerVisibleState(learner).sessions.map(x => x.no), [1, 2, 3, 4], "học viên: chỉ 4 buổi được giao")
+  assert.equal(learnerVisibleState(teacher).sessions.length, 48, "Thầy: đủ 48 buổi")
+  const h = renderToStaticMarkup(<ClassMap state={learnerVisibleState(learner)} current={1} onOpenSession={noop} onOpenThread={noop} />)
+  assert.match(h, /cs-map-stage-text">Chặng 1 · 4 buổi<\/span>/, "không lặp tên lớp (tên chặng = tên lớp) trong tiêu đề chặng")
+  assert.doesNotMatch(h, /44 buổi|Giáo trình ·/)
+  assert.equal((h.match(/class="cs-map-row/g) || []).length, 4)
+  const t = renderToStaticMarkup(<ClassMap state={learnerVisibleState(teacher)} current={1} onOpenSession={noop} onOpenThread={noop} />)
+  assert.match(t, /Giáo trình · 44 buổi/, "Thầy vẫn thấy nhóm 44 buổi")
+  // lớp KHÔNG có chặng nào (curriculum thuần): giữ nguyên, không làm trống danh sách
+  const flat = ready({ ...RAW, sessions: RAW.sessions.map(x => ({ ...x, stage_no: null, stage_title: null })) })
+  assert.equal(learnerVisibleState(flat).sessions.length, 24)
+  // buổi không chặng nhưng ĐÃ xuất bản / đã mở: vẫn hiện (không giấu thứ học viên đang dùng)
+  const mixed = ready({ ...RAW, sessions: RAW.sessions.map((x, i) => i === 0 ? { ...x, stage_no: null, stage_title: null } : x) })
+  assert.ok(learnerVisibleState(mixed).sessions.some(x => x.no === 1))
+  // quyền / mở khoá không đụng: trạng thái hiện tại tính từ dữ liệu gốc
+  assert.equal(currentSessionNo(learner, NOW), 1)
+  const p = src("class-social/classes/ClassPage.tsx")
+  assert.match(p, /const side = wide && hasSubmissions && learn\?\.role === 'teacher'/, "học viên không có panel phải")
+})
+
+test("Class Reading UI V1 (nghiệm thu): Không gian lớp không còn nút '← Về lớp' riêng — 'Giáo trình' trên thanh phân đoạn là đường quay lại", () => {
+  const sp = src("class-social/classes/ClassSpacePage.tsx")
+  assert.doesNotMatch(sp, /cs-classspace-back|ArrowLeft/)
+  assert.match(sp, /<ClassSectionNav classId=\{classId\} active="space" onOpenSyllabus=\{onBackToClass\}/)
 })

@@ -16,6 +16,7 @@ import { fetchLearningEntry, type LearningEntry } from './classesApi'
 import type { ClassCard } from './classModel'
 import ClassMap, { NoMapNote } from './ClassMap'
 import { ClassSectionNav } from './ClassParts'
+import { learnerVisibleState } from './classMapModel'
 import SubmissionsPanel from './SubmissionsPanel'
 import { rememberCheckpointFocus, useClassLearning } from './useClassLearning'
 
@@ -60,11 +61,14 @@ export default function ClassPage({ classId, isTeacher = false, onOpenThread, on
   // Master-detail chỉ khi THẬT có bài trả để diễn giải + vùng đủ rộng
   const hasSubmissions = !!learn && learn.mode === 'checkpoint' && learn.sessions.some(s => s.checkpoints.length > 0)
   const { ref, wide } = useWide(MASTER_DETAIL_MIN)
-  const side = wide && hasSubmissions
+  // Học viên: mục lục chỉ là danh sách bài học (chi tiết bài trả ở Trang Buổi). Thầy giữ panel xem nhanh bài trả.
+  const side = wide && hasSubmissions && learn?.role === 'teacher'
   const [picked, setPicked] = useState<number | null>(null)
   const firstWithSubs = learn?.sessions.find(s => s.checkpoints.length > 0)?.no ?? null
   const currentHasSubs = current != null && !!learn?.sessions.find(s => s.no === current)?.checkpoints.length
   const selected = picked ?? (currentHasSubs ? current : firstWithSubs)
+
+  const mapState = useMemo(() => (learn ? learnerVisibleState(learn) : null), [learn])
 
   // B dự phòng: lớp không có bản đồ giáo trình → hỏi server khoá chính / quyền (chỉ thành viên/Thầy)
   const member = !!c && (c.isMember || isTeacher)
@@ -101,7 +105,7 @@ export default function ClassPage({ classId, isTeacher = false, onOpenThread, on
         <section className="cs-classv2-sec cs-learnmap-main" aria-labelledby="cs-map-title">
           <h2 id="cs-map-title" className="cs-sr-only">Giáo trình</h2>
           {learn
-            ? <ClassMap state={learn} current={current} onOpenSession={openSession} onOpenThread={onOpenThread}
+            ? <ClassMap state={mapState!} current={current} onOpenSession={openSession} onOpenThread={onOpenThread}
                 layout={side ? 'side' : 'inline'} selected={selected} onSelect={setPicked} />
             : <NoMapNote entry={entry} isMember={member} />}
         </section>

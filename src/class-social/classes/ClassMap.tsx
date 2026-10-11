@@ -42,8 +42,10 @@ export function SubmissionList({ s, teacher, onOpenSession, onOpenThread, label,
 }
 
 // Tiêu đề chặng: MỘT dòng nhẹ "Chặng 1 · Tên chặng" (không lặp số buổi — danh sách bên dưới đã đếm được)
-function StageText({ no, title }: { no: number | null; title: string | null }) {
-  const text = [no != null ? `Chặng ${no}` : null, title].filter(Boolean).join(' · ') || 'Giáo trình'
+function StageText({ no, title, count, className }: { no: number | null; title: string | null; count: number; className?: string }) {
+  const norm = (x: string) => x.trim().toLocaleLowerCase('vi')
+  const shown = title && !(className && norm(title) === norm(className)) ? title : null   // không lặp tên lớp
+  const text = [no != null ? `Chặng ${no}` : 'Giáo trình', `${count} buổi`, shown].filter(Boolean).join(' · ')
   return <span className="cs-map-stage-text">{text}</span>
 }
 
@@ -68,11 +70,11 @@ function SessionItem({ s, state, current, layout, open, onToggle, onOpenSession,
           ? <span className="cs-map-title"><span className="cs-sr-only">Buổi {pad2(s.no)}: </span>{s.title}
               <Lock size={13} className="cs-map-lock" aria-hidden="true" /><span className="cs-sr-only"> — Chưa mở</span></span>
           : <button type="button" className="cs-map-title" onClick={() => onOpenSession(s.no)}><span className="cs-sr-only">Buổi {pad2(s.no)}: </span>{s.title}</button>}
-        {(meta || v.submissions) && (
+        {(meta || (v.submissions && teacher)) && (
           <div className="cs-map-meta">
             {meta && <span className="cs-map-state">{meta}</span>}
-            {meta && v.submissions && <span aria-hidden="true">·</span>}
-            {v.submissions && (layout === 'side'
+            {meta && v.submissions && teacher && <span aria-hidden="true">·</span>}
+            {v.submissions && teacher && (layout === 'side'
               ? <button type="button" className="cs-map-subs" aria-pressed={open} aria-controls="cs-subs-panel" onClick={onToggle}
                   aria-label={`${submissionsText(v.submissions, teacher)} — xem bài trả buổi ${pad2(s.no)} bên cạnh`}>
                   {!teacher && v.submissions.passed > 0 && <span aria-hidden="true">✓ </span>}
@@ -87,7 +89,7 @@ function SessionItem({ s, state, current, layout, open, onToggle, onOpenSession,
                 </button>)}
           </div>
         )}
-        {layout === 'inline' && open && v.submissions && (
+        {layout === 'inline' && open && v.submissions && teacher && (
           <SubmissionList s={s} teacher={teacher} label={`Bài trả buổi ${pad2(s.no)}`} onOpenSession={onOpenSession} onOpenThread={onOpenThread} />
         )}
       </div>
@@ -143,12 +145,12 @@ export default function ClassMap({ state, current, onOpenSession, onOpenThread, 
             {single && g.no == null
               ? null
               : single
-                ? <h3 className="cs-map-stage-title"><StageText no={g.no} title={g.title} /></h3>
+                ? <h3 className="cs-map-stage-title"><StageText no={g.no} title={g.title} count={g.sessions.length} className={state.className} /></h3>
                 : (
                   <h3 className="cs-map-stage-title">
                     <button type="button" className="cs-map-stage-toggle" aria-expanded={isOpen} onClick={() => flip(setOpen, g.key)}>
                       {isOpen ? <ChevronDown size={16} aria-hidden="true" /> : <ChevronRight size={16} aria-hidden="true" />}
-                      <StageText no={g.no} title={g.title} />
+                      <StageText no={g.no} title={g.title} count={g.sessions.length} className={state.className} />
                     </button>
                   </h3>
                 )}
