@@ -9,18 +9,18 @@ type Ready = Extract<ClassLearningState, { enabled: true }>
 export type CpTone = 'none' | 'wait' | 'info' | 'warn' | 'ok'
 export type CpStatus = { label: string; tone: CpTone; mark: string }
 
-/** Ngôn ngữ thống nhất: Chưa trả · Chờ Thầy · Cần làm lại · Đạt (+ "Thầy đã phản hồi" khi Thầy trả lời mà chưa chấm). */
+/** Ngôn ngữ thống nhất: Chưa trả · Chờ thầy chấm · Cần làm lại · Đạt (+ "Thầy đã phản hồi" khi Thầy trả lời mà chưa chấm). */
 export function checkpointStatus(t: CheckpointThread | null): CpStatus {
   switch (t?.status) {
     case 'passed': return { label: 'Đạt', tone: 'ok', mark: '✓' }
     case 'needs_retry': return { label: 'Cần làm lại', tone: 'warn', mark: '↻' }
-    case 'waiting_teacher': return { label: 'Chờ Thầy', tone: 'wait', mark: '…' }
+    case 'waiting_teacher': return { label: 'Chờ thầy chấm', tone: 'wait', mark: '…' }
     case 'teacher_responded': return { label: 'Thầy đã phản hồi', tone: 'info', mark: '…' }
     default: return { label: 'Chưa trả', tone: 'none', mark: '○' }
   }
 }
 
-/** Trạng thái của MỘT bài trả: trắc nghiệm → Đạt / Chưa trả (không Chờ Thầy) · bài Thầy chấm → theo Learning Thread. */
+/** Trạng thái của MỘT bài trả: trắc nghiệm → Đạt / Chưa trả (không Chờ thầy chấm) · bài Thầy chấm → theo Learning Thread. */
 export function cpStatus(cp: Pick<CheckpointState, 'accepts' | 'thread' | 'quizPassedAt'>): CpStatus {
   if (isQuizCheckpoint(cp)) return cp.quizPassedAt ? { label: 'Đạt', tone: 'ok', mark: '✓' } : { label: 'Chưa trả', tone: 'none', mark: '○' }
   // Đã Đạt (passed_at) rồi nộp lại → vẫn Đạt, đúng luật hoàn thành buổi của server (lsp_try_complete dùng passed_at)

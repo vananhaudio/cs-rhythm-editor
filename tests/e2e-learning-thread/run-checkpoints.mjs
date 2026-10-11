@@ -64,7 +64,7 @@ const rows = page => page.$$eval('.cs-map-row', els => els.map(e => ({
   title: (e.querySelector('.cs-map-no')?.textContent ?? '') + ' · ' + [...(e.querySelector('.cs-map-title')?.childNodes ?? [])]
     .filter(n => !(n.nodeType === 1 && (n.classList.contains('cs-sr-only') || n.tagName.toLowerCase() === 'svg'))).map(n => n.textContent).join('').trim(),
   current: e.getAttribute('aria-current') === 'step',
-  disabled: e.classList.contains('is-locked'), meta: e.querySelector('.cs-map-meta')?.textContent ?? '', cls: e.className })))
+  disabled: e.classList.contains('is-locked'), meta: e.querySelector('.cs-map-meta')?.textContent ?? '', learn: (e.querySelector('.cs-map-learn')?.textContent ?? '').replace(/^\S+\s*Trả bài:\s*/u, '').trim(), cls: e.className })))
 // Trang Lớp (bản đồ) vs Trang Buổi (phòng học)
 const onClassPage = async page => { await page.waitForSelector('.cs-map', { timeout: 15000 }); assert.equal(await page.$$eval('.lsn-paper', e => e.length), 0, 'Trang Lớp KHÔNG render giáo án') }
 async function openSessionFromMap(page, no) {
@@ -94,8 +94,8 @@ try {
   await onClassPage(page)
   // Class UX V3: trang HỌC — Tên lớp → Mục lục → cánh cửa Không gian lớp; KHÔNG feed / thành viên / Tiếp tục học / tab
   const top = await page.evaluate(() => { const t = document.querySelector('.cs-classv3').textContent
-    return [t.indexOf('Solo Guitar'), t.indexOf('Mục lục'), t.indexOf('Không gian lớp')] })
-  assert.ok(top.every((x, i) => x >= 0 && (i === 0 || x > top[i - 1])), 'thứ tự: Tên lớp → Mục lục → Không gian lớp ' + top)
+    return [t.indexOf('Solo Guitar'), t.indexOf('Giáo trình'), t.indexOf('Không gian lớp')] })
+  assert.ok(top.every((x, i) => x >= 0 && (i === 0 || x > top[i - 1])), 'thứ tự: Tên lớp → Giáo trình → Không gian lớp ' + top)
   assert.equal(await page.evaluate(() => /Tiếp tục học|Hoạt động gần đây|Xem toàn bộ giáo trình|Vào học|Lớp mình đang học/.test(document.querySelector('.cs-classv3').textContent)), false)
   assert.equal(await page.$$eval('.cs-classv3 .lt-profile-tabs, .cs-now-go, .cs-classv3 .cs-classv2-feed, .cs-classv3 .cs-member-list, .cs-subs-panel', e => e.length), 0, '390: một cột, không feed/thành viên/panel')
   assert.ok(await page.evaluate(() => scrollY) <= 10, 'vào lớp không tự cuộn')
@@ -108,7 +108,7 @@ try {
   assert.ok(r[1].disabled && r[2].disabled && r[1].meta === '' && r[2].meta === '', 'Buổi 02/03 khoá: thấy TÊN + ổ khoá; danh sách không lặp gợi ý mở khoá')
   assert.equal(await page.$$eval('.cs-map-row.is-locked .cs-map-lock', e => e.length), 3, 'ổ khoá trên mỗi buổi khoá (chữ "Chưa mở" cho trình đọc màn hình)')
   assert.equal(await page.$$eval('#buoi-02 button.cs-map-title', e => e.length), 0)
-  ok('B (390): Trang học V3 = Tên lớp → Mục lục (cột số · 01 0/2 bài trả Đạt · 02–04 khoá, ổ khoá + muted) → cánh cửa Không gian lớp; không feed/thành viên')
+  ok('B (390): Trang học V3 = Tên lớp → Giáo trình (cột số · 01 0/2 bài trả Đạt · 02–04 khoá, ổ khoá + muted) → cánh cửa Không gian lớp; không feed/thành viên')
   await page.screenshot({ path: `${SHOTS}/cp-0-class-v2-390.png`, fullPage: false })
   await noHorizontalOverflow(page, 'Trang Lớp 390px')
   await page.screenshot({ path: `${SHOTS}/cp-1-class-390.png`, fullPage: true })
@@ -147,8 +147,8 @@ try {
   await page.click('#buoi-01 .cs-map-subs')
   await page.waitForSelector('#buoi-01 .cs-map-cps')
   const cps = await page.$$eval('#buoi-01 .cs-map-cp', bs => bs.map(b => b.textContent))
-  assert.ok(/Bài trả 1\.1[\s\S]*Chờ Thầy/.test(cps[0]) && /Bài trả 1\.2[\s\S]*Chưa trả/.test(cps[1]), JSON.stringify(cps))
-  ok('← Về lớp: mục lục từ đầu · bung Buổi 01 tại chỗ (390): 1.1 Chờ Thầy · 1.2 Chưa trả')
+  assert.ok(/Bài trả 1\.1[\s\S]*Chờ thầy chấm/.test(cps[0]) && /Bài trả 1\.2[\s\S]*Chưa trả/.test(cps[1]), JSON.stringify(cps))
+  ok('← Về lớp: mục lục từ đầu · bung Buổi 01 tại chỗ (390): 1.1 Chờ thầy chấm · 1.2 Chưa trả')
   // bài chưa trả → Trang Buổi tại ĐÚNG bài trả 1.2
   await page.$$eval('#buoi-01 .cs-map-cp', bs => bs[1].click())
   await page.waitForFunction(id => location.pathname === `/me/classes/${id}/sessions/1`, {}, TH01)
@@ -230,7 +230,7 @@ try {
   await onClassPage(page)
   await expandAll(page)
   r = await rows(page)
-  assert.ok(/Hoàn thành\s*·\s*✓\s*1\/2 bài trả Đạt/.test(r[0].meta) && r[1].current && !r[1].disabled && r[2].disabled, JSON.stringify(r))
+  assert.ok(/^✓\s*1\/2 bài trả Đạt/.test(r[0].meta) && r[0].learn === 'Đạt' && r[1].current && !r[1].disabled && r[2].disabled, JSON.stringify(r))
   await openSessionFromMap(page, 2)
   await page.waitForSelector('#bai-tra-2\\.1'); assert.match(await cpText(page, '2.1'), /TRẢ BÀI/)
   assert.match(await page.$eval('.cs-learn-status', e => e.textContent), /0\/2 bài trả bắt buộc đã Đạt/)

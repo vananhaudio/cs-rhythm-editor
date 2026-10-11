@@ -508,7 +508,7 @@ try {
     // Bấm tên lớp trên tab Lớp → thẳng Class Page (Mục lục), không trang trung gian; Quay lại → tab Lớp
     await a.waitForSelector('.cs-home-classes .cs-classrow-name', { timeout: 15000 }); await a.evaluate(`${kd18}.click()`)
     await a.waitForFunction(() => location.pathname === '/me/classes/b0000000-0000-4000-8000-0000000000c1', { timeout: 15000 })
-    await a.waitForSelector('.cs-classv2', { timeout: 15000 }); await waitText(a, /Mục lục/)
+    await a.waitForSelector('.cs-classv2', { timeout: 15000 }); await waitText(a, /Giáo trình/)
     await a.goBack(); await a.waitForFunction(() => location.pathname === '/me' && location.search === '?feed=classes')
     await a.waitForFunction(() => document.querySelector('.cs-feed-tabs [aria-pressed="true"]')?.textContent === 'Lớp', { timeout: 15000 })
     await a.waitForSelector('.cs-home-classes .cs-classrow-name', { timeout: 15000 })

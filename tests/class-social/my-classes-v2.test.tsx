@@ -67,7 +67,7 @@ test("Mục lục sống (24 buổi / 3 chặng): chặng hiện tại mở; ch�
   assert.doesNotMatch(src("class-social/classes/ClassMap.tsx") + src("class-social/classes/ClassPage.tsx"), /scrollIntoView|scrollTo\(/, "vào lớp không tự cuộn")
 })
 
-test("bài trả: Đạt · Cần làm lại · Chờ Thầy · Chưa trả — từ Learning Thread thật, bung nhẹ tại chỗ", () => {
+test("bài trả: Đạt · Cần làm lại · Chờ thầy chấm · Chưa trả — từ Learning Thread thật, bung nhẹ tại chỗ", () => {
   const raw = { ...RAW, sessions: RAW.sessions.map((x, i) => i === 0 ? { ...x, checkpoints: [
     { id: "1.1", title: "Bài trả 1.1 — Tìm nốt", required: true, accepts: ["text"], thread: { id: "t11", status: "passed", visibility: "class", passed_at: "2026-10-02T12:00:00Z", last_event_at: null } },
     { id: "1.2", title: "Liên thông 3 vùng", required: true, accepts: ["video_link"], thread: { id: "t12", status: "needs_retry", visibility: "class", passed_at: null, last_event_at: null } },
@@ -79,7 +79,7 @@ test("bài trả: Đạt · Cần làm lại · Chờ Thầy · Chưa trả — 
   assert.doesNotMatch(closed, /cs-map-cps/, "mặc định thu gọn — tên bài là chính")
   assert.match(closed, /class="cs-map-learn is-warn"><span class="cs-map-learn-mark" aria-hidden="true">↻<\/span><span class="cs-sr-only">Trả bài: <\/span>Cần làm lại/, "nhãn cấp buổi bên phải tên buổi")
   // bung: dùng lại component với trạng thái đã bung (useState khởi tạo) — kiểm qua model + nhãn
-  assert.deepEqual(st.sessions[0].checkpoints.map(c => checkpointStatus(c.thread).label), ["Đạt", "Cần làm lại", "Chờ Thầy", "Chưa trả"])
+  assert.deepEqual(st.sessions[0].checkpoints.map(c => checkpointStatus(c.thread).label), ["Đạt", "Cần làm lại", "Chờ thầy chấm", "Chưa trả"])
   assert.equal(cpLabel({ id: "1.2", title: "Liên thông 3 vùng" }), "Bài trả 1.2 · Liên thông 3 vùng")
   assert.equal(cpLabel({ id: "1.1", title: "Bài trả 1.1 — Tìm nốt" }), "Bài trả 1.1 — Tìm nốt")
   // bấm bài có thread → đúng thread; bài chưa trả → Trang Buổi tại đúng bài trả

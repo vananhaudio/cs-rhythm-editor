@@ -138,7 +138,7 @@ try {
   assert.match(await page.$eval('.cs-subs-panel', e => e.textContent), new RegExp(`${QUIZ.length}/${TOTAL} Đạt`))
   const items = await page.$$eval('.cs-subs-panel .cs-map-cp', bs => bs.map(b => b.textContent))
   assert.equal(items.length, TOTAL)
-  QUIZ.forEach((id, i) => assert.ok(new RegExp(`${id.replace('.', '\\.')}[\\s\\S]*Đạt`).test(items[i]) && !/Chờ Thầy/.test(items[i]), JSON.stringify(items)))
+  QUIZ.forEach((id, i) => assert.ok(new RegExp(`${id.replace('.', '\\.')}[\\s\\S]*Đạt`).test(items[i]) && !/Chờ thầy chấm/.test(items[i]), JSON.stringify(items)))
   if (SPEC.video) assert.match(items[TOTAL - 1], /Chưa trả/)
   assert.match(await page.$eval(`#buoi-${NN} .cs-map-meta`, e => e.textContent), new RegExp(`${QUIZ.length}/${TOTAL} bài trả Đạt`))
   ok(`Trang lớp 1280: mục lục "${QUIZ.length}/${TOTAL} bài trả Đạt" · panel: ${QUIZ.join(', ')} Đạt · ${SPEC.video} Chưa trả`)
