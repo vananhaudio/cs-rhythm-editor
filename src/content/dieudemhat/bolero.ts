@@ -12,7 +12,7 @@ export const BOLERO: RhythmStyle = {
   sections: [
     { kind: 'loi1', intensity: 'Nhẹ, thoáng, phù hợp phần đầu', patterns: ['bolero-moc-1'] },
     { kind: 'loi2', intensity: 'Tiết tấu rõ hơn nhưng giữ tính chất Bolero', patterns: ['bolero-moc-2'] },
-    { kind: 'diepkhuc', intensity: 'Tương phản với Lời, nâng cường độ', patterns: ['quat-ballad-bolero-mini'] },
+    { kind: 'diepkhuc', intensity: 'Tương phản với Lời, nâng cường độ', patterns: ['quat-acoustic-ballad'] },
     { kind: 'loi3', intensity: 'Trở lại cách đệm của Lời 2', patterns: ['bolero-moc-2'], reuseOf: 'loi2' },
   ],
   practiceNotes: [
@@ -24,13 +24,11 @@ export const BOLERO: RhythmStyle = {
   editorial: {
     sources: [
       'Bolero Móc Kiểu 1 (B32123123) và Kiểu 2 (B321 – Chát – Bùm – Chát – Bụm – Chát), trường độ Đơn – Kép – Kép – Đơn × 6: Owner chốt 28/09/2026.',
-      'Điệp khúc: Owner xác nhận là một mẫu Quạt Ballad, nguồn “Buổi học 04 - Đệm cho điệp khúc — Lớp Bolero Mini thầy Văn Anh”, ♩ = 65. Không tạo “Quạt Bolero”.',
+      'Điệp khúc: Owner xác nhận là Quạt Ballad (phong cách acoustic), nguồn “Buổi học 04 - Đệm cho điệp khúc — Lớp Bolero Mini thầy Văn Anh”, ♩ = 65; trường độ + ký âm từ XML Owner 06/10/2026, chung nguồn với Ballad (`quat-acoustic-ballad`). Không tạo “Quạt Bolero”.',
       'Mục tiêu/cường độ từng phần: bảng công thức Bolero Owner chốt (commit 7ca38e0).',
       'Bài tập: theo ví dụ Owner đưa ngày 29/09/2026.',
     ],
     missing: [
-      'Điệp khúc: trường độ của chuỗi Bùm – Chát – I – X – I – x – Chát và định nghĩa I / X / x → chưa ký âm được.',
-      'Điệp khúc: mẫu này có trùng Quạt Ballad 1 (Cách đệm 7) / Quạt Ballad 2 (Cách đệm 8) không.',
       'Định nghĩa kỹ thuật tay phải của “Bùm”, “Chát”.',
       'Đặc điểm/cảm giác riêng của điệu Bolero — chưa có, không tự viết.',
       'Lỗi thường gặp khi đệm Bolero; bài hát gợi ý; Intro/Outro; audio/video mẫu.',

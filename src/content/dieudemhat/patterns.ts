@@ -35,10 +35,10 @@ const boleroBar = (labels: string[]): StrumNotation => ({
   ],
 })
 
-// Quạt Chùm 4 (Ballad cổ điển): mỗi phách quạt 4 tiếng đều nhau (cùng nhịp chia với Móc Chùm 4). Chưa có hướng quạt → không nhãn.
+// Quạt Chùm 4 (Ballad cổ điển): mỗi phách quạt 4 tiếng đều nhau, xuống–lên–xuống–lên (Owner 12/10/2026; cùng nhịp chia với Móc Chùm 4).
 const quatChum4: StrumNotation = {
   beatsPerBar: 4,
-  beats: [0, 1, 2, 3].map(() => [0, 1, 2, 3].map(() => ev(.25, '', 'strum'))),
+  beats: [0, 1, 2, 3].map(() => (['D', 'U', 'D', 'U'] as const).map((d) => ev(.25, d === 'D' ? '↓' : '↑', 'strum', { dir: d }))),
 }
 
 // Quạt Ballad acoustic = MỤC 3 của Bolero (điệp khúc). Owner XML 06/10/2026: phách 1 Bùm (đen) · phách 2 Chát (móc đơn chấm) + ↑ (móc kép)
@@ -79,11 +79,11 @@ export const PATTERNS: Record<string, Pattern> = {
     name: 'Quạt Chùm 4 — phong cách cổ điển',
     family: 'Quạt Ballad',
     strum: quatChum4,
-    guitar: '4 tiếng quạt đều / phách',
+    guitar: '↓ ↑ ↓ ↑ | ↓ ↑ ↓ ↑ | ↓ ↑ ↓ ↑ | ↓ ↑ ↓ ↑',
     durations: 'Kép × 16 (4 tiếng mỗi phách)',
-    legend: 'Đếm: 1 và 2 và 3 và 4 và, mỗi phách chia 4',
+    legend: '↓ xuống · ↑ lên · đều tay, xuống – lên xuống – lên',
     length: 'Cả mẫu dài đúng một ô nhịp.',
-    howTo: 'Mỗi phách quạt 4 tiếng đều nhau — cùng cách chia phách với Móc Chùm 4, nhưng quạt hợp âm thay vì móc từng dây.',
+    howTo: 'Mỗi phách quạt 4 tiếng đều nhau, luân phiên xuống – lên – xuống – lên — cùng cách chia phách với Móc Chùm 4, nhưng quạt hợp âm thay vì móc từng dây.',
   }),
   'quat-acoustic-ballad': p({
     id: 'quat-acoustic-ballad',
@@ -120,17 +120,6 @@ export const PATTERNS: Record<string, Pattern> = {
     length: 'Đủ một ô nhịp.',
     howTo: 'Giữ nguyên nhịp của Kiểu 1; từ nửa sau phách 2, thay tiếng móc bằng Chát – Bùm – Chát – Bụm – Chát.',
   }),
-  // Owner: điệp khúc Bolero dùng một mẫu thuộc họ Quạt Ballad (không có "Quạt Bolero").
-  // CHƯA có trường độ, CHƯA định nghĩa I/X/x → không ký âm (xem bolero.ts editorial).
-  'quat-ballad-bolero-mini': p({
-    id: 'quat-ballad-bolero-mini',
-    name: 'Quạt Ballad',
-    family: 'Quạt Ballad',
-    guitar: 'Bùm – Chát – I – X – I – x – Chát',
-    tempo: '♩ = 65',
-    howTo: 'Đây là mẫu quạt thầy dạy ở buổi “Đệm cho điệp khúc” (lớp Bolero Mini).',
-  }),
-
   // ── Slow Rock ──
   'slowrock-1': p({
     id: 'slowrock-1',

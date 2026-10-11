@@ -71,7 +71,7 @@ export const CB2_BUOI03: LessonDoc = {
       blocks: [
         { b: 'p', text: 'Ballad đi theo nhịp 4/4. Công thức cho cả bài: tiếng đàn dày dần lên — Chùm 2, rồi Chùm 4, tới điệp khúc thì chuyển sang quạt.' },
         { b: 'callout', label: 'CÔNG THỨC', text: 'Lời 1: Móc Chùm 2 · Lời 2: Móc Chùm 4 · Điệp khúc: quạt (cổ điển hoặc acoustic) · Lời 3: trở lại Móc Chùm 4.' },
-        { b: 'p', text: 'Điệp khúc có hai phong cách để chọn: cổ điển — Quạt Chùm 4 (mỗi phách quạt 4 tiếng đều, cùng nhịp chia với Móc Chùm 4); hoặc acoustic ballad — chính là cách đánh Cách 3 của Bolero ở Buổi 01.' },
+        { b: 'p', text: 'Điệp khúc có hai phong cách để chọn: cổ điển — Quạt Chùm 4 (mỗi phách quạt 4 tiếng đều, xuống – lên – xuống – lên, cùng nhịp chia với Móc Chùm 4); hoặc acoustic ballad — chính là cách đánh Cách 3 của Bolero ở Buổi 01.' },
       ],
     },
     fromPattern('ballad-moc-chum-2', 'Cách 1'),
@@ -80,7 +80,7 @@ export const CB2_BUOI03: LessonDoc = {
     stop(2, 'Tập riêng Móc Chùm 4: mỗi phách móc bốn lần đều nhau. Sau đó thử Chùm 2 → Chùm 4 mà không dừng nhịp.'),
     fromPattern('quat-chum-4', 'Cách 3a (điệp khúc) — cổ điển'),
     fromPattern('quat-acoustic-ballad', 'Cách 3b (điệp khúc) — acoustic'),
-    stop(3, 'Cách 3a: quạt 4 tiếng đều mỗi phách, giữ nhịp thật đều. Cách 3b: chính là Cách 3 của Bolero — bạn đã tập ở Buổi 01. Chọn MỘT phong cách cho điệp khúc rồi tập riêng. Sau đó thử Chùm 4 → Quạt → Chùm 4 mà không dừng nhịp.'),
+    stop(3, 'Cách 3a: quạt xuống – lên đều tay, 4 tiếng mỗi phách, giữ nhịp thật đều. Cách 3b: chính là Cách 3 của Bolero — bạn đã tập ở Buổi 01. Chọn MỘT phong cách cho điệp khúc rồi tập riêng. Sau đó thử Chùm 4 → Quạt → Chùm 4 mà không dừng nhịp.'),
     // ── BÀI TRẢ 3.1 — KIẾN THỨC (trắc nghiệm) ──
     {
       kind: 'checkpoint',
