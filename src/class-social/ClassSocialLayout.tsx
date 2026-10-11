@@ -161,7 +161,7 @@ export default function ClassSocialLayout({ me, section, onSection, children, ca
           {totalBadge > 0 && <span className="cs-nav-badge is-corner" aria-hidden="true">{totalBadge > 99 ? '99+' : totalBadge}</span>}
         </button>
         {/* Logo chuẩn — cùng cặp logo + chữ mà trang tuyển sinh class.vananhaudio.com đang dùng */}
-        <a className="cs-brand" href={SECTION_PATHS.home} aria-label="Về trang chủ"
+        <a className="cs-brand" href={SECTION_PATHS.home} aria-label="Thầy Văn Anh Guitar, về trang chủ"
           onClick={e => {
             e.preventDefault()
             // Đã ở /me (không ?feed=…): giữ nguyên trang — không dựng lại Home (mất bản nháp đang gõ), chỉ về đầu trang
