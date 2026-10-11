@@ -6,16 +6,8 @@
 import type { LessonDoc, LessonSection, StrumBar } from '../../lesson/lessonTypes'
 import { PATTERNS } from '../../content/dieudemhat/index.ts'
 
-// Cách 3 — phách 1 Bùm (đen) · phách 2 Chát (móc đơn chấm) + ↑ (móc kép) · phách 3 ↓ ↑ (kép) ↓ (đơn) · phách 4 Chát (đen).
-const CACH3: StrumBar = {
-  beatsPerBar: 4,
-  beats: [
-    [{ frac: 1, label: 'Bùm', act: 'bum' }],
-    [{ frac: 0.75, label: 'Chát', act: 'chat' }, { frac: 0.25, label: '↑', act: 'strum', dir: 'U' }],
-    [{ frac: 0.25, label: '↓', act: 'strum', dir: 'D' }, { frac: 0.25, label: '↑', act: 'strum', dir: 'U' }, { frac: 0.5, label: '↓', act: 'strum', dir: 'D' }],
-    [{ frac: 1, label: 'Chát', act: 'chat' }],
-  ],
-}
+// Cách 3 = Quạt Ballad Acoustic — ký âm đọc từ nguồn chung (src/content/dieudemhat/patterns.ts).
+const CACH3 = PATTERNS['quat-acoustic-ballad'].strum as StrumBar
 
 const fromPattern = (id: string, label: string): LessonSection => {
   const p = PATTERNS[id]
