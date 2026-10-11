@@ -35,13 +35,22 @@ const boleroBar = (labels: string[]): StrumNotation => ({
   ],
 })
 
-// Quạt Ballad (mẫu 2 phách: ĐEN | ĐƠN – KÉP – KÉP) lặp 2 lần cho đủ ô 4/4. Chưa có hướng quạt → không nhãn.
-const quatBallad = (accentFirst: boolean): StrumNotation => {
-  const half = [
-    [ev(1, '', 'strum', accentFirst ? { accent: true } : {})],
-    [ev(.5, '', 'strum'), ev(.25, '', 'strum'), ev(.25, '', 'strum')],
-  ]
-  return { beatsPerBar: 4, beats: [...half, ...half] }
+// Quạt Chùm 4 (Ballad cổ điển): mỗi phách quạt 4 tiếng đều nhau (cùng nhịp chia với Móc Chùm 4). Chưa có hướng quạt → không nhãn.
+const quatChum4: StrumNotation = {
+  beatsPerBar: 4,
+  beats: [0, 1, 2, 3].map(() => [0, 1, 2, 3].map(() => ev(.25, '', 'strum'))),
+}
+
+// Quạt Ballad acoustic = MỤC 3 của Bolero (điệp khúc). Owner XML 06/10/2026: phách 1 Bùm (đen) · phách 2 Chát (móc đơn chấm) + ↑ (móc kép)
+// · phách 3 ↓ ↑ (kép) ↓ (đơn) · phách 4 Chát (đen). Một nguồn duy nhất — giáo trình CB2 Buổi 01 đọc lại từ đây.
+const quatAcousticBallad: StrumNotation = {
+  beatsPerBar: 4,
+  beats: [
+    [ev(1, 'Bùm', 'bum')],
+    [ev(.75, 'Chát', 'chat'), ev(.25, '↑', 'strum', { dir: 'U' })],
+    [ev(.25, '↓', 'strum', { dir: 'D' }), ev(.25, '↑', 'strum', { dir: 'U' }), ev(.5, '↓', 'strum', { dir: 'D' })],
+    [ev(1, 'Chát', 'chat')],
+  ],
 }
 
 export const PATTERNS: Record<string, Pattern> = {
@@ -64,25 +73,29 @@ export const PATTERNS: Record<string, Pattern> = {
     length: 'Mẫu dài 2 phách, đàn 2 lần là đủ một ô nhịp.',
     howTo: 'Mỗi phách chia 4: mỗi phách móc 4 lần đều nhau.',
   }),
-  'quat-ballad-1': p({
-    id: 'quat-ballad-1',
-    name: 'Quạt Ballad 1',
+  // Điệp khúc Ballad có HAI phong cách (Owner 12/10/2026): cổ điển = Quạt Chùm 4; acoustic = mục 3 của Bolero.
+  'quat-chum-4': p({
+    id: 'quat-chum-4',
+    name: 'Quạt Chùm 4 — phong cách cổ điển',
     family: 'Quạt Ballad',
-    strum: quatBallad(false),
-    guitar: 'ĐEN | MÓC ĐƠN – MÓC KÉP – MÓC KÉP',
-    legend: 'Đếm: 1 | 2 và',
-    length: 'Mẫu dài 2 phách, đàn 2 lần là đủ một ô nhịp.',
-    howTo: 'Phách 1 quạt một tiếng dài; phách 2 quạt ba tiếng: một móc đơn rồi hai móc kép nhanh.',
+    strum: quatChum4,
+    guitar: '4 tiếng quạt đều / phách',
+    durations: 'Kép × 16 (4 tiếng mỗi phách)',
+    legend: 'Đếm: 1 và 2 và 3 và 4 và, mỗi phách chia 4',
+    length: 'Cả mẫu dài đúng một ô nhịp.',
+    howTo: 'Mỗi phách quạt 4 tiếng đều nhau — cùng cách chia phách với Móc Chùm 4, nhưng quạt hợp âm thay vì móc từng dây.',
   }),
-  'quat-ballad-2': p({
-    id: 'quat-ballad-2',
-    name: 'Quạt Ballad 2',
+  'quat-acoustic-ballad': p({
+    id: 'quat-acoustic-ballad',
+    name: 'Quạt Ballad Acoustic',
     family: 'Quạt Ballad',
-    strum: quatBallad(true),
-    guitar: 'ĐEN | MÓC ĐƠN – MÓC KÉP – MÓC KÉP',
-    legend: 'Dấu > = quạt mạnh (rasgueado)',
-    length: 'Mẫu dài 2 phách, đàn 2 lần là đủ một ô nhịp.',
-    howTo: 'Cùng tiết tấu với Quạt Ballad 1; tiếng đầu của mẫu là quạt mạnh (rasgueado).',
+    strum: quatAcousticBallad,
+    tempo: '♩ = 65',
+    guitar: 'Bùm – Chát – ↑ – ↓ ↑ ↓ – Chát',
+    durations: 'Đen – Đơn chấm dôi – Kép – Kép – Kép – Đơn – Đen',
+    legend: 'Bùm = như tiếng kick · Chát = như tiếng snare · ↑ lên · ↓ xuống',
+    length: 'Cả mẫu dài đúng một ô nhịp.',
+    howTo: 'Phách 1 là Bùm. Phách 2 và phách 4 là Chát. Giữa hai tiếng Chát là các tiếng quạt: lên – xuống lên xuống.',
   }),
 
   // ── Bolero ──

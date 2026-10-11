@@ -58,7 +58,7 @@ export const CB2_BUOI04: LessonDoc = {
             ['Chơi liên tục ba cách đánh Bolero, chuyển cách không dừng nhịp', '☐', '☐', '☐'],
             ['Tìm ngăn capo vừa giọng mình cho một bài', '☐', '☐', '☐'],
             ['Chơi ba kiểu Slow Rock, đếm trip-let đều', '☐', '☐', '☐'],
-            ['Chơi Móc Chùm 2, Móc Chùm 4 và một mẫu Quạt Ballad', '☐', '☐', '☐'],
+            ['Chơi Móc Chùm 2, Móc Chùm 4 và một kiểu quạt điệp khúc Ballad', '☐', '☐', '☐'],
             ['Đệm trọn một bài, đổi cách đánh giữa các phần', '☐', '☐', '☐'],
           ],
         },
