@@ -94,7 +94,7 @@ export const CB2_BUOI03: LessonDoc = {
         options: [
           { id: 'a', text: 'Móc Chùm 2, giống Lời 1.' },
           { id: 'b', text: 'Móc Chùm 4, trở lại cách đệm của Lời 2.' },
-          { id: 'c', text: 'Quạt Ballad, giống điệp khúc.' },
+          { id: 'c', text: 'Kiểu quạt của điệp khúc, giống điệp khúc.' },
           { id: 'd', text: 'Một cách hoàn toàn mới, khác mọi phần trước.' },
         ],
         hint: 'Lời 3 trở lại như Lời 2 — đó là cách bài hát "hạ xuống" sau điệp khúc.',
