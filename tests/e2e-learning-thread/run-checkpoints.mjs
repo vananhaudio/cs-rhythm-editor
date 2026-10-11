@@ -186,7 +186,7 @@ try {
   await page.waitForSelector('.lsn-paper', { timeout: 15000 })
   ok('Bấm TÊN Buổi 01 → đúng Trang Buổi (/sessions/1)')
   await page.click('.cs-session-back'); await onClassPage(page)
-  await page.click('.cs-space-door-go')
+  await page.click('.cs-secnav-space')
   await page.waitForFunction(id => location.pathname === `/me/classes/${id}/space`, {}, TH01)
   await page.waitForFunction(() => /Bài trả 1\.1/.test(document.querySelector('.cs-classv2-feed')?.textContent ?? ''), { timeout: 15000 })
   assert.equal(await page.evaluate(() => /Solo Guitar Căn Bản/.test(document.querySelector('.cs-classv2-feed').textContent)), false, 'feed không lặp tên lớp')

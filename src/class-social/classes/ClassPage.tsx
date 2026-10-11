@@ -1,11 +1,12 @@
 // /me/classes/<id> — CLASS UX V3 · TRANG HỌC CỦA LỚP (không phải Social). Con đường cố định (lần đầu = lần thứ 20):
-//   A. Tên lớp + lịch (nếu có) — không lặp tên khoá / mã / sĩ số
+//   A. Tên lớp + lịch (nếu có) — không lặp tên khoá / mã / sĩ số; ngay dưới: Giáo trình | Không gian lớp (hai route sẵn có)
 //   B. MỤC LỤC SỐNG ↔ BÀI TRẢ CỦA TÔI
 //        • vùng nội dung rộng (desktop): master-detail — mục lục trái (~62%) · "Bài trả của tôi" phải (~38%)
 //        • vùng hẹp (mobile / tablet hẹp): một cột, bấm "1/3 bài trả Đạt" bung tại chỗ
 //        • lớp không có bài trả (chế độ giáo trình / không giáo trình): KHÔNG master-detail giả
-//   C. Cánh cửa nhẹ "Không gian lớp" (/me/classes/<id>/space) — Feed của lớp + Thành viên ở đó, không preview ở đây
-// Không tab, không "Tiếp tục học", không card "Đang học", không tự cuộn. Quyền do server quyết; trang chỉ ĐỌC + trình bày.
+//      (Class Reading UI V1: không tiêu đề "Mục lục" lớn; nhãn trả bài cấp buổi nằm bên phải tên buổi)
+//   Không gian lớp (/me/classes/<id>/space) — Feed của lớp + Thành viên ở đó, không preview ở đây
+// Không hệ tab mới (thanh phân đoạn chỉ là hai link route sẵn có), không "Tiếp tục học", không card "Đang học", không tự cuộn. Quyền do server quyết; trang chỉ ĐỌC + trình bày.
 import ShareButton from '../../share/ShareButton'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { ArrowLeft } from 'lucide-react'
@@ -14,7 +15,7 @@ import { currentSessionNo } from '../../classLearning/progress'
 import { fetchLearningEntry, type LearningEntry } from './classesApi'
 import type { ClassCard } from './classModel'
 import ClassMap, { NoMapNote } from './ClassMap'
-import { ClassSpaceDoor } from './ClassParts'
+import { ClassSectionNav } from './ClassParts'
 import SubmissionsPanel from './SubmissionsPanel'
 import { rememberCheckpointFocus, useClassLearning } from './useClassLearning'
 
@@ -93,10 +94,12 @@ export default function ClassPage({ classId, isTeacher = false, onOpenThread, on
         {learn?.role === 'teacher' && <p className="cs-classv2-meta">Giáo viên xem trước: mọi buổi đều mở.</p>}
       </header>
 
+      <ClassSectionNav classId={classId} active="syllabus" onOpenSyllabus={() => undefined} onOpenSpace={onOpenSpace} />
+
       {/* B — MỤC LỤC SỐNG ↔ BÀI TRẢ CỦA TÔI */}
       <div className={side ? 'cs-learnmap is-split' : 'cs-learnmap'}>
         <section className="cs-classv2-sec cs-learnmap-main" aria-labelledby="cs-map-title">
-          <h2 id="cs-map-title" className="cs-classv2-h2">Mục lục</h2>
+          <h2 id="cs-map-title" className="cs-sr-only">Giáo trình</h2>
           {learn
             ? <ClassMap state={learn} current={current} onOpenSession={openSession} onOpenThread={onOpenThread}
                 layout={side ? 'side' : 'inline'} selected={selected} onSelect={setPicked} />
@@ -108,9 +111,6 @@ export default function ClassPage({ classId, isTeacher = false, onOpenThread, on
           </div>
         )}
       </div>
-
-      {/* C — cánh cửa Không gian lớp (Feed + Thành viên ở trang riêng) */}
-      {c && <ClassSpaceDoor onOpen={onOpenSpace} />}
     </>
   )
 }

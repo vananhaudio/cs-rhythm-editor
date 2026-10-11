@@ -12,7 +12,7 @@ import { isThreadEntry } from '../posts/postModel'
 import { usePostsFeed } from '../posts/usePostsFeed'
 import { fetchClassActivityPage, fetchClassDetail, fetchClassMembers } from './classesApi'
 import type { ClassCard, ClassMember } from './classModel'
-import { MemberList } from './ClassParts'
+import { ClassSectionNav, MemberList } from './ClassParts'
 import { ActivityLine } from './ClassActivity'
 import type { Load } from './useClassLearning'
 
@@ -60,12 +60,12 @@ export default function ClassSpacePage({ classId, onBackToClass, onOpenThread, o
   return (
     <div className="cs-col cs-home cs-classv2 cs-classspace">
       <button type="button" className="cs-btn cs-btn-ghost cs-btn-sm cs-profile-back cs-classspace-back" onClick={onBackToClass}>
-        <ArrowLeft size={16} /> {c?.name ?? 'Về lớp'}
+        <ArrowLeft size={16} /> Về lớp
       </button>
       <header className="cs-classv2-head">
-        <h1 className="cs-class-name">Không gian lớp</h1>
-        {c && <p className="cs-classv2-meta">{c.name}</p>}
+        <h1 className="cs-class-name">{c?.name ?? 'Không gian lớp'}</h1>
       </header>
+      <ClassSectionNav classId={classId} active="space" onOpenSyllabus={onBackToClass} onOpenSpace={() => undefined} />
       {detail.status === 'error' && <p className="cs-act-note" role="alert">{detail.message}</p>}
 
       <section className="cs-classv2-sec" aria-labelledby="cs-space-feed" aria-busy={feed.status === 'loading'}>

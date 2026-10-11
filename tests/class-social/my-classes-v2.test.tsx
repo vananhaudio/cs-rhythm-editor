@@ -10,7 +10,7 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { toClassLearningState, curriculumState, type ClassLearningState } from "../../src/classLearning/progress";
 import ClassMap from "../../src/class-social/classes/ClassMap";
-import { checkpointStatus, cpLabel, stageGroups } from "../../src/class-social/classes/classMapModel";
+import { checkpointStatus, cpLabel, sessionLearningLabel, stageGroups } from "../../src/class-social/classes/classMapModel";
 import ClassesPage from "../../src/class-social/classes/ClassesPage";
 import { ActivityLine, lessonLabel } from "../../src/class-social/classes/ClassActivity";
 import { toClassCards } from "../../src/class-social/classes/classModel";
@@ -52,8 +52,9 @@ test("Mục lục sống (24 buổi / 3 chặng): chặng hiện tại mở; ch�
   assert.deepEqual(stageGroups(st.sessions).map(x => [x.no, x.sessions.length]), [[1, 8], [2, 8], [3, 8]])
   const h = renderToStaticMarkup(<ClassMap state={st} current={1} onOpenSession={noop} onOpenThread={noop} />)
   assert.equal((h.match(/cs-map-stage-toggle/g) || []).length, 3)
-  assert.match(h, /cs-map-stage-no">Chặng 1 · 8 buổi<\/span><span class="cs-map-stage-name">TỪ GIAI ĐIỆU ĐẾN SOLO GUITAR<\/span>/, "tiêu đề chặng hai cấp kiểu mục lục")
-  assert.match(h, /cs-map-stage-no">Chặng 2 · 8 buổi<\/span><span class="cs-map-stage-name">PHÁT TRIỂN SOLO GUITAR &amp; BOLERO<\/span>/)
+  assert.match(h, /cs-map-stage-text">Chặng 1 · TỪ GIAI ĐIỆU ĐẾN SOLO GUITAR<\/span>/, "Class Reading UI V1: tiêu đề chặng MỘT dòng nhẹ, không lặp số buổi")
+  assert.match(h, /cs-map-stage-text">Chặng 2 · PHÁT TRIỂN SOLO GUITAR &amp; BOLERO<\/span>/)
+  assert.doesNotMatch(h, /\d+ buổi<\/span>/, "không lặp 'N buổi' ở tiêu đề chặng")
   assert.equal((h.match(/class="cs-map-row/g) || []).length, 8, "chỉ chặng đang học bung sẵn")
   // V3: cột số 01/02/… riêng; TÊN BUỔI là nút mở Trang Buổi; dòng phụ = bài trả của CHÍNH tôi
   assert.match(h, /aria-current="step"><span class="cs-map-no" aria-hidden="true">01<\/span><div class="cs-map-body"><button type="button" class="cs-map-title"><span class="cs-sr-only">Buổi 01: <\/span>Bản đồ nốt giản lược C–Am<\/button><div class="cs-map-meta"><button[^>]*>0\/3 bài trả Đạt/)
@@ -76,6 +77,7 @@ test("bài trả: Đạt · Cần làm lại · Chờ Thầy · Chưa trả — 
   const closed = renderToStaticMarkup(<ClassMap state={st} current={1} onOpenSession={noop} onOpenThread={noop} />)
   assert.match(closed, /aria-expanded="false"[^>]*><span aria-hidden="true">✓ <\/span>1\/4 bài trả Đạt/)
   assert.doesNotMatch(closed, /cs-map-cps/, "mặc định thu gọn — tên bài là chính")
+  assert.match(closed, /class="cs-map-learn is-warn"><span class="cs-map-learn-mark" aria-hidden="true">↻<\/span><span class="cs-sr-only">Trả bài: <\/span>Cần làm lại/, "nhãn cấp buổi bên phải tên buổi")
   // bung: dùng lại component với trạng thái đã bung (useState khởi tạo) — kiểm qua model + nhãn
   assert.deepEqual(st.sessions[0].checkpoints.map(c => checkpointStatus(c.thread).label), ["Đạt", "Cần làm lại", "Chờ Thầy", "Chưa trả"])
   assert.equal(cpLabel({ id: "1.2", title: "Liên thông 3 vùng" }), "Bài trả 1.2 · Liên thông 3 vùng")
@@ -111,16 +113,19 @@ test("V3 desktop master-detail: layout 'side' — bấm số bài trả CHỌN b
 
 test("Class Page V3: Tên lớp (+ lịch) → Mục lục ↔ Bài trả của tôi → cánh cửa Không gian lớp; KHÔNG feed/thành viên trên trang học", async () => {
   const p = src("class-social/classes/ClassPage.tsx")
-  const order = [/<h1 className="cs-class-name">/, />Mục lục<\/h2>/, /<SubmissionsPanel /, /<ClassSpaceDoor /].map(re => pos(p, re))
-  assert.deepEqual([...order].sort((a, b) => a - b), order, "thứ tự")
+  const order = [/<h1 className="cs-class-name">/, /<ClassSectionNav /, /<ClassMap /, /<SubmissionsPanel /].map(re => pos(p, re))
+  assert.deepEqual([...order].sort((a, b) => a - b), order, "thứ tự: Tên lớp → Giáo trình | Không gian lớp → mục lục ↔ bài trả")
+  assert.doesNotMatch(p, />Mục lục<\/h2>|ClassSpaceDoor/, "Class Reading UI V1: không tiêu đề 'Mục lục' lớn, không khối cánh cửa riêng")
   assert.doesNotMatch(p, /Lớp mình đang học|ActivityLine|MemberList|fetchClassActivityPage|fetchClassMembers|Tiếp tục học|Hoạt động gần đây|lt-profile-tabs|Vào học/)
   assert.doesNotMatch(p, /classMetaLine|teacherNames/, "header không lặp tên khoá / Thầy")
   assert.match(p, /\{c\?\.schedule && <p className="cs-classv2-meta">\{c\.schedule\}<\/p>\}/)
   assert.match(p, /<NoMapNote entry=\{entry\} isMember=\{member\} \/>/)
-  const { ClassSpaceDoor } = await import("../../src/class-social/classes/ClassParts")
-  const door = renderToStaticMarkup(<ClassSpaceDoor onOpen={noop} />)
-  assert.match(door, /Không gian lớp/); assert.match(door, /Bài trả · Hỏi bài · Trao đổi · Thành viên/)
-  assert.equal((door.match(/<button/g) || []).length, 1, "một đích bấm duy nhất")
+  const { ClassSectionNav } = await import("../../src/class-social/classes/ClassParts")
+  const cid = "11111111-2222-3333-4444-555555555555"
+  const nav = renderToStaticMarkup(<ClassSectionNav classId={cid} active="syllabus" onOpenSyllabus={noop} onOpenSpace={noop} />)
+  assert.match(nav, new RegExp(`href="/me/classes/${cid}"[^>]*aria-current="page"[^>]*>Giáo trình<`), "Giáo trình = route trang lớp, đang ở đây")
+  assert.match(nav, new RegExp(`href="/me/classes/${cid}/space"[^>]*>Không gian lớp<`), "Không gian lớp = route sẵn có")
+  assert.equal((nav.match(/<a /g) || []).length, 2, "hai khu vực, không hệ tab mới")
   // Không gian lớp: REUSE social_class_activity + ActivityLine + MemberList (không hệ Social mới), ← về đúng lớp
   const sp = src("class-social/classes/ClassSpacePage.tsx")
   assert.match(sp, /fetchClassActivityPage/); assert.match(sp, /<ActivityLine /); assert.match(sp, /<MemberList /); assert.match(sp, /fetchClassMembers/)
@@ -170,4 +175,38 @@ test("nguồn: hoạt động lớp = social_class_activity; tab \"Lớp\" trên
   const page = src("class-social/ClassSocialPage.tsx")
   assert.match(page, /openClasses = \(\) => navigate\(\{ kind: 'classes' \}\)/)
   assert.doesNotMatch(page, /openMyClasses/)
+})
+
+test("Class Reading UI V1 — nhãn trả bài CẤP BUỔI: chỉ từ bài BẮT BUỘC, theo thứ tự Đạt > Cần làm lại > Chờ thầy chấm > Chưa trả", () => {
+  const T = (status: string, passed_at: string | null = null) => ({ id: "t" + status, status, visibility: "class", passed_at, last_event_at: null })
+  const mk = (cps: unknown[], extra: Record<string, unknown> = {}, role = "learner") => {
+    const raw = { ...RAW, role, sessions: RAW.sessions.map((x, i) => i === 0 ? { ...x, ...extra, checkpoints: cps } : x) }
+    const st = ready(raw)
+    return sessionLearningLabel(st.sessions[0], st)?.label ?? null
+  }
+  const cp = (id: string, thread: unknown, required = true, accepts = ["text"], quiz_passed_at: string | null = null) => ({ id, title: id, required, accepts, thread, quiz_passed_at })
+  assert.equal(mk([cp("1.1", T("passed", "x")), cp("1.2", T("passed", "x"))]), "Đạt")
+  assert.equal(mk([cp("1.1", T("passed", "x")), cp("1.2", T("needs_retry")), cp("1.3", T("waiting_teacher"))]), "Cần làm lại", "retry ưu tiên hơn chờ chấm")
+  assert.equal(mk([cp("1.1", T("passed", "x")), cp("1.2", T("waiting_teacher")), cp("1.3", null)]), "Chờ thầy chấm", "chờ chấm ưu tiên hơn chưa nộp")
+  assert.equal(mk([cp("1.1", null), cp("1.2", null)]), "Chưa trả")
+  assert.equal(mk([cp("1.1", T("passed", "x")), cp("1.2", null)]), "Chưa trả", "còn bài bắt buộc chưa nộp")
+  // đã Đạt rồi nộp lại (server: status về waiting_teacher, passed_at giữ) → vẫn Đạt
+  assert.equal(mk([cp("1.1", T("waiting_teacher", "2026-10-02T12:00:00Z"))]), "Đạt")
+  // bài KHÔNG bắt buộc không ảnh hưởng
+  assert.equal(mk([cp("1.1", T("passed", "x")), cp("1.2", T("needs_retry"), false)]), "Đạt")
+  assert.equal(mk([cp("1.1", null, false)]), null, "không có bài bắt buộc → không nhãn")
+  // trắc nghiệm: Đạt / Chưa trả
+  assert.equal(mk([cp("2.1", null, true, ["quiz"], "2026-10-05T00:00:00Z"), cp("2.2", T("passed", "x"), true, ["video_link"])]), "Đạt")
+  assert.equal(mk([cp("2.1", null, true, ["quiz"]), cp("2.2", T("passed", "x"), true, ["video_link"])]), "Chưa trả")
+  // không đủ dữ liệu / không chắc → không đoán
+  assert.equal(mk([cp("1.1", T("teacher_responded"))]), null, "Thầy phản hồi chưa chấm: quy tắc chưa nêu → không nhãn")
+  assert.equal(mk([cp("1.1", null), cp("1.2", T("passed", "x"))], { completed_at: "2026-10-03T00:00:00Z" }), null, "server đã hoàn thành buổi mà còn bài bắt buộc chưa Đạt → không suy diễn")
+  assert.equal(mk([cp("1.1", T("passed", "x"))], {}, "teacher"), null, "Thầy: không có trạng thái theo học viên")
+  // buổi khoá (chưa mở) → không nhãn
+  const st = ready(RAW)
+  assert.equal(st.sessions[1].openedAt, null)
+  assert.equal(sessionLearningLabel(st.sessions[1], st), null)
+  // chế độ giáo trình → không nhãn
+  const cur = { ...ready({ ...RAW, sessions: RAW.sessions.map((x, i) => i === 0 ? { ...x, checkpoints: [cp("1.1", null)] } : x) }), mode: "curriculum" as const }
+  assert.equal(sessionLearningLabel(cur.sessions[0], cur), null)
 })

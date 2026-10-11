@@ -300,7 +300,7 @@ try {
   await noHorizontalOverflow(page, 'Trang lớp (390px)')
   await page.screenshot({ path: `${SHOTS}/12-class-outsider.png`, fullPage: true })
   const classUrl = await page.evaluate(() => location.pathname)
-  await page.click('.cs-space-door-go')
+  await page.click('.cs-secnav-space')
   await page.waitForFunction(u => location.pathname === u + '/space', { timeout: 15000 }, classUrl)
   await page.waitForSelector('.cs-classspace .cs-classv2-feed .cs-act-line', { timeout: 15000 })
   assert.match(await page.$eval('.cs-classv2-feed', e => e.textContent), /Bài 4\.3 — Bolero móc kiểu 1/)
@@ -335,9 +335,9 @@ try {
   ok('A chia sẻ "🎸 Đang tập…" từ Home → bài hiện ngay trong Feed của mình (bài status có sẵn, không hệ mới)')
   await page.screenshot({ path: `${SHOTS}/13-home.png`, fullPage: true })
   await page.goto(`http://class.localhost:${V}${classUrl}`, { waitUntil: 'networkidle0' })
-  await page.waitForSelector('.cs-space-door-go', { timeout: 15000 })   // thành viên ở Không gian lớp
+  await page.waitForSelector('.cs-secnav-space', { timeout: 15000 })   // thành viên ở Không gian lớp
   assert.equal(await page.evaluate(() => /Bạn đang xem lớp này/.test(document.querySelector('.cs-classv2').textContent)), false)
-  await page.click('.cs-space-door-go')
+  await page.click('.cs-secnav-space')
   await page.waitForSelector('.cs-member', { timeout: 15000 })
   const members = await page.$$eval('.cs-member-name', els => els.map(e => e.textContent))
   assert.ok(members.includes('An'))
@@ -430,7 +430,7 @@ try {
     await pg.waitForFunction(() => location.pathname.startsWith('/me/classes/'))
     const cls = await pathNow(pg)
     await noRaw(pg, 'Trang lớp')
-    await pg.waitForSelector('.cs-space-door-go', { timeout: 15000 }); await pg.click('.cs-space-door-go')
+    await pg.waitForSelector('.cs-secnav-space', { timeout: 15000 }); await pg.click('.cs-secnav-space')
     await pg.waitForSelector('.cs-classv2-feed .cs-act-line', { timeout: 15000 })
     await pg.$eval('.cs-classv2-feed .cs-act-line', b => b.click())
     await pg.waitForSelector('.lt-head', { timeout: 15000 })
@@ -654,7 +654,7 @@ try {
     assert.match(await e.$eval('.lt-head', x => x.textContent), /Ánh Dương Lê[\s\S]*DH2\.KD18 · Đệm hát 2/, 'thread: tên mới + snapshot lớp DH2.KD18 giữ nguyên')
     // Thành viên lớp
     await e.goto(ME + '/classes', { waitUntil: 'networkidle0' }); await e.waitForSelector('.cs-classrows .cs-classrow-name', { timeout: 15000 }); await e.$eval('.cs-classrows .cs-classrow-name', b => b.click())
-    await e.waitForSelector('.cs-space-door-go', { timeout: 15000 }); await e.click('.cs-space-door-go'); await e.waitForSelector('.cs-member')
+    await e.waitForSelector('.cs-secnav-space', { timeout: 15000 }); await e.click('.cs-secnav-space'); await e.waitForSelector('.cs-member')
     assert.ok(await e.$$eval('.cs-member-name', a => a.some(x => x.textContent === 'Ánh Dương Lê')), 'danh sách thành viên lớp có tên mới')
     await ce.close()
     // Người khác: KHÔNG có nút chỉnh sửa; thấy tên mới
@@ -701,7 +701,7 @@ try {
     await a.waitForSelector('.cs-share', { timeout: 15000 })
     await a.goto(ME + '/classes', { waitUntil: 'networkidle0' }); await a.waitForSelector('.cs-classrows .cs-classrow-name', { timeout: 15000 })
     await a.evaluate(() => [...document.querySelectorAll('.cs-classrows .cs-classrow-name')].find(t => /KD18/.test(t.textContent)).click())
-    await a.waitForSelector('.cs-space-door-go', { timeout: 15000 }); await a.click('.cs-space-door-go'); await a.waitForSelector('.cs-member')
+    await a.waitForSelector('.cs-secnav-space', { timeout: 15000 }); await a.click('.cs-secnav-space'); await a.waitForSelector('.cs-member')
     await a.waitForSelector('.cs-member .cs-lid', { timeout: 15000 })
     const memberBadges = await lids(a, '.cs-member .cs-lid')
     assert.ok(memberBadges.includes('◆Hành trình 2027') && !memberBadges.includes('Đệm hát 2'), 'thành viên lớp DH2: bỏ nhãn trùng ngữ cảnh: ' + JSON.stringify(memberBadges))
