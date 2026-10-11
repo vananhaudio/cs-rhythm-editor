@@ -12,6 +12,9 @@ import { SOLO01_BUOI04 } from '../data/solo01/buoi04'
 import { SOLO01_BUOI05 } from '../data/solo01/buoi05'
 import { CB1_BUOI00 } from '../data/cb1/buoi00'
 import { CB1_BUOI01 } from '../data/cb1/buoi01'
+import { CB1_BUOI02 } from '../data/cb1/buoi02'
+import { CB1_BUOI03 } from '../data/cb1/buoi03'
+import { CB1_BUOI04 } from '../data/cb1/buoi04'
 import { CB2_BUOI01 } from '../data/cb2/buoi01'
 import { CB2_BUOI02 } from '../data/cb2/buoi02'
 import { CB2_BUOI03 } from '../data/cb2/buoi03'
@@ -29,7 +32,7 @@ export interface ProgramTemplate {
 
 export const PROGRAM_TEMPLATES: Record<string, ProgramTemplate> = {
   // CB1.T3: chặng đã có trong DB — chỉ dùng `lessons` cho nút "Nhập bài có sẵn". Buổi 00 = khoá 0 (xem ghi chú buoi00.ts).
-  'CB1.T3': { perStage: 4, stages: [], lessons: { 0: CB1_BUOI00, 1: CB1_BUOI01 } },
+  'CB1.T3': { perStage: 4, stages: [], lessons: { 0: CB1_BUOI00, 1: CB1_BUOI01, 2: CB1_BUOI02, 3: CB1_BUOI03, 4: CB1_BUOI04 } },
   // Lớp đã có sẵn chặng trong DB (12 vòng × 4 buổi) — chỉ dùng `lessons` cho nút "Nhập bài có sẵn".
   'CB2.T3': {
     perStage: 4,
