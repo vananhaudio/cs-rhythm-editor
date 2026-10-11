@@ -79,18 +79,19 @@ export const CB2_BUOI02: LessonDoc = {
         { b: 'p', text: 'Đọc bảng: bạn bấm thế C, kẹp capo ngăn 2 — tiếng ra là D. Cả bài dịch lên cùng một khoảng, nên vẫn nghe đúng là bài đó.' },
         {
           b: 'callout',
-          label: 'QUY TẮC',
-          text: 'Hát cao quá, không với tới → HẠ tông (giảm ngăn capo hoặc bỏ capo). Hát thấp quá, giọng chìm → NÂNG tông (tăng ngăn capo).',
+          label: 'CAPO KHÔNG CHỈ DÙNG ĐỂ NÂNG TÔNG',
+          text: 'Ví dụ: Bạn đang hát bài ở tông Cm, sử dụng thế bấm Am với capo ngăn 3. Nếu thấy bài quá cao, bạn có thể chuyển capo lên ngăn 10. Khi đó bài chuyển sang tông Gm. Mặc dù âm thanh guitar cao lên, người hát có thể chọn hát Gm ở vùng giọng thấp hơn Cm ban đầu.',
         },
+        { b: 'p', text: 'Hãy nhớ: Tăng ngăn capo không phải lúc nào cũng có nghĩa là người hát phải hát cao hơn. Điều quan trọng là tìm được tông và vùng giọng phù hợp với mình.' },
       ],
     },
-    stop(1, 'Chọn một bài bạn đã biết hợp âm. Hát lần lượt với capo không, ngăn 2, ngăn 5. Ghi lại: ở tông nào bạn hát thoải mái nhất, nốt cao nhất không cần gồng.'),
+    stop(1, 'Chọn một bài bạn đã biết hợp âm. Hát lần lượt với capo không, ngăn 2, ngăn 5 — và thử hát ở cả vùng giọng thấp hơn, không chỉ vùng giọng cũ. Ghi lại: ở tông và vùng giọng nào bạn thoải mái nhất, nốt cao nhất không cần gồng.'),
     {
       kind: 'study',
       tag: 'Điểm dừng 2',
       title: '✋ Chọn tông cho bài của bạn',
       blocks: [
-        { b: 'ol', items: ['Hát bài ở tông gốc, chú ý chỗ cao nhất và thấp nhất.', 'Quyết định nên hạ hay nâng.', 'Thử các ngăn capo cho đến khi vừa giọng.'] },
+        { b: 'ol', items: ['Hát bài ở tông gốc, chú ý chỗ cao nhất và thấp nhất.', 'Thử các ngăn capo, kể cả chuyển lên cao hơn, và chọn vùng giọng hát thoải mái nhất.', 'Chọn tông + vùng giọng vừa với bạn.'] },
         { b: 'write', label: 'Bài tôi chọn · hợp âm gốc · ngăn capo vừa giọng', lines: 4 },
       ],
     },
@@ -106,11 +107,11 @@ export const CB2_BUOI02: LessonDoc = {
         question: 'Bạn đệm cho một người hát bài này mà họ không với tới nốt cao ở điệp khúc. Cách xử lý đúng nhất là gì?',
         options: [
           { id: 'a', text: 'Bảo họ cố gắng hát cao lên cho bằng bản gốc.' },
-          { id: 'b', text: 'Hạ tông xuống (giảm ngăn capo hoặc bỏ capo) cho vừa giọng họ.' },
-          { id: 'c', text: 'Nâng tông lên cao hơn nữa.' },
+          { id: 'b', text: 'Chọn lại tông (có thể bằng cách đổi ngăn capo) và để họ hát ở vùng giọng vừa với họ.' },
+          { id: 'c', text: 'Giữ nguyên tông, chỉ đánh đàn nhỏ lại để họ đỡ phải gồng.' },
           { id: 'd', text: 'Đổi sang điệu khác và giữ nguyên tông.' },
         ],
-        hint: 'Đệm hát là phục vụ giọng hát. Nốt cao nhất của bài phải nằm trong tầm của người hát.',
+        hint: 'Đệm hát là phục vụ giọng hát: tìm tông và vùng giọng để nốt cao nhất nằm trong tầm của người hát. Tăng ngăn capo không phải lúc nào cũng buộc người hát phải hát cao hơn.',
       },
     },
     // ── PHẦN 3 — SLOW ROCK ──
@@ -184,7 +185,7 @@ export const CB2_BUOI02: LessonDoc = {
       kind: 'checklist',
       items: [
         'Tôi giải thích được tông giọng là gì.',
-        'Tôi biết hạ hay nâng tông khi người hát không với tới / bị chìm.',
+        'Tôi biết chọn tông và vùng giọng vừa với người hát, kể cả khi tăng ngăn capo.',
         'Tôi đổi được tông bằng capo.',
         'Tôi chơi được ba kiểu Slow Rock và đếm trip-let đều.',
         'Tôi đã làm Bài trả 2.1 và gửi Bài trả 2.2.',
