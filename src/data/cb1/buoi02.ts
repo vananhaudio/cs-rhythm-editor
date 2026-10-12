@@ -3,9 +3,12 @@
 //   · Quy tắc "dịch một ngăn: lên = ♯, xuống = ♭" + 4 bước gặp ♯/♭ = Phần 3 của SOLO01 Buổi 04.
 //   · EX = EX_THANG_GIANG của SOLO01 Buổi 04, riêng ô 3 đổi sang Si dây 5 → Si♭ dây 5 (ngăn 2 → 1) để KHÔNG vượt 3 ngăn đầu.
 //   · CAU_TRUC = "Diễm Xưa" ô 7–10 (có Sol♯, trọn trong 3 ngăn đầu) của SOLO01 Buổi 04, dùng nguyên khuông + ngón + lời.
-// Mạch: HỌC NỬA CUNG/♯/♭ → TRẢ 2.1 → 4 BƯỚC + CÂU NHẠC → TRẢ 2.2. Chỉ bài trả văn bản/video (không trắc nghiệm → không cần đáp án server).
+//   · THÀNH QUẢ (Owner 12/10/2026): học viên chọn MỘT trong hai bài "Diễm Xưa" hoặc "Thành Phố Buồn" (nguyên bản WORK_* của SOLO01,
+//     chỉ giai điệu) để tập và trả bài 2.2. LƯU Ý: một số ô vượt 3 ngăn đầu (Diễm Xưa ô 3, 11–14, 18; Thành Phố Buồn ô 4, 11, 12, 21 — tới ngăn 4–6).
+// Mạch: HỌC NỬA CUNG/♯/♭ → TRẢ 2.1 → 4 BƯỚC + CÂU NHẠC → THÀNH QUẢ (chọn 1 trong 2 bài) → TRẢ 2.2. Chỉ bài trả văn bản/video (không trắc nghiệm → không cần đáp án server).
 // Quy ước alphaTab: dây 1 = Mi cao … 6 = Mi trầm; fret.dây.trườngđộ; ngón Việt n ⇒ `lf n+1`.
 import type { FretDot, FretZone, LessonDoc } from '../../lesson/lessonTypes'
+import { WORK_DIEM_XUA, WORK_THANH_PHO_BUON } from '../solo01/works'
 
 const LOAI: FretZone[] = [
   { no: 1, label: 'Nốt tự nhiên', tag: '', fromFret: 0, toFret: 3, strings: [1, 6], color: '#4338CA', hidden: true, hint: 'các nốt đã học ở Buổi 01.' },
@@ -73,6 +76,7 @@ export const CB1_BUOI02: LessonDoc = {
         'Biết dấu thăng ♯ nâng nốt lên nửa cung, dấu giáng ♭ hạ nốt xuống nửa cung.',
         'Tìm được nốt có ♯ / ♭ từ một nốt đã biết, trong 3 ngăn đầu.',
         'Đọc và chơi được một câu nhạc có nốt ♯.',
+        'Chọn một trong hai bài — Diễm Xưa hoặc Thành Phố Buồn — để tập và trả bài.',
       ],
     },
     // ── NHỊP 1 — NỬA CUNG, ♯ VÀ ♭ ──
@@ -142,7 +146,7 @@ export const CB1_BUOI02: LessonDoc = {
     {
       kind: 'note',
       title: 'Nhịp 2 · Gặp ♯ / ♭ trong một câu nhạc',
-      text: 'Bài hát thật vẫn có nốt ngoài bản đồ nốt tự nhiên, như Sol♯ trong câu sau. Kết thúc nhịp: Bài trả 2.2.',
+      text: 'Bài hát thật vẫn có nốt ngoài bản đồ nốt tự nhiên, như Sol♯ trong câu sau. Rồi bạn chọn một trong hai bài để tập thành quả của buổi. Kết thúc nhịp: Bài trả 2.2.',
     },
     {
       kind: 'study',
@@ -176,10 +180,32 @@ export const CB1_BUOI02: LessonDoc = {
       ],
     },
     {
+      kind: 'repertoire',
+      title: 'Thành quả của buổi — chọn một trong hai bài',
+      candidates: ['Diễm Xưa', 'Thành Phố Buồn'],
+      status: 'ready',
+      pieces: [
+        {
+          title: 'Diễm Xưa',
+          composer: 'Trịnh Công Sơn · giọng Am · giai điệu',
+          note: 'Bài có nốt Sol♯ bạn vừa học. Phần lớn nằm trong 3 ngăn đầu; ô 3, 11, 12, 13, 14 và 18 lên tới ngăn 4–6 — nhìn TAB để tìm đúng ngăn.',
+          barsPerRow: 3,
+          tex: WORK_DIEM_XUA,
+        },
+        {
+          title: 'Thành Phố Buồn',
+          composer: 'Lam Phương · giọng Am · giai điệu',
+          note: 'Phần lớn nằm trong 3 ngăn đầu; ô 4, 11, 12 và 21 lên tới ngăn 5 — nhìn TAB để tìm đúng ngăn.',
+          barsPerRow: 4,
+          tex: WORK_THANH_PHO_BUON,
+        },
+      ],
+    },
+    {
       kind: 'checkpoint',
       id: '2.2',
-      title: 'Bài trả 2.2 — Câu nhạc có Sol♯',
-      prompt: 'Quay video bạn chơi liên tục câu nhạc trên. Trước khi chơi, nói tên nốt có dấu ♯ và vị trí của nó. Kèm một dòng: "Tôi tìm Sol♯ bằng cách…". Không cần nhanh, thầy xem: đúng nốt · đúng vị trí · dòng nhạc liên tục.',
+      title: 'Bài trả 2.2 — Bài thành quả',
+      prompt: 'Chọn MỘT trong hai bài: Diễm Xưa hoặc Thành Phố Buồn. Quay video bạn chơi bài đã chọn, chậm và liên tục. Kèm hai dòng: "Tôi chọn bài … vì …" và "Chỗ tôi còn vấp là …". Nếu bạn chọn Diễm Xưa, nói luôn vị trí nốt Sol♯. Không cần nhanh, thầy xem: đúng nốt · đúng vị trí · dòng nhạc liên tục.',
       required: true,
       accepts: ['text', 'video_link'],
     },
@@ -189,7 +215,8 @@ export const CB1_BUOI02: LessonDoc = {
       items: [
         { label: 'Bài 1.', text: 'Mỗi ngày chơi bài tập "nốt đã biết → dịch một ngăn" chậm, vừa chơi vừa đọc tên nốt.' },
         { label: 'Bài 2.', text: 'Chọn một dây bất kỳ, đọc tên tất cả các ngăn từ 0 đến 3, kể cả nốt ♯ / ♭.' },
-        { label: 'Bài 3.', text: 'Chơi câu nhạc có Sol♯ thật chậm và liên tục.' },
+        { label: 'Bài 3.', text: 'Chọn Diễm Xưa hoặc Thành Phố Buồn. Tập từng đoạn 2–4 ô nhịp thật chậm, rồi nối lại và chơi liên tục.' },
+        { label: 'Bài 4.', text: 'Quay video bài đã chọn và gửi Bài trả 2.2.' },
       ],
       message: 'Không cần tập hoàn hảo. Hãy mang đúng những chỗ chưa làm được đến buổi học.',
     },
@@ -200,6 +227,7 @@ export const CB1_BUOI02: LessonDoc = {
         'Tôi tìm được nốt ♯ / ♭ từ một nốt đã biết bằng cách dịch một ngăn.',
         'Tôi biết vì sao giữa E–F và B–C không có nốt ♯.',
         'Tôi chơi được câu nhạc có Sol♯.',
+        'Tôi chọn một bài (Diễm Xưa hoặc Thành Phố Buồn) và chơi được liên tục.',
         'Tôi đã gửi Bài trả 2.1 và 2.2.',
       ],
     },
