@@ -1,11 +1,13 @@
 // Khu bình luận dưới một bài: "Xem thêm bình luận" (nếu còn), danh sách CŨ → MỚI, ô bình luận.
 import { useState } from 'react'
-import type { Comment } from '../../comments/commentModel'
+import { COMMENTS_PREVIEW, type Comment } from '../../comments/commentModel'
 import { loadCommentsApi } from '../../comments/lazyApi'
 import type { PostComments } from '../../comments/useFeedComments'
 import type { ClassIdentity } from '../../useClassSession'
 import CommentComposer from './CommentComposer'
 import CommentItem from './CommentItem'
+
+const COMMENTS_BATCH = 10   // mỗi lần "Xem thêm bình luận" mở thêm tối đa 10
 
 export default function CommentsSection({ postId, total, state, me, now, onRefresh, onExpand, onOpenProfile }: {
   postId: string
@@ -18,8 +20,16 @@ export default function CommentsSection({ postId, total, state, me, now, onRefre
   onOpenProfile?: (userId: string) => void
 }) {
   const [actionError, setActionError] = useState<string | null>(null)
-  const items = state?.items ?? []
-  const hiddenCount = Math.max(0, (state && !state.loading && !state.error ? state.total : total) - items.length)
+  const [limit, setLimit] = useState(COMMENTS_PREVIEW)   // số bình luận mới nhất đang hiện; "Xem thêm" mở thêm từng đợt
+  const all = state?.items ?? []
+  const items = all.length > limit ? all.slice(-limit) : all
+  const canFetchMore = !state?.expanded && (state && !state.loading && !state.error ? state.total : total) > all.length
+  const knownTotal = canFetchMore ? (state && !state.loading && !state.error ? state.total : total) : all.length
+  const hiddenCount = Math.max(0, knownTotal - items.length)
+  const more = () => {
+    setLimit(l => l + COMMENTS_BATCH)
+    if (canFetchMore) void onExpand(postId)
+  }
 
   const onDelete = async (c: Comment) => {
     if (!window.confirm('Xoá bình luận này?')) return
@@ -35,8 +45,8 @@ export default function CommentsSection({ postId, total, state, me, now, onRefre
 
   return (
     <section className="cs-cmts" aria-label="Bình luận">
-      {hiddenCount > 0 && !state?.expanded && (
-        <button type="button" className="cs-link-btn cs-cmts-more" onClick={() => void onExpand(postId)} disabled={state?.loading}>
+      {hiddenCount > 0 && (
+        <button type="button" className="cs-link-btn cs-cmts-more" onClick={more} disabled={state?.loading}>
           {state?.loading ? 'Đang tải…' : `Xem thêm bình luận (${hiddenCount})`}
         </button>
       )}
