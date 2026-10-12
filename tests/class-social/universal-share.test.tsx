@@ -110,7 +110,7 @@ test("Nhịp & Phách: MỘT nút 'Chia sẻ' (lưu riêng tự động); trang 
 });
 
 test("Lớp học & Buổi học: chỉ DM tham chiếu (không tạo artifact, không đăng cộng đồng); nút Chia sẻ ở trang lớp/buổi", () => {
-  for (const f of ["src/class-social/classes/ClassPage.tsx", "src/class-social/classes/ClassSessionPage.tsx"]) {
+  for (const f of ["src/class-social/classes/ClassHead.tsx", "src/class-social/classes/ClassSessionPage.tsx"]) {
     const src = code(f);
     assert.match(src, /<ShareButton /, f);
     assert.equal(/tool_artifact|saveArtifactForShare|publishArtifact/.test(src), false, `${f}: không tạo/đăng artifact`);
@@ -118,7 +118,8 @@ test("Lớp học & Buổi học: chỉ DM tham chiếu (không tạo artifact, 
   const btn = code("src/share/ShareButton.tsx");
   assert.match(btn, /canPublish=\{false\}/, "chỉ gửi bạn, không đăng cộng đồng");
   assert.equal(/publish=/.test(btn), false);
-  assert.match(code("src/class-social/classes/ClassPage.tsx"), /\{member && <ShareButton target=\{\{ type: 'class'/, "chỉ thành viên/Thầy thấy nút (server kiểm lại)");
+  assert.match(code("src/class-social/classes/ClassHead.tsx"), /\{canShare && name && <ShareButton target=\{\{ type: 'class'/, "chỉ thành viên/Thầy thấy nút (server kiểm lại)");
+  assert.match(code("src/class-social/classes/ClassPage.tsx"), /canShare=\{member\}/);
   assert.match(code("src/class-social/classes/ClassSessionPage.tsx"), /type: 'class_session', key: s\.sessionId\.toLowerCase\(\)/);
 });
 

@@ -222,7 +222,7 @@ function SignedInShell({ base, view, onSection, onOpenProfile, onOpenThread, onO
           onOpenClasses={onOpenClasses} onOpenSession={no => onOpenSession(view.classId, no)} />
       )}
       {view.kind === 'classSpace' && (
-        <ClassSpacePage key={'space:' + view.classId} classId={view.classId} onOpenThread={onOpenThread} onOpenProfile={onOpenProfile}
+        <ClassSpacePage key={'space:' + view.classId} classId={view.classId} isTeacher={me.isTeacher} onOpenClasses={onOpenClasses} onOpenThread={onOpenThread} onOpenProfile={onOpenProfile}
           onBackToClass={() => onBack({ kind: 'class', classId: view.classId })} />
       )}
       {view.kind === 'session' && (

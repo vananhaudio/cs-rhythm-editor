@@ -1,5 +1,6 @@
 // Phần hiển thị THUẦN của trang lớp (không mạng, không CSS import) — test render được.
-import { ArrowRight, Eye, UserCheck, Users } from 'lucide-react'
+import { Eye, UserCheck, Users } from 'lucide-react'
+import { classPath, classSpacePath } from '../resolveMeRoute'
 import { Avatar, PersonLink } from '../ui'
 import { IdentityBadges } from '../identity/IdentityBadges'
 import { classCodeNote, classMetaLine, classStatusLabel, memberRelationUi, type ClassCard, type ClassMember } from './classModel'
@@ -65,14 +66,22 @@ export function MemberList({ members, busyId, onAct, onOpenProfile, excludeIdent
   )
 }
 
-/** Cánh cửa sang Không gian lớp — MỘT tiêu đề bấm được + một dòng phạm vi ngắn; không preview Feed. */
-export function ClassSpaceDoor({ onOpen }: { onOpen: () => void }) {
+/** Điều hướng hai khu vực của CÙNG một lớp: Giáo trình (/me/classes/<id>) · Không gian lớp (/me/classes/<id>/space).
+ *  Hai route sẵn có, hiển thị như một thanh phân đoạn nhẹ — không phải hệ tab mới, URL/reload/deep link giữ nguyên. */
+export function ClassSectionNav({ classId, active, onOpenSyllabus, onOpenSpace }: {
+  classId: string; active: 'syllabus' | 'space'; onOpenSyllabus: () => void; onOpenSpace: () => void
+}) {
+  const item = (key: 'syllabus' | 'space', label: string, href: string, go: () => void, extra = '') => (
+    <a key={key} className={'cs-secnav-item' + (active === key ? ' is-active' : '') + extra} href={href}
+      aria-current={active === key ? 'page' : undefined}
+      onClick={e => { if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return; e.preventDefault(); if (active !== key) go() }}>
+      {label}
+    </a>
+  )
   return (
-    <section className="cs-classv2-sec cs-space-door" aria-label="Không gian lớp">
-      <button type="button" className="cs-space-door-go" onClick={onOpen}>
-        <span className="cs-space-door-title">Không gian lớp <ArrowRight size={18} aria-hidden="true" /></span>
-        <span className="cs-space-door-hint">Bài trả · Hỏi bài · Trao đổi · Thành viên</span>
-      </button>
-    </section>
+    <nav className="cs-secnav" aria-label="Khu vực của lớp">
+      {item('syllabus', 'Giáo trình', classPath(classId), onOpenSyllabus)}
+      {item('space', 'Không gian lớp', classSpacePath(classId), onOpenSpace, ' cs-secnav-space')}
+    </nav>
   )
 }

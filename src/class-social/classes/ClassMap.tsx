@@ -11,7 +11,7 @@ import { ChevronDown, ChevronRight, Lock } from 'lucide-react'
 import { pad2, type ClassLearningState, type SessionState } from '../../classLearning/progress'
 import { BreakDivider } from './LearnParts'
 import type { LearningEntry } from './classesApi'
-import { cpLabel, cpStatus, cpShort, sessionView, stageGroups, stageLabel, submissionsText, type StageGroup } from './classMapModel'
+import { cpLabel, cpStatus, cpShort, sessionLearningLabel, sessionView, stageGroups, stageLabel, submissionsText, type StageGroup } from './classMapModel'
 
 type Ready = Extract<ClassLearningState, { enabled: true }>
 export type MapLayout = 'inline' | 'side'
@@ -41,15 +41,12 @@ export function SubmissionList({ s, teacher, onOpenSession, onOpenThread, label,
   )
 }
 
-// Tiêu đề chặng kiểu mục lục giáo trình: dòng nhãn nhỏ "Chặng 1 · 8 buổi" → tên chặng đậm
-function StageText({ no, title, count }: { no: number | null; title: string | null; count: number }) {
-  const label = no != null ? `Chặng ${no}` : 'Giáo trình'
-  return (
-    <span className="cs-map-stage-text">
-      <span className="cs-map-stage-no">{`${label} · ${count} buổi`}</span>
-      {title && <span className="cs-map-stage-name">{title}</span>}
-    </span>
-  )
+// Tiêu đề chặng: MỘT dòng nhẹ "Chặng 1 · Tên chặng" (không lặp số buổi — danh sách bên dưới đã đếm được)
+function StageText({ no, title, count, className }: { no: number | null; title: string | null; count: number; className?: string }) {
+  const norm = (x: string) => x.trim().toLocaleLowerCase('vi')
+  const shown = title && !(className && norm(title) === norm(className)) ? title : null   // không lặp tên lớp
+  const text = [no != null ? `Chặng ${no}` : 'Giáo trình', `${count} buổi`, shown].filter(Boolean).join(' · ')
+  return <span className="cs-map-stage-text">{text}</span>
 }
 
 function SessionItem({ s, state, current, layout, open, onToggle, onOpenSession, onOpenThread }: {
@@ -62,7 +59,8 @@ function SessionItem({ s, state, current, layout, open, onToggle, onOpenSession,
   const v = sessionView(s, state)
   const teacher = state.role === 'teacher'
   // Buổi khoá: chỉ ổ khoá + "Chưa mở" cho trình đọc màn hình — lý do mở khoá nói ở panel/Trang Buổi, không lặp trong danh sách
-  const meta = v.locked ? '' : v.state
+  const learn = sessionLearningLabel(s, state)   // Chưa trả · Chờ thầy chấm · Đạt · Cần làm lại — null = không hiện
+  const meta = v.locked || (learn && v.state === 'Hoàn thành') ? '' : v.state   // "Hoàn thành" trùng với nhãn Đạt
   return (
     <li className={'cs-map-row' + (current ? ' is-current' : '') + (v.locked ? ' is-locked' : '') + (layout === 'side' && open ? ' is-selected' : '')}
       id={`buoi-${pad2(s.no)}`} aria-current={current ? 'step' : undefined}>
@@ -72,11 +70,11 @@ function SessionItem({ s, state, current, layout, open, onToggle, onOpenSession,
           ? <span className="cs-map-title"><span className="cs-sr-only">Buổi {pad2(s.no)}: </span>{s.title}
               <Lock size={13} className="cs-map-lock" aria-hidden="true" /><span className="cs-sr-only"> — Chưa mở</span></span>
           : <button type="button" className="cs-map-title" onClick={() => onOpenSession(s.no)}><span className="cs-sr-only">Buổi {pad2(s.no)}: </span>{s.title}</button>}
-        {(meta || v.submissions) && (
+        {(meta || (v.submissions && teacher)) && (
           <div className="cs-map-meta">
             {meta && <span className="cs-map-state">{meta}</span>}
-            {meta && v.submissions && <span aria-hidden="true">·</span>}
-            {v.submissions && (layout === 'side'
+            {meta && v.submissions && teacher && <span aria-hidden="true">·</span>}
+            {v.submissions && teacher && (layout === 'side'
               ? <button type="button" className="cs-map-subs" aria-pressed={open} aria-controls="cs-subs-panel" onClick={onToggle}
                   aria-label={`${submissionsText(v.submissions, teacher)} — xem bài trả buổi ${pad2(s.no)} bên cạnh`}>
                   {!teacher && v.submissions.passed > 0 && <span aria-hidden="true">✓ </span>}
@@ -91,10 +89,16 @@ function SessionItem({ s, state, current, layout, open, onToggle, onOpenSession,
                 </button>)}
           </div>
         )}
-        {layout === 'inline' && open && v.submissions && (
+        {layout === 'inline' && open && v.submissions && teacher && (
           <SubmissionList s={s} teacher={teacher} label={`Bài trả buổi ${pad2(s.no)}`} onOpenSession={onOpenSession} onOpenThread={onOpenThread} />
         )}
       </div>
+      {learn && (
+        <span className={'cs-map-learn is-' + learn.tone}>
+          <span className="cs-map-learn-mark" aria-hidden="true">{learn.mark}</span>
+          <span className="cs-sr-only">Trả bài: </span>{learn.label}
+        </span>
+      )}
     </li>
   )
 }
@@ -141,12 +145,12 @@ export default function ClassMap({ state, current, onOpenSession, onOpenThread, 
             {single && g.no == null
               ? null
               : single
-                ? <h3 className="cs-map-stage-title"><StageText no={g.no} title={g.title} count={g.sessions.length} /></h3>
+                ? <h3 className="cs-map-stage-title"><StageText no={g.no} title={g.title} count={g.sessions.length} className={state.className} /></h3>
                 : (
                   <h3 className="cs-map-stage-title">
                     <button type="button" className="cs-map-stage-toggle" aria-expanded={isOpen} onClick={() => flip(setOpen, g.key)}>
                       {isOpen ? <ChevronDown size={16} aria-hidden="true" /> : <ChevronRight size={16} aria-hidden="true" />}
-                      <StageText no={g.no} title={g.title} count={g.sessions.length} />
+                      <StageText no={g.no} title={g.title} count={g.sessions.length} className={state.className} />
                     </button>
                   </h3>
                 )}

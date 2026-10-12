@@ -9,21 +9,47 @@ type Ready = Extract<ClassLearningState, { enabled: true }>
 export type CpTone = 'none' | 'wait' | 'info' | 'warn' | 'ok'
 export type CpStatus = { label: string; tone: CpTone; mark: string }
 
-/** Ngôn ngữ thống nhất: Chưa trả · Chờ Thầy · Cần làm lại · Đạt (+ "Thầy đã phản hồi" khi Thầy trả lời mà chưa chấm). */
+/** Ngôn ngữ thống nhất: Chưa trả · Chờ thầy chấm · Cần làm lại · Đạt (+ "Thầy đã phản hồi" khi Thầy trả lời mà chưa chấm). */
 export function checkpointStatus(t: CheckpointThread | null): CpStatus {
   switch (t?.status) {
     case 'passed': return { label: 'Đạt', tone: 'ok', mark: '✓' }
     case 'needs_retry': return { label: 'Cần làm lại', tone: 'warn', mark: '↻' }
-    case 'waiting_teacher': return { label: 'Chờ Thầy', tone: 'wait', mark: '…' }
+    case 'waiting_teacher': return { label: 'Chờ thầy chấm', tone: 'wait', mark: '…' }
     case 'teacher_responded': return { label: 'Thầy đã phản hồi', tone: 'info', mark: '…' }
     default: return { label: 'Chưa trả', tone: 'none', mark: '○' }
   }
 }
 
-/** Trạng thái của MỘT bài trả: trắc nghiệm → Đạt / Chưa trả (không Chờ Thầy) · bài Thầy chấm → theo Learning Thread. */
+/** Trạng thái của MỘT bài trả: trắc nghiệm → Đạt / Chưa trả (không Chờ thầy chấm) · bài Thầy chấm → theo Learning Thread. */
 export function cpStatus(cp: Pick<CheckpointState, 'accepts' | 'thread' | 'quizPassedAt'>): CpStatus {
   if (isQuizCheckpoint(cp)) return cp.quizPassedAt ? { label: 'Đạt', tone: 'ok', mark: '✓' } : { label: 'Chưa trả', tone: 'none', mark: '○' }
+  // Đã Đạt (passed_at) rồi nộp lại → vẫn Đạt, đúng luật hoàn thành buổi của server (lsp_try_complete dùng passed_at)
+  if (cp.thread?.passedAt) return { label: 'Đạt', tone: 'ok', mark: '✓' }
   return checkpointStatus(cp.thread)
+}
+
+/** Nhãn trả bài CẤP BUỔI cho học viên — chỉ tổng hợp từ bài trả BẮT BUỘC; null = không hiện nhãn. */
+export type SessionLearningLabel = { label: 'Chưa trả' | 'Chờ thầy chấm' | 'Đạt' | 'Cần làm lại'; tone: CpTone; mark: string }
+const LABELS: Record<SessionLearningLabel['label'], SessionLearningLabel> = {
+  'Đạt': { label: 'Đạt', tone: 'ok', mark: '✓' },
+  'Cần làm lại': { label: 'Cần làm lại', tone: 'warn', mark: '↻' },
+  'Chờ thầy chấm': { label: 'Chờ thầy chấm', tone: 'wait', mark: '…' },
+  'Chưa trả': { label: 'Chưa trả', tone: 'none', mark: '○' },
+}
+
+export function sessionLearningLabel(s: SessionState, st: Pick<Ready, 'role' | 'mode'>): SessionLearningLabel | null {
+  if (st.role === 'teacher' || st.mode !== 'checkpoint') return null            // Thầy: không có trạng thái theo học viên
+  if (sessionPhase(s, st.role, st.mode) === 'locked') return null               // buổi khoá: server không lộ bài trả
+  const req = s.checkpoints.filter(c => c.required)
+  if (req.length === 0) return null
+  const open = req.filter(c => !checkpointPassed(c))                            // chưa Đạt (passed_at / quiz) — nộp lại sau Đạt vẫn là Đạt
+  if (open.length === 0) return LABELS['Đạt']
+  if (s.completedAt) return null            // server đã hoàn thành buổi mà còn bài bắt buộc chưa Đạt (giáo trình đổi sau đó): không suy diễn
+  const st_ = (c: typeof open[number]) => (isQuizCheckpoint(c) ? null : c.thread?.status ?? null)
+  if (open.some(c => st_(c) === 'needs_retry')) return LABELS['Cần làm lại']
+  if (open.some(c => st_(c) === 'waiting_teacher')) return LABELS['Chờ thầy chấm']
+  if (open.some(c => st_(c) === 'teacher_responded')) return null               // Thầy đã trả lời nhưng chưa chấm — quy tắc chưa nêu: không đoán
+  return LABELS['Chưa trả']
 }
 
 export type SessionView = {
@@ -43,7 +69,7 @@ export function sessionView(s: SessionState, st: Pick<Ready, 'role' | 'mode'>): 
   if (st.mode === 'curriculum') return { locked: false, state: s.published ? '' : 'Đang soạn', submissions: null }
   if (phase === 'locked') return { locked: true, state: 'Chưa mở', submissions: null }
   const total = s.checkpoints.length
-  const passed = s.checkpoints.filter(c => c.thread?.status === 'passed' || (isQuizCheckpoint(c) && checkpointPassed(c))).length
+  const passed = s.checkpoints.filter(checkpointPassed).length   // cùng luật hoàn thành buổi của server (passed_at / quiz)
   // Không nói điều người học tự nhận ra (vị trí "đang học"): chỉ trạng thái thật sự phân biệt — Hoàn thành / Đang soạn.
   const state = phase === 'done' ? 'Hoàn thành' : !s.published ? 'Đang soạn' : ''
   return { locked: false, state, submissions: total ? { passed, total } : null }
@@ -51,6 +77,14 @@ export function sessionView(s: SessionState, st: Pick<Ready, 'role' | 'mode'>): 
 
 export const submissionsText = (x: { passed: number; total: number }, teacher = false) =>
   teacher ? `${x.total} bài trả` : `${x.passed}/${x.total} bài trả Đạt`
+
+/** Góc nhìn HỌC VIÊN của mục lục: lớp có chặng thật thì các buổi KHÔNG chặng + chưa xuất bản (lịch xoay vòng nội bộ của Thầy,
+ *  vd. CB1/CB2 44 buổi) không hiện. Chỉ trình bày: không đổi dữ liệu / quyền / mở khoá; Thầy thấy đủ; lớp không có chặng nào giữ nguyên. */
+export function learnerVisibleState<T extends Pick<Ready, 'role' | 'sessions'>>(state: T): T {
+  if (state.role === 'teacher' || !state.sessions.some(s => s.stageNo != null)) return state
+  const sessions = state.sessions.filter(s => s.stageNo != null || s.published || s.openedAt != null)
+  return sessions.length === state.sessions.length ? state : { ...state, sessions }
+}
 
 export type StageGroup = { key: string; no: number | null; title: string | null; sessions: SessionState[] }
 

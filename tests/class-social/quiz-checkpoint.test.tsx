@@ -99,7 +99,7 @@ test("mục lục / Bài trả của tôi: trắc nghiệm chỉ Đạt / Chưa 
   const st = toClassLearningState(raw, "c") as Extract<ClassLearningState, { enabled: true }>;
   const [a, b, c] = st.sessions[0].checkpoints;
   assert.equal(a.quizPassedAt, "2026-10-03T10:00:00Z");
-  assert.deepEqual([cpStatus(a).label, cpStatus(b).label, cpStatus(c).label], ["Đạt", "Chưa trả", "Chờ Thầy"]);
+  assert.deepEqual([cpStatus(a).label, cpStatus(b).label, cpStatus(c).label], ["Đạt", "Chưa trả", "Chờ thầy chấm"]);
   assert.deepEqual(requiredProgress(st.sessions[0]), { passed: 1, total: 3 });
   assert.deepEqual(sessionView(st.sessions[0], st).submissions, { passed: 1, total: 3 });
   // RPC cũ (chưa có quiz_passed_at) → null, không vỡ

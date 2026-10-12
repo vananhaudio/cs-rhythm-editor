@@ -1,10 +1,9 @@
 // /me/classes/<id>/space — KHÔNG GIAN LỚP (Class UX V3): Social của ĐÚNG MỘT lớp, tách khỏi trang học.
 // Hoạt động = social_class_activity (Learning Thread của lớp: trả bài / hỏi bài / Thầy phản hồi / Đạt / làm lại),
 // dòng gọn ActivityLine (không lặp tên lớp) · Thành viên = social_class_members + MemberList (kết bạn, quyền riêng tư
-// giữ nguyên — server quyết can_view_members). Không hệ Social mới. "← <tên lớp>" về đúng trang học của lớp.
+// giữ nguyên — server quyết can_view_members). Không hệ Social mới. "Giáo trình" (thanh phân đoạn) về đúng trang học của lớp.
 // Hai phạm vi rõ: Home → tab "Lớp" = hoạt động mọi lớp của tôi · Lớp → Không gian lớp = hoạt động của một lớp.
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ArrowLeft } from 'lucide-react'
 import '../../learning-thread/styles'
 import { respondFriendRequest, sendFriendRequest } from '../friends/friendsApi'
 import { programKeyOfClass } from '../identity/learningIdentity'
@@ -12,12 +11,16 @@ import { isThreadEntry } from '../posts/postModel'
 import { usePostsFeed } from '../posts/usePostsFeed'
 import { fetchClassActivityPage, fetchClassDetail, fetchClassMembers } from './classesApi'
 import type { ClassCard, ClassMember } from './classModel'
+import ClassHead from './ClassHead'
 import { MemberList } from './ClassParts'
 import { ActivityLine } from './ClassActivity'
 import type { Load } from './useClassLearning'
 
-export default function ClassSpacePage({ classId, onBackToClass, onOpenThread, onOpenProfile }: {
+export default function ClassSpacePage({ classId, isTeacher, onOpenClasses, onBackToClass, onOpenThread, onOpenProfile }: {
   classId: string
+  isTeacher: boolean
+  /** "← Lớp của tôi" — cùng nút với trang Giáo trình (phần đầu dùng chung) */
+  onOpenClasses: () => void
   /** "← <tên lớp>": về trang học của lớp (lịch sử trong /me nếu có, ngược lại mở trang lớp) */
   onBackToClass: () => void
   onOpenThread: (id: string) => void
@@ -58,14 +61,9 @@ export default function ClassSpacePage({ classId, onBackToClass, onOpenThread, o
   }
 
   return (
-    <div className="cs-col cs-home cs-classv2 cs-classspace">
-      <button type="button" className="cs-btn cs-btn-ghost cs-btn-sm cs-profile-back cs-classspace-back" onClick={onBackToClass}>
-        <ArrowLeft size={16} /> {c?.name ?? 'Về lớp'}
-      </button>
-      <header className="cs-classv2-head">
-        <h1 className="cs-class-name">Không gian lớp</h1>
-        {c && <p className="cs-classv2-meta">{c.name}</p>}
-      </header>
+    <div className={'cs-home cs-classv2 cs-classspace cs-classframe' + (isTeacher ? ' is-teacher' : '')}>
+      <ClassHead classId={classId} card={c} canShare={!!c && (c.isMember || isTeacher)} active="space"
+        onOpenClasses={onOpenClasses} onOpenSyllabus={onBackToClass} onOpenSpace={() => undefined} />
       {detail.status === 'error' && <p className="cs-act-note" role="alert">{detail.message}</p>}
 
       <section className="cs-classv2-sec" aria-labelledby="cs-space-feed" aria-busy={feed.status === 'loading'}>
