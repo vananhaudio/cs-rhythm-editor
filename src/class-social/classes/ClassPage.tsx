@@ -81,7 +81,7 @@ export default function ClassPage({ classId, isTeacher = false, onOpenThread, on
   }, [loading, learn, member, classId])
 
   const back = <button type="button" className="cs-btn cs-btn-ghost cs-btn-sm cs-profile-back" onClick={onOpenClasses}><ArrowLeft size={16} /> Lớp của tôi</button>
-  const shell = (body: ReactNode) => <div ref={ref} className={'cs-home cs-classv2 cs-classv3' + (side ? ' is-wide' : ' cs-col')}>{body}</div>
+  const shell = (body: ReactNode) => <div ref={ref} className={'cs-home cs-classv2 cs-classv3' + (side ? ' is-wide' : '')}>{body}</div>
   if (detail.status === 'loading' || (loading && !learn)) return shell(<>{back}<p className="cs-loading" role="status">Đang mở lớp…</p></>)
   if (detail.status === 'error' && !learn) return shell(<>{back}<div className="cs-card cs-feed-error" role="alert"><p>{detail.message}</p></div></>)
 
