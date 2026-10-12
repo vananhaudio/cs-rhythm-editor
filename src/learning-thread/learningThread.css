@@ -234,3 +234,4 @@ textarea.lt-input { resize: vertical; min-height: 88px; line-height: 1.5; }
 /* Danh sách trống (hàng đợi): chữ nhẹ, không khung */
 .cs-root .lt-list + .lt-empty, .cs-root p.lt-card.lt-empty { background: transparent; border: none; }
 .lt-ms-times { font-weight: 700; color: var(--lt-t2, #52525b); }
+.lt-ev.is-focus .lt-ev-bubble { box-shadow: 0 0 0 2px #c4b5fd; }

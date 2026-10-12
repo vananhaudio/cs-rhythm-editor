@@ -4,8 +4,9 @@ import { supabase } from '../../supabase'
 import type { Result } from '../posts/postsApi'
 import type { ShareRef } from '../../share/shareRef'
 import {
-  chatErrorText, toConversations, toMessages, PAGE,
+  chatErrorText, toConversations, toMessages, toSystemNotices, toSystemSummary, NOTICE_PAGE, PAGE,
   type ChatMessage, type ConversationItem, type ConversationRow, type MessageRow,
+  type SystemNotice, type SystemNoticeRow, type SystemSummary, type SystemSummaryRow,
 } from './chatModel'
 
 const online = () => (typeof navigator === 'undefined' ? true : navigator.onLine !== false)
@@ -79,4 +80,20 @@ export async function shareToFriend(userId: string, ref: ShareRef): Promise<Resu
   if (!r.ok) return r
   const row = r.value?.[0]
   return row?.conversation_id ? { ok: true, value: { conversationId: row.conversation_id, seq: Number(row.seq) } } : { ok: false, message: 'Chưa thực hiện được. Hãy thử lại.' }
+}
+
+// ── Class 2.0 (thông báo hệ thống): CHỈ đọc + đánh dấu đã đọc. Client không có đường ghi thông báo (server/trigger phát). ──
+export async function fetchSystemSummary(): Promise<Result<SystemSummary>> {
+  const r = await rpc<SystemSummaryRow[]>('class_system_notice_summary', {})
+  return r.ok ? { ok: true, value: toSystemSummary(r.value) } : r
+}
+
+export async function fetchSystemNotices(opts: { beforeSeq?: number; limit?: number } = {}): Promise<Result<SystemNotice[]>> {
+  const r = await rpc<SystemNoticeRow[]>('class_system_notices', { p_before_seq: opts.beforeSeq ?? null, p_limit: opts.limit ?? NOTICE_PAGE })
+  return r.ok ? { ok: true, value: toSystemNotices(r.value) } : r
+}
+
+export async function markSystemRead(seq: number): Promise<Result<number>> {
+  const r = await rpc<number>('class_system_notice_mark_read', { p_seq: seq })
+  return r.ok ? { ok: true, value: Number(r.value) } : r
 }

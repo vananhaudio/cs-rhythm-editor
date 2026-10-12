@@ -1,9 +1,9 @@
 -- CLASS SYSTEM CHAT V1 — "Class 2.0": thông báo hệ thống hiện trong Trò chuyện. *** BẢN NHÁP — CHƯA CHẠY PRODUCTION, chờ Owner duyệt. ***
 -- Chạy bằng scripts/prod-db.py (một transaction; file KHÔNG có begin/commit). Idempotent, ADDITIVE: tiền tố class_system_*.
 -- Thiết kế: docs/CLASS-SYSTEM-CHAT-V1.md.
---   • KHÔNG sửa dm_* / lt_* / bảng nào đang có. Nguồn sự kiện = trigger AFTER INSERT trên learning_thread_events (kèm lt_respond: Thầy chấm/nhận xét/trả lời).
+--   • KHÔNG sửa dm_* / lt_* / bảng nào đang có. Nguồn sự kiện = trigger AFTER INSERT trên learning_thread_events (do lt_respond ghi khi Thầy chấm Đạt/Cần làm lại).
 --     Trigger chạy CÙNG transaction với lưu kết quả chấm → lưu thất bại thì không có thông báo; không có ai khác ghi được bảng này.
---   • Chống trùng: unique (user_id, dedupe_key) với dedupe_key = 'event:' || id sự kiện → một sự kiện chấm = tối đa một thông báo.
+--   • Chống trùng: unique (user_id, dedupe_key), dedupe_key theo (thread, lượt nộp của học viên) → một lần nộp = tối đa một thông báo chấm.
 --   • RLS bật, thu hồi mọi grant, KHÔNG policy → client chỉ đi qua RPC SECURITY DEFINER (auth.uid()); người A không đọc được của B.
 --   • Chưa đọc = seq > last_read_seq của CHÍNH người dùng (cùng mô hình dm_participants.last_read_seq) — tách hẳn với tin nhắn cá nhân.
 --   • KHÔNG backfill: chỉ sự kiện chấm SAU khi migration chạy mới có thông báo.
@@ -71,32 +71,29 @@ comment on function public.class_system_notice_mark_read(bigint) is 'class_syste
 revoke all on function public.class_system_notice_mark_read(bigint) from public, anon;
 grant execute on function public.class_system_notice_mark_read(bigint) to authenticated;
 
--- 2) Nguồn sự kiện: Thầy chấm / nhận xét / trả lời (kind teacher_*) → thông báo cho CHÍNH học viên của thread
+-- 2) Nguồn sự kiện DUY NHẤT của V1: Thầy HOÀN TẤT chấm bài trả (teacher_feedback có verdict pass|retry) → thông báo NGẮN cho CHÍNH học viên của thread.
+--    Thông báo không nêu kết quả/nhận xét (Chat là cổng điều hướng; dữ liệu nghiệp vụ ở Learning Thread).
+--    Chống trùng THEO CHU KỲ NỘP BÀI: dedupe_key = 'grade:<thread>:<seq lượt học viên nộp gần nhất>' → chấm lại / sửa kết quả trong
+--    cùng một lần nộp KHÔNG tạo thêm thông báo; học viên nộp lại rồi Thầy chấm → thông báo mới.
+--    Không phát cho: nhận xét không chấm (verdict null), trả lời Hỏi bài, sự kiện đã ẩn, hành động của học viên.
 create or replace function public.class_system_notice_on_event()
 returns trigger language plpgsql security definer set search_path = '' as $$
-declare v_t public.learning_threads%rowtype; v_kind text; v_label text; v_body text;
+declare v_t public.learning_threads%rowtype; v_label text; v_cycle bigint;
 begin
-  if new.author_role is distinct from 'teacher' or new.hidden_at is not null then return new; end if;
+  if new.author_role is distinct from 'teacher' or new.kind is distinct from 'teacher_feedback'
+     or new.verdict is null or new.hidden_at is not null then return new; end if;
   select * into v_t from public.learning_threads where id = new.thread_id;
   if not found or v_t.learner_user_id is null then return new; end if;
-  v_kind := case
-    when new.kind = 'teacher_feedback' and new.verdict = 'pass'  then 'checkpoint_passed'
-    when new.kind = 'teacher_feedback' and new.verdict = 'retry' then 'checkpoint_retry'
-    when new.kind = 'teacher_feedback'                          then 'checkpoint_commented'
-    when new.kind = 'teacher_answer'                            then 'teacher_answered' end;
-  if v_kind is null then return new; end if;
-  v_label := case when v_t.session_no is not null then 'Buổi ' || lpad(v_t.session_no::text, 2, '0') else 'bài học' end;
-  v_body := case v_kind
-    when 'checkpoint_passed'    then 'Bài trả ' || v_label || ' của bạn đã được Thầy chấm Đạt.'
-    when 'checkpoint_retry'     then 'Bài trả ' || v_label || ' của bạn cần làm lại. Thầy đã để lại nhận xét.'
-    when 'checkpoint_commented' then 'Bài trả ' || v_label || ' của bạn đã được Thầy nhận xét.'
-    else                             'Thầy đã trả lời câu hỏi của bạn về ' || v_label || '.' end;
+  select coalesce(max(e.seq), 0) into v_cycle from public.learning_thread_events e
+   where e.thread_id = new.thread_id and e.author_role = 'student' and e.seq < new.seq;
+  v_label := case when v_t.session_no is not null then 'Bài trả Buổi ' || lpad(v_t.session_no::text, 2, '0') else 'Bài trả' end;
   insert into public.class_system_notices (user_id, kind, body, ref_type, ref_key, dedupe_key)
-  values (v_t.learner_user_id, v_kind, v_body, 'thread', v_t.id::text, 'event:' || new.id::text)
+  values (v_t.learner_user_id, 'checkpoint_graded', v_label || ' của bạn đã được chấm.', 'thread', v_t.id::text,
+          'grade:' || v_t.id::text || ':' || v_cycle::text)
   on conflict (user_id, dedupe_key) do nothing;
   return new;
 end $$;
-comment on function public.class_system_notice_on_event() is 'class_system_chat_v1: trigger nguồn thông báo chấm bài';
+comment on function public.class_system_notice_on_event() is 'class_system_chat_v1: trigger nguồn thông báo chấm bài (hoàn tất chấm)';
 revoke all on function public.class_system_notice_on_event() from public, anon, authenticated;
 
 -- N) Bảng + trigger — đặt CUỐI, MỘT câu lệnh (khoá ngoại auth.users xin khoá tới COMMIT; cùng lý do dm_v1_setup.sql)
@@ -111,7 +108,7 @@ create table if not exists public.class_system_notices (
   ref_key    text not null,
   dedupe_key text not null,
   created_at timestamptz not null default clock_timestamp(),
-  constraint class_system_notices_kind_check check (kind in ('checkpoint_passed', 'checkpoint_retry', 'checkpoint_commented', 'teacher_answered')),
+  constraint class_system_notices_kind_check check (kind in ('checkpoint_graded')),
   constraint class_system_notices_body_check check (char_length(body) between 1 and 300),
   constraint class_system_notices_ref_check check (ref_type = 'thread' and ref_key ~ '^[0-9a-f-]{36}$'),
   constraint class_system_notices_dedupe_uq unique (user_id, dedupe_key)

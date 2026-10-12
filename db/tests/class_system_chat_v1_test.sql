@@ -50,43 +50,54 @@ insert into public.learning_threads (id, learner_user_id, content_kind, content_
 values ('99999999-0000-4000-8000-000000000001', t.u('A'), 'program_session', 'S:SOLO01:2', 'SOLO01', 2, '{}'::jsonb, 'waiting_teacher');
 
 do $$
-declare v_n int; v_hidden uuid;
 begin
   perform t.ok((select count(*) from public.class_system_notices) = 0, 'chưa có sự kiện chấm → chưa có thông báo (không backfill)');
 
   -- học viên nộp bài: KHÔNG thông báo
   insert into public.learning_thread_events (thread_id, author_user_id, author_role, kind, body)
   values ('99999999-0000-4000-8000-000000000001', t.u('A'), 'student', 'submission', 'Em nộp bài');
-  perform t.ok((select count(*) from public.class_system_notices) = 0, 'học viên nộp bài/hỏi bài không tạo thông báo');
+  perform t.ok((select count(*) from public.class_system_notices) = 0, 'học viên nộp bài không tạo thông báo');
 
-  -- Thầy: cần làm lại → chấm Đạt → nhận xét thường → trả lời câu hỏi
-  insert into public.learning_thread_events (thread_id, author_user_id, author_role, kind, verdict, body)
-  values ('99999999-0000-4000-8000-000000000001', t.u('T'), 'teacher', 'teacher_feedback', 'retry', 'Làm lại nhé');
-  insert into public.learning_thread_events (thread_id, author_user_id, author_role, kind, verdict, body)
-  values ('99999999-0000-4000-8000-000000000001', t.u('T'), 'teacher', 'teacher_feedback', 'pass', 'Đạt');
+  -- Thầy nhận xét KHÔNG chấm / trả lời Hỏi bài: không thông báo (V1 chỉ thông báo khi hoàn tất chấm)
   insert into public.learning_thread_events (thread_id, author_user_id, author_role, kind, body)
-  values ('99999999-0000-4000-8000-000000000001', t.u('T'), 'teacher', 'teacher_feedback', 'Nhận xét thêm');
+  values ('99999999-0000-4000-8000-000000000001', t.u('T'), 'teacher', 'teacher_feedback', 'Nhận xét chưa chấm');
   insert into public.learning_thread_events (thread_id, author_user_id, author_role, kind, body)
   values ('99999999-0000-4000-8000-000000000001', t.u('T'), 'teacher', 'teacher_answer', 'Trả lời');
-  perform t.ok((select count(*) from public.class_system_notices where user_id = t.u('A')) = 4, 'Thầy retry / pass / nhận xét / trả lời → đúng 4 thông báo cho học viên A');
-  perform t.ok((select string_agg(kind, ',' order by seq) from public.class_system_notices) = 'checkpoint_retry,checkpoint_passed,checkpoint_commented,teacher_answered', 'đúng loại, đúng thứ tự');
-  perform t.ok((select body from public.class_system_notices where kind = 'checkpoint_passed') = 'Bài trả Buổi 02 của bạn đã được Thầy chấm Đạt.', 'nội dung đúng buổi (Buổi 02)');
-  perform t.ok((select count(*) from public.class_system_notices where user_id <> t.u('A')) = 0, 'không có thông báo cho người khác (Thầy không nhận thông báo của chính mình)');
-  perform t.ok((select count(distinct dedupe_key) from public.class_system_notices) = 4, 'mỗi thông báo gắn đúng một sự kiện (dedupe_key)');
+  perform t.ok((select count(*) from public.class_system_notices) = 0, 'nhận xét không chấm / trả lời Hỏi bài không tạo thông báo');
 
-  -- sự kiện bị ẩn: không thông báo
+  -- sự kiện chấm đã ẩn: không thông báo
   insert into public.learning_thread_events (thread_id, author_user_id, author_role, kind, verdict, body, hidden_at)
   values ('99999999-0000-4000-8000-000000000001', t.u('T'), 'teacher', 'teacher_feedback', 'pass', 'ẩn', now());
-  perform t.ok((select count(*) from public.class_system_notices) = 4, 'sự kiện đã ẩn không tạo thông báo');
+  perform t.ok((select count(*) from public.class_system_notices) = 0, 'sự kiện đã ẩn không tạo thông báo');
 
   -- lưu thất bại (rollback) → không có thông báo
   begin
     insert into public.learning_thread_events (thread_id, author_user_id, author_role, kind, verdict, body)
-    values ('99999999-0000-4000-8000-000000000001', t.u('T'), 'teacher', 'teacher_feedback', 'pass', 'sẽ rollback');
+    values ('99999999-0000-4000-8000-000000000001', t.u('T'), 'teacher', 'teacher_feedback', 'retry', 'sẽ rollback');
     raise exception 'ROLLBACK_TEST';
   exception when others then if sqlerrm <> 'ROLLBACK_TEST' then raise; end if;
   end;
-  perform t.ok((select count(*) from public.class_system_notices) = 4, 'lưu thất bại (rollback) → không còn thông báo');
+  perform t.ok((select count(*) from public.class_system_notices) = 0, 'lưu thất bại (rollback) → không còn thông báo');
+
+  -- Thầy chấm xong (Cần làm lại) → đúng 1 thông báo cho A, nội dung ngắn không nêu kết quả
+  insert into public.learning_thread_events (thread_id, author_user_id, author_role, kind, verdict, body)
+  values ('99999999-0000-4000-8000-000000000001', t.u('T'), 'teacher', 'teacher_feedback', 'retry', 'Làm lại nhé: nhận xét chi tiết riêng tư');
+  perform t.ok((select count(*) from public.class_system_notices where user_id = t.u('A')) = 1, 'Thầy chấm xong → đúng 1 thông báo cho học viên A');
+  perform t.ok((select body from public.class_system_notices) = 'Bài trả Buổi 02 của bạn đã được chấm.', 'nội dung ngắn, đúng buổi, KHÔNG chứa nhận xét/kết quả');
+  perform t.ok((select ref_type || ':' || ref_key from public.class_system_notices) = 'thread:99999999-0000-4000-8000-000000000001', 'liên kết = đúng thread của bài trả');
+
+  -- Chấm lại / sửa kết quả trong CÙNG lần nộp → không thêm thông báo (hành vi bảo thủ)
+  insert into public.learning_thread_events (thread_id, author_user_id, author_role, kind, verdict, body)
+  values ('99999999-0000-4000-8000-000000000001', t.u('T'), 'teacher', 'teacher_feedback', 'pass', 'Đạt rồi');
+  perform t.ok((select count(*) from public.class_system_notices) = 1, 'chấm lại trong cùng lần nộp → vẫn 1 thông báo (không dồn dập)');
+
+  -- Học viên nộp lại → Thầy chấm → thông báo MỚI
+  insert into public.learning_thread_events (thread_id, author_user_id, author_role, kind, body)
+  values ('99999999-0000-4000-8000-000000000001', t.u('A'), 'student', 'submission', 'Em nộp lại');
+  insert into public.learning_thread_events (thread_id, author_user_id, author_role, kind, verdict, body)
+  values ('99999999-0000-4000-8000-000000000001', t.u('T'), 'teacher', 'teacher_feedback', 'pass', 'Đạt');
+  perform t.ok((select count(*) from public.class_system_notices where user_id = t.u('A')) = 2, 'nộp lại rồi được chấm → thông báo thứ 2');
+  perform t.ok((select count(*) from public.class_system_notices where user_id <> t.u('A')) = 0, 'không có thông báo cho người khác (Thầy không nhận)');
 
   -- chống trùng ở tầng DB
   perform t.fails($q$insert into public.class_system_notices (user_id, kind, body, ref_type, ref_key, dedupe_key)
@@ -100,16 +111,17 @@ select t.as_user('A');
 do $$
 declare v_max bigint; v_s record;
 begin
-  perform t.ok((select count(*) from public.class_system_notices(null, 30)) = 4, 'A thấy 4 thông báo của mình');
-  perform t.ok((select bool_and(unread) from public.class_system_notices(null, 30)), 'cả 4 đều chưa đọc');
+  perform t.ok((select count(*) from public.class_system_notices(null, 30)) = 2, 'A thấy 2 thông báo của mình');
+  perform t.ok((select bool_and(unread) from public.class_system_notices(null, 30)), 'cả 2 đều chưa đọc');
   perform t.ok((select seq from public.class_system_notices(null, 30) limit 1) = (select max(seq) from public.class_system_notices(null, 30)), 'mới nhất trước');
   select * into v_s from public.class_system_notice_summary();
-  perform t.ok(v_s.unread = 4 and v_s.last_body like '%trả lời%', 'summary: 4 chưa đọc + thông báo mới nhất');
+  perform t.ok(v_s.unread = 2 and v_s.last_body like 'Bài trả Buổi 02%', 'summary: 2 chưa đọc + thông báo mới nhất');
   perform t.ok((select count(*) from public.class_system_notices(null, 2)) = 2, 'phân trang: limit 2');
+  perform t.ok((select count(*) from public.class_system_notices(null, 1)) = 1 and (select count(*) from public.class_system_notices((select max(seq) from public.class_system_notices(null, 30)), 30)) = 1, 'phân trang: before_seq');
   select max(seq) into v_max from public.class_system_notices(null, 30);
-  perform t.ok(public.class_system_notice_mark_read(v_max - 2) = v_max - 2, 'mark_read tới giữa danh sách');
-  perform t.ok((select unread from public.class_system_notice_summary()) = 2, 'còn 2 chưa đọc');
-  perform t.ok(public.class_system_notice_mark_read(1) = v_max - 2, 'mark_read lùi không làm tụt (chỉ tăng)');
+  perform t.ok(public.class_system_notice_mark_read(v_max - 1) = v_max - 1, 'mark_read tới giữa danh sách');
+  perform t.ok((select unread from public.class_system_notice_summary()) = 1, 'còn 1 chưa đọc');
+  perform t.ok(public.class_system_notice_mark_read(1) = v_max - 1, 'mark_read lùi không làm tụt (chỉ tăng)');
   perform t.ok(public.class_system_notice_mark_read(v_max + 1000) = v_max, 'mark_read vượt không quá thông báo mới nhất');
   perform t.ok((select unread from public.class_system_notice_summary()) = 0, 'đọc hết → chưa đọc = 0 (reload không bật lại)');
   perform t.fails($q$select * from public.class_system_notices$q$, 'A không đọc thẳng bảng', 'permission denied');
