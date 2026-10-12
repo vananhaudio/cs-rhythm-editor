@@ -26,6 +26,7 @@ import ThreadPage from '../learning-thread/ThreadPage'
 import TeacherQueue from '../learning-thread/TeacherQueue'
 import { useSocialClasses } from './classes/useSocialClasses'
 import ClassNav from './classes/ClassNav'
+import MyBandNavItem from './mybands/MyBandNavItem'
 import ClassesPage from './classes/ClassesPage'
 import { refreshLearningIdentity } from './identity/identityStore'
 import ClassPage from './classes/ClassPage'
@@ -201,7 +202,8 @@ function SignedInShell({ base, view, onSection, onOpenProfile, onOpenThread, onO
       classNav={({ collapsed, onNavigate }) => (
         <ClassNav mine={classes.mine} loaded={classes.loaded} activeClassId={activeClassId} allClasses={classes.all != null}
           classesActive={view.kind === 'classes'} collapsed={collapsed}
-          onOpenClass={id => { onOpenClass(id); onNavigate() }} onOpenClasses={() => { onOpenClasses(); onNavigate() }} />
+          onOpenClass={id => { onOpenClass(id); onNavigate() }} onOpenClasses={() => { onOpenClasses(); onNavigate() }}
+          after={<MyBandNavItem userId={me.userId} collapsed={collapsed} />} />
       )}
       canEditAvatar={editor.canEditAvatar} onEditMedia={editor.pick} onSignOut={onSignOut}>
       {view.kind === 'profile' && (

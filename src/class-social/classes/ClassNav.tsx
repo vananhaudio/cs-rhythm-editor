@@ -1,12 +1,13 @@
 // Sidebar "LỚP HỌC": các lớp HIỆN TẠI của tôi hiện TRỰC TIẾP (bấm là vào lớp; thứ tự do server, không xếp lại theo hoạt động)
 // + MỘT mục cố định "Lớp của tôi" (/me/classes — bản đồ các lớp, mã tham gia, lớp trước đây, các lớp khác).
 // Component lá (không mạng, không CSS import) — dữ liệu từ useSocialClasses ở ClassSocialPage.
+import type { ReactNode } from 'react'
 import { GraduationCap } from 'lucide-react'
 import { classFullTitle, classShortName, currentClasses, type ClassCard } from './classModel'
 
 const MY_CLASSES_IN_NAV = 5
 
-export default function ClassNav({ mine, activeClassId, classesActive, collapsed, onOpenClass, onOpenClasses, allClasses = false }: {
+export default function ClassNav({ mine, activeClassId, classesActive, collapsed, onOpenClass, onOpenClasses, allClasses = false, after }: {
   mine: ClassCard[]
   /** (giữ trong hợp đồng props; danh sách rỗng khi chưa tải) */
   loaded: boolean
@@ -18,6 +19,8 @@ export default function ClassNav({ mine, activeClassId, classesActive, collapsed
   onOpenClasses: () => void
   /** Thầy/admin: /me/classes là "Tất cả lớp học" */
   allClasses?: boolean
+  /** Mục đặt NGAY DƯỚI "Lớp của tôi" (vd. "Band của tôi") — cùng nhóm, cùng kiểu .cs-nav-item */
+  after?: ReactNode
 }) {
   const classesLabel = allClasses ? 'Tất cả lớp học' : 'Lớp của tôi'
   const shown = currentClasses(mine).slice(0, MY_CLASSES_IN_NAV)   // cùng tập + thứ tự với tab "Lớp" và /me/classes
@@ -39,6 +42,7 @@ export default function ClassNav({ mine, activeClassId, classesActive, collapsed
         <GraduationCap size={21} strokeWidth={classesActive ? 2.2 : 1.9} />
         <span className="cs-nav-text">{classesLabel}</span>
       </button>
+      {after}
     </nav>
   )
 }

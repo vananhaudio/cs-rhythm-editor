@@ -1621,3 +1621,12 @@ button.cs-subs-title:hover { color: var(--cs-accent); }
 .cs-switch.is-on .cs-switch-knob { background: #34c759; }
 .cs-switch.is-on .cs-switch-knob::after { transform: translateX(20px); }
 .cs-switch:focus-visible .cs-switch-knob { outline: 2px solid var(--cs-primary, #0a84ff); outline-offset: 2px; }
+
+/* ── "Band của tôi": mục menu dùng .cs-nav-item (như "Lớp của tôi"); chỉ hộp thoại cần style riêng ── */
+.cs-my-band-backdrop, .cs-my-band-dialog { z-index: 400; }
+.cs-my-band-dialog { z-index: 401; }
+.cs-my-band-dialog .cs-btn + .cs-btn { margin-top: 10px; }
+.cs-my-band-list { list-style: none; margin: 0 0 16px; padding: 0; text-align: left; }
+.cs-my-band-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding: 10px 4px; border-bottom: 1px solid var(--cs-border); color: var(--cs-text); font-size: 16px; font-weight: 700; text-decoration: none; overflow-wrap: anywhere; }
+.cs-my-band-list li:last-child .cs-my-band-item { border-bottom: none; }
+.cs-my-band-item svg { flex: none; color: var(--cs-muted); }
