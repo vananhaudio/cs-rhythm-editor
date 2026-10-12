@@ -42,6 +42,16 @@ test("ngoài phạm vi: native, timming., localhost → null (giữ routing cũ:
   assert.equal(r("class2-site.netlify.app", "/me"), null);
   assert.equal(r("reliable-genie-43d4dc.netlify.app", "/me"), null);       // tên site trần ≠ draft
   assert.equal(r("main--x.netlify.app", "/me"), null);                      // branch deploy không phải draft id
+  assert.equal(r("deploy-preview--x.netlify.app", "/me"), null);            // thiếu số PR
+  assert.equal(r("deploy-preview-8.x.netlify.app", "/me"), null);           // sai dấu phân tách
+  assert.equal(r("evil-deploy-preview-8--x.netlify.app", "/me"), null);     // không neo đầu
+  assert.equal(r("deploy-preview-8--x.example.com", "/me"), null);          // không phải netlify.app
+});
+
+test("bí danh PR deploy-preview-<n>--site.netlify.app = Class Social (cùng bundle; /me/chat mở được để nghiệm thu)", () => {
+  const m = r("deploy-preview-8--reliable-genie-43d4dc.netlify.app", "/me/chat");
+  assert.ok(m && m.kind === "social", "deploy-preview-8 phải là Class Social");
+  assert.equal(m.kind === "social" && m.section, "chat");
 });
 
 test("draft Netlify (<deploy id>--site.netlify.app) = Class Social như class.* → /me/bands/<slug> mở được để nghiệm thu", () => {

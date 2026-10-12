@@ -39,7 +39,8 @@ export function isLearnPath(pathname: string): boolean {
 /** Social chỉ bật trên web ở host class.* — đúng phạm vi đã audit. */
 // Bản draft (deploy preview Netlify: <deploy id 24 hex>--<site>.netlify.app) chạy cùng bundle với class.* →
 // /me ở draft phải là Class Social như production, nếu không trang quản trị (/me/bands/…) không mở được để nghiệm thu.
-const DEPLOY_PREVIEW_RE = /^[0-9a-f]{24}--[a-z0-9-]+\.netlify\.app$/
+// Cũng nhận bí danh của Pull Request: deploy-preview-<số PR>--<site>.netlify.app (cùng bundle, địa chỉ Netlify đưa vào PR).
+const DEPLOY_PREVIEW_RE = /^(?:[0-9a-f]{24}|deploy-preview-\d+)--[a-z0-9-]+\.netlify\.app$/
 
 export function isSocialHost(hostname: string, isNative: boolean): boolean {
   return !isNative && (hostname.startsWith('class.') || DEPLOY_PREVIEW_RE.test(hostname))
