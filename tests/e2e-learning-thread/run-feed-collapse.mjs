@@ -30,7 +30,7 @@ async function openAs(width) {
   await page.click('.cs-guest-submit')
   await page.waitForSelector('.cs-account', { timeout: 15000 })
   await page.waitForFunction(() => document.body.innerText.includes('FCSHORT'), { timeout: 20000 })
-  await page.waitForFunction(() => document.body.innerText.includes('FCT'), { timeout: 20000 })   // bình luận tải theo lô
+  await page.waitForFunction(() => document.body.innerText.includes('FCM35'), { timeout: 20000 })   // bình luận (không phải nội dung bài) tải theo lô
   return page
 }
 // Thông tin một bài theo nhãn nội dung
