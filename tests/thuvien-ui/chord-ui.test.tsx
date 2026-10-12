@@ -789,6 +789,28 @@ test('Khung Class cho Thư viện: dùng đúng cấu trúc/class của Class (t
   assert.ok(view.getByText('nội dung'))
 })
 
+test('Khung Class: mục "Nạp bản nhạc mới" chỉ hiện với người được thêm bài vào thư viện (canUploadMusicXml)', async () => {
+  const allowed = render(<ThuVienShell active="musicxml" onNavigate={() => {}} session={SESSION_READY}><p>x</p></ThuVienShell>)
+  assert.ok([...allowed.container.querySelectorAll('.cs-sidebar button')].some(b => b.textContent === 'Nạp bản nhạc mới'), 'mặc định (và Biên tập/Admin) thấy mục nạp')
+  allowed.unmount()
+  const denied = render(<ThuVienShell active="musicxml" onNavigate={() => {}} session={SESSION_READY} canUploadMusicXml={false}><p>x</p></ThuVienShell>)
+  const items = [...denied.container.querySelectorAll('.cs-sidebar .cs-nav-item')].map(n => n.textContent)
+  assert.ok(!items.includes('Nạp bản nhạc mới'), 'không có quyền → ẩn mục nạp bản nhạc')
+  assert.ok(items.includes('Danh sách bản nhạc MusicXML') && items.includes('Nạp hợp âm mới'), 'các mục khác giữ nguyên')
+  fireEvent.click(denied.getByRole('button', { name: 'Mở menu' }))
+  const sheet = denied.getByRole('dialog', { name: 'Menu' })
+  assert.ok(![...sheet.querySelectorAll('.cs-nav-item')].some(n => n.textContent === 'Nạp bản nhạc mới'), 'menu mobile cũng ẩn')
+  denied.unmount()
+})
+
+test('Thêm bản nhạc: RLS từ chối → thông báo tiếng Việt rõ ràng; ghi công do server (created_by = auth.uid())', async () => {
+  const { ADD_DENIED_MESSAGE } = await import('../../src/thuvien/masterLibrary')
+  assert.match(ADD_DENIED_MESSAGE, /Biên tập âm nhạc/)
+  const src = (await import('node:fs')).readFileSync(new URL('../../src/thuvien/masterLibrary.ts', import.meta.url), 'utf8')
+  assert.match(src, /created_by: auth\.user\.id/, 'client gửi created_by = người đăng nhập; RLS ép bằng auth.uid()')
+  assert.match(src, /row-level security/i)
+})
+
 test('Khung Class: tài khoản như Class (avatar + menu; chưa đăng nhập → nút Đăng nhập về /me); mobile có ☰ mở menu dạng sheet, Esc đóng', async () => {
   const view = render(<ThuVienShell active="musicxml" onNavigate={() => {}} session={SESSION_READY}><p>x</p></ThuVienShell>)
   fireEvent.click(view.getByRole('button', { name: 'Tài khoản: Thầy Văn Anh' }))
@@ -817,7 +839,7 @@ test('mục MusicXML: vẫn là mặc định, vẫn gọi đúng các hàm cũ;
   for (const piece of ['listLibrary()', 'importMusicXml(prepared, title, composer)', 'prepareMusicXml(file.name, await file.text())', '<ScoreViewer key={openId}', 'accept=".musicxml,.xml"'])
     assert.ok(page.includes(piece), piece)
   assert.match(page, /<main className="thu-vien[^"]*">\s*<div className="mx-auto max-w-4xl">/)
-  assert.match(page, /<MusicXmlLibrary \/>/)
+  assert.match(page, /<MusicXmlLibrary canUpload=\{canUpload\} \/>/, 'MusicXmlLibrary vẫn là mặc định; chỉ nhận cờ ẩn/hiện mục nạp (quyền thật do RLS)')
   assert.match(page, /<ThuVienShell active=\{activeNavItem\(search\)\}/, 'toàn bộ trang nằm trong khung Class')
   assert.ok(!page.includes('ThuVienTabs') && !page.includes('ThuVienHeader'), 'thanh mục cũ đã được khung Class thay thế')
   assert.ok(!page.includes('+ Thêm bản nhạc'), 'danh sách MusicXML không còn nút tạo mới trùng với Header')

@@ -34,9 +34,11 @@ function readCollapsed(): boolean {
   try { return localStorage.getItem(COLLAPSE_KEY) === '1' } catch { return false }
 }
 
-function Entries({ active, collapsed, onNavigate }: { active: NavId | null; collapsed: boolean; onNavigate: (id: NavId) => void }) {
+function Entries({ active, collapsed, onNavigate, canUpload }: { active: NavId | null; collapsed: boolean; onNavigate: (id: NavId) => void; canUpload: boolean }) {
+  // Mục nạp bản nhạc chỉ hiện với người được thêm vào thư viện (RLS vẫn là chốt chặn thật).
+  const groups = TV_NAV_GROUPS.map(g => ({ ...g, items: g.items.filter(i => canUpload || i.id !== 'upload-musicxml') }))
   return <>
-    {TV_NAV_GROUPS.map(group => <div key={group.id} className="cs-nav-block">
+    {groups.map(group => <div key={group.id} className="cs-nav-block">
       <nav className="cs-nav-group" aria-label={group.title}>
         <div className="cs-nav-title">{group.title}</div>
         {group.items.map(item => {
@@ -59,7 +61,7 @@ function Entries({ active, collapsed, onNavigate }: { active: NavId | null; coll
   </>
 }
 
-function MobileMenu({ active, onClose, onNavigate }: { active: NavId | null; onClose: () => void; onNavigate: (id: NavId) => void }) {
+function MobileMenu({ active, onClose, onNavigate, canUpload }: { active: NavId | null; onClose: () => void; onNavigate: (id: NavId) => void; canUpload: boolean }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', onKey)
@@ -73,7 +75,7 @@ function MobileMenu({ active, onClose, onNavigate }: { active: NavId | null; onC
         <h2>Menu</h2>
         <button type="button" className="cs-icon-btn" onClick={onClose} aria-label="Đóng menu"><X size={22} /></button>
       </div>
-      <Entries active={active} collapsed={false} onNavigate={id => { onNavigate(id); onClose() }} />
+      <Entries active={active} collapsed={false} canUpload={canUpload} onNavigate={id => { onNavigate(id); onClose() }} />
     </div>
   </>
 }
@@ -91,11 +93,13 @@ function Account({ session }: { session: ClassSession }) {
     ]} />
 }
 
-export default function ThuVienShell({ active, onNavigate, session, children }: {
+export default function ThuVienShell({ active, onNavigate, session, children, canUploadMusicXml = true }: {
   active: NavId | null
   onNavigate: (id: NavId) => void
   session: ClassSession
   children: ReactNode
+  /** false → ẩn mục "Nạp bản nhạc mới" (người không có quyền thêm bài). Mặc định hiện. */
+  canUploadMusicXml?: boolean
 }) {
   const [collapsed, setCollapsed] = useState(readCollapsed)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -121,11 +125,11 @@ export default function ThuVienShell({ active, onNavigate, session, children }: 
     </header>
     <div className="cs-body">
       <aside className={'cs-sidebar' + (collapsed ? ' is-collapsed' : '')}>
-        <Entries active={active} collapsed={collapsed} onNavigate={onNavigate} />
+        <Entries active={active} collapsed={collapsed} onNavigate={onNavigate} canUpload={canUploadMusicXml} />
       </aside>
       <main className="cs-main cs-tv-main">{children}</main>
     </div>
-    {menuOpen && <MobileMenu active={active} onClose={() => setMenuOpen(false)} onNavigate={onNavigate} />}
+    {menuOpen && <MobileMenu active={active} onClose={() => setMenuOpen(false)} onNavigate={onNavigate} canUpload={canUploadMusicXml} />}
   </div>
 }
 

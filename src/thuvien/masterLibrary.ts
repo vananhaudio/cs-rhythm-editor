@@ -47,6 +47,22 @@ async function sha256(xml: string): Promise<string> {
   return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('')
 }
 
+/**
+ * Người dùng có được THÊM bài vào thư viện không (chỉ để ẩn/hiện mục "Nạp bản nhạc mới"; quyền thật do RLS):
+ * admin/teacher (isTeacher) hoặc người đang giữ vai Biên tập âm nhạc ở ít nhất một Band (teamlab_band_roles). Lỗi đọc → false.
+ */
+export async function canAddToLibrary(userId: string, isTeacher: boolean): Promise<boolean> {
+  if (isTeacher) return true
+  try {
+    const { supabase } = await import('../supabase.ts')
+    const { data, error } = await supabase.from('teamlab_band_roles').select('band_id')
+      .eq('user_id', userId).eq('role', 'music_editor').limit(1)
+    return !error && (data?.length ?? 0) > 0
+  } catch { return false }
+}
+
+export const ADD_DENIED_MESSAGE = 'Tài khoản chưa có quyền thêm bản nhạc vào thư viện. Cần vai trò Biên tập âm nhạc của một Band (hoặc Admin/Giáo viên).'
+
 export async function listLibrary(): Promise<LibraryItem[]> {
   const { supabase } = await import('../supabase.ts')
   const { data, error } = await supabase.from(TABLE)
@@ -87,6 +103,8 @@ export async function importMusicXml(input: ReturnType<typeof prepareMusicXml>, 
     size_bytes: input.sizeBytes,
     created_by: auth.user.id,
   }).select('id,title,composer,created_at').single()
+  // RLS từ chối (không phải Biên tập / mất vai): báo rõ, không lộ thông báo kỹ thuật.
+  if (error && (error.code === '42501' || /row-level security/i.test(error.message ?? ''))) throw new Error(ADD_DENIED_MESSAGE)
   if (error) throw error
   return data
 }

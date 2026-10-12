@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import type { ChangeEvent } from 'react'
-import { importMusicXml, listLibrary, matchesQuery, prepareMusicXml } from './masterLibrary.ts'
+import { ADD_DENIED_MESSAGE, canAddToLibrary, importMusicXml, listLibrary, matchesQuery, prepareMusicXml } from './masterLibrary.ts'
 import type { LibraryItem } from './masterLibrary.ts'
 import { scoreIdFromSearch } from './viewScore.ts'
 import { NEW_CHORD_SHEET, activeNavItem, sectionFromSearch, sectionUrl, uploadFromSearch, uploadUrl } from './sections.ts'
@@ -55,6 +55,17 @@ type PageProps = { chordLibrary?: ChordLibrary; measureAnalyzer?: MeasureAnalyze
 export function ThuVienPageView({ chordLibrary, measureAnalyzer = PRODUCTION_ANALYZER, contentExtractor = PRODUCTION_EXTRACTOR, session }: PageProps & { session: ClassSession }) {
   const [search, setSearch] = useState(() => window.location.search)
   const section = sectionFromSearch(search)
+  // Thêm bản nhạc vào thư viện: admin/teacher, hoặc người đang giữ vai Biên tập âm nhạc. Chỉ ẩn/hiện giao diện — RLS kiểm lại khi lưu.
+  const uid = session.status === 'ready' ? session.me.userId : null
+  const teacher = session.status === 'ready' && session.me.isTeacher
+  const [canUpload, setCanUpload] = useState<boolean | null>(teacher ? true : null)
+  useEffect(() => {
+    if (!uid) { setCanUpload(session.status === 'loading' ? null : false); return }
+    let alive = true
+    setCanUpload(teacher ? true : null)
+    void canAddToLibrary(uid, teacher).then(ok => { if (alive) setCanUpload(ok) })
+    return () => { alive = false }
+  }, [uid, teacher, session.status])
 
   useEffect(() => {
     const sync = () => setSearch(window.location.search)
@@ -76,15 +87,15 @@ export function ThuVienPageView({ chordLibrary, measureAnalyzer = PRODUCTION_ANA
 
   const content = section === 'chords'
     ? <Suspense fallback={<main className="tv-chords"><p className="cl-empty">Đang mở Hợp âm chuẩn hóa…</p></main>}><ChordLibraryPage library={chordLibrary} analyzer={measureAnalyzer} extractor={contentExtractor} /></Suspense>
-    : <MusicXmlLibrary />
-  return <ThuVienShell active={activeNavItem(search)} onNavigate={navigate} session={session}>{content}</ThuVienShell>
+    : <MusicXmlLibrary canUpload={canUpload} />
+  return <ThuVienShell active={activeNavItem(search)} onNavigate={navigate} session={session} canUploadMusicXml={canUpload !== false}>{content}</ThuVienShell>
 }
 
 export default function ThuVienPage(props: PageProps = {}) {
   return <ThuVienPageView {...props} session={useClassSession()} />
 }
 
-function MusicXmlLibrary() {
+function MusicXmlLibrary({ canUpload }: { canUpload: boolean | null }) {
   const [items, setItems] = useState<LibraryItem[]>([])
   const [listState, setListState] = useState<'loading' | 'ready' | 'error'>('loading')
   const [listError, setListError] = useState('')
@@ -193,6 +204,15 @@ function MusicXmlLibrary() {
         </div>
       </section>
   )
+
+  if (upload && canUpload === false) {
+    return <main className="thu-vien min-h-screen bg-[#f7f5ef] px-4 py-8 text-[#26352d] sm:px-8">
+        <div className="mx-auto max-w-4xl">
+        <h1 className="mb-5 text-2xl font-bold sm:text-3xl">NẠP BẢN NHẠC MỚI</h1>
+        <p role="status" className="rounded-lg bg-white p-4" data-testid="upload-denied">{ADD_DENIED_MESSAGE}</p>
+      </div>
+    </main>
+  }
 
   if (upload) {
     return <main className="thu-vien min-h-screen bg-[#f7f5ef] px-4 py-8 text-[#26352d] sm:px-8">
