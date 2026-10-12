@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import {
-  addSilent, addSustain, anchorLines, anchorWord, anchorsPayload, buildMeasureDisplay, firstLyricAnchor, measureDisplayText, moveMeasure, parseAnchors, removeMeasure, renderAnchors, toggleGap, uncoveredLines,
+  addSilent, addSustain, anchorLines, anchorWord, anchorsPayload, buildMeasureDisplay, firstLyricAnchor, measureDisplayText, moveMeasure, parseAnchors, provisionalBars, removeMeasure, renderAnchors, toggleGap, uncoveredLines,
 } from '../../src/thuvien/chordAnchors.ts'
 import type { MeasureAnchor } from '../../src/thuvien/chordAnchors.ts'
 import { MOCK_OWNER_ID, createMockChordLibrary, createRpcChordLibrary } from '../../src/thuvien/chordLibrary.ts'
@@ -192,4 +192,41 @@ test('uncoveredLines: hết báo khi đã phủ — kể cả dòng nằm giữa
 test('uncoveredLines: một lời hát đủ vạch (bài một lời) không báo gì', () => {
   const one = '1. Chiều [Am] nao, tiễn nhau [E7] đi khi trời\nXe lăn trong [F] tim khuất xa rồi'
   assert.deepEqual(uncoveredLines(one, { measures: [{ line: 0, token: 0 }, { line: 0, token: 4 }, { line: 1, token: 0 }] }), [])
+})
+
+// ── "Chia nhịp tạm thời" ───────────────────────────────────────────────────────────────────
+test('chia nhịp tạm thời: mỗi hợp âm mở một ô, theo thứ tự đọc, nhiều dòng', () => {
+  const result = provisionalBars(TEXT, null)
+  assert.ok(result.ok)
+  if (!result.ok) return
+  assert.equal(result.count, 6)
+  assert.deepEqual(result.anchors.measures, [A(0, 1), A(0, 4), A(1, 1), A(1, 3), A(2, 0), A(2, 2)])
+  assert.equal(result.anchors.pickup, undefined)
+  assert.notEqual(parseAnchors(result.anchors, TEXT), null, 'hình dạng hợp lệ với lời')
+})
+
+test('chia nhịp tạm thời: ví dụ trong yêu cầu, một dòng nhiều hợp âm', () => {
+  const text = '[Am] Mùa thu [Dm] cho em [G] nụ hôn [C] đầu tiên'
+  const result = provisionalBars(text, null)
+  assert.ok(result.ok)
+  if (!result.ok) return
+  assert.equal(renderAnchors(text, result.anchors)[0].text, '| [Am] Mùa thu | [Dm] cho em | [G] nụ hôn | [C] đầu tiên')
+})
+
+test('chia nhịp tạm thời: lời xen hợp âm, "(-)" giữ nguyên và mang vạch riêng', () => {
+  const text = '[Am] la la (-) [Dm] lá\nlời trần\n[G] (-) [C] hết'
+  const result = provisionalBars(text, null)
+  assert.ok(result.ok)
+  if (!result.ok) return
+  assert.deepEqual(result.anchors.measures, [A(0, 0), A(0, 3), A(2, 0), A(2, 1)])
+  assert.equal(text, '[Am] la la (-) [Dm] lá\nlời trần\n[G] (-) [C] hết', 'không đụng vào văn bản')
+})
+
+test('chia nhịp tạm thời: bài đã có vạch / không có hợp âm → chặn, không đổi gì', () => {
+  const existing = { measures: [A(0, 0)] }
+  const blocked = provisionalBars(TEXT, existing)
+  assert.equal(blocked.ok, false)
+  assert.equal(provisionalBars(TEXT, { pickup: A(0, 1), measures: [] }).ok, false)
+  assert.equal(provisionalBars('chỉ có lời\nkhông hợp âm', null).ok, false)
+  assert.deepEqual(existing, { measures: [A(0, 0)] })
 })

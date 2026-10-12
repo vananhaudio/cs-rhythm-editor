@@ -7,7 +7,7 @@ import type { ChordDraft, ChordDraftErrors } from './chordText.ts'
 import { NEW_CHORD_SHEET, chordSheetFromSearch, chordViewFromSearch, chordViewUrl, rhythmFromSearch, rhythmUrl, sectionUrl } from './sections.ts'
 import { MAX_SOURCE_FILES, SOURCE_ACCEPT, formatBytes, nextFreeIndex, parseSourcePath, sha256Hex, sourceErrorMessage, sourceFileProblem, sourceKindLabel, sourceMimeOf, sourcePath } from './chordSources.ts'
 import type { ChordSource } from './chordSources.ts'
-import { ANCHORS_STATUS_LABEL, buildMeasureDisplay, uncoveredLines } from './chordAnchors.ts'
+import { ANCHORS_STATUS_LABEL, buildMeasureDisplay, provisionalBars, uncoveredLines } from './chordAnchors.ts'
 import UncoveredNotice from './UncoveredNotice.tsx'
 import MeasureSheet from './MeasureSheet.tsx'
 import type { ChordAnchors } from './chordAnchors.ts'
@@ -305,6 +305,14 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
     setLayoutNote(note)
     setAnchorEditing(false)
     set({ text: next })
+  }
+  /** "Chia nhịp tạm thời": chỉ đặt vạch ban đầu vào bản đang sửa (chưa lưu); sửa tiếp bằng công cụ hiện có. */
+  function provisionalSplit() {
+    const result = provisionalBars(form.text, bars)
+    if (!result.ok) { setLayoutNote(result.reason); return }
+    setBars(result.anchors)
+    setLayoutNote(`Đã chia nhịp tạm thời: ${result.count} ô, mỗi hợp âm mở một ô. Chỉnh lại các chỗ chưa đúng rồi bấm Lưu.`)
+    setAnchorEditing(false)
   }
   const mock = library.mode === 'mock'
 
@@ -669,6 +677,7 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
               trigger={<span className="cl-edit-trigger"><Pencil size={15} strokeWidth={2} aria-hidden="true" /><span>Chỉnh sửa</span><ChevronDown size={15} strokeWidth={2} aria-hidden="true" /></span>} items={[
               { label: 'Chỉnh sửa lời bài hát', onSelect: () => setLinesOpen(true) },
               { label: 'Dán lại lời & hợp âm', onSelect: () => setLyricsOpen(true) },
+              { label: 'Chia nhịp tạm thời', onSelect: provisionalSplit },
               { label: 'Thêm ảnh/PDF tham khảo', onSelect: () => { if (!uploadLocked) fileInput.current?.click() } },
               { label: 'Phân tích vạch nhịp, phiên bản…', onSelect: () => setAdvancedOpen(true) },
             ]} />
