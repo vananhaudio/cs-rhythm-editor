@@ -1,23 +1,24 @@
 import { useEffect, useState } from 'react'
 import ThuVienPage from './ThuVienPage.tsx'
-import { canAddToLibrary } from './masterLibrary.ts'
+import { thuVienAccess } from './masterLibrary.ts'
+import type { ThuVienAccess } from './masterLibrary.ts'
 
 /**
- * Cổng /thuvien cho tài khoản KHÔNG phải admin: chỉ người đang giữ vai Biên tập âm nhạc (ít nhất một Band) vào được,
- * và chỉ thấy mục MusicXML (xem / nạp / sửa-gỡ bài của mình). Người khác về /start như trước.
- * Quyền thật vẫn do RLS ở musicxml_library; cổng này chỉ quyết định có hiện trang hay không.
+ * Cổng /thuvien cho tài khoản KHÔNG phải admin: chỉ người đang giữ vai Biên tập âm nhạc (đăng/sửa/gỡ bài của mình)
+ * hoặc Trưởng Band (chỉ xem/tìm/dùng) vào được; người khác về /start như trước. Không thấy "Nâng cao" (/admin).
+ * Quyền thật vẫn do máy chủ (RLS + RPC); cổng này chỉ quyết định có hiện trang và hiện những nút nào.
  */
 export default function ThuVienEditorGate({ userId }: { userId: string }) {
-  const [allowed, setAllowed] = useState(false)
+  const [access, setAccess] = useState<ThuVienAccess | null>(null)
   useEffect(() => {
     let alive = true
-    void canAddToLibrary(userId, false).then(ok => {
+    void thuVienAccess(userId).then(result => {
       if (!alive) return
-      if (ok) setAllowed(true)
+      if (result) setAccess(result)
       else window.location.href = '/start'
     })
     return () => { alive = false }
   }, [userId])
-  if (!allowed) return <div style={{ padding: 32 }}>Đang mở thư viện…</div>
-  return <ThuVienPage musicXmlOnly />
+  if (!access) return <div style={{ padding: 32 }}>Đang mở thư viện…</div>
+  return <ThuVienPage access={access} />
 }

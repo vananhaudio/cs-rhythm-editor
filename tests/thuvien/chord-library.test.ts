@@ -266,19 +266,19 @@ test('rpc: tìm → gộp theo BÀI: bản đang dùng làm đại diện, kèm 
 
 test('rpc: thêm bài = contribute rồi đọc lại — KHÔNG tự duyệt', async () => {
   const { rpc, calls } = fakeRpc({
-    chord_sheet_contribute: () => ({ ok: true, duplicate: false, sheet_id: 's1', version_id: 'v1' }),
+    chord_sheet_contribute_publish: () => ({ ok: true, duplicate: false, sheet_id: 's1', version_id: 'v1' }),
     chord_sheet_get: () => row({ is_canonical: false, review_status: 'private', meter: { beats: 3, beatType: 4 }, suggested_bpm: 96,
       sources: [{ path: `${'a'.repeat(8)}-0000-4000-8000-${'a'.repeat(12)}/${'b'.repeat(8)}-0000-4000-8000-${'b'.repeat(12)}/0.png`, mime: 'image/png', sha256: 'c'.repeat(64), size_bytes: 70, page: 1 }, { path: 'rác' }] }),
   })
   const detail = await createRpcChordLibrary(rpc).createChordSheet(draft({ title: ' Bài ', composer: ' ', meter: { beats: 3, beatType: 4 }, suggestedBpm: 96 }))
-  assert.deepEqual(calls.map(call => call.fn), ['chord_sheet_contribute', 'chord_sheet_get'])
+  assert.deepEqual(calls.map(call => call.fn), ['chord_sheet_contribute_publish', 'chord_sheet_get'])
   assert.deepEqual(calls[0].args, { p_text: '[C] la la', p_title: 'Bài', p_composer: null, p_meter: { beats: 3, beatType: 4 }, p_suggested_bpm: 96 })
   assert.deepEqual([detail.status, detail.meter, detail.suggestedBpm, detail.hasSource], ['draft', { beats: 3, beatType: 4 }, 96, true])
 })
 
 test('rpc: sửa = phiên bản mới của đúng bài, cha = bản đang sửa; duyệt và bỏ nháp là lời gọi riêng', async () => {
   const { rpc, calls } = fakeRpc({
-    chord_sheet_contribute: () => ({ ok: true, duplicate: false, sheet_id: 's1', version_id: 'v2' }),
+    chord_sheet_contribute_publish: () => ({ ok: true, duplicate: false, sheet_id: 's1', version_id: 'v2' }),
     chord_sheet_approve: () => ({ ok: true }),
     chord_sheet_reject: () => ({ ok: true }),
     chord_sheet_update_info: () => ({ ok: true }),
@@ -286,9 +286,9 @@ test('rpc: sửa = phiên bản mới của đúng bài, cha = bản đang sửa
   })
   const library = createRpcChordLibrary(rpc)
   const detail = await library.createChordSheetVersion('s1', { text: '[G] mới', meter: null, suggestedBpm: 88 }, 'v1')
-  assert.deepEqual(calls[0], { fn: 'chord_sheet_contribute', args: { p_text: '[G] mới', p_sheet_id: 's1', p_parent_version_id: 'v1', p_meter: null, p_suggested_bpm: 88 } })
+  assert.deepEqual(calls[0], { fn: 'chord_sheet_contribute_publish', args: { p_text: '[G] mới', p_sheet_id: 's1', p_parent_version_id: 'v1', p_meter: null, p_suggested_bpm: 88 } })
   assert.deepEqual([detail.versionId, detail.versionNumber, detail.status, detail.draftVersionId], ['v2', 2, 'draft', 'v5'])
-  assert.deepEqual(calls.map(call => call.fn), ['chord_sheet_contribute', 'chord_sheet_get'], 'lưu không gọi approve')
+  assert.deepEqual(calls.map(call => call.fn), ['chord_sheet_contribute_publish', 'chord_sheet_get'], 'lưu không gọi approve')
   const approved = await library.approveChordSheetVersion('v2')
   assert.deepEqual(calls.slice(2).map(call => [call.fn, call.args]), [['chord_sheet_approve', { p_version_id: 'v2' }], ['chord_sheet_get', { p_version_id: 'v2' }]])
   assert.equal(approved.status, 'current')
@@ -300,12 +300,12 @@ test('rpc: sửa = phiên bản mới của đúng bài, cha = bản đang sửa
 
 test('rpc: máy chủ báo trùng → trả đúng bản đã có, không tạo gì thêm', async () => {
   const { rpc, calls } = fakeRpc({
-    chord_sheet_contribute: () => ({ ok: true, duplicate: true, sheet_id: 's1', version_id: 'v1' }),
+    chord_sheet_contribute_publish: () => ({ ok: true, duplicate: true, sheet_id: 's1', version_id: 'v1' }),
     chord_sheet_get: () => row(),
   })
   const detail = await createRpcChordLibrary(rpc).createChordSheetVersion('s1', { text: '[C] la', meter: null, suggestedBpm: null }, 'v1')
   assert.deepEqual([detail.versionId, detail.status], ['v1', 'current'])
-  assert.deepEqual(calls.map(call => call.fn), ['chord_sheet_contribute', 'chord_sheet_get'])
+  assert.deepEqual(calls.map(call => call.fn), ['chord_sheet_contribute_publish', 'chord_sheet_get'])
 })
 
 test('rpc: lỗi máy chủ thành câu đọc được; lỗi mạng không bị nuốt', async () => {
@@ -319,4 +319,20 @@ test('rpc: lỗi máy chủ thành câu đọc được; lỗi mạng không b�
   await assert.rejects(createRpcChordLibrary(fakeRpc({}).rpc).createChordSheet(draft({ title: '' })), /Tên bài/)
   const failing = fakeRpc({ chord_sheet_update_info: () => { throw new Error('CHORDLIB_FORBIDDEN') } })
   await assert.rejects(createRpcChordLibrary(failing.rpc).updateChordSheetInfo('s1', { title: 'x', composer: '' }), /không có quyền/)
+})
+
+test('rpc: ghi công Người biên tập (editor_name) + sheet_mine; thiếu → null; gỡ bài gọi chord_sheet_archive; không có uid', async () => {
+  const { rpc, calls } = fakeRpc({
+    chord_sheet_search: () => [
+      row({ sheet_id: 's1', version_id: 'v1', is_canonical: true, review_status: 'approved', title: 'Bài A', editor_name: ' Trần Văn Anh ', sheet_mine: true }),
+      row({ sheet_id: 's2', version_id: 'v2', is_canonical: true, review_status: 'approved', title: 'Bài B' }),
+    ],
+    chord_sheet_archive: () => ({ ok: true }),
+  })
+  const library = createRpcChordLibrary(rpc)
+  const items = await library.searchChordSheets('')
+  assert.deepEqual(items.map(item => [item.sheetId, item.editorName, item.sheetMine]), [['s1', 'Trần Văn Anh', true], ['s2', null, false]])
+  assert.ok(!('contributedBy' in items[0]) && !('contributed_by' in items[0]), 'không đưa uid người đóng góp lên client')
+  await library.archiveChordSheet!('s1')
+  assert.deepEqual(calls[calls.length - 1], { fn: 'chord_sheet_archive', args: { p_sheet_id: 's1' } })
 })

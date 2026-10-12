@@ -32,13 +32,15 @@ const RhythmScrollPage = lazy(() => import('./RhythmScrollPage.tsx'))
 // Mọi đọc/ghi đi qua `library` (src/thuvien/chordLibrary.ts); component không biết Supabase.
 // CSS: ./ChordLibrary.css, nạp ở ThuVienPage.
 
-type Props = { tabs?: ReactNode; canEdit?: boolean; library?: ChordLibrary; analyzer?: MeasureAnalyzer; extractor?: ContentExtractor; readSource?: SourceReader }
+type Props = { tabs?: ReactNode; canEdit?: boolean; /** 'editor' = Biên tập (không duyệt; chỉ sửa/gỡ bài của mình) */ access?: 'admin' | 'editor' | 'viewer'; library?: ChordLibrary; analyzer?: MeasureAnalyzer; extractor?: ContentExtractor; readSource?: SourceReader }
 /** Đọc byte một file nguồn để đưa cho analyzer (mặc định: link xem có hạn → fetch). */
 type SourceReader = (library: ChordLibrary, path: string) => Promise<Blob>
 const readViaViewUrl: SourceReader = async (library, path) => (await fetch(await library.sources.viewUrl(path))).blob()
 
-export default function ChordLibraryPage({ tabs, canEdit = true, library = getChordLibrary(), analyzer, extractor, readSource = readViaViewUrl }: Props) {
-  const [open, setOpen] = useState<string | null>(() => chordSheetFromSearch(window.location.search))
+export default function ChordLibraryPage({ tabs, canEdit = true, access = 'admin', library = getChordLibrary(), analyzer, extractor, readSource = readViaViewUrl }: Props) {
+  const [openRaw, setOpen] = useState<string | null>(() => chordSheetFromSearch(window.location.search))
+  // Chỉ có quyền xem: "?hopam=moi" (thêm bài) không mở trình sửa — về danh sách.
+  const open = !canEdit && openRaw === NEW_CHORD_SHEET ? null : openRaw
   const [rhythm, setRhythm] = useState(() => rhythmFromSearch(window.location.search))
   // Trang XEM chỉ-đọc (`?xem=`); khác với `open` = trình sửa (`?hopam=`).
   const [view, setView] = useState<string | null>(() => chordViewFromSearch(window.location.search))
@@ -104,7 +106,7 @@ export default function ChordLibraryPage({ tabs, canEdit = true, library = getCh
   if (view && !open) {
     return <main className="tv-chords">
       {tabs}
-      <ChordSheetView key={view} library={library} versionId={view} canEdit={canEdit}
+      <ChordSheetView key={view} library={library} versionId={view} canEdit={canEdit} ownerOnly={access === 'editor'}
         onBack={() => go(null)} onEdit={id => go(id)} onOpenVersion={id => goView(id)} onRhythm={id => goRhythm(id, true)} />
     </main>
   }
@@ -113,11 +115,11 @@ export default function ChordLibraryPage({ tabs, canEdit = true, library = getCh
     {tabs}
     {open
       ? <ChordEditor key={open} library={library} analyzer={analyzer} extractor={extractor} readSource={readSource} versionId={open === NEW_CHORD_SHEET ? null : open}
-          onOpenVersion={id => go(id)} onRhythm={id => goRhythm(id, true)}
+          onOpenVersion={id => go(id)} onRhythm={id => goRhythm(id, true)} canReview={access === 'admin'}
           onClose={message => { setNotice(message ?? ''); go(null) }}
           // Lưu xong chỉ đổi địa chỉ (để tải lại trang vẫn mở đúng bài) — KHÔNG dựng lại editor, kẻo mất thông báo "Đã lưu".
           onSaved={detail => window.history.replaceState(window.history.state, '', sectionUrl(window.location.href, 'chords', detail.versionId))} />
-      : <ChordList library={library} notice={notice} onView={id => { setNotice(''); goView(id) }} onEdit={id => { setNotice(''); go(id) }} canEdit={canEdit} />}
+      : <ChordList library={library} notice={notice} onView={id => { setNotice(''); goView(id) }} onEdit={id => { setNotice(''); go(id) }} canEdit={canEdit} ownerOnly={access === 'editor'} />}
   </main>
 }
 
@@ -133,12 +135,28 @@ const Status = ({ label, on, yes = 'Có', no = 'Chưa có' }: { label: string; o
   <span className="cl-status" data-on={on}><span className="cl-status-label">{label}</span><span className="cl-status-value">{on ? `✓ ${yes}` : `— ${no}`}</span></span>
 
 // ── Danh sách ───────────────────────────────────────────────────────────────────────────────
-function ChordList({ library, notice, onView, onEdit, canEdit }: { library: ChordLibrary; notice: string; onView: (id: string) => void; onEdit: (id: string) => void; canEdit: boolean }) {
+function ChordList({ library, notice, onView, onEdit, canEdit, ownerOnly }: { library: ChordLibrary; notice: string; onView: (id: string) => void; onEdit: (id: string) => void; canEdit: boolean; ownerOnly: boolean }) {
   const [query, setQuery] = useState('')
   const [items, setItems] = useState<ChordSheetSummary[]>([])
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading')
   const [error, setError] = useState('')
   const [reload, setReload] = useState(0)
+  const [listNotice, setListNotice] = useState('')
+  const [archiving, setArchiving] = useState<string | null>(null)
+  // Biên tập chỉ sửa/gỡ bài do chính mình tạo (máy chủ kiểm lại); Admin/Giáo viên: mọi bài.
+  const mayManage = (item: ChordSheetSummary) => canEdit && (!ownerOnly || item.sheetMine === true)
+  async function archive(item: ChordSheetSummary) {
+    if (archiving || !library.archiveChordSheet) return
+    if (!window.confirm(`Gỡ bài “${item.title}” khỏi Thư viện? Bài sẽ không còn trong danh sách; Admin có thể khôi phục.`)) return
+    setArchiving(item.sheetId); setListNotice('')
+    try {
+      await library.archiveChordSheet(item.sheetId)
+      setItems(current => current.filter(entry => entry.sheetId !== item.sheetId))
+      setListNotice(`Đã gỡ “${item.title}” khỏi Thư viện.`)
+    } catch (cause) {
+      setListNotice(cause instanceof Error ? cause.message : 'Không gỡ được bài.')
+    } finally { setArchiving(null) }
+  }
 
   useEffect(() => {
     let active = true
@@ -165,11 +183,13 @@ function ChordList({ library, notice, onView, onEdit, canEdit }: { library: Chor
           placeholder="Tìm tên bài hoặc tác giả..." aria-label="Tìm tên bài hoặc tác giả" />
       </div>
       {notice && <p role="status" className="cl-notice">{notice}</p>}
+      {listNotice && <p role="status" className="cl-notice">{listNotice}</p>}
       <ul className="cl-list" aria-label="Danh sách bài">
         {state === 'ready' && items.map(item => <li key={item.sheetId} className="cl-item">
           <div className="cl-item-name">
             <strong>{item.title}{item.status === 'draft' && <em className="cl-tag">Chưa duyệt</em>}{item.draftVersionId && <em className="cl-tag">Có bản nháp</em>}</strong>
             <span>{item.composer || '—'}</span>
+            <small className="cl-editor-credit">Người biên tập: {item.editorName ?? 'Chưa xác định'}</small>
           </div>
           <div className="cl-item-status">
             <Status label="Hợp âm" on />
@@ -177,7 +197,8 @@ function ChordList({ library, notice, onView, onEdit, canEdit }: { library: Chor
           </div>
           <div className="cl-item-buttons">
             <button type="button" className="cl-open" onClick={() => onView(item.versionId)} aria-label={`Xem bài ${item.title}`}>Xem</button>
-            {canEdit && <button type="button" className="cl-open cl-open-edit" onClick={() => onEdit(item.versionId)} aria-label={`Sửa bài ${item.title}`}>Sửa</button>}
+            {mayManage(item) && <button type="button" className="cl-open cl-open-edit" onClick={() => onEdit(item.versionId)} aria-label={`Sửa bài ${item.title}`}>Sửa</button>}
+            {mayManage(item) && library.archiveChordSheet && <button type="button" className="cl-open cl-open-remove" disabled={archiving !== null} onClick={() => void archive(item)} aria-label={`Gỡ bài ${item.title}`}>{archiving === item.sheetId ? 'Đang gỡ…' : 'Gỡ'}</button>}
           </div>
         </li>)}
         {state === 'loading' && <li className="cl-empty" aria-live="polite">Đang tải danh sách…</li>}
@@ -199,7 +220,9 @@ const draftOf = (form: Form): ChordDraft => ({
   title: form.title, composer: form.composer, meter: parseMeter(form.meter), suggestedBpm: parseBpm(form.bpm), text: form.text,
 })
 
-function ChordEditor({ library, analyzer, extractor, readSource, versionId, onClose, onSaved, onOpenVersion, onRhythm }: {
+function ChordEditor({ library, analyzer, extractor, readSource, versionId, onClose, onSaved, onOpenVersion, onRhythm, canReview = true }: {
+  /** false (Biên tập): không có nút Duyệt/Bỏ bản nháp — bài của mình được máy chủ công khai ngay khi lưu. */
+  canReview?: boolean
   library: ChordLibrary
   analyzer: MeasureAnalyzer | undefined
   extractor: ContentExtractor | undefined
@@ -386,7 +409,9 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
         const next = await library.createChordSheet(draft, options)
         await afterVersion(next, sources)
         adopt(next); onSaved(next)
-        setMessage(`Đã lưu bản nháp (phiên bản ${next.versionNumber}${sources.length ? `, ${sources.length} file nguồn` : ''}) — bấm “Duyệt bản này” để đặt làm bản đang dùng.${suffix}`)
+        setMessage(next.status === 'current'
+          ? `Đã đăng bài công khai (phiên bản ${next.versionNumber}${sources.length ? `, ${sources.length} file nguồn` : ''}) — mọi người tìm và dùng được ngay.${suffix}`
+          : `Đã lưu bản nháp (phiên bản ${next.versionNumber}${sources.length ? `, ${sources.length} file nguồn` : ''}) — bấm “Duyệt bản này” để đặt làm bản đang dùng.${suffix}`)
         return
       }
       if (infoChanged) {
@@ -402,7 +427,9 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
       if (needsVersion) await afterVersion(next, sources)
       adopt(next); onSaved(next)
       setMessage((needsVersion
-        ? !duplicate
+        ? !duplicate && next.status === 'current'
+          ? `Đã lưu phiên bản ${next.versionNumber} và đăng công khai — mọi người dùng bản này ngay.`
+          : !duplicate
           ? `Đã lưu bản nháp (phiên bản ${next.versionNumber}${sources.length ? `, ${sources.length} file nguồn` : ''}). Bản đang dùng chưa đổi — bấm “Duyệt bản này” để dùng bản mới.`
           : `Nội dung này trùng phiên bản ${next.versionNumber} đã có — đã mở phiên bản đó, không tạo thêm.`
         : 'Đã lưu tên bài / tác giả.') + suffix)
@@ -630,7 +657,7 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
   }
 
   // Nút "Duyệt" cạnh nhãn bản nháp: bản nháp đang mở, hoặc bản nháp mới hơn của bản đang dùng. Chỉ khi có bản nháp thật.
-  const quickApproveId = !detail ? null : detail.status === 'draft' ? detail.versionId : detail.status === 'current' ? detail.draftVersionId : null
+  const quickApproveId = !detail || !canReview ? null : detail.status === 'draft' ? detail.versionId : detail.status === 'current' ? detail.draftVersionId : null
   return <div className="cl-wrap cl-wrap-wide">
     <header className="cl-editor-head">
       <button type="button" className="cl-back" onClick={close}>← Danh sách</button>
@@ -638,6 +665,7 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
       <button type="button" className="cl-primary" onClick={() => void save()} disabled={busy || sourceBusy}>{busy ? 'Đang lưu…' : 'Lưu'}</button>
     </header>
     <MockBanner library={library} />
+    {detail && <p className="cl-editor-credit cl-editor-credit-edit">Người biên tập: {detail.editorName ?? 'Chưa xác định'}</p>}
     {detail && <div className="cl-status-row">
       <button type="button" className="cl-status-chip" data-status={detail.status} onClick={() => setAdvancedOpen(true)}
         title="Xem / duyệt phiên bản">
@@ -719,8 +747,8 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
       </p>
       <div className="cl-state-actions">
         {detail.draftVersionId && <button type="button" className="cl-secondary" disabled={busy} onClick={() => void leave(() => onOpenVersion(detail.draftVersionId!))}>Mở bản nháp</button>}
-        {(detail.status === 'draft' || detail.status === 'old') && <button type="button" className="cl-secondary cl-approve" disabled={busy || dirty} onClick={() => void approve()}>{detail.status === 'draft' ? 'Duyệt bản này' : 'Dùng lại bản này'}</button>}
-        {detail.status === 'draft' && <button type="button" className="cl-secondary" disabled={busy} onClick={() => void discard()}>Bỏ bản nháp</button>}
+        {canReview && (detail.status === 'draft' || detail.status === 'old') && <button type="button" className="cl-secondary cl-approve" disabled={busy || dirty} onClick={() => void approve()}>{detail.status === 'draft' ? 'Duyệt bản này' : 'Dùng lại bản này'}</button>}
+        {canReview && detail.status === 'draft' && <button type="button" className="cl-secondary" disabled={busy} onClick={() => void discard()}>Bỏ bản nháp</button>}
       </div>
     </div>}
           <section className="cl-card" aria-label="Nguồn sheet">

@@ -62,6 +62,20 @@ export async function canAddToLibrary(userId: string, isTeacher: boolean): Promi
   } catch { return false }
 }
 
+/**
+ * Cửa vào /thuvien cho tài khoản KHÔNG phải admin (chỉ để chọn giao diện; quyền thật do máy chủ):
+ * 'editor' = đang giữ vai Biên tập âm nhạc ở ít nhất một Band · 'viewer' = Trưởng Band (chỉ xem/tìm/dùng) · null = không vào.
+ */
+export type ThuVienAccess = 'editor' | 'viewer'
+export async function thuVienAccess(userId: string): Promise<ThuVienAccess | null> {
+  try {
+    const { supabase } = await import('../supabase.ts')
+    const { data, error } = await supabase.from('teamlab_band_roles').select('role').eq('user_id', userId).in('role', ['music_editor', 'leader'])
+    if (error || !data?.length) return null
+    return data.some(row => row.role === 'music_editor') ? 'editor' : 'viewer'
+  } catch { return null }
+}
+
 export const ADD_DENIED_MESSAGE = 'Tài khoản chưa có quyền thêm bản nhạc vào thư viện. Cần vai trò Biên tập âm nhạc của một Band (hoặc Admin/Giáo viên).'
 
 export const EDITOR_UNKNOWN = 'Chưa xác định'

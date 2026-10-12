@@ -628,7 +628,7 @@ function fakeServer() {
     chord_sheet_search: a => versions.filter(v => sheets.get(v.sheet)!.title.toLowerCase().includes(String(a.p_query).toLowerCase())
       && (sheets.get(v.sheet)!.canonical === v.id || v.review === 'private')).map(rowOf),
     chord_sheet_get: a => { const v = versions.find(x => x.id === a.p_version_id); if (!v) throw new Error('CHORDLIB_NOT_FOUND'); return rowOf(v) },
-    chord_sheet_contribute: a => {
+    chord_sheet_contribute_publish: a => {
       let sheet = a.p_sheet_id as string | undefined
       if (!sheet) { sheet = `s${++seq}`; sheets.set(sheet, { title: a.p_title, composer: a.p_composer, canonical: null }) }
       const same = versions.find(v => v.sheet === sheet && v.review !== 'rejected' && v.text === a.p_text && JSON.stringify(v.meter) === JSON.stringify(a.p_meter) && v.bpm === a.p_suggested_bpm)
@@ -666,7 +666,7 @@ test('rpc: KHÔNG có băng "Dữ liệu thử"; danh sách + tạo bài + sửa
   server.calls.length = 0
   fireEvent.click(view.getByRole('button', { name: 'Lưu' }))
   await settle()
-  assert.deepEqual(server.calls, ['chord_sheet_contribute', 'chord_sheet_get'], 'lưu = contribute rồi ĐỌC LẠI từ máy chủ; không approve ngầm')
+  assert.deepEqual(server.calls, ['chord_sheet_contribute_publish', 'chord_sheet_get'], 'lưu = contribute rồi ĐỌC LẠI từ máy chủ; không approve ngầm')
   assert.doesNotMatch(view.getByRole('status').textContent ?? '', /Dữ liệu thử/)
   assert.match(view.getByRole('status').textContent ?? '', /Đã lưu bản nháp \(phiên bản 1\)/)
   assert.equal(server.sheets.get('s1')!.canonical, null)
@@ -679,7 +679,7 @@ test('rpc: KHÔNG có băng "Dữ liệu thử"; danh sách + tạo bài + sửa
   server.calls.length = 0
   fireEvent.click(view.getByRole('button', { name: 'Lưu' }))
   await settle()
-  assert.deepEqual(server.calls, ['chord_sheet_update_info', 'chord_sheet_contribute', 'chord_sheet_get'])
+  assert.deepEqual(server.calls, ['chord_sheet_update_info', 'chord_sheet_contribute_publish', 'chord_sheet_get'])
   assert.deepEqual(server.sheets.get('s1'), { title: 'Bài thử RPC (đổi tên)', composer: 'Thầy', canonical: null })
   assert.deepEqual(server.versions.map(v => [v.n, v.text, v.bpm, v.review]), [[1, '[C] lời một', null, 'private'], [2, '[C] lời một\n[G] lời hai', 88, 'private']], 'v1 không bị sửa; v2 là phiên bản mới')
   assert.ok(view.getByRole('heading', { name: 'Bài thử RPC (đổi tên)' }))
@@ -713,20 +713,20 @@ test('rpc: máy chủ lỗi khi lưu → hiện lỗi, KHÔNG báo "đã lưu", 
   await settle()
   type(view.getByLabelText(/Tên bài/), 'Bài lỗi (tên mới)')
   setLyrics(view, '[C] gốc\n[G] thêm')
-  server.fail('chord_sheet_contribute')
+  server.fail('chord_sheet_contribute_publish')
   server.calls.length = 0
   fireEvent.click(view.getByRole('button', { name: 'Lưu' }))
   await settle()
   assert.match(view.getByRole('alert').textContent ?? '', /máy chủ từ chối \(thử nghiệm\)/)
   assert.equal(view.queryByRole('status'), null, 'không có thông báo thành công')
   assert.equal(lyricsOf(view), '[C] gốc\n[G] thêm', 'chữ đang gõ còn nguyên')
-  assert.deepEqual(server.calls, ['chord_sheet_update_info', 'chord_sheet_contribute'])
+  assert.deepEqual(server.calls, ['chord_sheet_update_info', 'chord_sheet_contribute_publish'])
   assert.equal(server.versions.length, 1, 'không có phiên bản nào được tạo')
   assert.equal(server.sheets.get('s1')!.title, 'Bài lỗi (tên mới)', 'tên đã lưu thật ở bước trước')
   server.calls.length = 0
   fireEvent.click(view.getByRole('button', { name: 'Lưu' }))
   await settle()
-  assert.deepEqual(server.calls, ['chord_sheet_contribute', 'chord_sheet_get'], 'lần lưu lại chỉ gửi phần còn thiếu')
+  assert.deepEqual(server.calls, ['chord_sheet_contribute_publish', 'chord_sheet_get'], 'lần lưu lại chỉ gửi phần còn thiếu')
   assert.equal(server.versions.length, 2)
 })
 
@@ -827,24 +827,48 @@ test('Khung Class: tài khoản như Class (avatar + menu; chưa đăng nhập �
 })
 
 // ── Rào chắn: /thuvien vẫn chỉ admin đang hoạt động; mục MusicXML không bị đổi hành vi ──
-test('cổng /thuvien trong AppRouter: admin + active vào đủ; tài khoản khác chỉ qua cổng Biên tập (mục MusicXML); chưa đăng nhập/không active → /start', () => {
+test('cổng /thuvien trong AppRouter: admin + active vào đủ; tài khoản khác qua cổng (Biên tập / Trưởng Band); chưa đăng nhập/không active → /start', () => {
   const router = readFileSync(new URL('../../src/AppRouter.tsx', import.meta.url), 'utf8')
   const guard = /if \(path === '\/thuvien' \|\| path === '\/thuvien\/'\) \{\s*if \(loading\) return null\s*if \(!user \|\| appUser\?\.status !== 'active'\) \{\s*window\.location\.href = '\/start'\s*return null\s*\}[\s\S]*?if \(appUser\.role !== 'admin'\) return <Suspense[^\n]*<ThuVienEditorGate userId=\{user\.id\} \/><\/Suspense>\s*return <Suspense[^\n]*<ThuVienPage \/><\/Suspense>\s*\}/
   assert.match(router, guard)
-  assert.equal(router.match(/<ThuVienPage/g)?.length, 1, 'ThuVienPage đầy đủ chỉ dựng ở một chỗ — sau cổng admin')
+  assert.equal(router.match(/<ThuVienPage/g)?.length, 1, 'ThuVienPage đầy đủ (admin) chỉ dựng ở một chỗ')
   const gate = readFileSync(new URL('../../src/thuvien/ThuVienEditorGate.tsx', import.meta.url), 'utf8')
-  assert.match(gate, /canAddToLibrary\(userId, false\)/)
-  assert.match(gate, /else window\.location\.href = '\/start'/, 'không phải Biên tập → /start')
-  assert.match(gate, /<ThuVienPage musicXmlOnly \/>/, 'Biên tập chỉ thấy mục MusicXML')
+  assert.match(gate, /thuVienAccess\(userId\)/)
+  assert.match(gate, /else window\.location\.href = '\/start'/, 'không có vai Biên tập/Trưởng Band → /start')
+  assert.match(gate, /<ThuVienPage access=\{access\} \/>/)
 })
 
-test('Biên tập (musicXmlOnly): menu chỉ còn Danh sách bản nhạc MusicXML + Nạp bản nhạc mới — không có Hợp âm, Nâng cao', () => {
-  const view = render(<ThuVienShell active="musicxml" onNavigate={() => {}} session={SESSION_READY} musicXmlOnly><p>x</p></ThuVienShell>)
-  const labels = [...view.container.querySelectorAll('.cs-nav-item')].map(n => n.textContent)
-  assert.deepEqual(labels, ['Danh sách bản nhạc MusicXML', 'Nạp bản nhạc mới'])
-  const page = readFileSync(new URL('../../src/thuvien/ThuVienPage.tsx', import.meta.url), 'utf8')
-  assert.match(page, /const section = musicXmlOnly \? 'musicxml' : sectionFromSearch\(search\)/, '?muc=hopam bị bỏ qua với Biên tập')
-  cleanup()
+test('Biên tập / Trưởng Band: menu không có "Nâng cao"; Trưởng Band không có "Nạp hợp âm mới"; Admin giữ đủ', () => {
+  const labels = (props: Record<string, unknown>) => {
+    const view = render(<ThuVienShell active="chords" onNavigate={() => {}} session={SESSION_READY} {...props}><p>x</p></ThuVienShell>)
+    const out = [...view.container.querySelectorAll('.cs-nav-item')].map(n => n.textContent)
+    cleanup(); return out
+  }
+  const admin = labels({})
+  assert.ok(admin.includes('Nâng cao') && admin.includes('Nạp hợp âm mới'))
+  const editor = labels({ limited: true })
+  assert.ok(!editor.includes('Nâng cao') && editor.includes('Nạp hợp âm mới') && editor.includes('Danh sách bài hát có hợp âm'))
+  const viewer = labels({ limited: true, canCreateChords: false, canUploadMusicXml: false })
+  assert.deepEqual(viewer, ['Danh sách bài hát có hợp âm', 'Danh sách bản nhạc MusicXML'])
+})
+
+test('Hợp âm cho Biên tập: nút Sửa/Gỡ chỉ trên bài của mình; ghi công; không có Duyệt; Trưởng Band chỉ xem; lưu → thông báo đã công khai', () => {
+  const page = readFileSync(new URL('../../src/thuvien/ChordLibraryPage.tsx', import.meta.url), 'utf8')
+  assert.match(page, /const mayManage = \(item: ChordSheetSummary\) => canEdit && \(!ownerOnly \|\| item\.sheetMine === true\)/, 'Sửa/Gỡ theo sheetMine')
+  assert.match(page, /Người biên tập: \{item\.editorName \?\? 'Chưa xác định'\}/, 'danh sách ghi công')
+  assert.match(page, /const quickApproveId = !detail \|\| !canReview \? null/, 'Biên tập không có nút Duyệt')
+  assert.match(page, /canReview=\{access === 'admin'\}/)
+  assert.match(page, /!canEdit && openRaw === NEW_CHORD_SHEET \? null : openRaw/, 'Trưởng Band: ?hopam=moi không mở trình sửa')
+  assert.match(page, /window\.confirm\(`Gỡ bài/, 'Gỡ có xác nhận')
+  assert.match(page, /Đã đăng bài công khai/)
+  const view = readFileSync(new URL('../../src/thuvien/ChordSheetView.tsx', import.meta.url), 'utf8')
+  assert.match(view, /Người biên tập: \{detail\.editorName \?\? 'Chưa xác định'\}/)
+  assert.match(view, /canEdit && \(!ownerOnly \|\| detail\.sheetMine === true\)/)
+  const lib = readFileSync(new URL('../../src/thuvien/chordLibrary.ts', import.meta.url), 'utf8')
+  assert.match(lib, /call\('chord_sheet_archive', \{ p_sheet_id: sheetId \}\)/)
+  assert.ok(!/p_reviewed|chord_sheet_approve[^\n]*editor/i.test(lib), 'client không tự duyệt thay Biên tập')
+  const pageShell = readFileSync(new URL('../../src/thuvien/ThuVienPage.tsx', import.meta.url), 'utf8')
+  assert.match(pageShell, /canEdit=\{access !== 'viewer'\} access=\{access\}/)
 })
 
 test('Sửa/Gỡ bài trong Thư viện: nút chỉ hiện đúng người; Gỡ = archived_at (không DELETE) có xác nhận; danh sách lọc bài đã gỡ', async () => {

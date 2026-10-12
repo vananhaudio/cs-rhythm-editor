@@ -32,6 +32,10 @@ export type ChordSheetSummary = {
   status: ChordVersionStatus
   /** Bản nháp chưa duyệt MỚI HƠN `versionId` (nếu có). */
   draftVersionId: string | null
+  /** Người biên tập (người đưa bài vào Thư viện) — tên hiển thị do máy chủ trả; không email/SĐT, không uid. */
+  editorName?: string | null
+  /** Bài do CHÍNH người đang xem tạo (máy chủ tính; chỉ để ẩn/hiện nút — quyền thật do máy chủ). */
+  sheetMine?: boolean
 }
 
 export type ChordSheetDetail = ChordSheetSummary & {
@@ -71,6 +75,8 @@ export interface ChordLibrary {
   /** Sửa nội dung = phiên bản MỚI ở dạng bản nháp (phiên bản cũ bất biến). `fromVersionId` = bản đang sửa. */
   createChordSheetVersion(sheetId: string, content: ChordContent, fromVersionId: string, options?: ChordSaveOptions): Promise<ChordSheetDetail>
   updateChordSheetInfo(sheetId: string, info: Pick<ChordDraft, 'title' | 'composer'>): Promise<void>
+  /** Gỡ bài khỏi danh sách (lưu trữ, không xoá): Biên tập với bài của mình; Admin/Giáo viên với mọi bài. */
+  archiveChordSheet?(sheetId: string): Promise<void>
   /** Duyệt = đặt làm bản đang dùng. */
   approveChordSheetVersion(versionId: string): Promise<ChordSheetDetail>
   /** Bỏ một bản nháp (không xoá — chỉ thôi coi là bản chờ duyệt). */
@@ -340,6 +346,8 @@ export function createRpcChordLibrary(rpc: RpcCall, sourceStore: ChordSourceStor
     composer: row.composer == null ? null : String(row.composer),
     hasAnchors: hasAnchorsStatus(row.anchors_status), updatedAt: String(row.created_at),
     status: statusOfRow(row), draftVersionId,
+    editorName: typeof row.editor_name === 'string' && row.editor_name.trim() ? row.editor_name.trim() : null,
+    sheetMine: row.sheet_mine === true,
   })
   async function get(versionId: string): Promise<ChordSheetDetail> {
     const row = await call('chord_sheet_get', { p_version_id: versionId }) as Row
@@ -356,14 +364,16 @@ export function createRpcChordLibrary(rpc: RpcCall, sourceStore: ChordSourceStor
       anchorsStatus: (['none', 'processing', 'needs_review', 'ready', 'failed'].includes(status) ? status : 'none') as AnchorsStatus,
     }
   }
-  // Lưu = ĐÓNG GÓP (bản nháp, chưa duyệt). KHÔNG tự duyệt ngầm: duyệt là hành động riêng của thầy.
+  // Lưu = ĐÓNG GÓP. Người review/người thường: bản nháp chưa duyệt (duyệt là hành động riêng của thầy). Biên tập âm nhạc:
+// máy chủ công khai ngay bài của chính họ (chord_sheet_contribute_publish) — client KHÔNG tự duyệt gì.
   // Máy chủ báo `duplicate` = nội dung y hệt một bản đã có → trả chính bản đó, không có phiên bản rác.
   async function contribute(args: Record<string, unknown>, saveOptions: ChordSaveOptions = {}): Promise<ChordSheetDetail> {
     if (saveOptions.versionId) args.p_version_id = saveOptions.versionId
     if (saveOptions.sources?.length) args.p_sources = sourcesPayload(saveOptions.sources)
     // V1.4: vạch nhịp đi cùng lời trong MỘT lời gọi (máy chủ từ chối cả lần lưu nếu thiếu quyền / vạch sai).
     if (saveOptions.anchors) args.p_anchors = { ...(saveOptions.anchors.pickup ? { pickup: saveOptions.anchors.pickup } : {}), measures: saveOptions.anchors.measures }
-    const result = await call('chord_sheet_contribute', args) as Row
+    // Biên tập → máy chủ công khai ngay (bài của mình); người review / người khác: bản nháp như cũ (máy chủ quyết định).
+    const result = await call('chord_sheet_contribute_publish', args) as Row
     return get(String(result.version_id))
   }
 
@@ -403,6 +413,9 @@ export function createRpcChordLibrary(rpc: RpcCall, sourceStore: ChordSourceStor
     },
     async updateChordSheetInfo(sheetId, info) {
       await call('chord_sheet_update_info', { p_sheet_id: sheetId, p_title: info.title.trim(), p_composer: info.composer.trim() || null })
+    },
+    async archiveChordSheet(sheetId) {
+      await call('chord_sheet_archive', { p_sheet_id: sheetId })
     },
     async approveChordSheetVersion(versionId) {
       await call('chord_sheet_approve', { p_version_id: versionId })

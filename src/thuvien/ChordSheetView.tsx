@@ -11,6 +11,8 @@ type Props = {
   library: ChordLibrary
   versionId: string
   canEdit: boolean
+  /** Biên tập: chỉ sửa bài do chính mình tạo (máy chủ kiểm lại). */
+  ownerOnly?: boolean
   onBack: () => void
   onEdit: (versionId: string) => void
   onOpenVersion: (versionId: string) => void
@@ -21,7 +23,7 @@ const STATUS: Record<ChordSheetDetail['status'], string> = {
   current: 'Bản đang dùng', draft: 'Bản nháp — chưa duyệt', old: 'Bản cũ — đã duyệt trước đây, hiện không dùng', discarded: 'Bản nháp đã bỏ',
 }
 
-export default function ChordSheetView({ library, versionId, canEdit, onBack, onEdit, onOpenVersion, onRhythm }: Props) {
+export default function ChordSheetView({ library, versionId, canEdit, ownerOnly = false, onBack, onEdit, onOpenVersion, onRhythm }: Props) {
   const [detail, setDetail] = useState<ChordSheetDetail | null>(null)
   const [error, setError] = useState('')
 
@@ -49,10 +51,11 @@ export default function ChordSheetView({ library, versionId, canEdit, onBack, on
       <div className="cl-view-title">
         <h1>{detail.title}</h1>
         <p>{detail.composer || 'Chưa rõ tác giả'}</p>
+        <p className="cl-editor-credit">Người biên tập: {detail.editorName ?? 'Chưa xác định'}</p>
       </div>
       <div className="cl-view-actions">
         {detail.anchors && <button type="button" className="cl-secondary" onClick={() => onRhythm(detail.versionId)}>▶ Rhythm Scroll</button>}
-        {canEdit && <button type="button" className="cl-primary" onClick={() => onEdit(detail.versionId)}>Sửa bài này</button>}
+        {canEdit && (!ownerOnly || detail.sheetMine === true) && <button type="button" className="cl-primary" onClick={() => onEdit(detail.versionId)}>Sửa bài này</button>}
       </div>
     </header>
 

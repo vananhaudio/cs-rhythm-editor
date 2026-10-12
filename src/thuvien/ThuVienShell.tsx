@@ -34,11 +34,11 @@ function readCollapsed(): boolean {
   try { return localStorage.getItem(COLLAPSE_KEY) === '1' } catch { return false }
 }
 
-function Entries({ active, collapsed, onNavigate, canUpload, musicXmlOnly = false }: { active: NavId | null; collapsed: boolean; onNavigate: (id: NavId) => void; canUpload: boolean; musicXmlOnly?: boolean }) {
+function Entries({ active, collapsed, onNavigate, canUpload, limited = false, canCreateChords = true }: { active: NavId | null; collapsed: boolean; onNavigate: (id: NavId) => void; canUpload: boolean; limited?: boolean; canCreateChords?: boolean }) {
   // Mục nạp bản nhạc chỉ hiện với người được thêm vào thư viện (RLS vẫn là chốt chặn thật).
-  // musicXmlOnly (Biên tập không phải admin): chỉ hai mục MusicXML — không thấy Hợp âm chuẩn hóa và Nâng cao.
+  // limited (không phải admin): không thấy "Nâng cao" (/admin). canCreateChords=false (Trưởng Band): không có "Nạp hợp âm mới".
   const groups = TV_NAV_GROUPS
-    .map(g => ({ ...g, items: g.items.filter(i => (canUpload || i.id !== 'upload-musicxml') && (!musicXmlOnly || i.id === 'musicxml' || i.id === 'upload-musicxml')) }))
+    .map(g => ({ ...g, items: g.items.filter(i => (canUpload || i.id !== 'upload-musicxml') && (canCreateChords || i.id !== 'new-chords') && (!limited || i.id !== 'advanced')) }))
     .filter(g => g.items.length > 0)
   return <>
     {groups.map(group => <div key={group.id} className="cs-nav-block">
@@ -64,7 +64,7 @@ function Entries({ active, collapsed, onNavigate, canUpload, musicXmlOnly = fals
   </>
 }
 
-function MobileMenu({ active, onClose, onNavigate, canUpload, musicXmlOnly = false }: { active: NavId | null; onClose: () => void; onNavigate: (id: NavId) => void; canUpload: boolean; musicXmlOnly?: boolean }) {
+function MobileMenu({ active, onClose, onNavigate, canUpload, limited = false, canCreateChords = true }: { active: NavId | null; onClose: () => void; onNavigate: (id: NavId) => void; canUpload: boolean; limited?: boolean; canCreateChords?: boolean }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', onKey)
@@ -78,7 +78,7 @@ function MobileMenu({ active, onClose, onNavigate, canUpload, musicXmlOnly = fal
         <h2>Menu</h2>
         <button type="button" className="cs-icon-btn" onClick={onClose} aria-label="Đóng menu"><X size={22} /></button>
       </div>
-      <Entries active={active} collapsed={false} canUpload={canUpload} musicXmlOnly={musicXmlOnly} onNavigate={id => { onNavigate(id); onClose() }} />
+      <Entries active={active} collapsed={false} canUpload={canUpload} limited={limited} canCreateChords={canCreateChords} onNavigate={id => { onNavigate(id); onClose() }} />
     </div>
   </>
 }
@@ -96,15 +96,17 @@ function Account({ session }: { session: ClassSession }) {
     ]} />
 }
 
-export default function ThuVienShell({ active, onNavigate, session, children, canUploadMusicXml = true, musicXmlOnly = false }: {
+export default function ThuVienShell({ active, onNavigate, session, children, canUploadMusicXml = true, limited = false, canCreateChords = true }: {
   active: NavId | null
   onNavigate: (id: NavId) => void
   session: ClassSession
   children: ReactNode
   /** false → ẩn mục "Nạp bản nhạc mới" (người không có quyền thêm bài). Mặc định hiện. */
   canUploadMusicXml?: boolean
-  /** Chỉ hai mục MusicXML (Biên tập không phải admin). */
-  musicXmlOnly?: boolean
+  /** Không phải admin: ẩn "Nâng cao". */
+  limited?: boolean
+  /** false (Trưởng Band): ẩn "Nạp hợp âm mới". */
+  canCreateChords?: boolean
 }) {
   const [collapsed, setCollapsed] = useState(readCollapsed)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -130,11 +132,11 @@ export default function ThuVienShell({ active, onNavigate, session, children, ca
     </header>
     <div className="cs-body">
       <aside className={'cs-sidebar' + (collapsed ? ' is-collapsed' : '')}>
-        <Entries active={active} collapsed={collapsed} onNavigate={onNavigate} canUpload={canUploadMusicXml} musicXmlOnly={musicXmlOnly} />
+        <Entries active={active} collapsed={collapsed} onNavigate={onNavigate} canUpload={canUploadMusicXml} limited={limited} canCreateChords={canCreateChords} />
       </aside>
       <main className="cs-main cs-tv-main">{children}</main>
     </div>
-    {menuOpen && <MobileMenu active={active} onClose={() => setMenuOpen(false)} onNavigate={onNavigate} canUpload={canUploadMusicXml} musicXmlOnly={musicXmlOnly} />}
+    {menuOpen && <MobileMenu active={active} onClose={() => setMenuOpen(false)} onNavigate={onNavigate} canUpload={canUploadMusicXml} limited={limited} canCreateChords={canCreateChords} />}
   </div>
 }
 

@@ -178,7 +178,7 @@ test('rpc: lưu kèm nguồn gửi p_version_id + p_sources (5 khoá); đọc l�
   const path = `${U}/${V}/0.png`
   const rpc: RpcCall = async (fn, args) => {
     calls.push({ fn, args })
-    if (fn === 'chord_sheet_contribute') return { data: { ok: true, sheet_id: 's1', version_id: V }, error: null }
+    if (fn === 'chord_sheet_contribute_publish') return { data: { ok: true, sheet_id: 's1', version_id: V }, error: null }
     return { data: { sheet_id: 's1', version_id: V, title: 'Bài', composer: null, version_number: 1, is_canonical: false, review_status: 'private', created_at: 'x',
       text: TEXT, meter: null, suggested_bpm: null, sources: [{ path, mime: 'image/png', sha256: 'a'.repeat(64), size_bytes: 70, page: 1 }],
       anchors: { measures: [{ line: 0, token: 0 }] }, anchors_status: 'needs_review' }, error: null }
