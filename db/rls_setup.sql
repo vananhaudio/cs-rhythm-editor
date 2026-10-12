@@ -141,6 +141,9 @@ DECLARE
     -- Quiz Checkpoint V1 (db/quiz_checkpoint_v1_setup.sql): ĐÁP ÁN trắc nghiệm + kết quả ĐẠT — KHÔNG policy, chỉ server/RPC.
     -- Áp policy rộng = học sinh đọc được đáp án và tự ghi ĐẠT.
     'class_checkpoint_keys', 'learning_checkpoint_passes',
+    -- Class System Chat V1 (db/class_system_chat_v1_setup.sql): thông báo hệ thống — KHÔNG policy, chỉ qua RPC.
+    -- Áp policy rộng = học sinh đọc thông báo của nhau và tự ghi thông báo "từ hệ thống".
+    'class_system_notices', 'class_system_notice_reads',
     -- Billing Foundation (BƯỚC 8A — db/billing_setup.sql): anon KHÔNG policy nào;
     -- authenticated chỉ teacher SELECT (xem Admin); mọi write qua SECURITY DEFINER
     -- functions. ĐỪNG để vòng lặp áp policy rộng (sẽ lộ dữ liệu tài chính).

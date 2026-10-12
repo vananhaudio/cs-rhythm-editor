@@ -24,7 +24,7 @@ export type ConversationItem = {
 }
 
 /** Màn đang chọn trong /me/chat: chưa chọn · một hội thoại có sẵn · bắt đầu với một người (hội thoại tạo khi gửi tin đầu) */
-export type ChatSelection = { kind: 'none' } | { kind: 'conversation'; id: string } | { kind: 'with'; userId: string }
+export type ChatSelection = { kind: 'none' } | { kind: 'conversation'; id: string } | { kind: 'with'; userId: string } | { kind: 'system' }
 
 /** Chia sẻ nội bộ: CHỈ tham chiếu tới object gốc — Chat không giữ bản sao nội dung (loại/validate ở src/share/shareRef.ts) */
 export type ChatShareRef = ShareRef
@@ -155,3 +155,49 @@ export function layoutMessages(messages: ChatMessage[], now = new Date()): Messa
     return { m, label, cont: !label && prev !== null && prev.mine === m.mine }
   })
 }
+
+// ── Class 2.0 (System Chat V1): thông báo hệ thống hiện trong Trò chuyện. Chat chỉ là CỔNG + liên kết — dữ liệu nghiệp vụ ở hệ thống gốc. ──
+export const SYSTEM_NAME = 'Class 2.0'
+export const SYSTEM_FOOTNOTE = 'Đây là thông báo chính thức từ Class 2.0.'
+export const NOTICE_PAGE = 30
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+export type SystemNoticeRow = {
+  seq: number | string; kind: string | null; body: string | null; ref_type: string | null; ref_key: string | null
+  created_at: string | null; unread: boolean | null
+}
+/** Một thông báo: chỉ nội dung ngắn + đích điều hướng (thread bài trả). Không giữ nhận xét/kết quả. */
+export type SystemNotice = { seq: number; body: string; threadId: string; at: string; unread: boolean }
+
+export type SystemSummaryRow = { last_seq: number | string | null; last_body: string | null; last_at: string | null; unread: number | null }
+/** Tóm tắt cho hàng "Class 2.0" trong danh sách. lastSeq 0 = chưa có thông báo. */
+export type SystemSummary = { lastSeq: number; lastBody: string; lastAt: string; unread: number }
+
+export function toSystemNotices(rows: SystemNoticeRow[] | null | undefined): SystemNotice[] {
+  return (rows ?? [])
+    .filter(r => r?.seq != null && r.ref_type === 'thread' && !!r.ref_key && UUID_RE.test(r.ref_key) && !!(r.body ?? '').trim())
+    .map(r => ({ seq: Number(r.seq), body: (r.body ?? '').trim(), threadId: (r.ref_key as string).toLowerCase(), at: r.created_at ?? '', unread: r.unread === true }))
+    .sort((a, b) => a.seq - b.seq)
+}
+
+export function toSystemSummary(rows: SystemSummaryRow[] | null | undefined): SystemSummary {
+  const r = rows?.[0]
+  return {
+    lastSeq: Number(r?.last_seq) || 0,
+    lastBody: (r?.last_body ?? '').trim(),
+    lastAt: r?.last_at ?? '',
+    unread: Math.max(0, Number(r?.unread) || 0),
+  }
+}
+
+/** Gộp theo seq (khử trùng), tăng dần */
+export function mergeNotices(prev: SystemNotice[], incoming: SystemNotice[]): SystemNotice[] {
+  if (incoming.length === 0) return prev
+  const m = new Map<number, SystemNotice>()
+  for (const n of prev) m.set(n.seq, n)
+  for (const n of incoming) m.set(n.seq, n.unread || !m.has(n.seq) ? n : { ...n, unread: m.get(n.seq)!.unread })
+  return [...m.values()].sort((a, b) => a.seq - b.seq)
+}
+
+/** Đích điều hướng của thông báo: trang cuộc trao đổi bài trả (quyền do chính trang đó quyết) + focus vào khu vực kết quả */
+export const NOTICE_TARGET_SEARCH = '?focus=ket-qua'

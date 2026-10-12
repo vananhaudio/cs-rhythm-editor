@@ -1,18 +1,21 @@
 // Hook Trò chuyện V1a. Chỉ biết interface ChatLive (polling hôm nay, realtime sau này) — không đụng timer/mạng trực tiếp.
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { fetchConversations, fetchMessages, fetchUnreadCount, markRead, sendMessage } from './chatApi'
+import { fetchConversations, fetchMessages, fetchSystemNotices, fetchSystemSummary, fetchUnreadCount, markRead, markSystemRead, sendMessage } from './chatApi'
 import { pollingLive, type ChatLive } from './chatLive'
-import { PAGE, lastSeqOf, firstSeqOf, mergeMessages, normalizeBody, type ChatMessage, type ConversationItem, type PendingMessage } from './chatModel'
+import { PAGE, lastSeqOf, firstSeqOf, mergeMessages, mergeNotices, normalizeBody, NOTICE_PAGE, type ChatMessage, type ConversationItem, type PendingMessage, type SystemNotice, type SystemSummary } from './chatModel'
 
-/** Số hội thoại chưa đọc cho badge menu — MỘT nguồn ở SignedInShell */
+/** Badge menu Trò chuyện — MỘT nguồn ở SignedInShell: hội thoại cá nhân chưa đọc (dm) + thông báo Class 2.0 chưa đọc (tách trạng thái đọc). */
 export function useChatUnread(live: ChatLive = pollingLive) {
-  const [count, setCount] = useState(0)
-  useEffect(() => live.watchUnread(setCount), [live])
+  const [dm, setDm] = useState(0)
+  const [system, setSystem] = useState<SystemSummary | null>(null)
+  useEffect(() => live.watchUnread(setDm), [live])
+  useEffect(() => live.watchSystem?.(setSystem) ?? (() => {}), [live])
   const refresh = useCallback(async () => {
-    const r = await fetchUnreadCount()
-    if (r.ok) setCount(r.value)
+    const [a, b] = await Promise.all([fetchUnreadCount(), fetchSystemSummary()])
+    if (a.ok) setDm(a.value)
+    setSystem(b.ok ? b.value : null)
   }, [])
-  return { count, refresh }
+  return { count: dm + (system?.unread ?? 0), system, refresh }
 }
 
 export type ListState =
@@ -151,4 +154,65 @@ export function useConversation(id: string, onActivity: () => void, live: ChatLi
 
   const reload = useCallback(() => { setStatus('loading'); setError(null); setRev(x => x + 1) }, [])
   return { status, error, messages, pending, hasMore, loadingOlder, send, retry, discard, loadOlder, reload }
+}
+
+export type SystemNoticesState = {
+  status: 'loading' | 'ready' | 'error'
+  error: string | null
+  notices: SystemNotice[]
+  hasMore: boolean
+  loadingOlder: boolean
+  loadOlder: () => Promise<void>
+  reload: () => void
+}
+
+/** Màn Class 2.0: trang mới nhất → làm mới định kỳ → đánh dấu đã đọc tới thông báo mới nhất (chỉ khi màn này đang mở). */
+export function useSystemNotices(onActivity: () => void): SystemNoticesState {
+  const [state, setState] = useState<{ status: 'loading' | 'ready' | 'error'; error: string | null; notices: SystemNotice[]; hasMore: boolean }>(
+    { status: 'loading', error: null, notices: [], hasMore: false })
+  const [loadingOlder, setLoadingOlder] = useState(false)
+  const [rev, setRev] = useState(0)
+  const marked = useRef(0)
+  const noticesRef = useRef<SystemNotice[]>([])
+  noticesRef.current = state.notices
+
+  useEffect(() => {
+    let alive = true
+    void fetchSystemNotices({ limit: NOTICE_PAGE }).then(r => {
+      if (!alive) return
+      if (!r.ok) { setState(s => ({ ...s, status: s.status === 'ready' ? 'ready' : 'error', error: r.message })); return }
+      setState(s => ({ status: 'ready', error: null, notices: mergeNotices(s.notices, r.value), hasMore: s.status === 'ready' ? s.hasMore : r.value.length >= NOTICE_PAGE }))
+    })
+    return () => { alive = false }
+  }, [rev])
+
+  // Làm mới nhẹ (thông báo mới tới khi đang mở màn): cùng nhịp với danh sách
+  useEffect(() => {
+    const stop = (pollingLive.watchSystem ? pollingLive.watchSystem(sum => {
+      const have = noticesRef.current.at(-1)?.seq ?? 0
+      if (sum && sum.lastSeq > have) setRev(x => x + 1)
+    }) : () => {})
+    return stop
+  }, [])
+
+  // Đã đọc: chỉ khi màn đang mở, tới thông báo mới nhất đã hiện; chỉ tăng, không lặp lại
+  useEffect(() => {
+    const top = state.notices.at(-1)?.seq ?? 0
+    if (state.status !== 'ready' || top === 0 || top <= marked.current) return
+    marked.current = top
+    void markSystemRead(top).then(r => { if (r.ok) onActivity(); else marked.current = 0 })
+  }, [state.status, state.notices, onActivity])
+
+  const loadOlder = useCallback(async () => {
+    const first = noticesRef.current[0]?.seq
+    if (!first || loadingOlder) return
+    setLoadingOlder(true)
+    const r = await fetchSystemNotices({ beforeSeq: first, limit: NOTICE_PAGE })
+    setLoadingOlder(false)
+    if (!r.ok) { setState(s => ({ ...s, error: r.message })); return }
+    setState(s => ({ ...s, error: null, notices: mergeNotices(s.notices, r.value.map(n => ({ ...n, unread: false }))), hasMore: r.value.length >= NOTICE_PAGE }))
+  }, [loadingOlder])
+
+  const reload = useCallback(() => { setState(s => ({ ...s, status: 'loading', error: null })); setRev(x => x + 1) }, [])
+  return { ...state, loadingOlder, loadOlder, reload }
 }

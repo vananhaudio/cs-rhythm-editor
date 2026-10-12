@@ -3,6 +3,7 @@
 // Thân: dòng thời gian mọi lượt Trả bài / Hỏi bài / Thầy phản hồi theo đúng thứ tự.
 // Nội dung là plain text (React escape); video chỉ qua ExternalMediaView (tự dựng embed từ ID đã kiểm).
 // CSS nạp ở container (./styles) — file này không import CSS để test render được bằng Node.
+import { useEffect, useRef } from 'react'
 import ExternalMediaView from '../class-social/media/ExternalMediaView'
 import { parseExternalMedia } from '../class-social/media/parseExternalMedia'
 import ResourceCard from '../class-social/sections/comments/ResourceCard'
@@ -114,9 +115,17 @@ export function ThreadTimeline({ thread, now, canModerate = false, onModerate, o
   onOpenProfile?: (userId: string) => void
 }) {
   const labels = eventLabels(thread.events)
+  const list = useRef<HTMLOListElement>(null)
+  // Đến từ thông báo Class 2.0 (?focus=ket-qua): đưa phản hồi chấm bài MỚI NHẤT của Thầy vào tầm nhìn (chỉ điều hướng, không đổi dữ liệu)
+  useEffect(() => {
+    if (typeof window === 'undefined' || new URLSearchParams(window.location.search).get('focus') !== 'ket-qua') return
+    const hits = list.current?.querySelectorAll<HTMLElement>('.lt-ev.is-teacher')
+    const el = hits && hits.length ? hits[hits.length - 1] : null
+    if (el) { el.scrollIntoView({ block: 'center' }); el.classList.add('is-focus') }
+  }, [thread.id])
   if (thread.events.length === 0) return <p className="lt-empty">Chưa có lượt trao đổi nào.</p>
   return (
-    <ol className="lt-timeline" aria-label="Dòng thời gian trao đổi">
+    <ol className="lt-timeline" aria-label="Dòng thời gian trao đổi" ref={list}>
       {thread.events.map((e, i) => (
         <EventItem key={e.id} e={e} label={labels[i]} now={now} canModerate={canModerate} onModerate={onModerate} onOpenProfile={onOpenProfile} />
       ))}

@@ -139,6 +139,8 @@ export function bandAdminSlugFromPath(pathname: string): string | null {
 // ── Trò chuyện (Chat V1a): /me/chat (danh sách) · /me/chat/<id hội thoại> · /me/chat/u/<id người> (nhắn tin tới người này; hội thoại chỉ tạo khi gửi tin đầu) ──
 export const CHAT_PREFIX = SECTION_PATHS.chat + '/'
 export const CHAT_WITH_PREFIX = CHAT_PREFIX + 'u/'
+/** Class 2.0 — kênh thông báo hệ thống (cố định, không phải UUID hội thoại) */
+export const CHAT_SYSTEM_PATH = CHAT_PREFIX + 'system'
 
 export function chatConversationPath(conversationId: string): string {
   return CHAT_PREFIX + conversationId
@@ -173,6 +175,7 @@ export type MeView =
   | { kind: 'bandAdmin'; slug: string }
   | { kind: 'chatConversation'; conversationId: string }
   | { kind: 'chatWith'; userId: string }
+  | { kind: 'chatSystem' }
 
 export function viewFromPath(pathname: string): MeView {
   const userId = profileUserIdFromPath(pathname)
@@ -187,6 +190,7 @@ export function viewFromPath(pathname: string): MeView {
   if (classId) return { kind: 'class', classId }
   const bandSlug = bandAdminSlugFromPath(pathname)
   if (bandSlug) return { kind: 'bandAdmin', slug: bandSlug }
+  if (pathname.replace(/\/+$/, '') === CHAT_SYSTEM_PATH) return { kind: 'chatSystem' }
   const chatId = chatConversationIdFromPath(pathname)
   if (chatId) return { kind: 'chatConversation', conversationId: chatId }
   const chatWith = chatWithUserIdFromPath(pathname)
@@ -211,6 +215,7 @@ export function sameView(a: MeView, b: MeView): boolean {
     case 'bandAdmin': return b.kind === 'bandAdmin' && a.slug === b.slug
     case 'chatConversation': return b.kind === 'chatConversation' && a.conversationId === b.conversationId
     case 'chatWith': return b.kind === 'chatWith' && a.userId === b.userId
+    case 'chatSystem': return b.kind === 'chatSystem'
     default: return b.kind === 'section' && a.section === b.section
   }
 }
@@ -228,6 +233,7 @@ export function viewPath(view: MeView): string {
     case 'bandAdmin': return bandAdminPath(view.slug)
     case 'chatConversation': return chatConversationPath(view.conversationId)
     case 'chatWith': return chatWithPath(view.userId)
+    case 'chatSystem': return CHAT_SYSTEM_PATH
     default: return SECTION_PATHS[view.section]
   }
 }

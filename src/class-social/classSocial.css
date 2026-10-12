@@ -582,6 +582,17 @@ a.cs-share-card:focus-visible { outline: 2px solid var(--cs-p); outline-offset: 
 .cs-chat-count.is-over { color: var(--cs-warn); font-weight: 700; }
 .cs-chat-locked { flex: none; padding: 14px 16px calc(14px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--cs-border); background: var(--cs-neutral-soft); text-align: center; color: var(--cs-muted); font-size: 14px; }
 .cs-chat-locked p { margin: 0 0 8px; }
+/* Class 2.0 (System Chat V1): kênh thông báo chính thức — nhận diện hệ thống, chỉ đọc */
+.cs-chat-items-system { margin: 0 0 6px; padding: 0 0 6px; border-bottom: 1px solid var(--cs-border); list-style: none; }
+.cs-sys-avatar { flex: none; display: inline-grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; background: var(--cs-p-soft); color: var(--cs-p-strong); }
+.cs-sys-avatar.is-sm { width: 40px; height: 40px; }
+.cs-sys-scroll { gap: 8px; }
+.cs-sys-empty { margin: auto; max-width: 320px; text-align: center; color: var(--cs-muted); font-size: 14px; }
+.cs-sys-notice { align-self: flex-start; max-width: min(88%, 520px); padding: 10px 14px 8px; border-radius: 18px; background: var(--cs-neutral-soft); color: var(--cs-text); }
+.cs-sys-notice.is-unread { background: var(--cs-p-soft); }
+.cs-sys-body { margin: 0; font-size: 15px; line-height: 1.4; overflow-wrap: anywhere; }
+.cs-sys-action { display: inline-flex; align-items: center; gap: 4px; margin-top: 4px; padding: 6px 0; border: none; background: none; color: var(--cs-p-strong); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; min-height: 32px; }
+
 .cs-rel-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .cs-person-msg { flex: none; }
 

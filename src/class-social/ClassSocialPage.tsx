@@ -85,7 +85,7 @@ export default function ClassSocialPage({ initialSection }: { initialSection: So
     else if (view.kind === 'section') document.title = TITLES[view.section]
     else if (view.kind === 'classes') document.title = 'Lớp học · Thầy Văn Anh Guitar'
     else if (view.kind === 'bands') document.title = 'Quản lý Band · Thầy Văn Anh Guitar'
-    else if (view.kind === 'chatConversation' || view.kind === 'chatWith') document.title = TITLES.chat
+    else if (view.kind === 'chatConversation' || view.kind === 'chatWith' || view.kind === 'chatSystem') document.title = TITLES.chat
     // trang cá nhân tự đặt tiêu đề theo tên người
   }, [view, signedIn])
 
@@ -121,7 +121,7 @@ export default function ClassSocialPage({ initialSection }: { initialSection: So
   }
   const go = (section: SocialSection) => navigate({ kind: 'section', section })
   const openProfile = (userId: string) => navigate({ kind: 'profile', userId })
-  const openThread = (threadId: string) => navigate({ kind: 'thread', threadId })
+  const openThread = (threadId: string, search?: string) => navigate({ kind: 'thread', threadId }, search ? { search } : undefined)
   const openQueue = () => navigate({ kind: 'queue' })
   const openClass = (classId: string) => navigate({ kind: 'class', classId })
   // Trang Buổi luôn sâu MỘT cấp dưới Trang Lớp: chuyển Buổi trước/sau THAY mục lịch sử → "← Về lớp" luôn về lớp
@@ -135,21 +135,22 @@ export default function ClassSocialPage({ initialSection }: { initialSection: So
   // Trò chuyện: "Nhắn tin" từ Bạn bè/Trang cá nhân → /me/chat/u/<id> (hội thoại chỉ tạo khi gửi tin đầu); mở hội thoại có sẵn → /me/chat/<id>
   const openChatWith = (userId: string) => navigate({ kind: 'chatWith', userId })
   const openConversation = (conversationId: string, opts?: { replace?: boolean }) => navigate({ kind: 'chatConversation', conversationId }, opts)
+  const openChatSystem = () => navigate({ kind: 'chatSystem' })
 
   if (session.status === 'signed-out') return <MeGuestGate signIn={signInWithPassword} />
   if (session.status === 'no-profile') return <MeNoProfile email={session.email} onSignOut={() => void signOut()} />
   if (session.status !== 'ready') return <Splash text="Đang mở Class…" />
 
-  return <SignedInShell base={session.me} view={view} onSection={go} onOpenProfile={openProfile} onOpenThread={openThread} onOpenQueue={openQueue} onOpenClass={openClass} onOpenSession={openSession} onOpenClassSpace={openClassSpace} onOpenClasses={openClasses} onOpenBands={openBands} onOpenBandAdmin={openBandAdmin} onOpenChatWith={openChatWith} onOpenConversation={openConversation} onBack={back} visit={visit} />
+  return <SignedInShell base={session.me} view={view} onSection={go} onOpenProfile={openProfile} onOpenThread={openThread} onOpenQueue={openQueue} onOpenClass={openClass} onOpenSession={openSession} onOpenClassSpace={openClassSpace} onOpenClasses={openClasses} onOpenBands={openBands} onOpenBandAdmin={openBandAdmin} onOpenChatWith={openChatWith} onOpenConversation={openConversation} onOpenChatSystem={openChatSystem} onBack={back} visit={visit} />
 }
 
 // Danh tính giữ ở MỘT chỗ: đổi ảnh xong → header, top bar, ô Trả bài, bình luận cập nhật ngay.
-function SignedInShell({ base, view, onSection, onOpenProfile, onOpenThread, onOpenQueue, onOpenClass, onOpenSession, onOpenClassSpace, onOpenClasses, onOpenBands, onOpenBandAdmin, onOpenChatWith, onOpenConversation, onBack, visit }: {
+function SignedInShell({ base, view, onSection, onOpenProfile, onOpenThread, onOpenQueue, onOpenClass, onOpenSession, onOpenClassSpace, onOpenClasses, onOpenBands, onOpenBandAdmin, onOpenChatWith, onOpenConversation, onOpenChatSystem, onBack, visit }: {
   base: ClassIdentity
   view: MeView
   onSection: (s: SocialSection) => void
   onOpenProfile: (userId: string) => void
-  onOpenThread: (threadId: string) => void
+  onOpenThread: (threadId: string, search?: string) => void
   onOpenQueue: () => void
   onOpenClass: (classId: string) => void
   /** Trang Buổi (phòng học) của một lớp; replace = chuyển buổi ngang hàng */
@@ -164,6 +165,7 @@ function SignedInShell({ base, view, onSection, onOpenProfile, onOpenThread, onO
   /** Nhắn tin tới một người (Bạn bè / Trang cá nhân) */
   onOpenChatWith: (userId: string) => void
   onOpenConversation: (conversationId: string, opts?: { replace?: boolean }) => void
+  onOpenChatSystem: () => void
   /** Quay lại màn trước trong /me (fallback khi mở thẳng bằng link) */
   onBack: (fallback: MeView) => void
   /** Lượt điều hướng — key của Home: bấm Trang chủ = Home mặc định mới (Dành cho bạn, đầu trang) */
@@ -181,9 +183,10 @@ function SignedInShell({ base, view, onSection, onOpenProfile, onOpenThread, onO
   // Đăng xuất → useClassSession nhận SIGNED_OUT → /me về trạng thái khách (không chuyển trang)
   const onSignOut = useCallback(() => { void signOut() }, [])
   const section: SocialSection | null = view.kind === 'section' ? view.section
-    : view.kind === 'chatConversation' || view.kind === 'chatWith' ? 'chat' : null
+    : view.kind === 'chatConversation' || view.kind === 'chatWith' || view.kind === 'chatSystem' ? 'chat' : null
   const chatSelection: ChatSelection = view.kind === 'chatConversation' ? { kind: 'conversation', id: view.conversationId }
-    : view.kind === 'chatWith' ? { kind: 'with', userId: view.userId } : { kind: 'none' }
+    : view.kind === 'chatWith' ? { kind: 'with', userId: view.userId }
+    : view.kind === 'chatSystem' ? { kind: 'system' } : { kind: 'none' }
   // Số hội thoại chưa đọc: MỘT nguồn cho badge menu (polling nhẹ, dừng khi tab ẩn)
   const chatUnread = useChatUnread()
   // Lời mời kết bạn đến mình: MỘT nguồn cho badge menu + khối Home + trang Bạn bè
@@ -238,6 +241,7 @@ function SignedInShell({ base, view, onSection, onOpenProfile, onOpenThread, onO
         onJoinedClass={() => { classes.reload(); refreshLearningIdentity(me.userId) }} onOpenBands={onOpenBands} />}
       {section === 'friends' && <Friends requests={requests} onOpenProfile={onOpenProfile} onMessage={onOpenChatWith} />}
       {section === 'chat' && <Chat meId={me.userId} selection={chatSelection} onOpenConversation={onOpenConversation}
+        system={chatUnread.system} onOpenSystem={onOpenChatSystem} onOpenThread={onOpenThread}
         onBackToList={() => onBack({ kind: 'section', section: 'chat' })} onOpenProfile={onOpenProfile}
         onOpenFriends={() => onSection('friends')} onUnreadChanged={() => void chatUnread.refresh()} />}
       {section === 'tools' && <ToolsPage />}
