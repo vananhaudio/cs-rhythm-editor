@@ -170,6 +170,21 @@ export function toggleGap(measures: MeasureAnchor[], at: MeasureAnchor, mode: 'o
   return [...measures.slice(0, insert), at, ...measures.slice(insert)]
 }
 
+export type ProvisionalBars = { ok: true; anchors: ChordAnchors; count: number } | { ok: false; reason: string }
+
+/**
+ * "Chia nhịp tạm thời": đặt một vạch nhịp TRƯỚC mỗi chữ đang mang hợp âm (kể cả "(-)"), theo thứ tự đọc.
+ * Không đoán tiết tấu, không đụng vào lời/hợp âm; người biên tập sửa tiếp bằng công cụ khe/vạch hiện có.
+ * Bài đã có vạch (hoặc nhịp lấy đà) → chặn, không trộn.
+ */
+export function provisionalBars(text: string, existing: ChordAnchors | null): ProvisionalBars {
+  if (existing && (existing.measures.length > 0 || existing.pickup)) return { ok: false, reason: 'Bài đã có vạch nhịp — không chia lại để tránh đè lên vạch cũ.' }
+  const measures: MeasureAnchor[] = []
+  anchorLines(text).forEach((view, line) => view.tokens.forEach((token, index) => { if (token.chord) measures.push({ line, token: index }) }))
+  if (!measures.length) return { ok: false, reason: 'Bài chưa có hợp âm nào để chia nhịp.' }
+  return { ok: true, anchors: anchorsPayload(measures, null), count: measures.length }
+}
+
 /** Ô ngân: thêm một ô CÙNG vị trí ngay sau ô `index` (không chữ mới, vẫn tính một ô nhịp). */
 export const addSustain = (measures: MeasureAnchor[], index: number) => [...measures.slice(0, index + 1), { ...measures[index] }, ...measures.slice(index + 1)]
 /** Ô không lời (dạo, gian tấu): chèn sau ô `afterIndex`; -1 = đầu bài; vượt cuối = cuối bài. */
