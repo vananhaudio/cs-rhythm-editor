@@ -183,10 +183,10 @@ try {
   ;({ ctx, page } = await meAs('b@test.local', `/classes/${TH01}`, 1280))
   await page.waitForSelector('.cs-map', { timeout: 15000 })
   for (const b of await page.$$('.cs-map-stage-toggle[aria-expanded="false"]')) await b.click()
-  await page.waitForFunction(nn => /Hoàn thành/.test(document.querySelector(`#buoi-${nn} .cs-map-meta`)?.textContent ?? ''), { timeout: 15000 }, NN)
-  assert.match(await page.$eval(`#buoi-${NN} .cs-map-meta`, e => e.textContent), new RegExp(`${TOTAL}/${TOTAL} bài trả Đạt`))
+  // Class Reading UI V1: "Hoàn thành" trùng nhãn Đạt (không còn dòng "x/y bài trả Đạt") → buổi xong = nhãn Đạt bên phải tên buổi
+  await page.waitForFunction(nn => /Đạt/.test(document.querySelector(`#buoi-${nn} .cs-map-learn`)?.textContent ?? ''), { timeout: 15000 }, NN)
   assert.equal(await page.$eval(`#buoi-${NEXT}`, e => e.classList.contains('is-locked')), false, `Buổi ${NEXT} đã mở`)
-  ok(`${TOTAL}/${TOTAL} Đạt (${QUIZ.length} trắc nghiệm + video) → Buổi ${NN} Hoàn thành · Buổi ${NEXT} MỞ`)
+  ok(`${TOTAL}/${TOTAL} Đạt (${QUIZ.length} trắc nghiệm + video) → Buổi ${NN} nhãn Đạt · Buổi ${NEXT} MỞ`)
   await page.screenshot({ path: `${SHOTS}/quiz-b${NN}-class-1280.png`, fullPage: false })
   await noHorizontalOverflow(page, `Trang lớp sau Buổi ${NN} 1280px`)
   await ctx.close()
