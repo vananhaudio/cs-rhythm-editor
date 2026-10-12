@@ -64,6 +64,38 @@ export async function canAddToLibrary(userId: string, isTeacher: boolean): Promi
 
 export const ADD_DENIED_MESSAGE = 'Tài khoản chưa có quyền thêm bản nhạc vào thư viện. Cần vai trò Biên tập âm nhạc của một Band (hoặc Admin/Giáo viên).'
 
+export const EDITOR_UNKNOWN = 'Chưa xác định'
+
+/** `get_user_profile` trả 0 hoặc 1 hàng; thiếu tên → "Chưa xác định". Chỉ lấy cột name. */
+export function editorNameFromProfile(data: unknown): string {
+  const row = (Array.isArray(data) ? data[0] : data) as { name?: unknown } | null | undefined
+  const name = typeof row?.name === 'string' ? row.name.trim() : ''
+  return name || EDITOR_UNKNOWN
+}
+
+const editorNames = new Map<string, Promise<string>>()
+
+/**
+ * Tên hiển thị của Người biên tập (= musicxml_library.created_by), qua RPC sẵn có get_user_profile:
+ * đúng tên Class đang hiển thị (display_name → full_name → app_users.name, bỏ phần sau '@'), không email/số điện thoại.
+ * Không có hàng (không lấy được / không còn là thành viên Class) hoặc lỗi → "Chưa xác định". Nhớ kết quả trong phiên trang.
+ */
+export function editorName(userId: string | null | undefined): Promise<string> {
+  if (!userId) return Promise.resolve(EDITOR_UNKNOWN)
+  const cached = editorNames.get(userId)
+  if (cached) return cached
+  const request = (async () => {
+    try {
+      const { supabase } = await import('../supabase.ts')
+      const { data, error } = await supabase.rpc('get_user_profile', { p_user: userId })
+      if (error) { editorNames.delete(userId); return EDITOR_UNKNOWN }
+      return editorNameFromProfile(data)
+    } catch { editorNames.delete(userId); return EDITOR_UNKNOWN }
+  })()
+  editorNames.set(userId, request)
+  return request
+}
+
 export async function listLibrary(): Promise<LibraryItem[]> {
   const { supabase } = await import('../supabase.ts')
   const { data, error } = await supabase.from(TABLE)
