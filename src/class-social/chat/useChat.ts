@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { fetchConversations, fetchMessages, fetchSystemNotices, fetchSystemSummary, fetchUnreadCount, markRead, markSystemRead, sendMessage } from './chatApi'
 import { pollingLive, type ChatLive } from './chatLive'
-import { createNoticeSoundGate, getSoundEnabled, installAudioUnlock, playNoticePing, subscribeSound, writeSoundEnabled } from './noticeSound'
+import { createNoticeSoundGate, getSoundEnabled, installAudioUnlock, onNoticeAudioReady, playPendingNotice, subscribeSound, tryResumeNoticeAudio, writeSoundEnabled } from './noticeSound'
 import { PAGE, lastSeqOf, firstSeqOf, mergeMessages, mergeNotices, normalizeBody, NOTICE_PAGE, type ChatMessage, type ConversationItem, type PendingMessage, type SystemNotice, type SystemSummary } from './chatModel'
 
 /** Badge menu Trò chuyện — MỘT nguồn ở SignedInShell: hội thoại cá nhân chưa đọc (dm) + thông báo Class 2.0 chưa đọc (tách trạng thái đọc). */
@@ -14,7 +14,22 @@ export function useChatUnread(live: ChatLive = pollingLive) {
   // Sound V1: tiếng "ting" khi có thông báo Class 2.0 MỚI (so với mốc phiên) — dùng chính tóm tắt đang polling
   const gate = useRef(createNoticeSoundGate())
   useEffect(() => installAudioUnlock(), [])
-  useEffect(() => { if (gate.current.observe(system)) playNoticePing() }, [system])
+  // Tóm tắt mới → ghi nhận; kêu ngay nếu đủ điều kiện, nếu không thì GIỮ chờ (tab ẩn / âm thanh chưa mở khoá / iOS ngắt)
+  useEffect(() => { gate.current.observe(system); playPendingNotice(gate.current) }, [system])
+  useEffect(() => {
+    const retry = () => { tryResumeNoticeAudio(); playPendingNotice(gate.current) }
+    const offAudio = onNoticeAudioReady(() => { playPendingNotice(gate.current) })
+    const offSound = subscribeSound(() => { if (!getSoundEnabled()) gate.current.clear() })   // Tắt → không phát bù khi bật lại
+    document.addEventListener('visibilitychange', retry)
+    window.addEventListener('focus', retry)
+    window.addEventListener('pageshow', retry)
+    return () => {
+      offAudio(); offSound()
+      document.removeEventListener('visibilitychange', retry)
+      window.removeEventListener('focus', retry)
+      window.removeEventListener('pageshow', retry)
+    }
+  }, [])
   const refresh = useCallback(async () => {
     const [a, b] = await Promise.all([fetchUnreadCount(), fetchSystemSummary()])
     if (a.ok) setDm(a.value)

@@ -583,7 +583,7 @@ a.cs-share-card:focus-visible { outline: 2px solid var(--cs-p); outline-offset: 
 .cs-chat-locked { flex: none; padding: 14px 16px calc(14px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--cs-border); background: var(--cs-neutral-soft); text-align: center; color: var(--cs-muted); font-size: 14px; }
 .cs-chat-locked p { margin: 0 0 8px; }
 /* Class 2.0 (System Chat V1): kênh thông báo chính thức — nhận diện hệ thống, chỉ đọc */
-.cs-chat-items-system { margin: 0 0 6px; padding: 0 0 6px; border-bottom: 1px solid var(--cs-border); list-style: none; }
+.cs-chat-items-system { margin: 0 0 6px; padding: 0 0 6px; border-bottom: 1px solid var(--cs-border); list-style: none; flex: none; overflow: visible; }   /* hàng cố định theo nội dung (không ăn flex:1 của .cs-chat-items → hết khoảng trống + hết cắt hàng cuối) */
 .cs-sys-avatar { flex: none; display: inline-grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; background: var(--cs-p-soft); color: var(--cs-p-strong); }
 .cs-sys-avatar.is-sm { width: 40px; height: 40px; }
 .cs-sys-scroll { gap: 8px; }
@@ -728,7 +728,7 @@ a.cs-share-card:focus-visible { outline: 2px solid var(--cs-p); outline-offset: 
   /* Trò chuyện (điện thoại/iPad dọc): /me/chat = danh sách; mở hội thoại = màn chat TOÀN MÀN HÌNH, nút ← rõ ràng */
   .cs-chat { grid-template-columns: 1fr; height: auto; min-height: 0; }
   .cs-chat-list { border-right: none; }
-  .cs-chat-items { overflow: visible; }
+  .cs-chat-items { overflow: visible; flex: none; }   /* .cs-chat cao theo nội dung: flex:1 basis 0 làm hàng cuối bị cắt */
   .cs-chat-pane { display: none; }
   .cs-chat-pane.is-open {
     display: flex; position: fixed; left: 0; right: 0; top: var(--cs-chat-top, 0px); z-index: 90;

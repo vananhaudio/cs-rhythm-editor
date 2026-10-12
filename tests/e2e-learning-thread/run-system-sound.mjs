@@ -1,5 +1,6 @@
 // E2E System Chat Sound V1 — xem scripts/e2e-class-system-sound.sh. AudioContext được GIẢ (đếm số tiếng thật sự được lên lịch).
 // B mở Trò chuyện (im lặng) → Thầy chấm → B nghe ĐÚNG MỘT tiếng; polling/focus lặp, đọc thông báo, chuyển trang không kêu lại; Tắt → bền sau tải lại.
+// V1.1: iOS ngắt AudioContext → chờ rồi kêu sau lần chạm; tab ẩn → kêu khi quay lại; Tắt không phát bù; bố cục danh sách Chat 390/1280.
 import { createRequire } from 'node:module'
 import { mkdirSync } from 'node:fs'
 import assert from 'node:assert/strict'
@@ -28,9 +29,12 @@ async function meAs(email, path = '', width = 390) {
   page.on('console', m => { if (m.type() === 'error' && !/favicon|manifest|fonts\.g|net::ERR_|Failed to load resource/.test(m.text())) errors.push(`${email} console: ` + m.text()) })
   await page.evaluateOnNewDocument(() => {
     window.__pings = 0
+    window.__gesture = false
+    for (const ev of ['pointerdown', 'touchend', 'keydown']) window.addEventListener(ev, () => { window.__gesture = true; setTimeout(() => { window.__gesture = false }, 150) }, true)
     class FakeAC {
-      constructor() { this.state = 'suspended'; this.currentTime = 0; this.destination = {} }
-      resume() { this.state = 'running'; return Promise.resolve() }
+      constructor() { this.state = 'suspended'; this.currentTime = 0; this.destination = {}; this.onstatechange = null; window.__ac = this }
+      // như iOS Safari: chỉ resume được khi đang trong thao tác người dùng
+      resume() { if (!window.__gesture) return Promise.reject(new Error('NotAllowedError')); this.state = 'running'; if (this.onstatechange) this.onstatechange(); return Promise.resolve() }
       createGain() { return { connect() {}, gain: { setValueAtTime() {}, exponentialRampToValueAtTime() {} } } }
       createOscillator() { return { connect() {}, frequency: { value: 0 }, type: '', start: () => { window.__pings++ }, stop() {} } }
     }
@@ -134,6 +138,100 @@ const h = await page.$eval('.cs-chat-sound [role=switch]', e => e.getBoundingCli
 assert.ok(h >= 44, 'vùng chạm ≥ 44px'); ok('iPhone: công tắc vùng chạm ≥ 44px')
 await page.screenshot({ path: `${SHOTS}/sound-390.png` })
 await ctx.close()
+
+// ── 5. Bố cục danh sách Chat (V1.1): không khoảng trống dưới Class 2.0, không cắt hàng cuối, cuộn tới hết ──
+for (const [w, hh] of [[390, 844], [390, 520], [1280, 800], [1280, 560]]) {
+  ;({ ctx, page } = await meAs('b@test.local', '/chat', w))
+  await page.setViewport({ width: w, height: hh, deviceScaleFactor: 1, isMobile: w < 600, hasTouch: w < 600 })
+  await page.waitForSelector('.cs-chat-item-system', { timeout: 20000 })
+  await page.waitForFunction(() => document.querySelectorAll('.cs-chat-item').length >= 3, { timeout: 20000 })
+  await sleep(500)
+  const geo = () => page.evaluate(() => {
+    const items = [...document.querySelectorAll('.cs-chat-item')]
+    const last = items.at(-1).getBoundingClientRect()
+    const chat = document.querySelector('.cs-chat').getBoundingClientRect()
+    const ul = document.querySelector('.cs-chat-items-system').getBoundingClientRect()
+    const row = document.querySelector('.cs-chat-item-system').getBoundingClientRect()
+    return { n: items.length, lastTop: last.top, lastBottom: last.bottom, chatBottom: chat.bottom, gap: ul.height - row.height, innerH: innerHeight }
+  })
+  let g0 = await geo()
+  assert.ok(g0.gap <= 16, `${w}x${hh}: khoảng trống dưới Class 2.0 = ${g0.gap}px`)
+  // cuộn tới hết (trang + vùng danh sách) rồi hàng cuối phải nằm trọn trong khung và trong tầm nhìn
+  await page.evaluate(() => { window.scrollTo(0, document.documentElement.scrollHeight); document.querySelectorAll('.cs-chat-items').forEach(e => { e.scrollTop = e.scrollHeight }) })
+  await sleep(300)
+  const g1 = await geo()
+  assert.ok(g1.lastBottom <= g1.chatBottom + 1, `${w}x${hh}: hàng cuối bị cắt (bottom ${g1.lastBottom} > khung ${g1.chatBottom})`)
+  assert.ok(g1.lastTop >= 0 && g1.lastBottom <= g1.innerH + 1, `${w}x${hh}: hàng cuối ngoài tầm nhìn sau khi cuộn`)
+  ok(`${w}x${hh}: Class 2.0 không trống thừa (${Math.round(g0.gap)}px) · ${g0.n} hàng · hàng cuối trọn trong khung và tới được bằng cuộn`)
+  await page.screenshot({ path: `${SHOTS}/layout-${w}x${hh}.png` })
+  await ctx.close()
+}
+
+// ── 6. Sound V1.1: iOS ngắt AudioContext / tab ẩn / Tắt (tóm tắt Class 2.0 được GIẢ ở tầng mạng — chỉ stack cô lập) ──
+{
+  let sum = { last_seq: 500, last_body: 'Bài trả Buổi 01 của bạn đã được chấm.', last_at: new Date().toISOString(), unread: 0 }
+  const bump = (seq, unread) => { sum = { ...sum, last_seq: seq, unread, last_at: new Date().toISOString() } }
+  ;({ ctx, page } = await meAs('b@test.local', '', 1280))
+  await page.setRequestInterception(true)
+  page.on('request', req => {
+    if (req.method() === 'POST' && req.url().includes('/rpc/class_system_notice_summary'))
+      req.respond({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify([sum]) })
+    else req.continue()
+  })
+  await page.goto(`${ME}/chat`, { waitUntil: 'networkidle0' })
+  await page.waitForSelector('.cs-chat-sound [role=switch]', { timeout: 20000 })
+  const poll = async () => { await page.evaluate(() => window.dispatchEvent(new Event('focus'))); await sleep(1300) }
+  const state = () => page.evaluate(() => window.__ac?.state ?? null)
+  await page.mouse.click(700, 500); await sleep(400)
+  assert.equal(await state(), 'running'); assert.equal(await pings(page), 0)
+  await poll(); assert.equal(await pings(page), 0)
+  ok('V1.1 nền: sau chạm, AudioContext running; thông báo cũ (đã có từ trước) im lặng')
+
+  // A1: iOS ngắt context → thông báo mới CHỜ; chạm lại → resume → đúng một tiếng
+  await page.evaluate(() => { window.__ac.state = 'interrupted' })
+  bump(501, 1); await poll()
+  assert.equal(await pings(page), 0, 'context bị ngắt: chưa kêu')
+  await poll(); await poll()
+  assert.equal(await pings(page), 0)
+  await page.mouse.click(700, 500)
+  await page.waitForFunction(() => window.__pings >= 2, { timeout: 5000 }); await sleep(800)
+  assert.equal(await state(), 'running'); assert.equal(await pings(page), 2)
+  ok('A1: iOS ngắt AudioContext → thông báo mới chờ (không mất) → chạm lại → resume → đúng MỘT tiếng')
+  await poll(); await page.mouse.click(700, 500); await poll()
+  assert.equal(await pings(page), 2); ok('A1: polling/chạm lặp: không kêu lại')
+
+  // A2: tab ẩn khi có thông báo → quay lại tab → kêu một lần
+  await page.evaluate(() => { Object.defineProperty(document, 'visibilityState', { get: () => 'hidden', configurable: true }); document.dispatchEvent(new Event('visibilitychange')) })
+  bump(502, 1); await poll()
+  assert.equal(await pings(page), 2, 'tab ẩn: không kêu')
+  await page.evaluate(() => { Object.defineProperty(document, 'visibilityState', { get: () => 'visible', configurable: true }); document.dispatchEvent(new Event('visibilitychange')) })
+  await page.waitForFunction(() => window.__pings >= 4, { timeout: 8000 }); await sleep(800)
+  assert.equal(await pings(page), 4); ok('A2: tab ẩn → quay lại → đúng MỘT tiếng cho thông báo mới')
+  await poll(); await poll()
+  assert.equal(await pings(page), 4); ok('A2: không kêu lại sau khi đã bù')
+
+  // Đã đọc trong lúc chờ → không bù
+  await page.evaluate(() => { window.__ac.state = 'interrupted' })
+  bump(503, 1); await poll()
+  bump(503, 0); await poll()
+  await page.mouse.click(700, 500); await sleep(800)
+  assert.equal(await pings(page), 4); ok('Đã đọc trong lúc chờ → không phát bù')
+
+  // Tắt: im lặng + không giữ chờ; Bật lại không phát bù; thông báo kế tiếp kêu được
+  await page.click('.cs-chat-sound [role=switch]')
+  assert.equal(await page.$eval('.cs-chat-sound [role=switch]', e => e.getAttribute('aria-checked')), 'false')
+  await page.evaluate(() => { window.__ac.state = 'interrupted' })
+  bump(504, 1); await poll()
+  await page.mouse.click(700, 500); await sleep(800)
+  assert.equal(await pings(page), 4, 'Tắt: im lặng')
+  await page.click('.cs-chat-sound [role=switch]')
+  await sleep(800); await poll()
+  assert.equal(await pings(page), 4, 'Bật lại: không phát bù thông báo cũ')
+  bump(505, 1); await poll()
+  await page.waitForFunction(() => window.__pings >= 6, { timeout: 5000 }); await sleep(600)
+  assert.equal(await pings(page), 6); ok('Tắt → im lặng, không giữ chờ; Bật lại không bù; thông báo mới kế tiếp kêu đúng một tiếng')
+  await ctx.close()
+}
 
 assert.deepEqual(errors, [], 'không có lỗi console/pageerror: ' + errors.join(' | '))
 ok('Không có lỗi console / pageerror')
