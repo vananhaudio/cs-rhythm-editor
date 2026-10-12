@@ -68,6 +68,7 @@ const ClassSocialPage = lazy(() => import('./class-social/ClassSocialPage'))
 // Band — trang tuyển thành viên công khai /band/<slug> (một component cho mọi Band, dữ liệu từ server)
 const BandRecruitRoute = lazy(() => import('./band/BandRecruitRoute'))
 const ThuVienPage = lazy(() => import('./thuvien/ThuVienPage'))
+const ThuVienEditorGate = lazy(() => import('./thuvien/ThuVienEditorGate'))
 // Điệu đệm hát (/dieudemhat) — chunk riêng, dữ liệu từ src/content/dieudemhat
 const DieuDemHatPage = lazy(() => import('./dieudemhat/DieuDemHatPage'))
 // Rhythm Scroll — trang THỬ, chỉ có ở `npm run dev`. Bản build production: nhánh này bị loại hẳn,
@@ -186,10 +187,12 @@ function AppRouterContent() {
 
   if (path === '/thuvien' || path === '/thuvien/') {
     if (loading) return null
-    if (!user || appUser?.role !== 'admin' || appUser.status !== 'active') {
+    if (!user || appUser?.status !== 'active') {
       window.location.href = '/start'
       return null
     }
+    // Admin: toàn bộ /thuvien. Tài khoản khác: chỉ khi đang giữ vai Biên tập âm nhạc (cổng kiểm tra; mục MusicXML thôi).
+    if (appUser.role !== 'admin') return <Suspense fallback={<div style={{ padding: 32 }}>Đang mở thư viện…</div>}><ThuVienEditorGate userId={user.id} /></Suspense>
     return <Suspense fallback={<div style={{ padding: 32 }}>Đang mở thư viện…</div>}><ThuVienPage /></Suspense>
   }
 

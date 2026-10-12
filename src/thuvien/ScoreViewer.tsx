@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { ScorePage } from '../musicxml-beats/renderer/types.ts'
-import { updateLibraryMetadata } from './masterLibrary.ts'
+import { archiveLibraryItem, updateLibraryMetadata } from './masterLibrary.ts'
 import type { LibraryItem } from './masterLibrary.ts'
 import { pageSrc, renderPagesForView, ZOOM_STEPS } from './viewScore.ts'
 import type { Zoom } from './viewScore.ts'
@@ -23,12 +23,18 @@ type State =
  * Xem một bản trong `musicxml_library`. Chỉ đọc: lấy XML qua `getMasterCopySource`
  * (đã kiểm SHA-256 + kích thước + parse) rồi khắc bằng renderer của Nhịp Phách.
  */
-export default function ScoreViewer({ id, initial, onClose, onSaved }: {
+export default function ScoreViewer({ id, initial, onClose, onSaved, onArchived, canManage = true }: {
   id: string
   initial: Heading | null
   onClose: () => void
   onSaved: (item: LibraryItem) => void
+  /** Sau khi gỡ bài (lưu trữ) thành công. Không truyền → không có nút Gỡ. */
+  onArchived?: (id: string) => void
+  /** Hiện nút Sửa/Gỡ (chỉ ẩn/hiện; quyền thật do RLS). */
+  canManage?: boolean
 }) {
+  const [removing, setRemoving] = useState(false)
+  const [removeError, setRemoveError] = useState('')
   const [heading, setHeading] = useState<Heading | null>(initial)
   const [editing, setEditing] = useState(false)
   const [state, setState] = useState<State>({ kind: 'loading', step: 'Đang tải bản nhạc…' })
@@ -61,6 +67,16 @@ export default function ScoreViewer({ id, initial, onClose, onSaved }: {
     return () => { active = false; destroy?.() }
   }, [id, attempt])
 
+  async function remove() {
+    if (removing || !onArchived) return
+    if (!window.confirm(`Gỡ “${heading?.title ?? 'bản nhạc này'}” khỏi thư viện? Bài sẽ không còn trong danh sách; Admin có thể khôi phục.`)) return
+    setRemoving(true)
+    setRemoveError('')
+    try { await archiveLibraryItem(id); onArchived(id) }
+    catch (err) { setRemoveError(err instanceof Error ? err.message : 'Không gỡ được bản nhạc.') }
+    finally { setRemoving(false) }
+  }
+
   const step = (delta: 1 | -1) => {
     const next = ZOOM_STEPS[ZOOM_STEPS.indexOf(zoom) + delta]
     if (next) setZoom(next)
@@ -73,10 +89,12 @@ export default function ScoreViewer({ id, initial, onClose, onSaved }: {
         <h1>{heading?.title ?? 'Bản nhạc'}</h1>
         {heading?.composer && <p>{heading.composer}</p>}
       </div>
-      {heading && !editing && state.kind !== 'loading' && <div className="tv-actions">
+      {canManage && heading && !editing && state.kind !== 'loading' && <div className="tv-actions">
         <button type="button" className="tv-edit" onClick={() => setEditing(true)}>Sửa thông tin</button>
+        {onArchived && <button type="button" className="tv-edit tv-remove" disabled={removing} onClick={() => void remove()}>{removing ? 'Đang gỡ…' : 'Gỡ'}</button>}
       </div>}
     </header>
+    {removeError && <p className="tv-meta-error" role="alert">{removeError}</p>}
     {editing && heading && <MetadataForm id={id} heading={heading} onCancel={() => setEditing(false)}
       onSaved={item => { setHeading({ title: item.title, composer: item.composer }); setEditing(false); onSaved(item) }} />}
     {state.kind === 'loading' && <p className="tv-view-note" aria-live="polite">{state.step}</p>}

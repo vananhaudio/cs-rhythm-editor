@@ -827,11 +827,50 @@ test('Khung Class: tài khoản như Class (avatar + menu; chưa đăng nhập �
 })
 
 // ── Rào chắn: /thuvien vẫn chỉ admin đang hoạt động; mục MusicXML không bị đổi hành vi ──
-test('cổng /thuvien trong AppRouter giữ nguyên: admin + active, người khác bị đưa về /start', () => {
+test('cổng /thuvien trong AppRouter: admin + active vào đủ; tài khoản khác chỉ qua cổng Biên tập (mục MusicXML); chưa đăng nhập/không active → /start', () => {
   const router = readFileSync(new URL('../../src/AppRouter.tsx', import.meta.url), 'utf8')
-  const guard = /if \(path === '\/thuvien' \|\| path === '\/thuvien\/'\) \{\s*if \(loading\) return null\s*if \(!user \|\| appUser\?\.role !== 'admin' \|\| appUser\.status !== 'active'\) \{\s*window\.location\.href = '\/start'\s*return null\s*\}\s*return <Suspense[^\n]*<ThuVienPage \/><\/Suspense>\s*\}/
+  const guard = /if \(path === '\/thuvien' \|\| path === '\/thuvien\/'\) \{\s*if \(loading\) return null\s*if \(!user \|\| appUser\?\.status !== 'active'\) \{\s*window\.location\.href = '\/start'\s*return null\s*\}[\s\S]*?if \(appUser\.role !== 'admin'\) return <Suspense[^\n]*<ThuVienEditorGate userId=\{user\.id\} \/><\/Suspense>\s*return <Suspense[^\n]*<ThuVienPage \/><\/Suspense>\s*\}/
   assert.match(router, guard)
-  assert.equal(router.match(/<ThuVienPage/g)?.length, 1, 'ThuVienPage chỉ được dựng ở đúng một chỗ — sau cổng admin')
+  assert.equal(router.match(/<ThuVienPage/g)?.length, 1, 'ThuVienPage đầy đủ chỉ dựng ở một chỗ — sau cổng admin')
+  const gate = readFileSync(new URL('../../src/thuvien/ThuVienEditorGate.tsx', import.meta.url), 'utf8')
+  assert.match(gate, /canAddToLibrary\(userId, false\)/)
+  assert.match(gate, /else window\.location\.href = '\/start'/, 'không phải Biên tập → /start')
+  assert.match(gate, /<ThuVienPage musicXmlOnly \/>/, 'Biên tập chỉ thấy mục MusicXML')
+})
+
+test('Biên tập (musicXmlOnly): menu chỉ còn Danh sách bản nhạc MusicXML + Nạp bản nhạc mới — không có Hợp âm, Nâng cao', () => {
+  const view = render(<ThuVienShell active="musicxml" onNavigate={() => {}} session={SESSION_READY} musicXmlOnly><p>x</p></ThuVienShell>)
+  const labels = [...view.container.querySelectorAll('.cs-nav-item')].map(n => n.textContent)
+  assert.deepEqual(labels, ['Danh sách bản nhạc MusicXML', 'Nạp bản nhạc mới'])
+  const page = readFileSync(new URL('../../src/thuvien/ThuVienPage.tsx', import.meta.url), 'utf8')
+  assert.match(page, /const section = musicXmlOnly \? 'musicxml' : sectionFromSearch\(search\)/, '?muc=hopam bị bỏ qua với Biên tập')
+  cleanup()
+})
+
+test('Sửa/Gỡ bài trong Thư viện: nút chỉ hiện đúng người; Gỡ = archived_at (không DELETE) có xác nhận; danh sách lọc bài đã gỡ', async () => {
+  const { canManageItem, ARCHIVED_DUPLICATE_MESSAGE, MANAGE_DENIED_MESSAGE } = await import('../../src/thuvien/masterLibrary')
+  const mine = { created_by: 'u-editor' }, other = { created_by: 'u-other' }, adminMade = { created_by: 'u-admin' }
+  assert.equal(canManageItem(mine, 'u-editor', false, true), true, 'Biên tập hiện tại + bài của mình')
+  assert.equal(canManageItem(other, 'u-editor', false, true), false, 'không phải bài của mình')
+  assert.equal(canManageItem(adminMade, 'u-editor', false, true), false, 'bài của Admin')
+  assert.equal(canManageItem(mine, 'u-editor', false, false), false, 'đã mất vai Biên tập')
+  assert.equal(canManageItem(other, 'u-teacher', true, true), true, 'teacher/admin quản mọi bài')
+  assert.equal(canManageItem(null, 'u-editor', false, true), false)
+  assert.equal(canManageItem(mine, null, false, true), false)
+  assert.match(ARCHIVED_DUPLICATE_MESSAGE('Diễm xưa'), /đã được gỡ.*Admin khôi phục/)
+  assert.match(MANAGE_DENIED_MESSAGE, /Biên tập âm nhạc/)
+  const lib = readFileSync(new URL('../../src/thuvien/masterLibrary.ts', import.meta.url), 'utf8')
+  assert.match(lib, /\.select\('id,title,composer,created_at,created_by'\)\.is\('archived_at', null\)/, 'danh sách lọc bài đã gỡ')
+  assert.match(lib, /update\(\{ archived_at: new Date\(\)\.toISOString\(\) \}\)/, 'gỡ chỉ đặt archived_at')
+  assert.ok(!/\.delete\(\)/.test(lib), 'không DELETE')
+  assert.match(lib, /select\('id,title,archived_at'\)\.eq\('content_hash'/, 'tra trùng hash thấy cả bài đã gỡ')
+  const viewer = readFileSync(new URL('../../src/thuvien/ScoreViewer.tsx', import.meta.url), 'utf8')
+  assert.match(viewer, /canManage && heading && !editing/, 'nút Sửa/Gỡ chỉ hiện khi được phép')
+  assert.match(viewer, /window\.confirm\(/, 'Gỡ có xác nhận')
+  const page = readFileSync(new URL('../../src/thuvien/ThuVienPage.tsx', import.meta.url), 'utf8')
+  assert.match(page, /canManage=\{canManageItem\(item, uid, teacher, canUpload === true\)\}/)
+  const nip = readFileSync(new URL('../../src/nhipphach/MasterLibraryList.tsx', import.meta.url), 'utf8')
+  assert.match(nip, /listLibrary\(\)/, 'Nhịp & Phách dùng chung listLibrary → cùng bộ lọc')
 })
 
 test('mục MusicXML: vẫn là mặc định, vẫn gọi đúng các hàm cũ; thanh mục nằm NGOÀI khối bố cục theo vị trí', () => {
@@ -839,7 +878,7 @@ test('mục MusicXML: vẫn là mặc định, vẫn gọi đúng các hàm cũ;
   for (const piece of ['listLibrary()', 'importMusicXml(prepared, title, composer)', 'prepareMusicXml(file.name, await file.text())', '<ScoreViewer key={openId}', 'accept=".musicxml,.xml"'])
     assert.ok(page.includes(piece), piece)
   assert.match(page, /<main className="thu-vien[^"]*">\s*<div className="mx-auto max-w-4xl">/)
-  assert.match(page, /<MusicXmlLibrary canUpload=\{canUpload\} \/>/, 'MusicXmlLibrary vẫn là mặc định; chỉ nhận cờ ẩn/hiện mục nạp (quyền thật do RLS)')
+  assert.match(page, /<MusicXmlLibrary canUpload=\{canUpload\} uid=\{uid\} teacher=\{teacher\} \/>/, 'MusicXmlLibrary vẫn là mặc định; chỉ nhận cờ ẩn/hiện mục nạp (quyền thật do RLS)')
   assert.match(page, /<ThuVienShell active=\{activeNavItem\(search\)\}/, 'toàn bộ trang nằm trong khung Class')
   assert.ok(!page.includes('ThuVienTabs') && !page.includes('ThuVienHeader'), 'thanh mục cũ đã được khung Class thay thế')
   assert.ok(!page.includes('+ Thêm bản nhạc'), 'danh sách MusicXML không còn nút tạo mới trùng với Header')

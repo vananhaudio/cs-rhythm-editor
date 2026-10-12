@@ -10,6 +10,7 @@ export type LibraryItem = {
   title: string
   composer: string | null
   created_at: string
+  created_by?: string
 }
 
 export function prepareMusicXml(filename: string, xml: string) {
@@ -66,7 +67,8 @@ export const ADD_DENIED_MESSAGE = 'Tài khoản chưa có quyền thêm bản nh
 export async function listLibrary(): Promise<LibraryItem[]> {
   const { supabase } = await import('../supabase.ts')
   const { data, error } = await supabase.from(TABLE)
-    .select('id,title,composer,created_at').order('created_at', { ascending: false }).limit(1000)
+    .select('id,title,composer,created_at,created_by').is('archived_at', null)
+    .order('created_at', { ascending: false }).limit(1000)
   if (error) throw error
   return data ?? []
 }
@@ -76,12 +78,30 @@ export async function updateLibraryMetadata(id: string, title: string, composer:
   const { supabase } = await import('../supabase.ts')
   // `.single()`: RLS chặn hoặc id không còn thì báo lỗi, không bao giờ "lưu thành công" giả.
   const { data, error } = await supabase.from(TABLE).update(patch).eq('id', id)
-    .select('id,title,composer,created_at').single()
+    .select('id,title,composer,created_at,created_by').single()
   // 0 dòng được cập nhật (RLS không cho sửa, hoặc bài không còn) → PGRST116.
   if (error?.code === 'PGRST116') throw new Error('Không lưu được: tài khoản không có quyền sửa, hoặc bản nhạc không còn trong thư viện.')
+  if (error && (error.code === '42501' || /row-level security|Biên tập chỉ được/i.test(error.message ?? ''))) throw new Error(MANAGE_DENIED_MESSAGE)
   if (error) throw new Error(error.message || 'Không lưu được thông tin bản nhạc.')
   return data
 }
+
+/** Gỡ bản nhạc khỏi danh sách (lưu trữ, KHÔNG xoá): chỉ đặt archived_at. Quyền thật do RLS + trigger (chỉ bài của mình / admin / teacher). */
+export async function archiveLibraryItem(id: string): Promise<void> {
+  const { supabase } = await import('../supabase.ts')
+  const { data, error } = await supabase.from(TABLE).update({ archived_at: new Date().toISOString() }).eq('id', id).select('id')
+  if (error) throw new Error(error.message || 'Không gỡ được bản nhạc.')
+  if (!data?.length) throw new Error(MANAGE_DENIED_MESSAGE)
+}
+
+/** Ẩn/hiện nút Sửa/Gỡ (quyền thật do RLS): admin/teacher, hoặc Biên tập hiện tại với bài do chính mình tạo. */
+export function canManageItem(item: Pick<LibraryItem, 'created_by'> | null | undefined, userId: string | null, isTeacher: boolean, isEditor: boolean): boolean {
+  if (!item || !userId) return false
+  return isTeacher || (isEditor && item.created_by === userId)
+}
+
+export const MANAGE_DENIED_MESSAGE = 'Không thực hiện được: chỉ người tạo bài (đang giữ vai Biên tập âm nhạc), Admin hoặc Giáo viên được sửa/gỡ bài này.'
+export const ARCHIVED_DUPLICATE_MESSAGE = (title: string) => `Bản nhạc này đã từng có trong thư viện (“${title}”) nhưng đã được gỡ. Cần Admin khôi phục.`
 
 export async function importMusicXml(input: ReturnType<typeof prepareMusicXml>, title: string, composer: string): Promise<LibraryItem> {
   const cleanTitle = title.trim()
@@ -91,9 +111,12 @@ export async function importMusicXml(input: ReturnType<typeof prepareMusicXml>, 
   if (authError || !auth.user) throw new Error('Vui lòng đăng nhập lại.')
   const contentHash = await sha256(input.xml)
   const { data: existing, error: lookupError } = await supabase.from(TABLE)
-    .select('id,title').eq('content_hash', contentHash).limit(1)
+    .select('id,title,archived_at').eq('content_hash', contentHash).limit(1)
   if (lookupError) throw lookupError
-  if (existing?.length) throw new Error(`Bản nhạc này đã có trong thư viện: ${existing[0].title}.`)
+  if (existing?.length) {
+    if (existing[0].archived_at) throw new Error(ARCHIVED_DUPLICATE_MESSAGE(existing[0].title))
+    throw new Error(`Bản nhạc này đã có trong thư viện: ${existing[0].title}.`)
+  }
   const { data, error } = await supabase.from(TABLE).insert({
     title: cleanTitle,
     composer: composer.trim() || null,
@@ -102,7 +125,7 @@ export async function importMusicXml(input: ReturnType<typeof prepareMusicXml>, 
     content_hash: contentHash,
     size_bytes: input.sizeBytes,
     created_by: auth.user.id,
-  }).select('id,title,composer,created_at').single()
+  }).select('id,title,composer,created_at,created_by').single()
   // RLS từ chối (không phải Biên tập / mất vai): báo rõ, không lộ thông báo kỹ thuật.
   if (error && (error.code === '42501' || /row-level security/i.test(error.message ?? ''))) throw new Error(ADD_DENIED_MESSAGE)
   if (error) throw error
