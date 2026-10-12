@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import type { ChangeEvent } from 'react'
-import { ADD_DENIED_MESSAGE, canAddToLibrary, importMusicXml, listLibrary, matchesQuery, prepareMusicXml } from './masterLibrary.ts'
+import { ADD_DENIED_MESSAGE, canAddToLibrary, canManageItem, importMusicXml, listLibrary, matchesQuery, prepareMusicXml } from './masterLibrary.ts'
 import type { LibraryItem } from './masterLibrary.ts'
 import { scoreIdFromSearch } from './viewScore.ts'
 import { NEW_CHORD_SHEET, activeNavItem, sectionFromSearch, sectionUrl, uploadFromSearch, uploadUrl } from './sections.ts'
@@ -46,15 +46,16 @@ const PRODUCTION_EXTRACTOR = extractorUrls && import.meta.env.VITE_CHORD_LIBRARY
   })
   : undefined
 
-type PageProps = { chordLibrary?: ChordLibrary; measureAnalyzer?: MeasureAnalyzer; contentExtractor?: ContentExtractor }
+type PageProps = { chordLibrary?: ChordLibrary; measureAnalyzer?: MeasureAnalyzer; contentExtractor?: ContentExtractor; musicXmlOnly?: boolean }
 
 /**
  * Trang /thuvien: nằm trong KHUNG CỦA CLASS (ThuVienShell) — top bar, sidebar/menu sheet, tài khoản dùng chung với Class.
  * `ThuVienPageView` nhận phiên từ ngoài (trang thử / test truyền sẵn); mặc định xuất ra bản dùng phiên Class thật.
  */
-export function ThuVienPageView({ chordLibrary, measureAnalyzer = PRODUCTION_ANALYZER, contentExtractor = PRODUCTION_EXTRACTOR, session }: PageProps & { session: ClassSession }) {
+export function ThuVienPageView({ chordLibrary, measureAnalyzer = PRODUCTION_ANALYZER, contentExtractor = PRODUCTION_EXTRACTOR, session, musicXmlOnly = false }: PageProps & { session: ClassSession }) {
   const [search, setSearch] = useState(() => window.location.search)
-  const section = sectionFromSearch(search)
+  // musicXmlOnly (Biên tập không phải admin): luôn ở mục MusicXML, bỏ qua ?muc=hopam.
+  const section = musicXmlOnly ? 'musicxml' : sectionFromSearch(search)
   // Thêm bản nhạc vào thư viện: admin/teacher, hoặc người đang giữ vai Biên tập âm nhạc. Chỉ ẩn/hiện giao diện — RLS kiểm lại khi lưu.
   const uid = session.status === 'ready' ? session.me.userId : null
   const teacher = session.status === 'ready' && session.me.isTeacher
@@ -87,15 +88,15 @@ export function ThuVienPageView({ chordLibrary, measureAnalyzer = PRODUCTION_ANA
 
   const content = section === 'chords'
     ? <Suspense fallback={<main className="tv-chords"><p className="cl-empty">Đang mở Hợp âm chuẩn hóa…</p></main>}><ChordLibraryPage library={chordLibrary} analyzer={measureAnalyzer} extractor={contentExtractor} /></Suspense>
-    : <MusicXmlLibrary canUpload={canUpload} />
-  return <ThuVienShell active={activeNavItem(search)} onNavigate={navigate} session={session} canUploadMusicXml={canUpload !== false}>{content}</ThuVienShell>
+    : <MusicXmlLibrary canUpload={canUpload} uid={uid} teacher={teacher} />
+  return <ThuVienShell active={activeNavItem(search)} onNavigate={navigate} session={session} canUploadMusicXml={canUpload !== false} musicXmlOnly={musicXmlOnly}>{content}</ThuVienShell>
 }
 
 export default function ThuVienPage(props: PageProps = {}) {
   return <ThuVienPageView {...props} session={useClassSession()} />
 }
 
-function MusicXmlLibrary({ canUpload }: { canUpload: boolean | null }) {
+function MusicXmlLibrary({ canUpload, uid, teacher }: { canUpload: boolean | null; uid: string | null; teacher: boolean }) {
   const [items, setItems] = useState<LibraryItem[]>([])
   const [listState, setListState] = useState<'loading' | 'ready' | 'error'>('loading')
   const [listError, setListError] = useState('')
@@ -185,7 +186,9 @@ function MusicXmlLibrary({ canUpload }: { canUpload: boolean | null }) {
     return <main className="thu-vien">
         <Suspense fallback={<p className="tv-view-note">Đang mở bản nhạc…</p>}>
         <ScoreViewer key={openId} id={openId} initial={item ? { title: item.title, composer: item.composer } : null} onClose={closeScore}
-          onSaved={saved => setItems(current => current.map(entry => entry.id === saved.id ? saved : entry))} />
+          canManage={canManageItem(item, uid, teacher, canUpload === true)}
+          onArchived={removedId => { setItems(current => current.filter(entry => entry.id !== removedId)); closeScore() }}
+          onSaved={saved => setItems(current => current.map(entry => entry.id === saved.id ? { ...entry, ...saved } : entry))} />
       </Suspense>
     </main>
   }
