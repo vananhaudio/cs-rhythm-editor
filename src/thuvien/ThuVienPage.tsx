@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import type { ChangeEvent } from 'react'
+import EditorName from './EditorName.tsx'
 import { ADD_DENIED_MESSAGE, canAddToLibrary, canManageItem, importMusicXml, listLibrary, matchesQuery, prepareMusicXml } from './masterLibrary.ts'
 import type { LibraryItem } from './masterLibrary.ts'
 import { scoreIdFromSearch } from './viewScore.ts'
@@ -185,7 +186,7 @@ function MusicXmlLibrary({ canUpload, uid, teacher }: { canUpload: boolean | nul
     const item = items.find(entry => entry.id === openId)
     return <main className="thu-vien">
         <Suspense fallback={<p className="tv-view-note">Đang mở bản nhạc…</p>}>
-        <ScoreViewer key={openId} id={openId} initial={item ? { title: item.title, composer: item.composer } : null} onClose={closeScore}
+        <ScoreViewer key={openId} id={openId} initial={item ? { title: item.title, composer: item.composer } : null} editorId={item?.created_by ?? null} onClose={closeScore}
           canManage={canManageItem(item, uid, teacher, canUpload === true)}
           onArchived={removedId => { setItems(current => current.filter(entry => entry.id !== removedId)); closeScore() }}
           onSaved={saved => setItems(current => current.map(entry => entry.id === saved.id ? { ...entry, ...saved } : entry))} />
@@ -249,7 +250,7 @@ function MusicXmlLibrary({ canUpload, uid, teacher }: { canUpload: boolean | nul
       <div className="overflow-hidden rounded-xl border border-[#d8dfd6] bg-white">
         <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-3 bg-[#e9eee7] px-4 py-3 text-sm font-semibold sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_8rem]"><span>Tên bài</span><span>Tác giả</span><span className="hidden sm:block">Ngày thêm</span></div>
         {listState === 'ready' && shown.map(item => <button type="button" key={item.id} className="tv-row" onClick={() => openScore(item.id)} aria-label={`Mở bản nhạc ${item.title}`}>
-          <span className="break-words font-medium">{item.title}</span><span className="break-words">{item.composer || '—'}</span><time className="hidden sm:block" dateTime={item.created_at}>{new Date(item.created_at).toLocaleDateString('vi-VN')}</time>
+          <span className="break-words font-medium">{item.title}<EditorName userId={item.created_by} /></span><span className="break-words">{item.composer || '—'}</span><time className="hidden sm:block" dateTime={item.created_at}>{new Date(item.created_at).toLocaleDateString('vi-VN')}</time>
         </button>)}
         {listState === 'loading' && <p aria-live="polite">Đang tải thư viện…</p>}
         {listState === 'error' && <p role="alert">{listError} <button type="button" className="tv-retry" onClick={() => { setListState('loading'); setReload(n => n + 1) }}>Thử lại</button></p>}
