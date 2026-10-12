@@ -7,7 +7,7 @@ import ConversationList from '../chat/ConversationList'
 import ConversationView, { type Peer } from '../chat/ConversationView'
 import NewConversationView from '../chat/NewConversationView'
 import SystemNoticeView from '../chat/SystemNoticeView'
-import { useConversationList } from '../chat/useChat'
+import { useConversationList, useNoticeSound } from '../chat/useChat'
 import { NOTICE_TARGET_SEARCH, type ChatSelection, type SystemSummary } from '../chat/chatModel'
 
 /** Điện thoại: khi mở một hội thoại, khung phủ toàn màn hình → theo chiều cao THẬT khi bàn phím mở (iOS không co 100dvh) */
@@ -51,6 +51,7 @@ export default function Chat({ meId, selection, onOpenConversation, onBackToList
   onOpenThread?: (threadId: string, search?: string) => void
 }) {
   const list = useConversationList()
+  const sound = useNoticeSound()
   const { reload } = list
   const [hint, setHint] = useState<(Peer & { conversationId: string }) | null>(null)
   const open = selection.kind !== 'none'
@@ -78,6 +79,16 @@ export default function Chat({ meId, selection, onOpenConversation, onBackToList
   return (
     <div className={'cs-col-wide cs-chat-wrap' + (open ? ' has-open' : '')}>
       <h1 className="cs-page-title">Trò chuyện</h1>
+      {system != null && (
+        <div className="cs-chat-sound">
+          <span id="cs-chat-sound-label">Âm thanh thông báo</span>
+          <button type="button" role="switch" aria-checked={sound.enabled} aria-labelledby="cs-chat-sound-label"
+            className={'cs-switch' + (sound.enabled ? ' is-on' : '')} onClick={() => sound.set(!sound.enabled)}>
+            <span className="cs-switch-text">{sound.enabled ? 'Bật' : 'Tắt'}</span>
+            <span className="cs-switch-knob" aria-hidden="true" />
+          </button>
+        </div>
+      )}
       <section className="cs-card cs-chat">
         <ConversationList state={list.state} selectedId={selectedId} onSelect={id => onOpenConversation(id)}
           onRetry={list.retry} onOpenFriends={onOpenFriends}

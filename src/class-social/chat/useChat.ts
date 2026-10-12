@@ -1,7 +1,8 @@
 // Hook Trò chuyện V1a. Chỉ biết interface ChatLive (polling hôm nay, realtime sau này) — không đụng timer/mạng trực tiếp.
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { fetchConversations, fetchMessages, fetchSystemNotices, fetchSystemSummary, fetchUnreadCount, markRead, markSystemRead, sendMessage } from './chatApi'
 import { pollingLive, type ChatLive } from './chatLive'
+import { createNoticeSoundGate, getSoundEnabled, installAudioUnlock, playNoticePing, subscribeSound, writeSoundEnabled } from './noticeSound'
 import { PAGE, lastSeqOf, firstSeqOf, mergeMessages, mergeNotices, normalizeBody, NOTICE_PAGE, type ChatMessage, type ConversationItem, type PendingMessage, type SystemNotice, type SystemSummary } from './chatModel'
 
 /** Badge menu Trò chuyện — MỘT nguồn ở SignedInShell: hội thoại cá nhân chưa đọc (dm) + thông báo Class 2.0 chưa đọc (tách trạng thái đọc). */
@@ -10,12 +11,23 @@ export function useChatUnread(live: ChatLive = pollingLive) {
   const [system, setSystem] = useState<SystemSummary | null>(null)
   useEffect(() => live.watchUnread(setDm), [live])
   useEffect(() => live.watchSystem?.(setSystem) ?? (() => {}), [live])
+  // Sound V1: tiếng "ting" khi có thông báo Class 2.0 MỚI (so với mốc phiên) — dùng chính tóm tắt đang polling
+  const gate = useRef(createNoticeSoundGate())
+  useEffect(() => installAudioUnlock(), [])
+  useEffect(() => { if (gate.current.observe(system)) playNoticePing() }, [system])
   const refresh = useCallback(async () => {
     const [a, b] = await Promise.all([fetchUnreadCount(), fetchSystemSummary()])
     if (a.ok) setDm(a.value)
     setSystem(b.ok ? b.value : null)
   }, [])
   return { count: dm + (system?.unread ?? 0), system, refresh }
+}
+
+/** Công tắc "Âm thanh thông báo" (lưu trên thiết bị). Bật bằng thao tác người dùng ⇒ cũng mở khoá âm thanh trình duyệt. */
+export function useNoticeSound() {
+  const enabled = useSyncExternalStore(subscribeSound, getSoundEnabled, () => true)
+  const set = useCallback((on: boolean) => { writeSoundEnabled(on) }, [])
+  return { enabled, set }
 }
 
 export type ListState =

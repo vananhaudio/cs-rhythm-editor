@@ -1612,3 +1612,12 @@ button.cs-subs-title:hover { color: var(--cs-accent); }
 .cs-classspace .cs-classv2-sec + .cs-classv2-sec { border-top: 1px solid var(--cs-border); margin-top: var(--cs-s3); }
 .cs-classspace .cs-classv2-h2 { text-transform: none; letter-spacing: 0; font-size: 15px; font-weight: 600; color: var(--cs-text); margin-bottom: var(--cs-s2); }
 .cs-classspace .cs-act-line:hover { border-radius: 0; }
+
+/* Âm thanh thông báo (Sound V1): hàng công tắc nhỏ dưới tiêu đề Trò chuyện */
+.cs-chat-sound { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: -4px 0 10px; padding: 0 4px; font-size: 14px; color: var(--cs-text-2, var(--cs-text)); }
+.cs-switch { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 2px 0 8px; border: 0; background: transparent; color: var(--cs-text); font: inherit; font-size: 14px; cursor: pointer; }
+.cs-switch-knob { position: relative; width: 51px; height: 31px; border-radius: 999px; background: var(--cs-neutral-soft, #e5e5ea); transition: background .2s; flex: none; }
+.cs-switch-knob::after { content: ''; position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.3); transition: transform .2s; }
+.cs-switch.is-on .cs-switch-knob { background: #34c759; }
+.cs-switch.is-on .cs-switch-knob::after { transform: translateX(20px); }
+.cs-switch:focus-visible .cs-switch-knob { outline: 2px solid var(--cs-primary, #0a84ff); outline-offset: 2px; }
