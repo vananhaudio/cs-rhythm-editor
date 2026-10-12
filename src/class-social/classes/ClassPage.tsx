@@ -7,15 +7,13 @@
 //      (Class Reading UI V1: không tiêu đề "Mục lục" lớn; nhãn trả bài cấp buổi nằm bên phải tên buổi)
 //   Không gian lớp (/me/classes/<id>/space) — Feed của lớp + Thành viên ở đó, không preview ở đây
 // Không hệ tab mới (thanh phân đoạn chỉ là hai link route sẵn có), không "Tiếp tục học", không card "Đang học", không tự cuộn. Quyền do server quyết; trang chỉ ĐỌC + trình bày.
-import ShareButton from '../../share/ShareButton'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { ArrowLeft } from 'lucide-react'
 import '../../learning-thread/styles'
 import { currentSessionNo } from '../../classLearning/progress'
 import { fetchLearningEntry, type LearningEntry } from './classesApi'
 import type { ClassCard } from './classModel'
 import ClassMap, { NoMapNote } from './ClassMap'
-import { ClassSectionNav } from './ClassParts'
+import ClassHead from './ClassHead'
 import { learnerVisibleState } from './classMapModel'
 import SubmissionsPanel from './SubmissionsPanel'
 import { rememberCheckpointFocus, useClassLearning } from './useClassLearning'
@@ -62,7 +60,7 @@ export default function ClassPage({ classId, isTeacher = false, onOpenThread, on
   const hasSubmissions = !!learn && learn.mode === 'checkpoint' && learn.sessions.some(s => s.checkpoints.length > 0)
   const { ref, wide } = useWide(MASTER_DETAIL_MIN)
   // Học viên: mục lục chỉ là danh sách bài học (chi tiết bài trả ở Trang Buổi). Thầy giữ panel xem nhanh bài trả.
-  const side = wide && hasSubmissions && learn?.role === 'teacher'
+  const side = wide && hasSubmissions && isTeacher && learn?.role === 'teacher'
   const [picked, setPicked] = useState<number | null>(null)
   const firstWithSubs = learn?.sessions.find(s => s.checkpoints.length > 0)?.no ?? null
   const currentHasSubs = current != null && !!learn?.sessions.find(s => s.no === current)?.checkpoints.length
@@ -80,25 +78,21 @@ export default function ClassPage({ classId, isTeacher = false, onOpenThread, on
     return () => { alive = false }
   }, [loading, learn, member, classId])
 
-  const back = <button type="button" className="cs-btn cs-btn-ghost cs-btn-sm cs-profile-back" onClick={onOpenClasses}><ArrowLeft size={16} /> Lớp của tôi</button>
-  const shell = (body: ReactNode) => <div ref={ref} className={'cs-home cs-classv2 cs-classv3' + (side ? ' is-wide' : '')}>{body}</div>
-  if (detail.status === 'loading' || (loading && !learn)) return shell(<>{back}<p className="cs-loading" role="status">Đang mở lớp…</p></>)
-  if (detail.status === 'error' && !learn) return shell(<>{back}<div className="cs-card cs-feed-error" role="alert"><p>{detail.message}</p></div></>)
+  const head = (
+    <ClassHead classId={classId} card={c} fallbackName={learn?.className} canShare={member} active="syllabus"
+      onOpenClasses={onOpenClasses} onOpenSyllabus={() => undefined} onOpenSpace={onOpenSpace} />
+  )
+  const shell = (body: ReactNode) => (
+    <div ref={ref} className={'cs-home cs-classv2 cs-classv3 cs-classframe' + (isTeacher ? ' is-teacher' : '') + (side ? ' is-wide' : '')}>{head}{body}</div>
+  )
+  if (detail.status === 'loading' || (loading && !learn)) return shell(<p className="cs-loading" role="status">Đang mở lớp…</p>)
+  if (detail.status === 'error' && !learn) return shell(<div className="cs-card cs-feed-error" role="alert"><p>{detail.message}</p></div>)
 
-  const name = learn?.className ?? c?.name ?? 'Lớp học'
   return shell(
     <>
-      {back}
-      {/* A — tên lớp + lịch (thông tin thật sự hữu ích); không lặp tên khoá / Thầy / mã */}
-      <header className="cs-classv2-head">
-        <h1 className="cs-class-name">{name}</h1>
-        {member && <ShareButton target={{ type: 'class', key: classId.toLowerCase() }} title={name} />}
-        {c?.schedule && <p className="cs-classv2-meta">{c.schedule}</p>}
-        {c && !c.isMember && !isTeacher && <p className="cs-classv2-meta">Bạn đang xem lớp này — bạn chưa tham gia.</p>}
-        {learn?.role === 'teacher' && <p className="cs-classv2-meta">Giáo viên xem trước: mọi buổi đều mở.</p>}
-      </header>
-
-      <ClassSectionNav classId={classId} active="syllabus" onOpenSyllabus={() => undefined} onOpenSpace={onOpenSpace} />
+      {/* Thông báo theo vai trò nằm ở vùng nội dung, không làm dịch phần đầu */}
+      {c && !c.isMember && !isTeacher && <p className="cs-classv2-meta">Bạn đang xem lớp này — bạn chưa tham gia.</p>}
+      {learn?.role === 'teacher' && <p className="cs-classv2-meta">Giáo viên xem trước: mọi buổi đều mở.</p>}
 
       {/* B — MỤC LỤC SỐNG ↔ BÀI TRẢ CỦA TÔI */}
       <div className={side ? 'cs-learnmap is-split' : 'cs-learnmap'}>

@@ -114,12 +114,15 @@ test("V3 desktop master-detail: layout 'side' — bấm số bài trả CHỌN b
 
 test("Class Page V3: Tên lớp (+ lịch) → Mục lục ↔ Bài trả của tôi → cánh cửa Không gian lớp; KHÔNG feed/thành viên trên trang học", async () => {
   const p = src("class-social/classes/ClassPage.tsx")
-  const order = [/<h1 className="cs-class-name">/, /<ClassSectionNav /, /<ClassMap /, /<SubmissionsPanel /].map(re => pos(p, re))
-  assert.deepEqual([...order].sort((a, b) => a - b), order, "thứ tự: Tên lớp → Giáo trình | Không gian lớp → mục lục ↔ bài trả")
+  const order = [/<ClassHead /, /<ClassMap /, /<SubmissionsPanel /].map(re => pos(p, re))
+  assert.deepEqual([...order].sort((a, b) => a - b), order, "thứ tự: phần đầu dùng chung (Tên lớp → Giáo trình | Không gian lớp) → mục lục ↔ bài trả")
   assert.doesNotMatch(p, />Mục lục<\/h2>|ClassSpaceDoor/, "Class Reading UI V1: không tiêu đề 'Mục lục' lớn, không khối cánh cửa riêng")
   assert.doesNotMatch(p, /Lớp mình đang học|ActivityLine|MemberList|fetchClassActivityPage|fetchClassMembers|Tiếp tục học|Hoạt động gần đây|lt-profile-tabs|Vào học/)
   assert.doesNotMatch(p, /classMetaLine|teacherNames/, "header không lặp tên khoá / Thầy")
-  assert.match(p, /\{c\?\.schedule && <p className="cs-classv2-meta">\{c\.schedule\}<\/p>\}/)
+  const hd = src("class-social/classes/ClassHead.tsx")
+  assert.match(hd, /<h1 className="cs-class-name">/)
+  assert.match(hd, /\{schedule && <p className="cs-classv2-meta">\{schedule\}<\/p>\}/)
+  assert.match(hd, /<ClassSectionNav /)
   assert.match(p, /<NoMapNote entry=\{entry\} isMember=\{member\} \/>/)
   const { ClassSectionNav } = await import("../../src/class-social/classes/ClassParts")
   const cid = "11111111-2222-3333-4444-555555555555"
@@ -237,11 +240,16 @@ test("Class Reading UI V1 (nghiệm thu): học viên không thấy 44 buổi xo
   // quyền / mở khoá không đụng: trạng thái hiện tại tính từ dữ liệu gốc
   assert.equal(currentSessionNo(learner, NOW), 1)
   const p = src("class-social/classes/ClassPage.tsx")
-  assert.match(p, /const side = wide && hasSubmissions && learn\?\.role === 'teacher'/, "học viên không có panel phải")
+  assert.match(p, /const side = wide && hasSubmissions && isTeacher && learn\?\.role === 'teacher'/, "học viên không có panel phải")
 })
 
 test("Class Reading UI V1 (nghiệm thu): Không gian lớp không còn nút '← Về lớp' riêng — 'Giáo trình' trên thanh phân đoạn là đường quay lại", () => {
   const sp = src("class-social/classes/ClassSpacePage.tsx")
   assert.doesNotMatch(sp, /cs-classspace-back|ArrowLeft/)
-  assert.match(sp, /<ClassSectionNav classId=\{classId\} active="space" onOpenSyllabus=\{onBackToClass\}/)
+  assert.match(sp, /<ClassHead classId=\{classId\} card=\{c\} canShare=\{[^}]+\} active="space"/)
+  assert.match(sp, /onOpenSyllabus=\{onBackToClass\}/)
+  // Một phần đầu + một khung cho cả hai khu vực → tên lớp/thanh điều hướng không đổi toạ độ khi chuyển
+  const cp = src("class-social/classes/ClassPage.tsx")
+  assert.match(cp, /<ClassHead classId=\{classId\} card=\{c\} fallbackName=\{learn\?\.className\} canShare=\{member\} active="syllabus"/)
+  for (const f of [sp, cp]) assert.match(f, /cs-classframe/)
 })

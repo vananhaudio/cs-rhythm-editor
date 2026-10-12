@@ -286,8 +286,8 @@ try {
       if (w >= 1280 && (name === 'class' || name === 'space')) {
         const cw = await page.$eval('.cs-main > *:not(.cs-topbar)', e => e.getBoundingClientRect().width).catch(() => 0)
         const root = await page.$eval(name === 'class' ? '.cs-classv3' : '.cs-classspace', e => e.getBoundingClientRect().width)
-        // Class Reading UI V1: mục lục học viên là MỘT cột đọc (kiểu Apple Books, ≥ 600px, không panel phải); Không gian lớp giữ ≥ 860
-        const min = name === 'class' ? 600 : 860
+        // Class Reading UI V1 (đồng bộ bố cục): học viên cả hai khu vực dùng cùng một cột đọc căn giữa (720px, cùng khung .cs-classframe)
+        const min = 700
         assert.ok(root >= min, `${name} ${w}px: nội dung chỉ ${Math.round(root)}px (main ${Math.round(cw)})`)
       }
       if (name === 'space') {

@@ -1158,7 +1158,6 @@ a.cs-classrow-name { text-decoration: none; align-self: flex-start; }
 
 /* ── CLASS UX V3 — Learning Map ↔ Bài trả của tôi · Không gian lớp ─────────────────────────────────────────────
    Trang học = không gian học (không Social). Thứ bậc bằng chữ + khoảng trắng + căn cột; không card, ít viền. */
-.cs-classv3 { margin: 0 auto; }
 /* Mục lục: cột số 01/02/… scan được · tên buổi là trục riêng */
 .cs-classv3 .cs-map-row { display: grid; grid-template-columns: 2.4em minmax(0, 1fr); column-gap: 10px; align-items: baseline; padding-left: 10px; }
 .cs-map-no { font-variant-numeric: tabular-nums; font-size: 14px; font-weight: 700; color: var(--cs-faint); text-align: right; }
@@ -1191,20 +1190,22 @@ button.cs-subs-title:hover { color: var(--cs-accent); }
   --cs-r-sm: 8px; --cs-r-md: 12px; --cs-r-lg: 14px;
   --cs-shadow: 0 1px 2px rgba(24, 24, 27, 0.06);
   --cs-nav-active: #f5f1fe;
-  --cs-w-feed: 680px; --cs-w-thread: 720px; --cs-w-space: 880px; --cs-w-dir: 880px; --cs-w-profile: 760px; --cs-w-class: 1160px;
+  --cs-w-feed: 680px; --cs-w-thread: 720px; --cs-w-space: 880px; --cs-w-dir: 880px; --cs-w-profile: 760px; --cs-w-class: 1160px; --cs-w-class-col: 720px;
 }
 
 /* Bề rộng theo loại trang — không "cột mobile giữa biển trắng" trên desktop */
 .cs-col { max-width: var(--cs-w-feed); }
 .cs-col.lt-page { max-width: var(--cs-w-thread); }
-.cs-col.cs-classspace { max-width: var(--cs-w-class); }
 .cs-col.cs-friends-page { max-width: var(--cs-w-dir); }
 .cs-col.cs-profile-page { max-width: var(--cs-w-profile); }
-/* Trang học + Không gian lớp CÙNG một container (--cs-w-class, căn giữa) → tên lớp · thanh Giáo trình/Không gian lớp ·
-   nội dung chính chung một trục trái ở mọi vai trò/cỡ. Độ rộng đọc (--cs-w-space) giới hạn ở nội dung, canh trái. */
-.cs-classv3 { max-width: var(--cs-w-class); }
-.cs-classv3:not(.is-wide) .cs-learnmap-main, .cs-classv3:not(.is-wide) > .cs-secnav,
-.cs-col.cs-classspace > .cs-classv2-sec, .cs-col.cs-classspace > .cs-secnav { max-width: var(--cs-w-space); }
+/* Trang học + Không gian lớp CÙNG một khung (.cs-classframe): cột đọc căn giữa như Trang chủ (--cs-w-class-col).
+   Giáo viên (.is-teacher) dùng khung rộng --cs-w-class cho master-detail; header giống hệt ở cả hai trang nên không dịch. */
+.cs-classframe { max-width: var(--cs-w-class-col); margin: 0 auto; width: 100%; }
+.cs-classframe.is-teacher { max-width: var(--cs-w-class); margin: 0 auto; }
+.cs-classframe.is-teacher .cs-learnmap:not(.is-split), .cs-classframe.is-teacher.cs-classspace > .cs-classv2-sec { max-width: var(--cs-w-space); }
+.cs-classhead { display: flex; flex-direction: column; gap: 6px; }
+.cs-classhead-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 36px; }
+.cs-classhead .cs-class-name { min-height: 1.25em; }
 
 /* Sidebar: hàng đều 44px, icon thẳng cột, nhóm cách 16px; tiêu đề nhóm chữ thường (không ALL CAPS) */
 .cs-nav-title { text-transform: none; letter-spacing: 0; font-size: 13px; font-weight: 600; color: var(--cs-faint); padding: 0 12px 4px; }

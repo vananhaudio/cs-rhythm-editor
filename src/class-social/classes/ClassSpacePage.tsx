@@ -11,12 +11,16 @@ import { isThreadEntry } from '../posts/postModel'
 import { usePostsFeed } from '../posts/usePostsFeed'
 import { fetchClassActivityPage, fetchClassDetail, fetchClassMembers } from './classesApi'
 import type { ClassCard, ClassMember } from './classModel'
-import { ClassSectionNav, MemberList } from './ClassParts'
+import ClassHead from './ClassHead'
+import { MemberList } from './ClassParts'
 import { ActivityLine } from './ClassActivity'
 import type { Load } from './useClassLearning'
 
-export default function ClassSpacePage({ classId, onBackToClass, onOpenThread, onOpenProfile }: {
+export default function ClassSpacePage({ classId, isTeacher, onOpenClasses, onBackToClass, onOpenThread, onOpenProfile }: {
   classId: string
+  isTeacher: boolean
+  /** "← Lớp của tôi" — cùng nút với trang Giáo trình (phần đầu dùng chung) */
+  onOpenClasses: () => void
   /** "← <tên lớp>": về trang học của lớp (lịch sử trong /me nếu có, ngược lại mở trang lớp) */
   onBackToClass: () => void
   onOpenThread: (id: string) => void
@@ -57,11 +61,9 @@ export default function ClassSpacePage({ classId, onBackToClass, onOpenThread, o
   }
 
   return (
-    <div className="cs-col cs-home cs-classv2 cs-classspace">
-      <header className="cs-classv2-head">
-        <h1 className="cs-class-name">{c?.name ?? 'Không gian lớp'}</h1>
-      </header>
-      <ClassSectionNav classId={classId} active="space" onOpenSyllabus={onBackToClass} onOpenSpace={() => undefined} />
+    <div className={'cs-home cs-classv2 cs-classspace cs-classframe' + (isTeacher ? ' is-teacher' : '')}>
+      <ClassHead classId={classId} card={c} canShare={!!c && (c.isMember || isTeacher)} active="space"
+        onOpenClasses={onOpenClasses} onOpenSyllabus={onBackToClass} onOpenSpace={() => undefined} />
       {detail.status === 'error' && <p className="cs-act-note" role="alert">{detail.message}</p>}
 
       <section className="cs-classv2-sec" aria-labelledby="cs-space-feed" aria-busy={feed.status === 'loading'}>
