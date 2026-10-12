@@ -199,8 +199,8 @@ test('chia nhịp tạm thời: mỗi hợp âm mở một ô, theo thứ tự �
   const result = provisionalBars(TEXT, null)
   assert.ok(result.ok)
   if (!result.ok) return
-  assert.equal(result.count, 6)
-  assert.deepEqual(result.anchors.measures, [A(0, 1), A(0, 4), A(1, 1), A(1, 3), A(2, 0), A(2, 2)])
+  assert.equal(result.count, 7)
+  assert.deepEqual(result.anchors.measures, [A(0, 0), A(0, 1), A(0, 4), A(1, 1), A(1, 3), A(2, 0), A(2, 2)])
   assert.equal(result.anchors.pickup, undefined)
   assert.notEqual(parseAnchors(result.anchors, TEXT), null, 'hình dạng hợp lệ với lời')
 })
@@ -229,4 +229,44 @@ test('chia nhịp tạm thời: bài đã có vạch / không có hợp âm → 
   assert.equal(provisionalBars(TEXT, { pickup: A(0, 1), measures: [] }).ok, false)
   assert.equal(provisionalBars('chỉ có lời\nkhông hợp âm', null).ok, false)
   assert.deepEqual(existing, { measures: [A(0, 0)] })
+})
+
+test('chia nhịp tạm thời: lời trước hợp âm đầu → vạch đầu bài (ô 1) + vạch trước mỗi hợp âm; hợp âm đầu bài → không trùng', () => {
+  const lead = 'Mùa thu [Am] cho em [Dm] nụ hôn'
+  const a = provisionalBars(lead, null)
+  assert.ok(a.ok)
+  if (!a.ok) return
+  assert.deepEqual(a.anchors.measures, [A(0, 0), A(0, 2), A(0, 4)])
+  assert.equal(a.anchors.pickup, undefined, 'không dùng nhịp lấy đà')
+  assert.equal(renderAnchors(lead, a.anchors)[0].text, '| Mùa thu | [Am] cho em | [Dm] nụ hôn')
+  const b = provisionalBars('[Am] Mùa thu [Dm] cho em', null)
+  assert.ok(b.ok)
+  if (!b.ok) return
+  assert.deepEqual(b.anchors.measures, [A(0, 0), A(0, 2)])
+  assert.equal(renderAnchors('[Am] Mùa thu [Dm] cho em', b.anchors)[0].text, '| [Am] Mùa thu | [Dm] cho em')
+})
+
+test('chia nhịp tạm thời: bỏ qua dòng trống, nhãn và chú thích đầu bài; không bao giờ có hai vạch cùng vị trí', () => {
+  const text = '\n(Capo 2)\n\nIntro:\n1. Chiều nay [Am] tiễn nhau [E7] đi\n[C] la la'
+  const r = provisionalBars(text, null)
+  assert.ok(r.ok)
+  if (!r.ok) return
+  // dòng 0 = "(Capo 2)" sau chuẩn hoá bỏ dòng trống đầu; dòng hát đầu tiên là "1. Chiều nay …"
+  const lines = anchorLines(text)
+  const start = lines.findIndex(v => v.tokens.some(t => t.word === 'Chiều'))
+  assert.deepEqual(r.anchors.measures[0], A(start, 0))
+  const keys = r.anchors.measures.map(m => `${m.line}:${m.token}`)
+  assert.equal(new Set(keys).size, keys.length, 'không trùng')
+  assert.notEqual(parseAnchors(r.anchors, text), null)
+})
+
+test('chia nhịp tạm thời: kết quả vẫn sửa được bằng công cụ vạch (bỏ vạch, thêm vạch, dịch)', () => {
+  const lead = 'Mùa thu [Am] cho em [Dm] nụ hôn'
+  const r = provisionalBars(lead, null)
+  assert.ok(r.ok)
+  if (!r.ok) return
+  const removed = toggleGap(r.anchors.measures, A(0, 2), 'order')
+  assert.deepEqual(removed, [A(0, 0), A(0, 4)])
+  const added = toggleGap(removed, A(0, 3), 'order')
+  assert.deepEqual(added, [A(0, 0), A(0, 3), A(0, 4)])
 })

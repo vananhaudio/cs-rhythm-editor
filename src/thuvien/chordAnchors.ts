@@ -173,15 +173,23 @@ export function toggleGap(measures: MeasureAnchor[], at: MeasureAnchor, mode: 'o
 export type ProvisionalBars = { ok: true; anchors: ChordAnchors; count: number } | { ok: false; reason: string }
 
 /**
- * "Chia nhịp tạm thời": đặt một vạch nhịp TRƯỚC mỗi chữ đang mang hợp âm (kể cả "(-)"), theo thứ tự đọc.
- * Không đoán tiết tấu, không đụng vào lời/hợp âm; người biên tập sửa tiếp bằng công cụ khe/vạch hiện có.
- * Bài đã có vạch (hoặc nhịp lấy đà) → chặn, không trộn.
+ * "Chia nhịp tạm thời": vạch ĐẦU BÀI (chữ hát đầu tiên của dòng hát đầu tiên — bỏ qua nhãn, dòng trống, chú thích kiểu
+ * "Capo 2") rồi một vạch TRƯỚC mỗi chữ đang mang hợp âm (kể cả "(-)"), theo thứ tự đọc. Phần lời trước hợp âm đầu tiên
+ * vì vậy là ô 1. Hợp âm đứng ngay đầu bài thì chỉ một vạch. Không dùng `pickup`, không đoán tiết tấu, không đụng vào lời/hợp âm;
+ * người biên tập sửa tiếp bằng công cụ khe/vạch hiện có. Bài đã có vạch (hoặc nhịp lấy đà) → chặn, không trộn.
  */
 export function provisionalBars(text: string, existing: ChordAnchors | null): ProvisionalBars {
   if (existing && (existing.measures.length > 0 || existing.pickup)) return { ok: false, reason: 'Bài đã có vạch nhịp — không chia lại để tránh đè lên vạch cũ.' }
+  const raw = canonicalChordText(text).split('\n')
+  const views = anchorLines(text)
   const measures: MeasureAnchor[] = []
-  anchorLines(text).forEach((view, line) => view.tokens.forEach((token, index) => { if (token.chord) measures.push({ line, token: index }) }))
+  views.forEach((view, line) => view.tokens.forEach((token, index) => { if (token.chord) measures.push({ line, token: index }) }))
   if (!measures.length) return { ok: false, reason: 'Bài chưa có hợp âm nào để chia nhịp.' }
+  let startLine = views.findIndex((view, line) => view.tokens.length > 0 && !NOT_SUNG.test(foldVi(raw[line].trim())))
+  if (startLine < 0) startLine = views.findIndex(view => view.tokens.length > 0)
+  const first = measures[0]
+  // Vạch đầu bài chỉ thêm khi chưa có hợp âm nào ở đó hoặc trước đó (khi đó chính vạch hợp âm đã là vạch đầu bài).
+  if (startLine >= 0 && !(first.line !== null && (first.line < startLine || (first.line === startLine && (first.token as number) === 0)))) measures.unshift({ line: startLine, token: 0 })
   return { ok: true, anchors: anchorsPayload(measures, null), count: measures.length }
 }
 

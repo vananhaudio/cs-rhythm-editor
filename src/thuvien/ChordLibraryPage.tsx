@@ -552,12 +552,15 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
     setExtraction({ state: 'idle' })
   }
 
-  async function approve() {
-    if (busy || !detail) return
+  /** Duyệt MỘT phiên bản: mặc định bản đang mở; nút cạnh nhãn "có bản nháp mới hơn" truyền id của bản nháp. Cùng một lời gọi duyệt. */
+  async function approve(targetId: string | undefined = detail?.versionId) {
+    if (busy || !detail || !targetId) return
     setBusy(true); setMessage(''); setFailed('')
     try {
-      adopt(await library.approveChordSheetVersion(detail.versionId))
-      setMessage(`Đã duyệt — phiên bản ${detail.versionNumber} là bản đang dùng.${suffix}`)
+      const next = await library.approveChordSheetVersion(targetId)
+      adopt(next)
+      if (targetId !== detail.versionId) onSaved(next)   // đang mở bản cũ: địa chỉ chuyển sang bản vừa duyệt
+      setMessage(`Đã duyệt — phiên bản ${next.versionNumber} là bản đang dùng.${suffix}`)
     } catch (cause) {
       setFailed(cause instanceof Error ? cause.message : 'Không duyệt được.')
     } finally { setBusy(false) }
@@ -626,6 +629,8 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
     </div>
   }
 
+  // Nút "Duyệt" cạnh nhãn bản nháp: bản nháp đang mở, hoặc bản nháp mới hơn của bản đang dùng. Chỉ khi có bản nháp thật.
+  const quickApproveId = !detail ? null : detail.status === 'draft' ? detail.versionId : detail.status === 'current' ? detail.draftVersionId : null
   return <div className="cl-wrap cl-wrap-wide">
     <header className="cl-editor-head">
       <button type="button" className="cl-back" onClick={close}>← Danh sách</button>
@@ -633,14 +638,18 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
       <button type="button" className="cl-primary" onClick={() => void save()} disabled={busy || sourceBusy}>{busy ? 'Đang lưu…' : 'Lưu'}</button>
     </header>
     <MockBanner library={library} />
-    {detail && <button type="button" className="cl-status-chip" data-status={detail.status} onClick={() => setAdvancedOpen(true)}
-      title="Xem / duyệt phiên bản">
-      {detail.status === 'current' && (detail.draftVersionId ? 'Đang dùng · có bản nháp mới hơn' : 'Đang dùng')}
-      {detail.status === 'draft' && 'Bản nháp — chưa dùng chính thức'}
-      {detail.status === 'old' && 'Bản cũ — hiện không dùng'}
-      {detail.status === 'discarded' && 'Bản nháp đã bỏ'}
-      <span aria-hidden="true"> ›</span>
-    </button>}
+    {detail && <div className="cl-status-row">
+      <button type="button" className="cl-status-chip" data-status={detail.status} onClick={() => setAdvancedOpen(true)}
+        title="Xem / duyệt phiên bản">
+        {detail.status === 'current' && (detail.draftVersionId ? 'Đang dùng · có bản nháp mới hơn' : 'Đang dùng')}
+        {detail.status === 'draft' && 'Bản nháp — chưa dùng chính thức'}
+        {detail.status === 'old' && 'Bản cũ — hiện không dùng'}
+        {detail.status === 'discarded' && 'Bản nháp đã bỏ'}
+        <span aria-hidden="true"> ›</span>
+      </button>
+      {quickApproveId && <button type="button" className="cl-approve-quick" disabled={busy || unsaved} title={unsaved ? 'Lưu thay đổi trước khi duyệt' : 'Duyệt bản nháp này để dùng chính thức'}
+        onClick={() => void approve(quickApproveId)}>Duyệt</button>}
+    </div>}
     {message && <p role="status" className="cl-notice">{message}</p>}
     {failed && <p role="alert" className="cl-notice cl-notice-bad">{failed}</p>}
 

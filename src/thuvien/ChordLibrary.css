@@ -208,6 +208,10 @@
 .tv-chords .cl-h2-note { font-size: 13px; font-weight: 500; color: #526456; text-transform: none; letter-spacing: 0; }
 .tv-chords .cl-status-chip { justify-self: start; margin: 0 0 14px; padding: 6px 12px; border: 1px solid #ccd5ca; border-radius: 999px; background: #fff; color: #26352d; font-size: 13px; font-weight: 600; }
 .tv-chords .cl-status-chip[data-status=draft] { border-color: #e3c98b; background: #fffaf0; }
+.tv-chords .cl-status-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin: 0 0 14px; }
+.tv-chords .cl-status-row .cl-status-chip { margin: 0; }
+.tv-chords .cl-approve-quick { min-height: 44px; padding: 0 18px; border: 0; border-radius: 999px; background: #32664a; color: #fff; font-size: 15px; font-weight: 600; }
+.tv-chords .cl-approve-quick:disabled { opacity: .5; }
 .tv-chords .cl-status-chip[data-status=current] { border-color: #b9d6c2; background: #f1f8f3; }
 .tv-chords .cl-fold { border: 1px solid #d8dfd6; border-radius: 12px; background: #fff; }
 .tv-chords .cl-fold > summary { min-height: 48px; padding: 12px 20px; cursor: pointer; font-weight: 700; display: flex; align-items: center; gap: 8px; }

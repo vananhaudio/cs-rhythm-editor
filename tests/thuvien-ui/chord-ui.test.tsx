@@ -1845,3 +1845,75 @@ test('Chia nhịp tạm thời: vạch hiện ngay (chưa lưu), lời + hợp �
   const draft = await view.library.getChordSheet(saved.draftVersionId!)
   assert.ok((draft.anchors?.measures.length ?? 0) > 0, 'vạch đi vào phiên bản mới')
 })
+
+// ── Nút "Duyệt" ngay cạnh nhãn bản nháp ──
+const quick = (view: ReturnType<typeof render>) => view.queryByRole('button', { name: 'Duyệt' })
+
+test('Duyệt nhanh: bản đang dùng không có nháp → không có nút; có nháp → nút cạnh nhãn, duyệt ĐÚNG bản nháp, kết quả như nút cũ, không duyệt hai lần', async () => {
+  const view = await openList()
+  fireEvent.click(view.getByRole('button', { name: 'Sửa bài Bài thử 01' }))
+  await settle()
+  assert.equal(quick(view), null, 'không có bản nháp → không có nút')
+  const chip = () => view.container.querySelector('.cl-status-row .cl-status-chip')!
+  assert.equal(chip().textContent?.replace(/\s*›$/, ''), 'Đang dùng')
+  // tạo bản nháp v2
+  type(view.getByLabelText(/Tên bài/), 'Bài thử 01 (nháp)')
+  setLyrics(view, lyricsOf(view) + '\n[C] Thêm một dòng')
+  fireEvent.click(view.getByRole('button', { name: 'Lưu' }))
+  await settle()
+  const [item] = await view.library.searchChordSheets('nhap')
+  assert.ok(item.draftVersionId)
+  const draftId = item.draftVersionId!
+  // mở lại BẢN ĐANG DÙNG từ danh sách: nhãn "có bản nháp mới hơn" + nút Duyệt ngay cạnh, không cần mở bản nháp
+  fireEvent.click(view.getByRole('button', { name: '← Danh sách' }))
+  await settle()
+  fireEvent.click(view.getByRole('button', { name: 'Sửa bài Bài thử 01 (nháp)' }))
+  await settle()
+  assert.match(chip().textContent ?? '', /có bản nháp mới hơn/)
+  const button = quick(view) as HTMLButtonElement
+  assert.ok(button, 'nút Duyệt hiện cạnh thông báo')
+  assert.equal(button.parentElement, chip().parentElement, 'cùng một hàng với nhãn')
+  assert.equal((await view.library.getChordSheet(item.versionId)).status, 'current')
+  fireEvent.click(button)
+  await settle()
+  const approved = await view.library.getChordSheet(draftId)
+  assert.deepEqual([approved.status, approved.versionNumber], ['current', 2], 'duyệt đúng bản nháp')
+  assert.equal((await view.library.getChordSheet(item.versionId)).status, 'old', 'bản cũ → "bản cũ", y như nút Duyệt bản này')
+  assert.match(view.getByRole('status').textContent ?? '', /Đã duyệt — phiên bản 2/)
+  assert.equal(dom.window.location.search, `?muc=hopam&hopam=${draftId}`, 'địa chỉ chuyển sang bản vừa duyệt')
+  assert.equal(quick(view), null, 'sau khi duyệt không còn nút → không duyệt hai lần')
+  assert.match(lyricsOf(view), /Thêm một dòng$/)
+})
+
+test('Duyệt nhanh: đang mở BẢN NHÁP → nút Duyệt cạnh nhãn, cho kết quả như "Duyệt bản này"; còn thay đổi chưa lưu thì khoá', async () => {
+  const view = await openList()
+  fireEvent.click(view.getByRole('button', { name: 'Sửa bài Bài thử 01' }))
+  await settle()
+  type(view.getByLabelText(/BPM gợi ý/), '77')
+  fireEvent.click(view.getByRole('button', { name: 'Lưu' }))
+  await settle()
+  const [item] = await view.library.searchChordSheets('bai thu 01')
+  const draftId = item.draftVersionId!
+  assert.match(view.container.querySelector('.cl-status-row .cl-status-chip')?.textContent ?? '', /Bản nháp/)
+  const button = quick(view) as HTMLButtonElement
+  assert.ok(button)
+  assert.equal(button.disabled, false)
+  type(view.getByLabelText(/BPM gợi ý/), '88')
+  assert.equal((quick(view) as HTMLButtonElement).disabled, true, 'còn thay đổi chưa lưu → không duyệt')
+  type(view.getByLabelText(/BPM gợi ý/), '77')
+  fireEvent.click(quick(view)!)
+  await settle()
+  const approved = await view.library.getChordSheet(draftId)
+  assert.deepEqual([approved.status, approved.versionNumber], ['current', 2])
+  assert.equal(quick(view), null)
+})
+
+test('Duyệt nhanh: chỉ-xem (không quyền sửa) → không có trình sửa nên không có nút Duyệt', async () => {
+  const library = createMockChordLibrary({ storage: memoryStorage() })
+  const [first] = await library.searchChordSheets('')
+  goto(`?muc=hopam&hopam=${first.versionId}`)
+  const view = render(<ChordLibraryPage library={library} canEdit={false} />)
+  await settle()
+  assert.equal(view.queryByRole('button', { name: 'Duyệt' }), null)
+  assert.equal(view.queryByRole('button', { name: 'Duyệt bản này' }), null)
+})
