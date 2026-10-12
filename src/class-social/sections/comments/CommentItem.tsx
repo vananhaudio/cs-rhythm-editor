@@ -5,6 +5,7 @@ import { relativeTime } from '../../posts/postModel'
 import { Avatar, MoreMenu, PersonLink } from '../../ui'
 import ResourceCard from './ResourceCard'
 import { IdentityBadges } from '../../identity/IdentityBadges'
+import ExpandableText from '../ExpandableText'
 
 export default function CommentItem({ c, canModerate, now, onDelete, onModerate, onOpenProfile }: {
   c: Comment
@@ -33,7 +34,7 @@ export default function CommentItem({ c, canModerate, now, onDelete, onModerate,
             {teacher ? <span className="cs-cmt-badge" title="Nhận xét của giáo viên">Thầy</span> : <IdentityBadges userId={c.author.userId} max={1} />}
             {c.isHidden && <span className="cs-cmt-hidden">Đã ẩn · học sinh không thấy</span>}
           </div>
-          <p className="cs-cmt-body">{c.body}</p>
+          <ExpandableText text={c.body} className="cs-cmt-body" lines={4} />
           {c.tags.length > 0 && (
             <ul className="cs-tags" aria-label="Tag kiến thức">
               {c.tags.map(t => <li key={t.id} className="cs-tag">#{t.name}</li>)}

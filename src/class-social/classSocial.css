@@ -306,6 +306,10 @@
 /* ── Bình luận ───────────────────────────────────────────────────────────── */
 .cs-cmts { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--cs-border); display: flex; flex-direction: column; gap: 8px; }
 .cs-cmts-more { align-self: flex-start; }
+/* Thu gọn văn bản dài (ExpandableText): số dòng theo --cs-clamp-lines */
+.cs-clamp { scroll-margin-top: 72px; }
+.cs-clamp.is-clamped { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: var(--cs-clamp-lines, 6); line-clamp: var(--cs-clamp-lines, 6); overflow: hidden; }
+.cs-clamp-toggle { display: block; margin-top: 4px; }
 .cs-cmts-error { margin: 0; font-size: 13.5px; color: #b42318; }
 .cs-cmt-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
 .cs-cmt { display: flex; gap: 8px; align-items: flex-start; min-width: 0; }

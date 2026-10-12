@@ -9,6 +9,7 @@ import { Avatar, MoreMenu, PersonLink } from '../ui'
 import CommentsSection from './comments/CommentsSection'
 import ToolShareBody from '../toolshare/ToolShareCard'
 import { IdentityBadges } from '../identity/IdentityBadges'
+import ExpandableText from './ExpandableText'
 
 export type PostSocial = {
   me: ClassIdentity | null
@@ -70,7 +71,7 @@ export default function PostCard({ post, now, social }: { post: FeedPost; now?: 
       {post.body && (
         <div className="cs-post-note">
           {post.type === 'assignment' && <span className="cs-post-note-label">Ghi chú cho Thầy</span>}
-          <p className="cs-post-body">{post.body}</p>
+          <ExpandableText text={post.body} className="cs-post-body" lines={6} />
         </div>
       )}
       {social && (
