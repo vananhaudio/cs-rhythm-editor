@@ -95,6 +95,21 @@ export function storyLine(c: Pick<ThreadCard, 'lastEvent' | 'learner'>): Story |
   }
 }
 
+/** Dòng kể chuyện của THẺ status: học viên (người tạo thread) luôn là chủ thể; Thầy chỉ là người tác động. */
+export function cardStory(c: Pick<ThreadCard, 'lastEvent' | 'learner'>): Story | null {
+  const e = c.lastEvent
+  if (!e) return null
+  const base = storyLine(c)
+  if (!base) return null
+  if (e.authorRole !== 'teacher') return base   // học viên tự trả/hỏi/sửa bài: đã là chủ thể
+  const by = e.author.name
+  const text = e.kind === 'teacher_answer' ? `được ${by} trả lời`
+    : e.verdict === 'retry' ? `được ${by} nhận xét · Cần làm lại`
+    : e.verdict === 'pass' ? `được ${by} nhận xét · Đạt`
+    : `được ${by} nhận xét`
+  return { ...base, actor: c.learner, text }
+}
+
 // ── Hành trình (RPC learning_journey) ─────────────────────────────────────────
 export type JourneyEvent = { kind: EventKind; verdict: Verdict | null; authorRole: 'student' | 'teacher'; hasResources: boolean; createdAt: string }
 export type JourneyItem = {

@@ -4,7 +4,7 @@
 import { relativeTime } from '../class-social/posts/postModel'
 import { Avatar, PersonLink } from '../class-social/ui'
 import { VISIBILITY_LABEL, identityLine, moduleLabel } from './ltModel'
-import { originBadge, storyLine, type ThreadCard } from './feedModel'
+import { cardStory, originBadge, type ThreadCard } from './feedModel'
 import { StatusChip } from './ThreadView'
 import { IdentityBadges } from '../class-social/identity/IdentityBadges'
 import UiIcon from '../class-social/UiIcon'
@@ -18,7 +18,7 @@ export default function LearningThreadCard({ card, now, onOpenThread, onOpenProf
   inClass?: boolean
 }) {
   const badge = originBadge(card)
-  const story = storyLine(card)
+  const story = cardStory(card)
   // Lượt đầu của chính người học đã rõ qua tên + nhãn loại → chỉ kể khi Thầy vừa phản hồi hoặc học sinh trả lại bài
   const showStory = !!story && (card.lastEvent?.authorRole === 'teacher' || card.lastEvent?.isResubmission === true)
   const learner = card.learner
