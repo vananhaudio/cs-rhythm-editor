@@ -135,9 +135,9 @@ test("Class Page V3: Tên lớp (+ lịch) → Mục lục ↔ Bài trả của 
   const navM = renderToStaticMarkup(<ClassSectionNav classId={cid} active="members" onOpenSyllabus={noop} onOpenSpace={noop} onOpenMembers={noop} />)
   assert.match(navM, new RegExp(`href="/me/classes/${cid}/members"[^>]*aria-current="page"`), "tab Thành viên đang chọn")
   assert.doesNotMatch(navM, new RegExp(`href="/me/classes/${cid}/space"[^>]*aria-current`))
-  // Không gian lớp: REUSE social_class_activity + ActivityLine + MemberList (không hệ Social mới), ← về đúng lớp
+  // Không gian lớp: REUSE social_class_activity + LearningThreadCard (thẻ Feed) + MemberList (không hệ Social mới), ← về đúng lớp
   const sp = src("class-social/classes/ClassSpacePage.tsx")
-  assert.match(sp, /fetchClassActivityPage/); assert.match(sp, /<ActivityLine /); assert.match(sp, /<MemberList /); assert.match(sp, /fetchClassMembers/)
+  assert.match(sp, /fetchClassActivityPage/); assert.match(sp, /<LearningThreadCard /); assert.doesNotMatch(sp, /<ActivityLine /); assert.match(sp, /<MemberList /); assert.match(sp, /fetchClassMembers/)
   assert.doesNotMatch(sp, /rpc\(|\.from\(/)
   assert.match(sp, /\{tab === 'space' && <section[\s\S]*cs-space-feed/, "Không gian lớp = bảng hoạt động trực tiếp")
   assert.match(sp, /\{tab === 'members' && <section[\s\S]*cs-space-members/, "Thành viên = tab riêng, không nằm trên/dưới feed")
