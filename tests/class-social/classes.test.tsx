@@ -8,7 +8,7 @@ import { readFileSync } from "node:fs";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
-  CLASSES_PATH, classIdFromPath, classPath, classSpacePath, keepsPathForGuest, resolveMeRoute, sameView, viewFromPath, viewPath,
+  CLASSES_PATH, classIdFromPath, classMembersPath, classPath, classSpacePath, keepsPathForGuest, resolveMeRoute, sameView, viewFromPath, viewPath,
 } from "../../src/class-social/resolveMeRoute";
 import { NAV_GROUPS } from "../../src/class-social/nav";
 import ClassNav from "../../src/class-social/classes/ClassNav";
@@ -30,6 +30,17 @@ const card = (o: Record<string, unknown> = {}) => ({
 });
 
 // ── Route ────────────────────────────────────────────────────────────────────
+test("route Thành viên /me/classes/<uuid>/members — thêm mới, /space và /classes/<id> giữ nguyên, giữ link qua đăng nhập", () => {
+  assert.equal(classMembersPath(CID), `/me/classes/${CID}/members`);
+  assert.deepEqual(viewFromPath(`/me/classes/${CID.toUpperCase()}/members/`), { kind: "classMembers", classId: CID });
+  assert.equal(viewPath({ kind: "classMembers", classId: CID }), `/me/classes/${CID}/members`);
+  assert.equal(sameView({ kind: "classMembers", classId: CID }, { kind: "classSpace", classId: CID }), false);
+  assert.equal(keepsPathForGuest({ kind: "classMembers", classId: CID }), true);
+  assert.deepEqual(viewFromPath(`/me/classes/${CID}/space`), { kind: "classSpace", classId: CID }, "deep link cũ giữ nguyên");
+  assert.deepEqual(viewFromPath(`/me/classes/${CID}`), { kind: "class", classId: CID }, "mặc định mở lớp = Giáo trình");
+  assert.deepEqual(viewFromPath(`/me/classes/${CID}/members/x`), { kind: "section", section: "home" }, "đường dẫn thừa không khớp");
+});
+
 test("route Không gian lớp /me/classes/<uuid>/space (V3) — một cấp dưới Trang Lớp, giữ link qua đăng nhập", () => {
   assert.equal(classSpacePath(CID), `/me/classes/${CID}/space`);
   assert.deepEqual(viewFromPath(`/me/classes/${CID.toUpperCase()}/space/`), { kind: "classSpace", classId: CID });

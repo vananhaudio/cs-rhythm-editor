@@ -1,4 +1,5 @@
-// /me/classes/<id>/space — KHÔNG GIAN LỚP (Class UX V3): Social của ĐÚNG MỘT lớp, tách khỏi trang học.
+// /me/classes/<id>/space (Không gian lớp) và /members (Thành viên) — Class UX V3: Social của ĐÚNG MỘT lớp, tách khỏi trang học.
+// Hai tab ngang hàng dùng CHUNG trang này (không remount khi chuyển): space = bảng hoạt động, members = MemberList hiện có.
 // Hoạt động = social_class_activity (Learning Thread của lớp: trả bài / hỏi bài / Thầy phản hồi / Đạt / làm lại),
 // dòng gọn ActivityLine (không lặp tên lớp) · Thành viên = social_class_members + MemberList (kết bạn, quyền riêng tư
 // giữ nguyên — server quyết can_view_members). Không hệ Social mới. "Giáo trình" (thanh phân đoạn) về đúng trang học của lớp.
@@ -16,13 +17,17 @@ import { MemberList } from './ClassParts'
 import { ActivityLine } from './ClassActivity'
 import type { Load } from './useClassLearning'
 
-export default function ClassSpacePage({ classId, isTeacher, onOpenClasses, onBackToClass, onOpenThread, onOpenProfile }: {
+export default function ClassSpacePage({ classId, tab = 'space', isTeacher, onOpenClasses, onBackToClass, onOpenSpace, onOpenMembers, onOpenThread, onOpenProfile }: {
   classId: string
+  /** 'space' = bảng hoạt động · 'members' = danh sách thành viên (cùng dữ liệu, cùng component; route /members) */
+  tab?: 'space' | 'members'
   isTeacher: boolean
   /** "← Lớp của tôi" — cùng nút với trang Giáo trình (phần đầu dùng chung) */
   onOpenClasses: () => void
   /** "← <tên lớp>": về trang học của lớp (lịch sử trong /me nếu có, ngược lại mở trang lớp) */
   onBackToClass: () => void
+  onOpenSpace: () => void
+  onOpenMembers: () => void
   onOpenThread: (id: string) => void
   onOpenProfile: (userId: string) => void
 }) {
@@ -33,7 +38,7 @@ export default function ClassSpacePage({ classId, isTeacher, onOpenClasses, onBa
     return () => { alive = false }
   }, [classId])
   const c = detail.status === 'ready' ? detail.value : null
-  useEffect(() => { if (c?.name) document.title = `Không gian lớp · ${c.name} · Thầy Văn Anh Guitar` }, [c?.name])
+  useEffect(() => { if (c?.name) document.title = `${tab === 'members' ? 'Thành viên' : 'Không gian lớp'} · ${c.name} · Thầy Văn Anh Guitar` }, [c?.name, tab])
 
   const fetchPage = useCallback((cur?: { createdAt: string; id: string; key: string }) => fetchClassActivityPage(classId, cur), [classId])
   const { state: feed, loadMore } = usePostsFeed(fetchPage)
@@ -62,11 +67,11 @@ export default function ClassSpacePage({ classId, isTeacher, onOpenClasses, onBa
 
   return (
     <div className={'cs-home cs-classv2 cs-classspace cs-classframe' + (isTeacher ? ' is-teacher' : '')}>
-      <ClassHead classId={classId} card={c} canShare={!!c && (c.isMember || isTeacher)} active="space"
-        onOpenClasses={onOpenClasses} onOpenSyllabus={onBackToClass} onOpenSpace={() => undefined} />
+      <ClassHead classId={classId} card={c} canShare={!!c && (c.isMember || isTeacher)} active={tab}
+        onOpenClasses={onOpenClasses} onOpenSyllabus={onBackToClass} onOpenSpace={onOpenSpace} onOpenMembers={onOpenMembers} />
       {detail.status === 'error' && <p className="cs-act-note" role="alert">{detail.message}</p>}
 
-      <section className="cs-classv2-sec" aria-labelledby="cs-space-feed" aria-busy={feed.status === 'loading'}>
+      {tab === 'space' && <section className="cs-classv2-sec" aria-labelledby="cs-space-feed" aria-busy={feed.status === 'loading'}>
         <h2 id="cs-space-feed" className="cs-classv2-h2">Hoạt động</h2>
         {feed.status === 'loading' && <p className="cs-act-note" role="status">Đang tải…</p>}
         {feed.status === 'error' && <p className="cs-act-note" role="alert">{feed.message}</p>}
@@ -80,9 +85,9 @@ export default function ClassSpacePage({ classId, isTeacher, onOpenClasses, onBa
           <button type="button" className="cs-btn cs-btn-ghost cs-btn-sm cs-classv2-more" onClick={() => void loadMore()} disabled={feed.loadingMore}>
             {feed.loadingMore ? 'Đang tải…' : 'Xem thêm'}</button>
         )}
-      </section>
+      </section>}
 
-      <section className="cs-classv2-sec" aria-labelledby="cs-space-members">
+      {tab === 'members' && <section className="cs-classv2-sec" aria-labelledby="cs-space-members">
         <h2 id="cs-space-members" className="cs-classv2-h2">Thành viên{c ? ` · ${c.memberCount}` : ''}</h2>
         {!c ? null
           : !canViewMembers ? <p className="cs-act-note">Danh sách thành viên chỉ hiện với thành viên của lớp.</p>
@@ -93,7 +98,7 @@ export default function ClassSpacePage({ classId, isTeacher, onOpenClasses, onBa
               <MemberList members={members.value} busyId={busyId} onAct={(m, a) => void act(m, a)} onOpenProfile={onOpenProfile}
                 excludeIdentity={programKeyOfClass(c)} />
             </>}
-      </section>
+      </section>}
     </div>
   )
 }
