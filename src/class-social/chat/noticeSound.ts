@@ -47,6 +47,37 @@ export function createNoticeSoundGate() {
 }
 export type NoticeSoundGate = ReturnType<typeof createNoticeSoundGate>
 
+/** DM (Sound V1.2): theo dõi lastSeq TỪNG hội thoại. Sự kiện = hội thoại có lastSeq tăng, tin cuối của NGƯỜI KHÁC, còn chưa đọc.
+ *  Lần quan sát đầu chỉ lập mốc. Kết quả đưa vào một gate riêng (cùng hạn chờ/tuổi/chống chồng với System Chat). THUẦN. */
+type DmRow = { id: string; lastSeq: number; lastMine: boolean; unread: number; lastAt?: string }
+export function createDmSoundTracker() {
+  const seen = new Map<string, number>()
+  let first = true
+  let tick = 0
+  const gate = createNoticeSoundGate()
+  return {
+    gate,
+    observe(rows: DmRow[], now: number = Date.now()): void {
+      let fresh = false
+      let newest: string | undefined
+      let unread = 0
+      for (const r of rows) {
+        if (r.unread > 0) unread++
+        const prev = seen.get(r.id)
+        if (!first && r.lastSeq > (prev ?? 0) && !r.lastMine && r.unread > 0) {
+          fresh = true
+          if (!newest || (r.lastAt && Date.parse(r.lastAt) > Date.parse(newest))) newest = r.lastAt
+        }
+        if (prev === undefined || r.lastSeq > prev) seen.set(r.id, r.lastSeq)
+      }
+      first = false
+      if (fresh) tick++
+      gate.observe({ lastSeq: tick, unread, lastAt: newest }, now)
+    },
+  }
+}
+export type DmSoundTracker = ReturnType<typeof createDmSoundTracker>
+
 // ── Tuỳ chọn Bật/Tắt (lưu trên thiết bị; mặc định BẬT) ──────────────────────────────────────────────
 type Store = Pick<Storage, 'getItem' | 'setItem'>
 const store = (): Store | null => { try { return typeof localStorage === 'undefined' ? null : localStorage } catch { return null } }
