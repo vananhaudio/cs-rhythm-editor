@@ -24,8 +24,8 @@ async function rpc<T>(fn: string, args: Record<string, unknown>, ctx?: 'share'):
   }
 }
 
-export async function fetchConversations(): Promise<Result<ConversationItem[]>> {
-  const r = await rpc<ConversationRow[]>('dm_conversations', { p_limit: 50 })
+export async function fetchConversations(limit = 50): Promise<Result<ConversationItem[]>> {
+  const r = await rpc<ConversationRow[]>('dm_conversations', { p_limit: limit })
   return r.ok ? { ok: true, value: toConversations(r.value) } : r
 }
 

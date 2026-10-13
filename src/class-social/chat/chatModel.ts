@@ -64,6 +64,14 @@ export function toConversations(rows: ConversationRow[] | null | undefined): Con
   }))
 }
 
+/** Trần số hội thoại khi lấy "hộp thư" toàn cục — bằng trần của RPC dm_conversations (least(p_limit, 100)) */
+export const INBOX_LIMIT = 100
+
+/** Số hội thoại chưa đọc — CÙNG ngữ nghĩa dm_unread_count (đếm hội thoại có last_seq > last_read_seq, không đếm số tin) */
+export function inboxUnread(rows: ConversationItem[]): number {
+  return rows.reduce((n, c) => n + (c.unread > 0 ? 1 : 0), 0)
+}
+
 export function toMessages(rows: MessageRow[] | null | undefined): ChatMessage[] {
   return (rows ?? []).filter(r => r?.seq != null).map(r => ({
     seq: Number(r.seq), mine: r.mine === true, body: r.body ?? '', at: r.created_at ?? '', ref: toShareRef(r.ref_type, r.ref_key),

@@ -4,6 +4,7 @@
 //   • không bao giờ chồng hai lượt gọi; lỗi → giãn nhịp (×2, tối đa 60 s) rồi tự hồi
 //   • hội thoại đang mở chỉ hỏi tin MỚI (seq > đã có), không bao giờ tải lại cả lịch sử
 import { fetchConversations, fetchMessages, fetchSystemSummary, fetchUnreadCount } from './chatApi'
+import { INBOX_LIMIT, inboxUnread } from './chatModel'
 import type { Result } from '../posts/postsApi'
 import type { ChatMessage, ConversationItem, SystemSummary } from './chatModel'
 import { POLL_MS, startPolling, type Unsubscribe } from './polling'
@@ -12,6 +13,9 @@ export type { Unsubscribe }
 
 export interface ChatLive {
   watchUnread(onCount: (n: number) => void): Unsubscribe
+  /** Sound V1.2: MỘT request dm_conversations phục vụ cả badge (unread = số hội thoại chưa đọc) lẫn âm thanh (theo lastSeq từng hội thoại).
+   *  Không có → hook dùng watchUnread (không âm thanh DM). */
+  watchInbox?(onInbox: (rows: ConversationItem[], unread: number) => void): Unsubscribe
   watchList(onRows: (r: Result<ConversationItem[]>) => void): Unsubscribe
   /** Class 2.0: tóm tắt thông báo hệ thống (null = chưa dùng được, vd. DB chưa có tính năng → ẩn mục) */
   watchSystem?(onSummary: (s: SystemSummary | null) => void): Unsubscribe
@@ -25,6 +29,17 @@ export const pollingLive: ChatLive = {
       const r = await fetchUnreadCount()
       if (r.ok) onCount(r.value)
       return r.ok
+    }, POLL_MS.unread)
+  },
+  watchInbox(onInbox) {
+    return startPolling(async () => {
+      const r = await fetchConversations(INBOX_LIMIT)
+      if (!r.ok) return false
+      let unread = inboxUnread(r.value)
+      // Danh sách có thể bị cắt ở trần → số đếm chính xác lấy từ RPC cũ (giữ nguyên ngữ nghĩa badge)
+      if (r.value.length >= INBOX_LIMIT) { const c = await fetchUnreadCount(); if (c.ok) unread = c.value }
+      onInbox(r.value, unread)
+      return true
     }, POLL_MS.unread)
   },
   watchList(onRows) {

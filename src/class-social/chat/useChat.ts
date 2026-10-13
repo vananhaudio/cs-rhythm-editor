@@ -2,14 +2,24 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { fetchConversations, fetchMessages, fetchSystemNotices, fetchSystemSummary, fetchUnreadCount, markRead, markSystemRead, sendMessage } from './chatApi'
 import { pollingLive, type ChatLive } from './chatLive'
-import { createNoticeSoundGate, getSoundEnabled, installAudioUnlock, onNoticeAudioReady, playPendingNotice, subscribeSound, tryResumeNoticeAudio, writeSoundEnabled } from './noticeSound'
+import { createDmSoundTracker, createNoticeSoundGate, getSoundEnabled, installAudioUnlock, onNoticeAudioReady, playPendingNotice, subscribeSound, tryResumeNoticeAudio, writeSoundEnabled } from './noticeSound'
 import { PAGE, lastSeqOf, firstSeqOf, mergeMessages, mergeNotices, normalizeBody, NOTICE_PAGE, type ChatMessage, type ConversationItem, type PendingMessage, type SystemNotice, type SystemSummary } from './chatModel'
 
 /** Badge menu Trò chuyện — MỘT nguồn ở SignedInShell: hội thoại cá nhân chưa đọc (dm) + thông báo Class 2.0 chưa đọc (tách trạng thái đọc). */
 export function useChatUnread(live: ChatLive = pollingLive) {
   const [dm, setDm] = useState(0)
   const [system, setSystem] = useState<SystemSummary | null>(null)
-  useEffect(() => live.watchUnread(setDm), [live])
+  // Sound V1.2: gate DM riêng (theo lastSeq từng hội thoại), tạo lại mỗi lần đăng ký → đăng nhập lại/đổi live = mốc mới
+  const dmTracker = useRef(createDmSoundTracker())
+  useEffect(() => {
+    if (!live.watchInbox) return live.watchUnread(setDm)       // live không có hộp thư (test/realtime cũ): chỉ badge
+    dmTracker.current = createDmSoundTracker()
+    return live.watchInbox((rows, unread) => {
+      setDm(unread)
+      dmTracker.current.observe(rows)
+      playPendingNotice(dmTracker.current.gate)
+    })
+  }, [live])
   useEffect(() => live.watchSystem?.(setSystem) ?? (() => {}), [live])
   // Sound V1: tiếng "ting" khi có thông báo Class 2.0 MỚI (so với mốc phiên) — dùng chính tóm tắt đang polling
   const gate = useRef(createNoticeSoundGate())
@@ -17,9 +27,10 @@ export function useChatUnread(live: ChatLive = pollingLive) {
   // Tóm tắt mới → ghi nhận; kêu ngay nếu đủ điều kiện, nếu không thì GIỮ chờ (tab ẩn / âm thanh chưa mở khoá / iOS ngắt)
   useEffect(() => { gate.current.observe(system); playPendingNotice(gate.current) }, [system])
   useEffect(() => {
-    const retry = () => { tryResumeNoticeAudio(); playPendingNotice(gate.current) }
-    const offAudio = onNoticeAudioReady(() => { playPendingNotice(gate.current) })
-    const offSound = subscribeSound(() => { if (!getSoundEnabled()) gate.current.clear() })   // Tắt → không phát bù khi bật lại
+    const play = () => { playPendingNotice(gate.current); playPendingNotice(dmTracker.current.gate) }   // một tiếng/đợt: gate sau thấy MIN_GAP → bỏ
+    const retry = () => { tryResumeNoticeAudio(); play() }
+    const offAudio = onNoticeAudioReady(play)
+    const offSound = subscribeSound(() => { if (!getSoundEnabled()) { gate.current.clear(); dmTracker.current.gate.clear() } })   // Tắt → không phát bù khi bật lại
     document.addEventListener('visibilitychange', retry)
     window.addEventListener('focus', retry)
     window.addEventListener('pageshow', retry)
