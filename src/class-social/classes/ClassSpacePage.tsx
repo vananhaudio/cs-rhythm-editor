@@ -1,7 +1,7 @@
 // /me/classes/<id>/space (Không gian lớp) và /members (Thành viên) — Class UX V3: Social của ĐÚNG MỘT lớp, tách khỏi trang học.
 // Hai tab ngang hàng dùng CHUNG trang này (không remount khi chuyển): space = bảng hoạt động, members = MemberList hiện có.
 // Hoạt động = social_class_activity (Learning Thread của lớp: trả bài / hỏi bài / Thầy phản hồi / Đạt / làm lại),
-// dòng gọn ActivityLine (không lặp tên lớp) · Thành viên = social_class_members + MemberList (kết bạn, quyền riêng tư
+// thẻ status LearningThreadCard DÙNG CHUNG với Feed /me (học viên là chủ thể; inClass = không lặp tên lớp) · Thành viên = social_class_members + MemberList (kết bạn, quyền riêng tư
 // giữ nguyên — server quyết can_view_members). Không hệ Social mới. "Giáo trình" (thanh phân đoạn) về đúng trang học của lớp.
 // Hai phạm vi rõ: Home → tab "Lớp" = hoạt động mọi lớp của tôi · Lớp → Không gian lớp = hoạt động của một lớp.
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -14,7 +14,7 @@ import { fetchClassActivityPage, fetchClassDetail, fetchClassMembers } from './c
 import type { ClassCard, ClassMember } from './classModel'
 import ClassHead from './ClassHead'
 import { MemberList } from './ClassParts'
-import { ActivityLine } from './ClassActivity'
+import LearningThreadCard from '../../learning-thread/LearningThreadCard'
 import type { Load } from './useClassLearning'
 
 export default function ClassSpacePage({ classId, tab = 'space', isTeacher, onOpenClasses, onBackToClass, onOpenSpace, onOpenMembers, onOpenThread, onOpenProfile }: {
@@ -77,9 +77,10 @@ export default function ClassSpacePage({ classId, tab = 'space', isTeacher, onOp
         {feed.status === 'error' && <p className="cs-act-note" role="alert">{feed.message}</p>}
         {feed.status === 'ready' && items.length === 0 && <p className="cs-act-note">Chưa có bài trả hay câu hỏi nào trong lớp.</p>}
         {items.length > 0 && (
-          <ul className="cs-act-list cs-classv2-feed">
-            {items.map(p => isThreadEntry(p) && <ActivityLine key={p.id} card={p.card} now={now} onOpenThread={onOpenThread} />)}
-          </ul>
+          <div className="cs-post-list cs-classv2-feed">
+            {items.map(p => isThreadEntry(p) && <LearningThreadCard key={p.id} card={p.card} now={now} inClass
+              onOpenThread={onOpenThread} onOpenProfile={onOpenProfile} />)}
+          </div>
         )}
         {feed.status === 'ready' && feed.hasMore && (
           <button type="button" className="cs-btn cs-btn-ghost cs-btn-sm cs-classv2-more" onClick={() => void loadMore()} disabled={feed.loadingMore}>

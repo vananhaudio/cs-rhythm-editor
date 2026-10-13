@@ -284,7 +284,7 @@ try {
   for (const w of [320, 390, 768, 1280, 1440, 1600]) {
     ;({ ctx, page } = await meAs('b@test.local', '', w))
     for (const [name, path, sel] of [['home', '', '.cs-home-feedfirst'], ['classes', '/classes', '.cs-myclasses-page'], ['class', `/classes/${TH01}`, '.cs-map-row'],
-      ['space', `/classes/${TH01}/space`, '.cs-classspace .cs-act-line'], ['friends', '/friends', '.cs-friends-page'],
+      ['space', `/classes/${TH01}/space`, '.cs-classspace .lt-feed-card'], ['friends', '/friends', '.cs-friends-page'],
       ['tabclass', '?feed=classes', '.cs-home-classes .cs-classrow'], ['thread', `/t/${threadId}`, '.lt-page'],
       ['profile', '/u/bbbbbbbb-0000-4000-8000-00000000000b', '.cs-profile-page']]) {
       await page.goto('about:blank'); await page.goto(`${ME}${path}`, { waitUntil: 'networkidle0' })
@@ -300,7 +300,7 @@ try {
         assert.ok(root >= min, `${name} ${w}px: nội dung chỉ ${Math.round(root)}px (main ${Math.round(cw)})`)
       }
       if (name === 'space') {
-        assert.ok(await page.$$eval('.cs-classspace .cs-act-line > .cs-avatar', e => e.length) > 0, 'Không gian lớp: dòng hoạt động có avatar (người trước)')
+        assert.ok(await page.$$eval('.cs-classspace .lt-feed-card .cs-avatar', e => e.length) > 0, 'Không gian lớp: dòng hoạt động có avatar (người trước)')
       }
       await page.screenshot({ path: `${SHOTS}/vs-${name}-${w}.png`, fullPage: false })
     }
