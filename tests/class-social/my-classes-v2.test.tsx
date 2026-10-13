@@ -60,7 +60,7 @@ test("Mục lục sống (24 buổi / 3 chặng): chặng hiện tại mở; ch�
   assert.doesNotMatch(h, /Đang học|Chưa học|Bạn đang ở đây/, "không nhãn vị trí")
   // Buổi khoá: thấy tên, nhạt + ổ khoá; "Chưa mở" cho trình đọc màn hình; chỉ buổi khoá ĐẦU có một câu gợi ý
   assert.match(h, /<span class="cs-map-title"><span class="cs-sr-only">Buổi 02: <\/span>Bài 2<svg[^>]*cs-map-lock[\s\S]*?<span class="cs-sr-only"> — Chưa mở<\/span>/)
-  assert.equal((h.match(/Hoàn thành Buổi 01 để mở/g) || []).length, 0, "danh sách không lặp gợi ý mở khoá — lý do ở panel/Trang Buổi")
+  assert.equal((h.match(/Bạn cần trả bài Buổi 01 mới mở khoá được/g) || []).length, 0, "danh sách không lặp gợi ý mở khoá — lý do ở panel/Trang Buổi")
   assert.equal((h.match(/class="cs-map-state">Chưa mở/g) || []).length, 0, "không lặp chữ Chưa mở từng dòng")
   assert.doesNotMatch(h, /Tiếp tục học|Xem toàn bộ giáo trình|Hoạt động gần đây|Vào học/)
   assert.doesNotMatch(src("class-social/classes/ClassMap.tsx") + src("class-social/classes/ClassPage.tsx"), /scrollIntoView|scrollTo\(/, "vào lớp không tự cuộn")
@@ -106,7 +106,7 @@ test("V3 desktop master-detail: layout 'side' — bấm số bài trả CHỌN b
   assert.deepEqual([...order].sort((a, b) => a - b), order, "panel: buổi → tóm tắt → từng bài trả")
   assert.doesNotMatch(panel, /%|XP|progress|Tiếp tục/i)
   const locked = renderToStaticMarkup(<SubmissionsPanel state={st} sessionNo={2} onOpenSession={noop} onOpenThread={noop} />)
-  assert.match(locked, /Chưa mở · Hoàn thành Buổi 01 để mở/)
+  assert.match(locked, /Chưa mở · Bạn cần trả bài Buổi 01 mới mở khoá được/)
   const p = src("class-social/classes/ClassPage.tsx")
   assert.match(p, /const side = wide && hasSubmissions/, "master-detail chỉ khi đủ rộng VÀ thật có bài trả (không master-detail giả)")
   assert.match(p, /learn\.mode === 'checkpoint'/)

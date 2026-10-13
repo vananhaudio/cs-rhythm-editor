@@ -159,9 +159,9 @@ try {
 
   // Deep link + reload buổi khoá: không vượt bằng URL
   await page.goto(`${ME}/classes/${TH01}/sessions/2`, { waitUntil: 'networkidle0' })
-  await waitText(page, /Hoàn thành Buổi 01 để mở/)
+  await waitText(page, /Bạn cần trả bài Buổi 01 mới mở khoá được/)
   assert.equal(await page.$$eval('.lsn-paper', e => e.length), 0, 'buổi khoá: KHÔNG nội dung dù vào thẳng URL')
-  ok('Vào thẳng URL Buổi 02 (khoá) → "Hoàn thành Buổi 01 để mở", không lộ giáo án')
+  ok('Vào thẳng URL Buổi 02 (khoá) → "Bạn cần trả bài Buổi 01 mới mở khoá được", không lộ giáo án')
   await page.goto(`${ME}/classes/${TH01}/sessions/1`, { waitUntil: 'networkidle0' })
   await page.waitForSelector('#bai-tra-1\\.1')
   await page.reload({ waitUntil: 'networkidle0' }); await page.waitForSelector('#bai-tra-1\\.1')
