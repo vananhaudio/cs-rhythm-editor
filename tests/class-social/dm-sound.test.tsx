@@ -121,7 +121,7 @@ test("Tích hợp cổng: DM + System Chat cùng chờ → MỘT tiếng; Tắt 
   sys.observe({ lastSeq: 1, unread: 0 }, NOW); dm.observe([row("a", 1, { unread: 0 })], NOW);
   sys.observe({ lastSeq: 2, unread: 1, lastAt: new Date(NOW).toISOString() }, NOW + 30_000);
   dm.observe([row("a", 2)], NOW + 30_000);
-  const T = Date.now() + 1000;
+  const T = NOW + 31_000;
   const first = playPendingNotice(sys, T);
   const second = playPendingNotice(dm.gate, T + 100);
   assert.equal(first, true);

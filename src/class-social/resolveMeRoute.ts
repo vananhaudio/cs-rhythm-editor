@@ -122,6 +122,17 @@ export function classSpaceFromPath(pathname: string): string | null {
   return m && UUID_RE.test(m[1]) ? m[1].toLowerCase() : null
 }
 
+// ── THÀNH VIÊN LỚP: /me/classes/<class id>/members — tab thứ ba cạnh Giáo trình · Không gian lớp (route thêm, /space giữ nguyên) ──
+export function classMembersPath(classId: string): string {
+  return `${classPath(classId)}/members`
+}
+
+const MEMBERS_RE = /^\/me\/classes\/([0-9a-f-]{36})\/members$/i
+export function classMembersFromPath(pathname: string): string | null {
+  const m = MEMBERS_RE.exec(pathname.replace(/\/+$/, ''))
+  return m && UUID_RE.test(m[1]) ? m[1].toLowerCase() : null
+}
+
 // ── Quản lý Band (Recruit V1 + Quản lý V1): /me/bands · /me/bands/<slug> — quyền do server (band_can_manage) quyết ──
 export const BANDS_PATH = '/me/bands'
 const BAND_SLUG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/
@@ -172,6 +183,7 @@ export type MeView =
   | { kind: 'class'; classId: string }
   | { kind: 'session'; classId: string; sessionNo: number }
   | { kind: 'classSpace'; classId: string }
+  | { kind: 'classMembers'; classId: string }
   | { kind: 'bands' }
   | { kind: 'bandAdmin'; slug: string }
   | { kind: 'chatConversation'; conversationId: string }
@@ -187,6 +199,8 @@ export function viewFromPath(pathname: string): MeView {
   if (ses) return { kind: 'session', ...ses }
   const spaceId = classSpaceFromPath(pathname)
   if (spaceId) return { kind: 'classSpace', classId: spaceId }
+  const membersId = classMembersFromPath(pathname)
+  if (membersId) return { kind: 'classMembers', classId: membersId }
   const classId = classIdFromPath(pathname)
   if (classId) return { kind: 'class', classId }
   const bandSlug = bandAdminSlugFromPath(pathname)
@@ -210,6 +224,7 @@ export function sameView(a: MeView, b: MeView): boolean {
     case 'class': return b.kind === 'class' && a.classId === b.classId
     case 'session': return b.kind === 'session' && a.classId === b.classId && a.sessionNo === b.sessionNo
     case 'classSpace': return b.kind === 'classSpace' && a.classId === b.classId
+    case 'classMembers': return b.kind === 'classMembers' && a.classId === b.classId
     case 'queue': return b.kind === 'queue'
     case 'classes': return b.kind === 'classes'
     case 'bands': return b.kind === 'bands'
@@ -228,6 +243,7 @@ export function viewPath(view: MeView): string {
     case 'class': return classPath(view.classId)
     case 'session': return sessionPath(view.classId, view.sessionNo)
     case 'classSpace': return classSpacePath(view.classId)
+    case 'classMembers': return classMembersPath(view.classId)
     case 'queue': return QUEUE_PATH
     case 'classes': return CLASSES_PATH
     case 'bands': return BANDS_PATH
@@ -242,7 +258,7 @@ export function viewPath(view: MeView): string {
 /** Link sâu nên GIỮ qua bước đăng nhập (khách → đăng nhập tại chỗ → đúng trang). */
 export function keepsPathForGuest(view: MeView): boolean {
   return view.kind === 'thread' || view.kind === 'class' || view.kind === 'classes' || view.kind === 'session'
-    || view.kind === 'classSpace'
+    || view.kind === 'classSpace' || view.kind === 'classMembers'
     || view.kind === 'bands' || view.kind === 'bandAdmin'
 }
 

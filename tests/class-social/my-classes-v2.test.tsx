@@ -126,14 +126,22 @@ test("Class Page V3: Tên lớp (+ lịch) → Mục lục ↔ Bài trả của 
   assert.match(p, /<NoMapNote entry=\{entry\} isMember=\{member\} \/>/)
   const { ClassSectionNav } = await import("../../src/class-social/classes/ClassParts")
   const cid = "11111111-2222-3333-4444-555555555555"
-  const nav = renderToStaticMarkup(<ClassSectionNav classId={cid} active="syllabus" onOpenSyllabus={noop} onOpenSpace={noop} />)
+  const nav = renderToStaticMarkup(<ClassSectionNav classId={cid} active="syllabus" onOpenSyllabus={noop} onOpenSpace={noop} onOpenMembers={noop} />)
   assert.match(nav, new RegExp(`href="/me/classes/${cid}"[^>]*aria-current="page"[^>]*>Giáo trình<`), "Giáo trình = route trang lớp, đang ở đây")
   assert.match(nav, new RegExp(`href="/me/classes/${cid}/space"[^>]*>Không gian lớp<`), "Không gian lớp = route sẵn có")
-  assert.equal((nav.match(/<a /g) || []).length, 2, "hai khu vực, không hệ tab mới")
+  assert.match(nav, new RegExp(`href="/me/classes/${cid}/members"[^>]*>Thành viên<`), "Thành viên = tab thứ ba, route riêng")
+  assert.deepEqual([...nav.matchAll(/>(Giáo trình|Không gian lớp|Thành viên)</g)].map(m => m[1]), ["Giáo trình", "Không gian lớp", "Thành viên"], "đúng 3 tab, đúng thứ tự")
+  assert.equal((nav.match(/<a /g) || []).length, 3, "ba khu vực ngang hàng, không hệ tab mới")
+  const navM = renderToStaticMarkup(<ClassSectionNav classId={cid} active="members" onOpenSyllabus={noop} onOpenSpace={noop} onOpenMembers={noop} />)
+  assert.match(navM, new RegExp(`href="/me/classes/${cid}/members"[^>]*aria-current="page"`), "tab Thành viên đang chọn")
+  assert.doesNotMatch(navM, new RegExp(`href="/me/classes/${cid}/space"[^>]*aria-current`))
   // Không gian lớp: REUSE social_class_activity + ActivityLine + MemberList (không hệ Social mới), ← về đúng lớp
   const sp = src("class-social/classes/ClassSpacePage.tsx")
   assert.match(sp, /fetchClassActivityPage/); assert.match(sp, /<ActivityLine /); assert.match(sp, /<MemberList /); assert.match(sp, /fetchClassMembers/)
   assert.doesNotMatch(sp, /rpc\(|\.from\(/)
+  assert.match(sp, /\{tab === 'space' && <section[\s\S]*cs-space-feed/, "Không gian lớp = bảng hoạt động trực tiếp")
+  assert.match(sp, /\{tab === 'members' && <section[\s\S]*cs-space-members/, "Thành viên = tab riêng, không nằm trên/dưới feed")
+  assert.match(sp, /tab = 'space'/, "mặc định /space vẫn là Không gian lớp (deep link cũ)")
   assert.match(src("class-social/ClassSocialPage.tsx"), /onBackToClass=\{\(\) => onBack\(\{ kind: 'class', classId: view\.classId \}\)\} \/>/)
 })
 
@@ -246,7 +254,7 @@ test("Class Reading UI V1 (nghiệm thu): học viên không thấy 44 buổi xo
 test("Class Reading UI V1 (nghiệm thu): Không gian lớp không còn nút '← Về lớp' riêng — 'Giáo trình' trên thanh phân đoạn là đường quay lại", () => {
   const sp = src("class-social/classes/ClassSpacePage.tsx")
   assert.doesNotMatch(sp, /cs-classspace-back|ArrowLeft/)
-  assert.match(sp, /<ClassHead classId=\{classId\} card=\{c\} canShare=\{[^}]+\} active="space"/)
+  assert.match(sp, /<ClassHead classId=\{classId\} card=\{c\} canShare=\{[^}]+\} active=\{tab\}/)
   assert.match(sp, /onOpenSyllabus=\{onBackToClass\}/)
   // Một phần đầu + một khung cho cả hai khu vực → tên lớp/thanh điều hướng không đổi toạ độ khi chuyển
   const cp = src("class-social/classes/ClassPage.tsx")

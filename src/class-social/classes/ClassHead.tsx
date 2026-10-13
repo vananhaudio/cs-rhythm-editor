@@ -1,24 +1,25 @@
-// Phần đầu DÙNG CHUNG của trang lớp (Giáo trình · Không gian lớp): [← Lớp của tôi · Chia sẻ] → tên lớp → lịch → thanh phân đoạn.
+// Phần đầu DÙNG CHUNG của trang lớp (Giáo trình · Không gian lớp · Thành viên): [← Lớp của tôi · Chia sẻ] → tên lớp → lịch → thanh phân đoạn.
 // Hai khu vực render cùng cấu trúc + cùng nguồn dữ liệu (social_class_detail) nên tên lớp / thanh điều hướng không đổi toạ độ khi chuyển.
 // Thông báo theo vai trò (xem trước, chưa tham gia) KHÔNG nằm ở đây — đặt ở vùng nội dung bên dưới để không làm dịch header.
 import { useEffect } from 'react'
 import { ArrowLeft } from 'lucide-react'
 import ShareButton from '../../share/ShareButton'
 import type { ClassCard } from './classModel'
-import { ClassSectionNav } from './ClassParts'
+import { ClassSectionNav, type ClassSection } from './ClassParts'
 
 // Giữ tên/lịch đã biết của lớp trong phiên: sang khu vực kia header vẽ ngay đúng chữ cũ, không chờ mạng rồi giật.
 const known = new Map<string, { name: string | null; schedule: string | null }>()
 
-export default function ClassHead({ classId, card, fallbackName, canShare, active, onOpenClasses, onOpenSyllabus, onOpenSpace }: {
+export default function ClassHead({ classId, card, fallbackName, canShare, active, onOpenClasses, onOpenSyllabus, onOpenSpace, onOpenMembers }: {
   classId: string
   card: ClassCard | null
   fallbackName?: string | null
   canShare: boolean
-  active: 'syllabus' | 'space'
+  active: ClassSection
   onOpenClasses: () => void
   onOpenSyllabus: () => void
   onOpenSpace: () => void
+  onOpenMembers: () => void
 }) {
   const prev = known.get(classId)
   const name = card?.name ?? fallbackName ?? prev?.name ?? null
@@ -34,7 +35,7 @@ export default function ClassHead({ classId, card, fallbackName, canShare, activ
         <h1 className="cs-class-name">{name ?? ' '}</h1>
         {schedule && <p className="cs-classv2-meta">{schedule}</p>}
       </div>
-      <ClassSectionNav classId={classId} active={active} onOpenSyllabus={onOpenSyllabus} onOpenSpace={onOpenSpace} />
+      <ClassSectionNav classId={classId} active={active} onOpenSyllabus={onOpenSyllabus} onOpenSpace={onOpenSpace} onOpenMembers={onOpenMembers} />
     </header>
   )
 }

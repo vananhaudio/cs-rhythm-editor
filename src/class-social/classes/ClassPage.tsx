@@ -34,7 +34,7 @@ function useWide(min: number) {
   return { ref, wide }
 }
 
-export default function ClassPage({ classId, isTeacher = false, onOpenThread, onOpenClasses, onOpenSession, onOpenSpace }: {
+export default function ClassPage({ classId, isTeacher = false, onOpenThread, onOpenClasses, onOpenSession, onOpenSpace, onOpenMembers }: {
   classId: string
   /** Bấm một buổi → Trang Buổi (/me/classes/<id>/sessions/<n>) */
   onOpenSession: (sessionNo: number) => void
@@ -44,6 +44,8 @@ export default function ClassPage({ classId, isTeacher = false, onOpenThread, on
   onOpenClasses: () => void
   /** Không gian lớp (/me/classes/<id>/space) */
   onOpenSpace: () => void
+  /** Thành viên (/me/classes/<id>/members) */
+  onOpenMembers: () => void
 }) {
   const { detail, learn, loading } = useClassLearning(classId, isTeacher)
   const c: ClassCard | null = detail.status === 'ready' ? detail.value : null
@@ -80,7 +82,7 @@ export default function ClassPage({ classId, isTeacher = false, onOpenThread, on
 
   const head = (
     <ClassHead classId={classId} card={c} fallbackName={learn?.className} canShare={member} active="syllabus"
-      onOpenClasses={onOpenClasses} onOpenSyllabus={() => undefined} onOpenSpace={onOpenSpace} />
+      onOpenClasses={onOpenClasses} onOpenSyllabus={() => undefined} onOpenSpace={onOpenSpace} onOpenMembers={onOpenMembers} />
   )
   const shell = (body: ReactNode) => (
     <div ref={ref} className={'cs-home cs-classv2 cs-classv3 cs-classframe' + (isTeacher ? ' is-teacher' : '') + (side ? ' is-wide' : '')}>{head}{body}</div>

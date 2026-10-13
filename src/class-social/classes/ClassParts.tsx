@@ -1,6 +1,6 @@
 // Phần hiển thị THUẦN của trang lớp (không mạng, không CSS import) — test render được.
 import { Eye, UserCheck, Users } from 'lucide-react'
-import { classPath, classSpacePath } from '../resolveMeRoute'
+import { classMembersPath, classPath, classSpacePath } from '../resolveMeRoute'
 import { Avatar, PersonLink } from '../ui'
 import { IdentityBadges } from '../identity/IdentityBadges'
 import { classCodeNote, classMetaLine, classStatusLabel, memberRelationUi, type ClassCard, type ClassMember } from './classModel'
@@ -66,12 +66,13 @@ export function MemberList({ members, busyId, onAct, onOpenProfile, excludeIdent
   )
 }
 
-/** Điều hướng hai khu vực của CÙNG một lớp: Giáo trình (/me/classes/<id>) · Không gian lớp (/me/classes/<id>/space).
- *  Hai route sẵn có, hiển thị như một thanh phân đoạn nhẹ — không phải hệ tab mới, URL/reload/deep link giữ nguyên. */
-export function ClassSectionNav({ classId, active, onOpenSyllabus, onOpenSpace }: {
-  classId: string; active: 'syllabus' | 'space'; onOpenSyllabus: () => void; onOpenSpace: () => void
+/** Điều hướng ba khu vực của CÙNG một lớp: Giáo trình (/me/classes/<id>) · Không gian lớp (…/space) · Thành viên (…/members).
+ *  Ba route, hiển thị như một thanh phân đoạn nhẹ — không phải hệ tab mới, URL/reload/deep link giữ nguyên. */
+export type ClassSection = 'syllabus' | 'space' | 'members'
+export function ClassSectionNav({ classId, active, onOpenSyllabus, onOpenSpace, onOpenMembers }: {
+  classId: string; active: ClassSection; onOpenSyllabus: () => void; onOpenSpace: () => void; onOpenMembers: () => void
 }) {
-  const item = (key: 'syllabus' | 'space', label: string, href: string, go: () => void, extra = '') => (
+  const item = (key: ClassSection, label: string, href: string, go: () => void, extra = '') => (
     <a key={key} className={'cs-secnav-item' + (active === key ? ' is-active' : '') + extra} href={href}
       aria-current={active === key ? 'page' : undefined}
       onClick={e => { if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return; e.preventDefault(); if (active !== key) go() }}>
@@ -82,6 +83,7 @@ export function ClassSectionNav({ classId, active, onOpenSyllabus, onOpenSpace }
     <nav className="cs-secnav" aria-label="Khu vực của lớp">
       {item('syllabus', 'Giáo trình', classPath(classId), onOpenSyllabus)}
       {item('space', 'Không gian lớp', classSpacePath(classId), onOpenSpace, ' cs-secnav-space')}
+      {item('members', 'Thành viên', classMembersPath(classId), onOpenMembers, ' cs-secnav-members')}
     </nav>
   )
 }
