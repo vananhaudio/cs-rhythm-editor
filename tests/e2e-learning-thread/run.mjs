@@ -240,7 +240,7 @@ try {
   const cards = await page.$$eval('.lt-feed-card', els => els.map(e => e.textContent))
   assert.equal(cards.length, 1, 'chỉ 1 thẻ: thread community của A (thread private của B KHÔNG lên Feed)')
   assert.match(cards[0], /An/); assert.match(cards[0], /DH2\.KD18 · Đệm hát 2/)
-  assert.match(cards[0], /Bài 4\.3 — Bolero móc kiểu 1/); assert.match(cards[0], /vừa nhận xét · Đạt/); assert.match(cards[0], /Đã đạt/)
+  assert.match(cards[0], /Bài 4\.3 — Bolero móc kiểu 1/); assert.match(cards[0], /được .+ nhận xét · Đạt/); assert.match(cards[0], /Đã đạt/)
   ok('Feed /me của C: MỘT thẻ câu chuyện (An · DH2.KD18 · Bài 4.3 · Thầy vừa nhận xét · Đạt); thread private của B không có')
   await noHorizontalOverflow(page, 'Feed /me có thẻ thread (390px)')
   await page.screenshot({ path: `${SHOTS}/9-feed-thread-card.png`, fullPage: true })

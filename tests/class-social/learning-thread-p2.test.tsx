@@ -13,7 +13,7 @@ import FeedEntryCard from "../../src/class-social/sections/FeedEntryCard";
 import LearningThreadCard from "../../src/learning-thread/LearningThreadCard";
 import JourneyTimeline from "../../src/learning-thread/JourneyTimeline";
 import {
-  TRACK_THEMES, eventSteps, groupJourney, originBadge, storyLine, toJourneyItem, toThreadCard, trackTheme, type JourneyRow,
+  cardStory, TRACK_THEMES, eventSteps, groupJourney, originBadge, storyLine, toJourneyItem, toThreadCard, trackTheme, type JourneyRow,
 } from "../../src/learning-thread/feedModel";
 void React;
 
@@ -69,6 +69,18 @@ test("câu chuyện theo event mới nhất (Phần U) — tên Thầy lấy t�
   assert.deepEqual(originBadge(toThreadCard(card({ first_kind: "submission" }))!), { icon: "🎸", label: "Trả bài" });
 });
 
+test("cardStory: chủ thể luôn là học viên tạo thread, bất kể event mới nhất của Thầy (2 học viên, mới/nhận xét/sửa+Đạt)", () => {
+  const mk = (learner: string, le: Record<string, unknown>) =>
+    cardStory(toThreadCard(card({ learner: { user_id: "u-" + learner, name: learner }, last_event: le }))!)!;
+  const fresh = mk("Hải", { kind: "submission", author_role: "student", author: { name: "Hải" } });
+  const fb = mk("Lan", { kind: "teacher_feedback", verdict: "retry", author_role: "teacher", author: { name: "Thầy Minh" } });
+  const pass = mk("Hải", { kind: "teacher_feedback", verdict: "pass", author_role: "teacher", author: { name: "Thầy Minh" }, is_resubmission: false });
+  assert.deepEqual([fresh.actor.name, fb.actor.name, pass.actor.name], ["Hải", "Lan", "Hải"]);
+  assert.equal(fb.text, "được Thầy Minh nhận xét · Cần làm lại");
+  assert.equal(pass.text, "được Thầy Minh nhận xét · Đạt");
+  assert.equal(pass.verdict, "pass");
+});
+
 test("thẻ Feed: AI · danh tính lịch sử · bài · chuyện vừa xảy ra · trạng thái · [Xem cuộc trao đổi]", () => {
   const h = renderToStaticMarkup(<LearningThreadCard card={toThreadCard(card())!} now={NOW} onOpenThread={() => {}} />);
   assert.match(h, /HS03/);
@@ -79,7 +91,7 @@ test("thẻ Feed: AI · danh tính lịch sử · bài · chuyện vừa xảy r
   assert.equal(/Chương 4: Điệu/.test(h), false, "không lặp nguyên văn chương + bài trên Feed");
   const inClass = renderToStaticMarkup(<LearningThreadCard card={toThreadCard(card({ identity: identity({ class: { code: "DH2.KD18", stage_title: "Đệm hát 2" } }) }))!} inClass />);
   assert.equal(/lt-feed-identity/.test(inClass), false, "trong trang lớp không lặp nhãn lớp");
-  assert.match(h, /lt-feed-actor">Thầy Minh<\/span> vừa nhận xét · Cần làm lại/);
+  assert.match(h, /lt-feed-actor">HS03<\/span> được Thầy Minh nhận xét · Cần làm lại/, "học viên là chủ thể, Thầy là người tác động");
   assert.match(h, /Chờ Thầy phản hồi|Cần làm lại/);
   // Lượt đầu của chính học sinh: tên + "❓ Hỏi bài" đã đủ — không kể lại "vừa hỏi bài"
   const own = renderToStaticMarkup(<LearningThreadCard card={toThreadCard(card({ status: "waiting_teacher", last_event: { kind: "question", author_role: "student", author: { name: "HS03" } } }))!} />);
@@ -92,7 +104,8 @@ test("thẻ Feed: AI · danh tính lịch sử · bài · chuyện vừa xảy r
   assert.equal(/Thầy Văn Anh/.test(h), false, "không hard-code tên Thầy");
   const pass = renderToStaticMarkup(<LearningThreadCard card={toThreadCard(card({ status: "passed", last_event: { kind: "teacher_feedback", verdict: "pass", author_role: "teacher", author: { name: "Thầy Minh" } } }))!} />);
   assert.match(pass, /Đã đạt/);
-  assert.match(pass, /vừa nhận xét · Đạt/);
+  assert.match(pass, /được Thầy Minh nhận xét · Đạt/);
+  assert.equal(/lt-feed-actor">Thầy Minh/.test(pass), false, "thẻ không đứng tên Thầy");
   // Không bung nội dung event
   assert.equal(/Tay phải móc chưa đều/.test(h), false);
 });
