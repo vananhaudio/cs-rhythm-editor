@@ -2,9 +2,8 @@
 // Buổi nào mở được là do RLS trả về (membership + entitlement + published); client không suy quyền.
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
-import LessonDocument from '../lesson/LessonDocument'
-import { fetchClassOutline, fetchSessionContent, type ClassOutlineData, type SessionContent } from './api'
-import { groupOutline, toLessonDoc, type ClassRow, type OutlineLesson, type StageRow } from './outline'
+import { fetchClassOutline, type ClassOutlineData } from './api'
+import { groupOutline, type ClassRow, type OutlineLesson } from './outline'
 import { CL } from './theme'
 
 const fmtDay = (iso: string) => new Date(iso).toLocaleDateString('vi-VN',
@@ -13,8 +12,6 @@ const fmtDay = (iso: string) => new Date(iso).toLocaleDateString('vi-VN',
 export default function ClassLearningOverlay({ cls, onClose }: { cls: ClassRow; onClose: () => void }) {
   const [data, setData] = useState<ClassOutlineData | null>(null)
   const [error, setError] = useState(false)
-  const [open, setOpen] = useState<{ lesson: OutlineLesson; stage: StageRow | null } | null>(null)
-  const [content, setContent] = useState<SessionContent | null | 'loading' | 'error'>(null)
 
   const [tick, setTick] = useState(0)
   useEffect(() => {
@@ -26,15 +23,11 @@ export default function ClassLearningOverlay({ cls, onClose }: { cls: ClassRow; 
   }, [cls.id, tick])
   const load = () => { setError(false); setTick(t => t + 1) }
 
-  const openLesson = async (lesson: OutlineLesson, stage: StageRow | null) => {
-    setOpen({ lesson, stage }); setContent('loading')
-    try { setContent(await fetchSessionContent(supabase, lesson.session.id)) } catch { setContent('error') }
-  }
-
-  if (open && content && content !== 'loading' && content !== 'error') {
-    return <div style={{ position: 'fixed', inset: 0, zIndex: 80, overflowY: 'auto', background: '#F7F5FC' }}>
-      <LessonDocument doc={toLessonDoc(cls, open.stage, open.lesson.session, content.sections)} onBack={() => { setOpen(null); setContent(null) }} />
-    </div>
+  // Mở buổi = vào TRANG BUỔI của Lớp của tôi (/me/classes/<lớp>/sessions/<số buổi>): nơi có phần tương tác của bài trả
+  // (trắc nghiệm "Kiểm tra", TRẢ BÀI) + khoá/mở buổi do server quyết. Overlay này chỉ còn là danh sách chặng/buổi; nó từng
+  // vẽ giáo trình TĨNH nên học viên không thấy nút ở bài trắc nghiệm (10/2026).
+  const openLesson = (lesson: OutlineLesson) => {
+    window.location.href = `/me/classes/${encodeURIComponent(cls.id)}/sessions/${lesson.no}`
   }
 
   const outline = data ? groupOutline(data.stages, data.sessions, data.contents) : []
@@ -57,10 +50,6 @@ export default function ClassLearningOverlay({ cls, onClose }: { cls: ClassRow; 
       </div>}
       {data && outline.length === 0 && <div style={{ margin: '8px 18px', padding: 18, borderRadius: 20, background: CL.surface, color: CL.t2, textAlign: 'center' }}>🌱 Lịch học của lớp sẽ hiện ở đây.</div>}
 
-      {open && content === 'loading' && <div role="status" style={{ margin: '0 18px 10px', color: CL.t2, fontSize: 13.5 }}>Đang mở giáo trình Buổi {open.lesson.no}…</div>}
-      {open && (content === 'error' || content === null) && <div role="alert" style={{ margin: '0 18px 10px', padding: 12, borderRadius: 14, background: CL.a2, color: CL.a1, fontSize: 13.5 }}>
-        {content === 'error' ? 'Không mở được giáo trình. Thử lại sau nhé.' : `Giáo trình Buổi ${open.lesson.no} chưa mở cho bạn.`}</div>}
-
       {outline.map(g => <div key={g.stage?.id ?? 'loose'} style={{ margin: '6px 18px 16px', background: CL.surface, borderRadius: 20, boxShadow: CL.shadow, overflow: 'hidden', textAlign: 'left' }}>
         <div style={{ padding: '14px 16px 10px', borderBottom: `1px solid ${CL.border}` }}>
           <div style={{ fontSize: 11.5, fontWeight: 900, color: CL.p1, letterSpacing: '.05em' }}>{g.stage ? `CHẶNG ${g.stage.stage_no}` : 'CÁC BUỔI KHÁC'}</div>
@@ -69,7 +58,7 @@ export default function ClassLearningOverlay({ cls, onClose }: { cls: ClassRow; 
         </div>
         {g.lessons.map(l => {
           const available = l.content !== null
-          return <button key={l.session.id} disabled={!available} onClick={() => void openLesson(l, g.stage)} style={{
+          return <button key={l.session.id} disabled={!available} onClick={() => openLesson(l)} style={{
             width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', border: 'none',
             borderTop: `1px solid ${CL.border}`, background: 'transparent', textAlign: 'left', cursor: available ? 'pointer' : 'default', fontFamily: 'inherit',
           }}>
