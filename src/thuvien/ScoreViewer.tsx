@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { ScorePage } from '../musicxml-beats/renderer/types.ts'
 import { archiveLibraryItem, updateLibraryMetadata } from './masterLibrary.ts'
 import EditorName from './EditorName.tsx'
+import { bandLabel } from './libraryBands.ts'
 import type { LibraryItem } from './masterLibrary.ts'
 import { pageSrc, renderPagesForView, ZOOM_STEPS } from './viewScore.ts'
 import type { Zoom } from './viewScore.ts'
@@ -24,11 +25,13 @@ type State =
  * Xem một bản trong `musicxml_library`. Chỉ đọc: lấy XML qua `getMasterCopySource`
  * (đã kiểm SHA-256 + kích thước + parse) rồi khắc bằng renderer của Nhịp Phách.
  */
-export default function ScoreViewer({ id, initial, editorId = null, onClose, onSaved, onArchived, canManage = true }: {
+export default function ScoreViewer({ id, initial, editorId = null, bandName = null, onClose, onSaved, onArchived, canManage = true }: {
   id: string
   initial: Heading | null
   /** Người biên tập = created_by của bài (chỉ hiển thị). */
   editorId?: string | null
+  /** Band sở hữu (chỉ hiển thị); null = "Chưa gán Band". */
+  bandName?: string | null
   onClose: () => void
   onSaved: (item: LibraryItem) => void
   /** Sau khi gỡ bài (lưu trữ) thành công. Không truyền → không có nút Gỡ. */
@@ -91,6 +94,7 @@ export default function ScoreViewer({ id, initial, editorId = null, onClose, onS
       <div className="tv-view-title">
         <h1>{heading?.title ?? 'Bản nhạc'}</h1>
         {heading?.composer && <p>{heading.composer}</p>}
+        <small className="tv-editor tv-editor-view" data-testid="score-band">Band: {bandLabel(bandName)}</small>
         <EditorName userId={editorId} className="tv-editor tv-editor-view" />
       </div>
       {canManage && heading && !editing && state.kind !== 'loading' && <div className="tv-actions">

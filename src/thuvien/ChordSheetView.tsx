@@ -1,3 +1,4 @@
+import { bandLabel } from './libraryBands.ts'
 import { useEffect, useMemo, useState } from 'react'
 import type { ChordLibrary, ChordSheetDetail } from './chordLibrary.ts'
 import { buildMeasureDisplay } from './chordAnchors.ts'
@@ -51,7 +52,7 @@ export default function ChordSheetView({ library, versionId, canEdit, ownerOnly 
       <div className="cl-view-title">
         <h1>{detail.title}</h1>
         <p>{detail.composer || 'Chưa rõ tác giả'}</p>
-        <p className="cl-editor-credit">Người biên tập: {detail.editorName ?? 'Chưa xác định'}</p>
+        <p className="cl-editor-credit">Band: {bandLabel(detail.bandName)} · Người biên tập: {detail.editorName ?? 'Chưa xác định'}</p>
       </div>
       <div className="cl-view-actions">
         {detail.anchors && <button type="button" className="cl-secondary" onClick={() => onRhythm(detail.versionId)}>▶ Rhythm Scroll</button>}

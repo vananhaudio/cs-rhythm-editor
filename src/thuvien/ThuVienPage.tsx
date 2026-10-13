@@ -1,6 +1,9 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import type { ChangeEvent } from 'react'
 import EditorName from './EditorName.tsx'
+import BandOwnerField from './BandOwnerField.tsx'
+import { NO_BANDS, bandChoiceProblem, bandIdOfChoice, bandLabel, initialBandChoice, loadWritableBands } from './libraryBands.ts'
+import type { BandChoices } from './libraryBands.ts'
 import type { ThuVienAccess } from './masterLibrary.ts'
 import { ADD_DENIED_MESSAGE, canAddToLibrary, canManageItem, importMusicXml, listLibrary, matchesQuery, prepareMusicXml } from './masterLibrary.ts'
 import type { LibraryItem } from './masterLibrary.ts'
@@ -48,13 +51,15 @@ const PRODUCTION_EXTRACTOR = extractorUrls && import.meta.env.VITE_CHORD_LIBRARY
   })
   : undefined
 
-type PageProps = { chordLibrary?: ChordLibrary; measureAnalyzer?: MeasureAnalyzer; contentExtractor?: ContentExtractor; access?: ThuVienAccess | 'admin' }
+type PageProps = { chordLibrary?: ChordLibrary; measureAnalyzer?: MeasureAnalyzer; contentExtractor?: ContentExtractor; access?: ThuVienAccess | 'admin'
+  /** Các Band được lưu bài vào (test truyền sẵn; mặc định tải từ máy chủ). */
+  loadBands?: () => Promise<BandChoices> }
 
 /**
  * Trang /thuvien: nằm trong KHUNG CỦA CLASS (ThuVienShell) — top bar, sidebar/menu sheet, tài khoản dùng chung với Class.
  * `ThuVienPageView` nhận phiên từ ngoài (trang thử / test truyền sẵn); mặc định xuất ra bản dùng phiên Class thật.
  */
-export function ThuVienPageView({ chordLibrary, measureAnalyzer = PRODUCTION_ANALYZER, contentExtractor = PRODUCTION_EXTRACTOR, session, access = 'admin' }: PageProps & { session: ClassSession }) {
+export function ThuVienPageView({ chordLibrary, measureAnalyzer = PRODUCTION_ANALYZER, contentExtractor = PRODUCTION_EXTRACTOR, session, access = 'admin', loadBands }: PageProps & { session: ClassSession }) {
   const [search, setSearch] = useState(() => window.location.search)
   // access: 'admin' (như cũ) · 'editor' (Biên tập: đăng/sửa/gỡ bài của mình) · 'viewer' (Trưởng Band: chỉ xem/tìm/dùng).
   const section = sectionFromSearch(search)
@@ -89,8 +94,8 @@ export function ThuVienPageView({ chordLibrary, measureAnalyzer = PRODUCTION_ANA
   }
 
   const content = section === 'chords'
-    ? <Suspense fallback={<main className="tv-chords"><p className="cl-empty">Đang mở Hợp âm chuẩn hóa…</p></main>}><ChordLibraryPage library={chordLibrary} analyzer={measureAnalyzer} extractor={contentExtractor} canEdit={access !== 'viewer'} access={access} /></Suspense>
-    : <MusicXmlLibrary canUpload={canUpload} uid={uid} teacher={teacher} />
+    ? <Suspense fallback={<main className="tv-chords"><p className="cl-empty">Đang mở Hợp âm chuẩn hóa…</p></main>}><ChordLibraryPage library={chordLibrary} analyzer={measureAnalyzer} extractor={contentExtractor} canEdit={access !== 'viewer'} access={access} loadBands={loadBands} /></Suspense>
+    : <MusicXmlLibrary canUpload={canUpload} uid={uid} teacher={teacher} loadBands={loadBands} />
   return <ThuVienShell active={activeNavItem(search)} onNavigate={navigate} session={session} canUploadMusicXml={canUpload !== false} limited={access !== 'admin'} canCreateChords={access !== 'viewer'}>{content}</ThuVienShell>
 }
 
@@ -98,7 +103,15 @@ export default function ThuVienPage(props: PageProps = {}) {
   return <ThuVienPageView {...props} session={useClassSession()} />
 }
 
-function MusicXmlLibrary({ canUpload, uid, teacher }: { canUpload: boolean | null; uid: string | null; teacher: boolean }) {
+function MusicXmlLibrary({ canUpload, uid, teacher, loadBands = loadWritableBands }: { canUpload: boolean | null; uid: string | null; teacher: boolean; loadBands?: () => Promise<BandChoices> }) {
+  const [bands, setBands] = useState<BandChoices>(NO_BANDS)
+  const [bandPick, setBandPick] = useState<string | null>(null)
+  const bandChoice = bandPick ?? initialBandChoice(bands)
+  useEffect(() => {
+    let alive = true
+    void loadBands().then(result => { if (alive) setBands(result) }).catch(() => undefined)
+    return () => { alive = false }
+  }, [loadBands])
   const [items, setItems] = useState<LibraryItem[]>([])
   const [listState, setListState] = useState<'loading' | 'ready' | 'error'>('loading')
   const [listError, setListError] = useState('')
@@ -170,10 +183,13 @@ function MusicXmlLibrary({ canUpload, uid, teacher }: { canUpload: boolean | nul
 
   async function save() {
     if (!prepared || busy) return
+    const bandProblem = bandChoiceProblem(bands, bandChoice)
+    if (bandProblem) { setMessage(`Chưa lưu được — ${bandProblem}`); return }
     setBusy(true)
     setMessage('')
     try {
-      const item = await importMusicXml(prepared, title, composer)
+      const bandId = bandIdOfChoice(bandChoice)
+      const item = await importMusicXml(prepared, title, composer, bandId, bands.bands.find(band => band.id === bandId)?.name ?? null)
       setItems(current => [item, ...current])
       setPrepared(null)
       setSaved(true)
@@ -187,7 +203,7 @@ function MusicXmlLibrary({ canUpload, uid, teacher }: { canUpload: boolean | nul
     const item = items.find(entry => entry.id === openId)
     return <main className="thu-vien">
         <Suspense fallback={<p className="tv-view-note">Đang mở bản nhạc…</p>}>
-        <ScoreViewer key={openId} id={openId} initial={item ? { title: item.title, composer: item.composer } : null} editorId={item?.created_by ?? null} onClose={closeScore}
+        <ScoreViewer key={openId} id={openId} initial={item ? { title: item.title, composer: item.composer } : null} editorId={item?.created_by ?? null} bandName={item?.band_name ?? null} onClose={closeScore}
           canManage={canManageItem(item, uid, teacher, canUpload === true)}
           onArchived={removedId => { setItems(current => current.filter(entry => entry.id !== removedId)); closeScore() }}
           onSaved={saved => setItems(current => current.map(entry => entry.id === saved.id ? { ...entry, ...saved } : entry))} />
@@ -202,6 +218,7 @@ function MusicXmlLibrary({ canUpload, uid, teacher }: { canUpload: boolean | nul
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="font-medium">Tên bài<input value={title} onChange={event => setTitle(event.target.value)} className="mt-1 block w-full rounded-lg border border-[#ccd5ca] px-3 py-2" /></label>
           <label className="font-medium">Tác giả<input value={composer} onChange={event => setComposer(event.target.value)} className="mt-1 block w-full rounded-lg border border-[#ccd5ca] px-3 py-2" /></label>
+          <BandOwnerField choices={bands} value={bandChoice} onChange={setBandPick} disabled={busy} className="font-medium sm:col-span-2 tv-band-field" />
         </div>
         <div className="mt-5 flex gap-3">
           <button type="button" onClick={() => void save()} disabled={busy || !title.trim()} className="rounded-lg bg-[#32664a] px-5 py-2 font-semibold text-white disabled:opacity-50">Thêm vào thư viện</button>
@@ -251,7 +268,7 @@ function MusicXmlLibrary({ canUpload, uid, teacher }: { canUpload: boolean | nul
       <div className="overflow-hidden rounded-xl border border-[#d8dfd6] bg-white">
         <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-3 bg-[#e9eee7] px-4 py-3 text-sm font-semibold sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_8rem]"><span>Tên bài</span><span>Tác giả</span><span className="hidden sm:block">Ngày thêm</span></div>
         {listState === 'ready' && shown.map(item => <button type="button" key={item.id} className="tv-row" onClick={() => openScore(item.id)} aria-label={`Mở bản nhạc ${item.title}`}>
-          <span className="break-words font-medium">{item.title}<EditorName userId={item.created_by} /></span><span className="break-words">{item.composer || '—'}</span><time className="hidden sm:block" dateTime={item.created_at}>{new Date(item.created_at).toLocaleDateString('vi-VN')}</time>
+          <span className="break-words font-medium">{item.title}<small className="tv-editor" data-testid="row-band">Band: {bandLabel(item.band_name)}</small><EditorName userId={item.created_by} /></span><span className="break-words">{item.composer || '—'}</span><time className="hidden sm:block" dateTime={item.created_at}>{new Date(item.created_at).toLocaleDateString('vi-VN')}</time>
         </button>)}
         {listState === 'loading' && <p aria-live="polite">Đang tải thư viện…</p>}
         {listState === 'error' && <p role="alert">{listError} <button type="button" className="tv-retry" onClick={() => { setListState('loading'); setReload(n => n + 1) }}>Thử lại</button></p>}

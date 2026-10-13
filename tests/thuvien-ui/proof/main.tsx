@@ -37,9 +37,14 @@ const session: ClassSession = {
     level: null, enrolledAt: null, htMember: false, isTeacher: true, coverUrl: null },
 }
 
+// ?bands=editor|admin: danh sách Band thử cho ô "Lưu vào Band" (không gọi Supabase).
+const BAND_SAMPLE = [{ id: 'b1', name: 'Band Sao Mai' }, { id: 'b2', name: 'Band Hoàng Hôn' }]
+const bandsParam = params.get('bands')
+const loadBands = bandsParam ? async () => ({ bands: BAND_SAMPLE, admin: bandsParam === 'admin' }) : undefined
+
 createRoot(document.getElementById('root')!).render(<StrictMode>
   {local && <div style={{ position: 'fixed', right: 8, bottom: 8, zIndex: 9, padding: '4px 10px', borderRadius: 6, background: '#1f4a33', color: '#fff', font: '600 12px system-ui' }}>
     DB TẠM (local) · vai: {as} · kho MusicXML = bản thử trong trình duyệt · không phải production
   </div>}
-  <ThuVienPageView chordLibrary={local} measureAnalyzer={analyzer} session={session} />
+  <ThuVienPageView chordLibrary={local} measureAnalyzer={analyzer} session={session} loadBands={loadBands} />
 </StrictMode>)

@@ -609,9 +609,10 @@ test('bài MỚI chưa lưu: nút Sửa vạch nhịp khoá, có lời nhắc l�
 // ── Backend thật qua adapter RPC — máy chủ giả có trạng thái, cùng hợp đồng với db/chord_library_v1_setup.sql ──
 function fakeServer() {
   type V = { id: string; sheet: string; n: number; text: string; meter: unknown; bpm: number | null; review: string }
-  const sheets = new Map<string, { title: string; composer: string | null; canonical: string | null }>()
+  const sheets = new Map<string, { title: string; composer: string | null; canonical: string | null; band?: string | null }>()
   const versions: V[] = []
   const calls: string[] = []
+  const bandCalls: Array<Record<string, unknown>> = []
   let failNext: string | null = null
   let seq = 0
   const rowOf = (v: V) => {
@@ -620,6 +621,7 @@ function fakeServer() {
       sheet_id: v.sheet, version_id: v.id, title: sheet.title, composer: sheet.composer, version_number: v.n, is_canonical: sheet.canonical === v.id,
       canonical_version_id: sheet.canonical, review_status: v.review, anchors_status: 'none', created_at: `2026-10-04T00:00:${String(v.n).padStart(2, '0')}Z`,
       text: v.text, meter: v.meter, suggested_bpm: v.bpm, sources: [],
+      band_id: sheet.band ?? null, band_name: sheet.band ? `Band ${sheet.band}` : null,
       draft_version_id: versions.filter(x => x.sheet === v.sheet && x.review === 'private' && x.n > v.n).sort((a, b) => b.n - a.n)[0]?.id ?? null,
     }
   }
@@ -637,6 +639,13 @@ function fakeServer() {
       versions.push(v)
       return { ok: true, duplicate: false, sheet_id: sheet, version_id: v.id }
     },
+    chord_sheet_contribute_publish_band: a => {
+      bandCalls.push(a)
+      if (a.p_band_id === 'band-forbidden') throw new Error('CHORDLIB_FORBIDDEN: không có quyền lưu bài vào Band này')
+      const result = handlers.chord_sheet_contribute_publish(a) as { sheet_id: string }
+      if (a.p_band_id) sheets.get(result.sheet_id)!.band = String(a.p_band_id)
+      return result
+    },
     chord_sheet_approve: a => { const v = versions.find(x => x.id === a.p_version_id)!; v.review = 'approved'; sheets.get(v.sheet)!.canonical = v.id; return { ok: true } },
     chord_sheet_reject: a => { versions.find(x => x.id === a.p_version_id)!.review = 'rejected'; return { ok: true } },
     chord_sheet_update_info: a => { const sheet = sheets.get(a.p_sheet_id)!; sheet.title = a.p_title; sheet.composer = a.p_composer; return { ok: true } },
@@ -646,7 +655,7 @@ function fakeServer() {
     if (failNext === fn) { failNext = null; return { data: null, error: { message: 'CHORDLIB_INVALID: máy chủ từ chối (thử nghiệm)' } } }
     try { return { data: handlers[fn](args), error: null } } catch (cause) { return { data: null, error: { message: (cause as Error).message } } }
   }
-  return { rpc, calls, versions, sheets, fail: (fn: string) => { failNext = fn } }
+  return { rpc, calls, bandCalls, versions, sheets, fail: (fn: string) => { failNext = fn } }
 }
 
 test('rpc: KHÔNG có băng "Dữ liệu thử"; danh sách + tạo bài + sửa + duyệt đi qua đúng các RPC; form nạp lại từ máy chủ', async () => {
@@ -807,7 +816,7 @@ test('Thêm bản nhạc: RLS từ chối → thông báo tiếng Việt rõ rà
   const { ADD_DENIED_MESSAGE } = await import('../../src/thuvien/masterLibrary')
   assert.match(ADD_DENIED_MESSAGE, /Biên tập âm nhạc/)
   const src = (await import('node:fs')).readFileSync(new URL('../../src/thuvien/masterLibrary.ts', import.meta.url), 'utf8')
-  assert.match(src, /created_by: auth\.user\.id/, 'client gửi created_by = người đăng nhập; RLS ép bằng auth.uid()')
+  assert.match(src, /userId: auth\.user\.id/, 'client gửi created_by = người đăng nhập; RLS ép bằng auth.uid()')
   assert.match(src, /row-level security/i)
 })
 
@@ -884,7 +893,8 @@ test('Sửa/Gỡ bài trong Thư viện: nút chỉ hiện đúng người; Gỡ
   assert.match(ARCHIVED_DUPLICATE_MESSAGE('Diễm xưa'), /đã được gỡ.*Admin khôi phục/)
   assert.match(MANAGE_DENIED_MESSAGE, /Biên tập âm nhạc/)
   const lib = readFileSync(new URL('../../src/thuvien/masterLibrary.ts', import.meta.url), 'utf8')
-  assert.match(lib, /\.select\('id,title,composer,created_at,created_by'\)\.is\('archived_at', null\)/, 'danh sách lọc bài đã gỡ')
+  assert.match(lib, /select\(columns\)\.is\('archived_at', null\)/, 'danh sách lọc bài đã gỡ')
+  assert.match(lib, /query\('id,title,composer,created_at,created_by'\)/, 'máy chủ chưa có band_id → danh sách cũ, không vỡ')
   assert.match(lib, /update\(\{ archived_at: new Date\(\)\.toISOString\(\) \}\)/, 'gỡ chỉ đặt archived_at')
   assert.ok(!/\.delete\(\)/.test(lib), 'không DELETE')
   assert.match(lib, /select\('id,title,archived_at'\)\.eq\('content_hash'/, 'tra trùng hash thấy cả bài đã gỡ')
@@ -922,10 +932,10 @@ test('Người biên tập (created_by): lấy tên qua get_user_profile, không
 
 test('mục MusicXML: vẫn là mặc định, vẫn gọi đúng các hàm cũ; thanh mục nằm NGOÀI khối bố cục theo vị trí', () => {
   const page = readFileSync(new URL('../../src/thuvien/ThuVienPage.tsx', import.meta.url), 'utf8')
-  for (const piece of ['listLibrary()', 'importMusicXml(prepared, title, composer)', 'prepareMusicXml(file.name, await file.text())', '<ScoreViewer key={openId}', 'accept=".musicxml,.xml"'])
+  for (const piece of ['listLibrary()', 'importMusicXml(prepared, title, composer, bandId,', 'prepareMusicXml(file.name, await file.text())', '<ScoreViewer key={openId}', 'accept=".musicxml,.xml"'])
     assert.ok(page.includes(piece), piece)
   assert.match(page, /<main className="thu-vien[^"]*">\s*<div className="mx-auto max-w-4xl">/)
-  assert.match(page, /<MusicXmlLibrary canUpload=\{canUpload\} uid=\{uid\} teacher=\{teacher\} \/>/, 'MusicXmlLibrary vẫn là mặc định; chỉ nhận cờ ẩn/hiện mục nạp (quyền thật do RLS)')
+  assert.match(page, /<MusicXmlLibrary canUpload=\{canUpload\} uid=\{uid\} teacher=\{teacher\} loadBands=\{loadBands\} \/>/, 'MusicXmlLibrary vẫn là mặc định; chỉ nhận cờ ẩn/hiện mục nạp (quyền thật do RLS)')
   assert.match(page, /<ThuVienShell active=\{activeNavItem\(search\)\}/, 'toàn bộ trang nằm trong khung Class')
   assert.ok(!page.includes('ThuVienTabs') && !page.includes('ThuVienHeader'), 'thanh mục cũ đã được khung Class thay thế')
   assert.ok(!page.includes('+ Thêm bản nhạc'), 'danh sách MusicXML không còn nút tạo mới trùng với Header')
@@ -1940,4 +1950,114 @@ test('Duyệt nhanh: chỉ-xem (không quyền sửa) → không có trình sử
   await settle()
   assert.equal(view.queryByRole('button', { name: 'Duyệt' }), null)
   assert.equal(view.queryByRole('button', { name: 'Duyệt bản này' }), null)
+})
+
+// ── Band sở hữu (L2) ──────────────────────────────────────────────────────────────────────────
+const BANDS_EDITOR = { bands: [{ id: 'band-b', name: 'Beta' }, { id: 'band-a', name: 'Alpha' }], admin: false }
+const BANDS_ADMIN = { bands: [{ id: 'band-b', name: 'Beta' }, { id: 'band-a', name: 'Alpha' }], admin: true }
+
+test('Band: Biên tập nhiều Band → mặc định Band đầu theo tên, lưu bài MỚI qua hàm Band với đúng p_band_id; bài hiện Band', async () => {
+  const server = fakeServer()
+  goto('?muc=hopam')
+  const view = render(<ChordLibraryPage library={createRpcChordLibrary(server.rpc)} loadBands={async () => BANDS_EDITOR} />)
+  await settle()
+  await openNewChord()
+  await settle()
+  const select = view.getByTestId('band-owner') as HTMLSelectElement
+  assert.equal(select.value, 'band-a', 'mặc định = Band đầu theo tên (Alpha)')
+  assert.deepEqual([...select.options].map(option => option.textContent), ['Alpha', 'Beta'], 'Biên tập: chỉ Band của mình, không "Chưa gán Band"')
+  type(select, 'band-b')
+  type(view.getByLabelText(/Tên bài/), 'Bài Band B')
+  setLyrics(view, '[C] lời một')
+  server.calls.length = 0
+  fireEvent.click(view.getByRole('button', { name: 'Lưu' }))
+  await settle()
+  assert.deepEqual(server.calls, ['chord_sheet_contribute_publish_band', 'chord_sheet_get'])
+  assert.equal(server.bandCalls[0].p_band_id, 'band-b')
+  assert.match(view.container.querySelector('.cl-editor-credit-edit')?.textContent ?? '', /Band: Band band-b/)
+  assert.equal(view.queryByTestId('band-owner'), null, 'bài đã có: không đổi Band ở trình sửa')
+})
+
+test('Band: người không có Band hợp lệ → không có ô chọn, lưu bằng hàm cũ y như trước', async () => {
+  const server = fakeServer()
+  goto('?muc=hopam')
+  const view = render(<ChordLibraryPage library={createRpcChordLibrary(server.rpc)} loadBands={async () => ({ bands: [], admin: false })} />)
+  await settle()
+  await openNewChord()
+  await settle()
+  assert.equal(view.queryByTestId('band-owner'), null)
+  type(view.getByLabelText(/Tên bài/), 'Bài không Band')
+  setLyrics(view, '[C] lời một')
+  server.calls.length = 0
+  fireEvent.click(view.getByRole('button', { name: 'Lưu' }))
+  await settle()
+  assert.deepEqual(server.calls, ['chord_sheet_contribute_publish', 'chord_sheet_get'], 'luồng cũ: hàm cũ, không p_band_id')
+})
+
+test('Band: Admin phải chọn trước khi lưu (không đoán); "Chưa gán Band" là lựa chọn rõ ràng', async () => {
+  const server = fakeServer()
+  goto('?muc=hopam')
+  const view = render(<ChordLibraryPage library={createRpcChordLibrary(server.rpc)} loadBands={async () => BANDS_ADMIN} />)
+  await settle()
+  await openNewChord()
+  await settle()
+  const select = view.getByTestId('band-owner') as HTMLSelectElement
+  assert.equal(select.value, '', 'Admin: chưa chọn')
+  assert.deepEqual([...select.options].map(option => option.textContent), ['— Chọn Band', 'Alpha', 'Beta', 'Chưa gán Band'])
+  type(view.getByLabelText(/Tên bài/), 'Bài Admin')
+  setLyrics(view, '[C] lời một')
+  server.calls.length = 0
+  fireEvent.click(view.getByRole('button', { name: 'Lưu' }))
+  await settle()
+  assert.deepEqual(server.calls, [], 'chưa chọn Band → không gọi máy chủ')
+  assert.match(view.container.textContent ?? '', /Chọn Band để lưu bài/)
+  type(select, '__none')
+  fireEvent.click(view.getByRole('button', { name: 'Lưu' }))
+  await settle()
+  assert.deepEqual(server.calls, ['chord_sheet_contribute_publish', 'chord_sheet_get'], 'Chưa gán Band → hàm cũ')
+})
+
+test('Band: máy chủ từ chối Band (không quyền) → báo lỗi, KHÔNG báo đã lưu', async () => {
+  const server = fakeServer()
+  goto('?muc=hopam')
+  const view = render(<ChordLibraryPage library={createRpcChordLibrary(server.rpc)} loadBands={async () => ({ bands: [{ id: 'band-forbidden', name: 'Lạ' }], admin: false })} />)
+  await settle()
+  await openNewChord()
+  await settle()
+  type(view.getByLabelText(/Tên bài/), 'Bài bị chặn')
+  setLyrics(view, '[C] lời một')
+  fireEvent.click(view.getByRole('button', { name: 'Lưu' }))
+  await settle()
+  assert.equal(server.versions.length, 0, 'không có phiên bản nào được ghi')
+  assert.doesNotMatch(view.container.textContent ?? '', /Đã lưu/)
+})
+
+test('Band: danh sách hợp âm hiện "Band: <tên>" và bài cũ hiện "Chưa gán Band"', async () => {
+  const server = fakeServer()
+  server.sheets.set('old', { title: 'Bài cũ', composer: null, canonical: 'vold' })
+  server.versions.push({ id: 'vold', sheet: 'old', n: 1, text: '[C] cũ', meter: null, bpm: null, review: 'approved' })
+  server.sheets.set('new', { title: 'Bài có Band', composer: null, canonical: 'vnew', band: 'x1' })
+  server.versions.push({ id: 'vnew', sheet: 'new', n: 1, text: '[C] mới', meter: null, bpm: null, review: 'approved' })
+  goto('?muc=hopam')
+  const view = render(<ChordLibraryPage library={createRpcChordLibrary(server.rpc)} loadBands={async () => ({ bands: [], admin: false })} />)
+  await settle()
+  const text = [...view.container.querySelectorAll('.cl-item')].map(item => item.textContent ?? '')
+  assert.ok(text.some(row => /Bài cũ/.test(row) && /Band: Chưa gán Band/.test(row)), 'bài cũ: Chưa gán Band')
+  assert.ok(text.some(row => /Bài có Band/.test(row) && /Band: Band x1/.test(row)), 'bài có Band hiện tên')
+})
+
+test('Band (MusicXML): bandChoiceProblem/initialBandChoice/bandIdOfChoice', async () => {
+  const { bandChoiceProblem, initialBandChoice, bandIdOfChoice, bandLabel, NO_BAND_CHOICE, NO_BANDS } = await import('../../src/thuvien/libraryBands')
+  assert.equal(initialBandChoice(NO_BANDS), NO_BAND_CHOICE)
+  assert.equal(bandChoiceProblem(NO_BANDS, NO_BAND_CHOICE), null, 'không có Band hợp lệ: lưu như cũ')
+  assert.equal(initialBandChoice(BANDS_EDITOR), 'band-a')
+  assert.equal(initialBandChoice(BANDS_ADMIN), '')
+  assert.match(bandChoiceProblem(BANDS_ADMIN, '') ?? '', /Chọn Band/)
+  assert.equal(bandChoiceProblem(BANDS_ADMIN, NO_BAND_CHOICE), null)
+  assert.match(bandChoiceProblem(BANDS_EDITOR, NO_BAND_CHOICE) ?? '', /Chọn Band/, 'Biên tập không được bỏ trống Band')
+  assert.match(bandChoiceProblem(BANDS_EDITOR, 'band-khac') ?? '', /Chọn Band/, 'Band không thuộc danh sách')
+  assert.equal(bandIdOfChoice(NO_BAND_CHOICE), null)
+  assert.equal(bandIdOfChoice('band-a'), 'band-a')
+  assert.equal(bandLabel(null), 'Chưa gán Band')
+  assert.equal(bandLabel(' Alpha '), 'Alpha')
 })

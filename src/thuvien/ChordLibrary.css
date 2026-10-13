@@ -337,6 +337,8 @@
 .tv-chords .cl-info .cl-field input, .tv-chords .cl-info .cl-field select { min-height: 38px; padding: 6px 10px; font-size: 15px; font-weight: 500; color: #26352d; }
 .tv-chords .cl-info .cl-field-title { grid-column: 1 / -1; }
 .tv-chords .cl-info .cl-field-title input { min-height: 44px; font-size: 19px; font-weight: 800; letter-spacing: -0.01em; }
+/* Lưu vào Band (chỉ bài mới): một hàng riêng, đủ rộng trên mobile */
+.tv-chords .cl-info .cl-field-band { grid-column: 1 / -1; }
 @container (min-width: 760px) {
   .tv-chords .cl-info-grid { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr) 104px 92px; }
   .tv-chords .cl-info .cl-field-title { grid-column: auto; }

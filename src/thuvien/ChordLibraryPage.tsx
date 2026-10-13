@@ -16,6 +16,9 @@ import ChordSheetEditor from './ChordSheetEditor.tsx'
 import ChordLyricsModal from './ChordLyricsModal.tsx'
 import ChordLineEditor from './ChordLineEditor.tsx'
 import ChordSheetView from './ChordSheetView.tsx'
+import BandOwnerField from './BandOwnerField.tsx'
+import { NO_BANDS, bandChoiceProblem, bandIdOfChoice, bandLabel, initialBandChoice, loadWritableBands } from './libraryBands.ts'
+import type { BandChoices } from './libraryBands.ts'
 import { ChevronDown, Pencil } from 'lucide-react'
 import { MoreMenu } from '../class-social/ui'
 import { remapAnchorsForInsert, remapAnchorsForRemove, sameLyricStructure } from './chordEdit.ts'
@@ -32,12 +35,21 @@ const RhythmScrollPage = lazy(() => import('./RhythmScrollPage.tsx'))
 // Mọi đọc/ghi đi qua `library` (src/thuvien/chordLibrary.ts); component không biết Supabase.
 // CSS: ./ChordLibrary.css, nạp ở ThuVienPage.
 
-type Props = { tabs?: ReactNode; canEdit?: boolean; /** 'editor' = Biên tập (không duyệt; chỉ sửa/gỡ bài của mình) */ access?: 'admin' | 'editor' | 'viewer'; library?: ChordLibrary; analyzer?: MeasureAnalyzer; extractor?: ContentExtractor; readSource?: SourceReader }
+type Props = { tabs?: ReactNode; canEdit?: boolean; /** 'editor' = Biên tập (không duyệt; chỉ sửa/gỡ bài của mình) */ access?: 'admin' | 'editor' | 'viewer'; library?: ChordLibrary; analyzer?: MeasureAnalyzer; extractor?: ContentExtractor; readSource?: SourceReader
+  /** Các Band tài khoản được lưu bài vào (mặc định: tải từ máy chủ khi dùng backend thật). Không có Band → lưu như cũ. */
+  loadBands?: () => Promise<BandChoices> }
 /** Đọc byte một file nguồn để đưa cho analyzer (mặc định: link xem có hạn → fetch). */
 type SourceReader = (library: ChordLibrary, path: string) => Promise<Blob>
 const readViaViewUrl: SourceReader = async (library, path) => (await fetch(await library.sources.viewUrl(path))).blob()
 
-export default function ChordLibraryPage({ tabs, canEdit = true, access = 'admin', library = getChordLibrary(), analyzer, extractor, readSource = readViaViewUrl }: Props) {
+export default function ChordLibraryPage({ tabs, canEdit = true, access = 'admin', library = getChordLibrary(), analyzer, extractor, readSource = readViaViewUrl, loadBands }: Props) {
+  const [bands, setBands] = useState<BandChoices>(NO_BANDS)
+  useEffect(() => {
+    let alive = true
+    const load = loadBands ?? (library.mode === 'rpc' ? loadWritableBands : async () => NO_BANDS)
+    void load().then(result => { if (alive) setBands(result) }).catch(() => undefined)
+    return () => { alive = false }
+  }, [library, loadBands])
   const [openRaw, setOpen] = useState<string | null>(() => chordSheetFromSearch(window.location.search))
   // Chỉ có quyền xem: "?hopam=moi" (thêm bài) không mở trình sửa — về danh sách.
   const open = !canEdit && openRaw === NEW_CHORD_SHEET ? null : openRaw
@@ -115,7 +127,7 @@ export default function ChordLibraryPage({ tabs, canEdit = true, access = 'admin
     {tabs}
     {open
       ? <ChordEditor key={open} library={library} analyzer={analyzer} extractor={extractor} readSource={readSource} versionId={open === NEW_CHORD_SHEET ? null : open}
-          onOpenVersion={id => go(id)} onRhythm={id => goRhythm(id, true)} canReview={access === 'admin'}
+          onOpenVersion={id => go(id)} onRhythm={id => goRhythm(id, true)} canReview={access === 'admin'} bands={bands}
           onClose={message => { setNotice(message ?? ''); go(null) }}
           // Lưu xong chỉ đổi địa chỉ (để tải lại trang vẫn mở đúng bài) — KHÔNG dựng lại editor, kẻo mất thông báo "Đã lưu".
           onSaved={detail => window.history.replaceState(window.history.state, '', sectionUrl(window.location.href, 'chords', detail.versionId))} />
@@ -189,7 +201,7 @@ function ChordList({ library, notice, onView, onEdit, canEdit, ownerOnly }: { li
           <div className="cl-item-name">
             <strong>{item.title}{item.status === 'draft' && <em className="cl-tag">Chưa duyệt</em>}{item.draftVersionId && <em className="cl-tag">Có bản nháp</em>}</strong>
             <span>{item.composer || '—'}</span>
-            <small className="cl-editor-credit">Người biên tập: {item.editorName ?? 'Chưa xác định'}</small>
+            <small className="cl-editor-credit">Band: {bandLabel(item.bandName)} · Người biên tập: {item.editorName ?? 'Chưa xác định'}</small>
           </div>
           <div className="cl-item-status">
             <Status label="Hợp âm" on />
@@ -220,7 +232,9 @@ const draftOf = (form: Form): ChordDraft => ({
   title: form.title, composer: form.composer, meter: parseMeter(form.meter), suggestedBpm: parseBpm(form.bpm), text: form.text,
 })
 
-function ChordEditor({ library, analyzer, extractor, readSource, versionId, onClose, onSaved, onOpenVersion, onRhythm, canReview = true }: {
+function ChordEditor({ library, analyzer, extractor, readSource, versionId, onClose, onSaved, onOpenVersion, onRhythm, canReview = true, bands = NO_BANDS }: {
+  /** Band tài khoản được lưu bài mới vào (rỗng = không hiện ô chọn, lưu như cũ). */
+  bands?: BandChoices
   /** false (Biên tập): không có nút Duyệt/Bỏ bản nháp — bài của mình được máy chủ công khai ngay khi lưu. */
   canReview?: boolean
   library: ChordLibrary
@@ -242,6 +256,9 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
   const [failed, setFailed] = useState('')
+  // Band sở hữu cho BÀI MỚI: null = chưa đổi tay → dùng mặc định (Band của Biên tập; Admin phải chọn).
+  const [bandPick, setBandPick] = useState<string | null>(null)
+  const bandChoice = bandPick ?? initialBandChoice(bands)
   // File nguồn cho phiên bản SẮP lưu: bản đã gắn (giữ lại sẽ được CHÉP sang phiên bản mới) + file mới nạp vào
   // thư mục {uid}/{draftId}/. draftId = version_id của phiên bản sắp tạo, sinh sẵn để tải file trước khi lưu.
   const [plan, setPlan] = useState<PlanItem[]>([])
@@ -395,6 +412,10 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
     setMessage(''); setFailed('')
     if (Object.keys(found).length) { setFailed('Chưa lưu được — xem các ô được đánh dấu.'); return }
     if (detail && !unsaved) { setMessage('Chưa có thay đổi nào để lưu.'); return }
+    if (!detail) {
+      const bandProblem = bandChoiceProblem(bands, bandChoice)
+      if (bandProblem) { setFailed(`Chưa lưu được — ${bandProblem}`); return }
+    }
     setBusy(true)
     try {
       // MỘT lần lưu: lời + hợp âm + vạch nhịp đang hiện đi cùng nhau trong một lời gọi → một phiên bản.
@@ -406,7 +427,8 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
       }
       const options = { versionId: draftId, sources, anchors: bars }
       if (!detail) {
-        const next = await library.createChordSheet(draft, options)
+        const bandId = bandIdOfChoice(bandChoice)
+        const next = await library.createChordSheet(draft, { ...options, bandId, bandName: bands.bands.find(band => band.id === bandId)?.name ?? null })
         await afterVersion(next, sources)
         adopt(next); onSaved(next)
         setMessage(next.status === 'current'
@@ -667,7 +689,7 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
       <button type="button" className="cl-primary" onClick={() => void save()} disabled={busy || sourceBusy}>{busy ? 'Đang lưu…' : 'Lưu'}</button>
     </header>
     <MockBanner library={library} />
-    {detail && <p className="cl-editor-credit cl-editor-credit-edit">Người biên tập: {detail.editorName ?? 'Chưa xác định'}</p>}
+    {detail && <p className="cl-editor-credit cl-editor-credit-edit">Band: {bandLabel(detail.bandName)} · Người biên tập: {detail.editorName ?? 'Chưa xác định'}</p>}
     {detail && <div className="cl-status-row">
       <button type="button" className="cl-status-chip" data-status={detail.status} onClick={() => setAdvancedOpen(true)}
         title="Xem / duyệt phiên bản">
@@ -695,6 +717,8 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
               <input value={form.composer} onChange={event => set({ composer: event.target.value })} aria-invalid={!!errors.composer} maxLength={220} />
               {errors.composer && <span className="cl-error">{errors.composer}</span>}
             </label>
+            {!detail && <BandOwnerField choices={bands} value={bandChoice} onChange={setBandPick} disabled={busy}
+              invalid={!!bandChoiceProblem(bands, bandChoice) && !!failed} />}
             <label className="cl-field cl-field-meter">Nhịp
               <select value={form.meter} onChange={event => set({ meter: event.target.value })}>
                 <option value="">— Chưa rõ</option>

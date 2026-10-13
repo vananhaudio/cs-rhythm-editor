@@ -36,6 +36,9 @@ export type ChordSheetSummary = {
   editorName?: string | null
   /** Bài do CHÍNH người đang xem tạo (máy chủ tính; chỉ để ẩn/hiện nút — quyền thật do máy chủ). */
   sheetMine?: boolean
+  /** Band sở hữu (teamlab_bands). null/thiếu = bài cũ, "Chưa gán Band". */
+  bandId?: string | null
+  bandName?: string | null
 }
 
 export type ChordSheetDetail = ChordSheetSummary & {
@@ -57,6 +60,10 @@ export type ChordSaveOptions = {
   sources?: ChordSource[]
   /** Vạch nhịp đang hiển thị — đi CÙNG lời trong MỘT lần lưu (một phiên bản). null/thiếu = bản nháp chưa có vạch. */
   anchors?: ChordAnchors | null
+  /** Band sở hữu — chỉ khi TẠO BÀI MỚI (máy chủ không đổi Band của bài đã có). null/thiếu = không gán Band. */
+  bandId?: string | null
+  /** Tên Band, chỉ để dữ liệu thử (mock) hiện đúng; máy chủ thật tự tra. */
+  bandName?: string | null
 }
 
 /** Phần NỘI DUNG của một phiên bản (không gồm tên bài/tác giả — hai thứ đó thuộc về bài). */
@@ -109,7 +116,7 @@ type MockVersion = {
   hasAnchors: boolean; createdAt: string; review: 'private' | 'approved' | 'rejected'
   sources?: ChordSource[]; anchors?: ChordAnchors | null
 }
-type MockSheet = { sheetId: string; title: string; composer: string | null; currentVersionId: string | null; versions: MockVersion[] }
+type MockSheet = { sheetId: string; title: string; composer: string | null; currentVersionId: string | null; versions: MockVersion[]; bandId?: string | null; bandName?: string | null }
 
 export const MOCK_STORAGE_KEY = 'tv-chordlib-mock-v2'
 
@@ -179,6 +186,7 @@ export function createMockChordLibrary(options: MockOptions = {}): ChordLibrary 
   const summary = (sheet: MockSheet, version: MockVersion): ChordSheetSummary => ({
     sheetId: sheet.sheetId, versionId: version.versionId, title: sheet.title, composer: sheet.composer,
     hasAnchors: version.hasAnchors, updatedAt: version.createdAt, status: statusOf(sheet, version), draftVersionId: newerDraft(sheet, version),
+    bandId: sheet.bandId ?? null, bandName: sheet.bandName ?? null,
   })
   const detail = (sheet: MockSheet, version: MockVersion): ChordSheetDetail => {
     const anchors = parseAnchors(version.anchors ?? null, version.text)
@@ -232,7 +240,8 @@ export function createMockChordLibrary(options: MockOptions = {}): ChordLibrary 
       const text = canonicalChordText(draft.text)
       const anchors = mockAnchors(saveOptions.anchors, text)
       const version: MockVersion = { versionId, versionNumber: 1, text, meter: draft.meter, suggestedBpm: draft.suggestedBpm, hasAnchors: !!anchors, anchors, createdAt: now(), review: 'private', sources: saveOptions.sources ?? [] }
-      const sheet: MockSheet = { sheetId: newId(), title: draft.title.trim(), composer: draft.composer.trim() || null, currentVersionId: null, versions: [version] }
+      const sheet: MockSheet = { sheetId: newId(), title: draft.title.trim(), composer: draft.composer.trim() || null, currentVersionId: null, versions: [version],
+        bandId: saveOptions.bandId ?? null, bandName: saveOptions.bandId ? saveOptions.bandName ?? null : null }
       sheets = [sheet, ...sheets]
       persist()
       return detail(sheet, version)
@@ -348,6 +357,8 @@ export function createRpcChordLibrary(rpc: RpcCall, sourceStore: ChordSourceStor
     status: statusOfRow(row), draftVersionId,
     editorName: typeof row.editor_name === 'string' && row.editor_name.trim() ? row.editor_name.trim() : null,
     sheetMine: row.sheet_mine === true,
+    bandId: typeof row.band_id === 'string' ? row.band_id : null,
+    bandName: typeof row.band_name === 'string' && row.band_name.trim() ? row.band_name.trim() : null,
   })
   async function get(versionId: string): Promise<ChordSheetDetail> {
     const row = await call('chord_sheet_get', { p_version_id: versionId }) as Row
@@ -373,7 +384,10 @@ export function createRpcChordLibrary(rpc: RpcCall, sourceStore: ChordSourceStor
     // V1.4: vạch nhịp đi cùng lời trong MỘT lời gọi (máy chủ từ chối cả lần lưu nếu thiếu quyền / vạch sai).
     if (saveOptions.anchors) args.p_anchors = { ...(saveOptions.anchors.pickup ? { pickup: saveOptions.anchors.pickup } : {}), measures: saveOptions.anchors.measures }
     // Biên tập → máy chủ công khai ngay (bài của mình); người review / người khác: bản nháp như cũ (máy chủ quyết định).
-    const result = await call('chord_sheet_contribute_publish', args) as Row
+    // Tạo bài MỚI kèm Band → hàm bọc (kiểm quyền Band ở máy chủ). Còn lại: đúng hàm cũ — bản FE/BE cũ không đổi.
+    const withBand = saveOptions.bandId && !args.p_sheet_id
+    if (withBand) args.p_band_id = saveOptions.bandId
+    const result = await call(withBand ? 'chord_sheet_contribute_publish_band' : 'chord_sheet_contribute_publish', args) as Row
     return get(String(result.version_id))
   }
 

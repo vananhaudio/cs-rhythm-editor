@@ -11,6 +11,9 @@ export type LibraryItem = {
   composer: string | null
   created_at: string
   created_by?: string
+  /** Band sở hữu (teamlab_bands). null/thiếu = bài cũ, "Chưa gán Band". */
+  band_id?: string | null
+  band_name?: string | null
 }
 
 export function prepareMusicXml(filename: string, xml: string) {
@@ -110,13 +113,22 @@ export function editorName(userId: string | null | undefined): Promise<string> {
   return request
 }
 
+type BandedRow = LibraryItem & { band?: { name?: string | null } | null }
+const withBandName = (row: BandedRow): LibraryItem => {
+  const { band, ...rest } = row
+  return { ...rest, band_id: row.band_id ?? null, band_name: band?.name?.trim() || null }
+}
+
 export async function listLibrary(): Promise<LibraryItem[]> {
   const { supabase } = await import('../supabase.ts')
-  const { data, error } = await supabase.from(TABLE)
-    .select('id,title,composer,created_at,created_by').is('archived_at', null)
+  const query = (columns: string) => supabase.from(TABLE).select(columns).is('archived_at', null)
     .order('created_at', { ascending: false }).limit(1000)
-  if (error) throw error
-  return data ?? []
+  // Có band_id (+ tên Band qua teamlab_bands). Máy chủ chưa có cột (chưa migrate) → danh sách cũ, không Band — không vỡ trang.
+  const withBand = await query('id,title,composer,created_at,created_by,band_id,band:teamlab_bands(name)')
+  if (!withBand.error) return ((withBand.data ?? []) as unknown as BandedRow[]).map(withBandName)
+  const plain = await query('id,title,composer,created_at,created_by')
+  if (plain.error) throw plain.error
+  return ((plain.data ?? []) as unknown as LibraryItem[]).map(row => ({ ...row, band_id: null, band_name: null }))
 }
 
 export async function updateLibraryMetadata(id: string, title: string, composer: string): Promise<LibraryItem> {
@@ -149,7 +161,22 @@ export function canManageItem(item: Pick<LibraryItem, 'created_by'> | null | und
 export const MANAGE_DENIED_MESSAGE = 'Không thực hiện được: chỉ người tạo bài (đang giữ vai Biên tập âm nhạc), Admin hoặc Giáo viên được sửa/gỡ bài này.'
 export const ARCHIVED_DUPLICATE_MESSAGE = (title: string) => `Bản nhạc này đã từng có trong thư viện (“${title}”) nhưng đã được gỡ. Cần Admin khôi phục.`
 
-export async function importMusicXml(input: ReturnType<typeof prepareMusicXml>, title: string, composer: string): Promise<LibraryItem> {
+/** Dòng INSERT: band_id CHỈ có khi chọn Band (không chọn → payload y như bản cũ, chạy được cả khi máy chủ chưa có cột). */
+export function insertRow(input: { title: string; composer: string; filename: string; xml: string; contentHash: string; sizeBytes: number; userId: string; bandId?: string | null }) {
+  return {
+    title: input.title,
+    composer: input.composer.trim() || null,
+    original_filename: input.filename,
+    musicxml_text: input.xml,
+    content_hash: input.contentHash,
+    size_bytes: input.sizeBytes,
+    created_by: input.userId,
+    ...(input.bandId ? { band_id: input.bandId } : {}),
+  }
+}
+
+/** `bandId`: Band sở hữu (máy chủ kiểm quyền bằng trigger). null/thiếu = không gán Band — payload y như bản cũ. */
+export async function importMusicXml(input: ReturnType<typeof prepareMusicXml>, title: string, composer: string, bandId: string | null = null, bandName: string | null = null): Promise<LibraryItem> {
   const cleanTitle = title.trim()
   if (!cleanTitle) throw new Error('Vui lòng nhập Tên bài.')
   const { supabase } = await import('../supabase.ts')
@@ -163,17 +190,14 @@ export async function importMusicXml(input: ReturnType<typeof prepareMusicXml>, 
     if (existing[0].archived_at) throw new Error(ARCHIVED_DUPLICATE_MESSAGE(existing[0].title))
     throw new Error(`Bản nhạc này đã có trong thư viện: ${existing[0].title}.`)
   }
-  const { data, error } = await supabase.from(TABLE).insert({
-    title: cleanTitle,
-    composer: composer.trim() || null,
-    original_filename: input.filename,
-    musicxml_text: input.xml,
-    content_hash: contentHash,
-    size_bytes: input.sizeBytes,
-    created_by: auth.user.id,
-  }).select('id,title,composer,created_at,created_by').single()
+  const { data, error } = await supabase.from(TABLE).insert(
+    insertRow({ title: cleanTitle, composer, filename: input.filename, xml: input.xml, contentHash, sizeBytes: input.sizeBytes, userId: auth.user.id, bandId })
+  ).select('id,title,composer,created_at,created_by').single()
   // RLS từ chối (không phải Biên tập / mất vai): báo rõ, không lộ thông báo kỹ thuật.
+  if (error && /không có quyền lưu bài vào Band/i.test(error.message ?? '')) throw new Error(BAND_DENIED_MESSAGE)
   if (error && (error.code === '42501' || /row-level security/i.test(error.message ?? ''))) throw new Error(ADD_DENIED_MESSAGE)
   if (error) throw error
-  return data
+  return { ...data, band_id: bandId, band_name: bandId ? bandName : null }
 }
+
+export const BAND_DENIED_MESSAGE = 'Không lưu được: tài khoản không có quyền lưu bài vào Band này. Chọn Band của bạn rồi lưu lại.'
