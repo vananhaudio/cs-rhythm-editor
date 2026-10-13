@@ -173,7 +173,7 @@ export function currentSessionNo(st: Extract<ClassLearningState, { enabled: true
 /** Copy ngắn cho buổi khoá — không trừng phạt. */
 export function lockedHint(sessions: SessionState[], s: SessionState): string {
   const prev = [...sessions].filter(x => x.no < s.no).sort((a, b) => b.no - a.no)[0]
-  return prev ? `Hoàn thành Buổi ${pad2(prev.no)} để mở` : 'Buổi này sẽ mở khi bạn bắt đầu học'
+  return prev ? `Bạn cần trả bài Buổi ${pad2(prev.no)} mới mở khoá được` : 'Buổi này sẽ mở khi bạn bắt đầu học'
 }
 
 // ── Nhịp tuần (1 tuần = 1 buổi, chuẩn paceDays) — CHỈ trình bày, không phạt, không khoá ──

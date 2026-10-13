@@ -63,7 +63,7 @@ test("buổi hiện tại = buổi đã mở chưa xong nhỏ nhất; khoá theo
   const st = ready(RAW);
   assert.equal(currentSessionNo(st), 2);
   assert.deepEqual(st.sessions.map(s => sessionPhase(s, "learner")), ["done", "open", "locked", "locked"]);
-  assert.equal(lockedHint(st.sessions, st.sessions[2]), "Hoàn thành Buổi 02 để mở");
+  assert.equal(lockedHint(st.sessions, st.sessions[2]), "Bạn cần trả bài Buổi 02 mới mở khoá được");
   // xong hết → buổi đã mở cuối cùng
   const all = ready({ ...RAW, sessions: RAW.sessions.slice(0, 1) });
   assert.equal(currentSessionNo(all), 1);
@@ -163,7 +163,7 @@ test("visibility: bài trả = Các bạn cùng lớp | Chỉ Thầy; thread cũ
     session_no: 4, checkpoint_id: "4.1", class_schedule_id: CLS, identity: {}, events: [] });
   assert.deepEqual(d?.checkpoint, { classId: CLS, programCode: "SOLO01", sessionNo: 4, checkpointId: "4.1" });
   assert.equal(toThreadDetail({ id: "t", status: "passed", visibility: "community", identity: {}, events: [] })?.checkpoint, null);
-  assert.match(ltErrorText({ message: "LT_SESSION_LOCKED" }), /Hoàn thành buổi trước/);
+  assert.match(ltErrorText({ message: "LT_SESSION_LOCKED" }), /Bạn cần trả bài buổi trước/);
   const comp = renderToStaticMarkup(<StudentComposer lessonId="cp-1" kinds={["submission"]} initialKind="submission" isNewThread
     visibilities={["class", "private"]} requireMedia onSent={() => {}} />);
   assert.match(comp, /Các bạn cùng lớp/); assert.doesNotMatch(comp, /Cộng đồng học tập/); assert.match(comp, /\(bắt buộc\)/);
