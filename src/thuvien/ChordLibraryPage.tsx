@@ -514,7 +514,9 @@ function ChordEditor({ library, analyzer, extractor, readSource, versionId, onCl
       const fresh = next.versionNumber > detail.versionNumber && next.versionId !== detail.versionId
       adopt(next); onSaved(next); setAnchorEditing(false)
       setMessage((fresh
-        ? `Đã lưu vạch nhịp thành phiên bản ${next.versionNumber} (bản nháp) — phiên bản ${detail.versionNumber} giữ nguyên. Bấm “Duyệt bản này” để dùng bản mới.`
+        ? next.status === 'current'
+          ? `Đã lưu vạch nhịp thành phiên bản ${next.versionNumber} và dùng ngay — phiên bản ${detail.versionNumber} giữ nguyên.`
+          : `Đã lưu vạch nhịp thành phiên bản ${next.versionNumber} (bản nháp) — phiên bản ${detail.versionNumber} giữ nguyên. Bấm “Duyệt bản này” để dùng bản mới.`
         : `Bộ vạch nhịp này đã có ở phiên bản ${next.versionNumber} — đã mở phiên bản đó, không tạo thêm.`) + suffix)
     } catch (cause) {
       setFailed(cause instanceof Error ? cause.message.replace(/^CHORDLIB_INVALID: /, '') : 'Không lưu được vạch nhịp.')

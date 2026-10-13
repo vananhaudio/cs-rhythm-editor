@@ -105,12 +105,12 @@ test('rpc: acceptAnchors gọi đúng RPC + tham số (mode manual, không gửi
   const calls: { fn: string; args: Record<string, unknown> }[] = []
   const rpc: RpcCall = async (fn, args) => {
     calls.push({ fn, args })
-    if (fn === 'chord_sheet_accept_anchors') return { data: { ok: true, duplicate: false, version_id: 'v2' }, error: null }
+    if (fn === 'chord_sheet_accept_anchors_publish') return { data: { ok: true, duplicate: false, version_id: 'v2' }, error: null }
     return { data: { sheet_id: 's', version_id: 'v2', title: 'B', composer: null, version_number: 2, is_canonical: false, review_status: 'private', created_at: 'x',
       text: TEXT, meter: null, suggested_bpm: null, sources: [], anchors: { measures: [{ line: 0, token: 1 }] }, anchors_status: 'ready' }, error: null }
   }
   const detail = await createRpcChordLibrary(rpc).acceptAnchors('v1', { pickup: A(0, 0), measures: [A(0, 1)] })
-  assert.deepEqual(calls[0], { fn: 'chord_sheet_accept_anchors', args: { p_from_version_id: 'v1', p_anchors: { pickup: A(0, 0), measures: [A(0, 1)] }, p_anchor_review: { mode: 'manual' } } })
+  assert.deepEqual(calls[0], { fn: 'chord_sheet_accept_anchors_publish', args: { p_from_version_id: 'v1', p_anchors: { pickup: A(0, 0), measures: [A(0, 1)] }, p_anchor_review: { mode: 'manual' } } })
   assert.deepEqual([detail.versionId, detail.anchorsStatus, detail.anchors?.measures.length], ['v2', 'ready', 1])
   const failing = createRpcChordLibrary(async () => ({ data: null, error: { message: 'CHORDLIB_INVALID: vạch nhịp không hợp lệ — vị trí 1: dòng 9 không có trong lời' } }))
   await assert.rejects(failing.acceptAnchors('v1', { measures: [A(9, 0)] }), /^Error: vạch nhịp không hợp lệ — vị trí 1: dòng 9/)

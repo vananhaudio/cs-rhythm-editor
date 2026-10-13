@@ -425,7 +425,8 @@ export function createRpcChordLibrary(rpc: RpcCall, sourceStore: ChordSourceStor
       await call('chord_sheet_reject', { p_version_id: versionId, p_reason: 'Bỏ bản nháp (bàn biên tập).' })
     },
     async acceptAnchors(fromVersionId, anchors) {
-      const result = await call('chord_sheet_accept_anchors', {
+      // Biên tập: máy chủ công khai ngay (bài của mình); người review / người khác: bản nháp như cũ (máy chủ quyết định).
+      const result = await call('chord_sheet_accept_anchors_publish', {
         p_from_version_id: fromVersionId,
         p_anchors: { ...(anchors.pickup ? { pickup: anchors.pickup } : {}), measures: anchors.measures },
         p_anchor_review: { mode: 'manual' },
