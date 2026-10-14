@@ -1632,3 +1632,7 @@ button.cs-subs-title:hover { color: var(--cs-accent); }
 .cs-my-band-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding: 10px 4px; border-bottom: 1px solid var(--cs-border); color: var(--cs-text); font-size: 16px; font-weight: 700; text-decoration: none; overflow-wrap: anywhere; }
 .cs-my-band-list li:last-child .cs-my-band-item { border-bottom: none; }
 .cs-my-band-item svg { flex: none; color: var(--cs-muted); }
+
+/* Thẻ "Bài mới phát hành" (Feed /me): ảnh bìa Team công khai, tỉ lệ cố định, không tràn */
+.cs-pub-cover { display: block; width: 100%; max-width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 12px; margin: 8px 0 4px; background: var(--cs-surface-2, #f1f1f4); }
+.cs-pub-open { display: inline-flex; align-items: center; text-decoration: none; }
