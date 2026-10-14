@@ -75,18 +75,20 @@ test("V2: bài đăng có nội dung hợp âm thật (hợp âm trên lời) + 
   assert.match(html, /Anh còn nợ em/);
   assert.match(html, /cs-chord-name[^>]*>Am</);
   assert.match(html, /Chiều/);
-  assert.match(html, /▶ Tập ngay/);
+  assert.match(html, /aria-label="Phát Play Scroll"/);
+  assert.match(html, /Bấm Play để tự cuộn hợp âm/);
   assert.match(html, new RegExp(`href="/hopam/${V}"`));
   assert.doesNotMatch(html, /rhythm-scroll-page/, "không dựng player khi chưa bấm");
+  assert.match(html, /Chia sẻ/);
 });
 
 test("V2: đang tải → khung chờ, nút Tập ngay khoá; không quyền/thu hồi → không khả dụng", () => {
   const loading = renderToStaticMarkup(<ChordSheetPostView view={FEED_VIEW} versionId={V} preview={undefined} playing={false} onPlay={() => undefined} onClose={() => undefined} />);
   assert.match(loading, /aria-busy="true"/);
-  assert.match(loading, /disabled/);
+  assert.match(loading, /cs-chord-play[^>]*disabled|disabled[^>]*cs-chord-play/);
   const gone = renderToStaticMarkup(<ChordSheetPostView view={FEED_VIEW} versionId={V} preview={null} playing={false} onPlay={() => undefined} onClose={() => undefined} />);
   assert.match(gone, /Nội dung này không còn khả dụng/);
-  assert.doesNotMatch(gone, /Tập ngay/);
+  assert.doesNotMatch(gone, /Phát Play Scroll/);
 });
 
 test("V2: ChordPreview chỉ lấy vài dòng đầu (không kéo cả bài)", () => {
@@ -118,6 +120,7 @@ test("V2: ToolShareBody chuyển bài chord_sheet sang ChordSheetPost (lazy); th
   assert.match(src, /ToolShareBodyView view=\{view\}/, "công cụ khác vẫn dùng thẻ cũ");
   const post = read("src/class-social/toolshare/ChordSheetPost.tsx");
   assert.match(post, /IntersectionObserver/);
+  assert.match(post, /<RhythmScrollPage embedded autoStart/, "bấm Play ở xem trước → player chạy ngay, không bấm lần hai");
   assert.match(post, /lazy\(\(\) => import\('\.\.\/\.\.\/thuvien\/RhythmScrollPage'\)\)/);
   assert.doesNotMatch(post, /createProofClock|buildChordTimeline|locateBeat/, "không viết lại engine");
 });

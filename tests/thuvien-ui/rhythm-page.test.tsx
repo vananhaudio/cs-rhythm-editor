@@ -127,3 +127,16 @@ test('nhúng trong bài đăng: khung riêng, "Thu gọn" + "Mở rộng" (/hopa
   assert.equal(closed, 1)
   assert.ok(view.getByRole('button', { name: 'Phát' }), 'không tự phát: nút Phát, chưa chạy')
 })
+
+test('autoStart: dựng xong là chạy ngay (một lần bấm Play ở Feed); mặc định thì KHÔNG tự phát', async () => {
+  Object.assign(globalThis, { requestAnimationFrame: (cb: () => void) => setTimeout(cb, 16), cancelAnimationFrame: (id: number) => clearTimeout(id) })
+  const lib = libraryWith({ status: 'current' })
+  const detail = await lib.getChordSheet('v')
+  const auto = render(<RhythmScrollPage embedded autoStart library={lib} versionId="v" initialDetail={detail} onBack={() => {}} />)
+  await settle(60)
+  assert.ok(auto.getByRole('button', { name: 'Tạm dừng' }), 'đang chạy → nút là Tạm dừng')
+  cleanup()
+  const manual = render(<RhythmScrollPage embedded library={lib} versionId="v" initialDetail={detail} onBack={() => {}} />)
+  await settle(60)
+  assert.ok(manual.getByRole('button', { name: 'Phát' }), 'không tự phát')
+})

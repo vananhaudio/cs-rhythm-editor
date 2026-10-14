@@ -29,12 +29,14 @@ const parseMeterKey = (key: string): TimelineMeter | null => {
 type Load = { state: 'loading' } | { state: 'error'; message: string } | { state: 'ready'; detail: ChordSheetDetail }
 
 /** Gắn `key={versionId}` ở nơi dùng: đổi phiên bản = dựng lại, nên chỉ cần nạp một lần. */
-export default function RhythmScrollPage({ library, versionId, onBack, embedded = false, initialDetail }: {
+export default function RhythmScrollPage({ library, versionId, onBack, embedded = false, initialDetail, autoStart = false }: {
   library: ChordLibrary; versionId: string; onBack: () => void
   /** Nhúng trong bài đăng (/me): khung có chiều cao riêng, nút "Thu gọn" + "Mở rộng"; không có Chia sẻ. */
   embedded?: boolean
   /** Đã có nội dung (Feed đã tải để xem trước) → không tải lại. */
   initialDetail?: ChordSheetDetail
+  /** Chạy ngay khi dựng xong (Feed: người xem đã bấm Play ở bản xem trước). Mặc định KHÔNG tự phát. */
+  autoStart?: boolean
 }) {
   const [load, setLoad] = useState<Load>(initialDetail ? { state: 'ready', detail: initialDetail } : { state: 'loading' })
   useEffect(() => {
@@ -48,7 +50,7 @@ export default function RhythmScrollPage({ library, versionId, onBack, embedded 
 
   if (load.state === 'loading') return <Shell embedded={embedded} versionId={versionId} onBack={onBack} title="Rhythm Scroll"><p className="rs-note">Đang tải bài…</p></Shell>
   if (load.state === 'error') return <Shell embedded={embedded} versionId={versionId} onBack={onBack} title="Rhythm Scroll"><p role="alert" className="rs-bad">{load.message}</p></Shell>
-  return <Player detail={load.detail} onBack={onBack} embedded={embedded} />
+  return <Player detail={load.detail} onBack={onBack} embedded={embedded} autoStart={autoStart} />
 }
 
 function Shell({ title, onBack, children, right, embedded = false, versionId }: { title: string; onBack: () => void; children: React.ReactNode; right?: React.ReactNode; embedded?: boolean; versionId?: string }) {
@@ -70,7 +72,7 @@ const Icon = ({ name }: { name: 'play' | 'pause' | 'restart' | 'gear' | 'share' 
   gear: <path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7zm8.2 5.5-.1-.9 1.9-1.5-2-3.4-2.3.9a7 7 0 0 0-1.5-.9L15.8 5h-4l-.4 2.4c-.5.2-1 .5-1.5.9l-2.3-.9-2 3.4 1.9 1.5a7 7 0 0 0 0 1.8L5.6 15.6l2 3.4 2.3-.9c.5.4 1 .7 1.5.9l.4 2.4h4l.4-2.4c.5-.2 1-.5 1.5-.9l2.3.9 2-3.4-1.9-1.5z" />,
 }[name]}</svg>
 
-function Player({ detail, onBack, embedded = false }: { detail: ChordSheetDetail; onBack: () => void; embedded?: boolean }) {
+function Player({ detail, onBack, embedded = false, autoStart = false }: { detail: ChordSheetDetail; onBack: () => void; embedded?: boolean; autoStart?: boolean }) {
   const [sharing, setSharing] = useState(false)
   // Chỉ bản đã duyệt (current/old) chia sẻ được; máy chủ kiểm lại approved khi đăng/gửi.
   const canShare = !embedded && (detail.status === 'current' || detail.status === 'old')
@@ -112,6 +114,15 @@ function Player({ detail, onBack, embedded = false }: { detail: ChordSheetDetail
     tick()
     return () => { cancelAnimationFrame(frame); clearTimeout(timer) }
   }, [playing, total])
+
+  // Người xem đã bấm Play ở bản xem trước → chạy ngay (một lần), dùng đúng đồng hồ + play() của engine hiện có.
+  const autoStarted = useRef(false)
+  useEffect(() => {
+    if (!autoStart || autoStarted.current || !total) return
+    autoStarted.current = true
+    clockRef.current.play()
+    setPlaying(true)
+  }, [autoStart, total])
 
   if (!anchors || !timeline || !script) {
     return <Shell embedded={embedded} versionId={detail.versionId} onBack={onBack} title={detail.title}><p role="alert" className="rs-bad">Phiên bản này chưa có vạch nhịp nên chưa chạy được Rhythm Scroll. Hãy đặt vạch nhịp trong trình sửa rồi mở lại.</p></Shell>

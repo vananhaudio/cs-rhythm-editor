@@ -41,11 +41,18 @@ export function ChordSheetPostView({ view, versionId, preview, onShare, playing,
       : preview === undefined
         ? <div className="cs-chord-preview is-loading" aria-busy="true"><span className="cs-skeleton" style={{ width: '70%', height: 16 }} /><span className="cs-skeleton" style={{ width: '55%', height: 16, marginTop: 10 }} /></div>
         : <ChordPreview text={preview.text} />}
-    {!playing && <div className="cs-chord-actions">
-      <button type="button" className="cs-btn cs-btn-soft cs-tool-share-cta" onClick={onPlay} disabled={preview === undefined}>▶ Tập ngay</button>
-      <a className="cs-btn cs-btn-ghost cs-btn-sm" href={`/hopam/${versionId}`}>Mở rộng</a>
-      {onShare && <button type="button" className="cs-btn cs-btn-ghost cs-btn-sm" onClick={onShare}>Chia sẻ</button>}
-    </div>}
+    {!playing && <>
+      <div className="cs-chord-dock">
+        <button type="button" className="cs-chord-play" onClick={onPlay} disabled={preview === undefined} aria-label="Phát Play Scroll">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z" /></svg>
+        </button>
+        <div className="cs-chord-dock-text"><strong>Play Scroll</strong><span>Bấm Play để tự cuộn hợp âm</span></div>
+      </div>
+      <div className="cs-chord-actions">
+        <a className="cs-btn cs-btn-ghost cs-btn-sm" href={`/hopam/${versionId}`}>Mở rộng</a>
+        {onShare && <button type="button" className="cs-btn cs-btn-ghost cs-btn-sm" onClick={onShare}>Chia sẻ</button>}
+      </div>
+    </>}
     {playing && <div className="cs-chord-actions"><button type="button" className="cs-btn cs-btn-ghost cs-btn-sm" onClick={onClose}>Thu gọn</button></div>}
   </div>
 }
@@ -78,7 +85,7 @@ export default function ChordSheetPost({ postId, view, versionId, onShare }: { p
 
   const player = playing && preview
     ? <Suspense fallback={<div className="cs-chord-preview is-loading" aria-busy="true">Đang mở trình phát…</div>}>
-        {library && <RhythmScrollPage embedded library={library} versionId={versionId} initialDetail={preview} onBack={() => closeEmbed(embedId)} />}
+        {library && <RhythmScrollPage embedded autoStart library={library} versionId={versionId} initialDetail={preview} onBack={() => closeEmbed(embedId)} />}
       </Suspense>
     : null
   return <div ref={rootRef}>
