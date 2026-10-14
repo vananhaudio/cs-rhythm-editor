@@ -424,7 +424,7 @@ export const HT2027_BUOI06: LessonDoc = {
             [
               "C → Am",
               "C → A",
-              "3 cung rưỡi xuống",
+              "3 nửa cung xuống",
               "G/B (bass B nằm giữa)"
             ],
             [
@@ -867,7 +867,7 @@ export const HT2027_BUOI06: LessonDoc = {
             ],
             [
               "Chỗ nhảy xa",
-              "C → A (nhảy xuống 3 cung rưỡi)"
+              "C → A (nhảy xuống 3 nửa cung)"
             ],
             [
               "Cầu nối",
