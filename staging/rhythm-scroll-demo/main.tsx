@@ -39,10 +39,10 @@ const feedView = describeToolShare({ v: 1, tool: 'chord_sheet', kind: 'chord_she
 const dmView = chordCardView({ version_id: VERSION, title: 'Chuyến tàu hoàng hôn', composer: 'Đức Huy', meter: { beats: 4, beatType: 4 }, bpm: 72 })
 
 function Cards() {
-  return <div style={{ maxWidth: 520, margin: '0 auto', padding: 16, fontFamily: '-apple-system,system-ui,sans-serif', background: '#F2F2F7', minHeight: '100vh' }}>
+  return <div className="cs-root" style={{ maxWidth: 520, margin: '0 auto', padding: 16, fontFamily: '-apple-system,system-ui,sans-serif', minHeight: '100vh' }}>
     <p><a href="#">← Play Scroll</a></p>
     <h3>Thẻ trên tường /me (Feed)</h3>
-    <div className="cs-card" style={{ background: '#fff', borderRadius: 14, padding: 14 }}>
+    <div className="cs-card" style={{ padding: 14 }}>
       <ToolShareBodyView view={feedView} onShareToFriend={() => undefined} />
     </div>
     <h3>Thẻ trong trò chuyện (DM)</h3>
