@@ -64,6 +64,13 @@ export function sessionCardView(row: SessionCardRow | null | undefined, classNam
   }
 }
 
+// ── Hợp âm (Play Scroll): metadata công khai của bản approved qua RPC chord_share_card (không kéo lời/hợp âm) ──
+export type ChordCardRow = { version_id: string; title: string | null; composer?: string | null; meter?: unknown; bpm?: number | null }
+export function chordCardView(row: ChordCardRow | null | undefined): ToolShareView | null {
+  if (!row) return null
+  return describeToolShare({ v: 1, tool: 'chord_sheet', kind: 'chord_sheet', version_id: row.version_id, title: row.title ?? '', composer: row.composer ?? '', meter: row.meter ?? null, bpm: row.bpm ?? null })
+}
+
 // ── Resolver theo loại: keys[] → Map<key, view | null>. Lỗi mạng ném ra (KHÔNG coi là "đã xoá") ───────────────
 type Resolver = (keys: string[]) => Promise<Map<string, ToolShareView | null>>
 type Db = { from: (t: string) => { select: (c: string) => { in: (col: string, v: string[]) => PromiseLike<{ data: unknown[] | null; error: { code?: string; message?: string } | null }> } } }
@@ -88,6 +95,14 @@ export const REF_RESOLVERS: Record<ShareRefType, Resolver> = {
   class: async keys => {
     const m = new Map<string, ToolShareView | null>(keys.map(k => [k, null]))
     for (const r of await fetchRows<ClassCardRow>('class_schedule', 'id,name,code', keys)) m.set(r.id.toLowerCase(), classCardView(r))
+    return m
+  },
+  chord_sheet: async keys => {
+    const m = new Map<string, ToolShareView | null>(keys.map(k => [k, null]))
+    const { fetchChordCards } = await import('./chordShareApi')
+    for (let i = 0; i < keys.length; i += 50) {
+      for (const r of await fetchChordCards(keys.slice(i, i + 50))) m.set(r.version_id.toLowerCase(), chordCardView(r))
+    }
     return m
   },
   class_session: async keys => {

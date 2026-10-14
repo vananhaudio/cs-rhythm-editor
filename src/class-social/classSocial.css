@@ -1643,3 +1643,23 @@ button.cs-subs-title:hover { color: var(--cs-accent); }
 .cs-pub-err { margin: 8px 0; font-size: 13px; }
 .cs-pub-close { margin-top: 6px; }
 .cs-pub-note { margin-top: 6px; font-size: 12px; color: var(--cs-muted, #6b6b76); overflow-wrap: anywhere; }
+
+/* Play Scroll Share V2 — bài đăng hợp âm trên Feed: xem trước + player nhúng */
+.cs-root .cs-chord-preview { margin-top: 8px; padding: 10px 12px; border-radius: 14px; background: var(--cs-surface-2, #f6f6fa); border: 1px solid var(--cs-border); max-height: 190px; overflow: hidden; position: relative; }
+.cs-root .cs-chord-preview::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 36px; background: linear-gradient(transparent, var(--cs-surface-2, #f6f6fa)); pointer-events: none; }
+.cs-root .cs-chord-preview.is-loading::after { display: none; }
+.cs-root .cs-chord-line { display: flex; flex-wrap: wrap; column-gap: .32em; margin-bottom: 6px; }
+.cs-root .cs-chord-word { display: inline-flex; flex-direction: column; }
+.cs-root .cs-chord-name { font-size: 13px; font-weight: 700; color: #c2410c; line-height: 1.2; min-height: 1.2em; white-space: pre; }
+.cs-root .cs-chord-lyric { font-size: 16px; color: var(--cs-text); line-height: 1.3; }
+.cs-root .cs-chord-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; align-items: center; }
+
+/* V2.1: thanh Play Scroll dựng sẵn dưới bản xem trước — nút Play nổi bật, nhãn ngắn */
+.cs-root .cs-chord-dock { display: flex; align-items: center; gap: 12px; margin-top: 10px; padding: 8px 14px 8px 8px; border-radius: 999px; background: #fff; border: 1px solid var(--cs-border); box-shadow: 0 2px 10px rgba(0,0,0,.08); }
+.cs-root .cs-chord-play { flex: none; width: 52px; height: 52px; border-radius: 50%; border: 0; background: #ea580c; color: #fff; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 12px rgba(234,88,12,.35); transition: transform .12s ease; -webkit-tap-highlight-color: transparent; }
+.cs-root .cs-chord-play:active { transform: scale(.94); }
+.cs-root .cs-chord-play:disabled { opacity: .5; cursor: default; box-shadow: none; }
+.cs-root .cs-chord-play svg { width: 24px; height: 24px; fill: currentColor; margin-left: 2px; }
+.cs-root .cs-chord-dock-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.cs-root .cs-chord-dock-text strong { font-size: 15px; }
+.cs-root .cs-chord-dock-text span { font-size: 13px; color: var(--cs-faint, #6b6b76); }

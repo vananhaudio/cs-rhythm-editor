@@ -94,3 +94,49 @@ test('nhịp lấy đà: ô lấy đà ngắn, hợp âm đầu chưa vang, tổ
   seek(view, 1)
   assert.equal(view.getByTestId('rs-chord-now').textContent, 'Am')
 })
+
+test('Chia sẻ: nút hiện ở bản đã duyệt (current/old), ẩn ở bản nháp; bấm mở bảng Chia sẻ', async () => {
+  const approved = await open({ status: 'current' })
+  assert.ok(approved.getByRole('button', { name: 'Chia sẻ' }))
+  fireEvent.click(approved.getByRole('button', { name: 'Chia sẻ' }))
+  await settle(80)
+  assert.ok(approved.getByRole('dialog', { name: 'Chia sẻ' }))
+  assert.ok(approved.getByText('Đăng lên cộng đồng'))
+  cleanup()
+  const old = await open({ status: 'old' })
+  assert.ok(old.queryByRole('button', { name: 'Chia sẻ' }))
+  cleanup()
+  const draft = await open({ status: 'draft' })
+  assert.equal(draft.queryByRole('button', { name: 'Chia sẻ' }), null)
+})
+
+test('nhúng trong bài đăng: khung riêng, "Thu gọn" + "Mở rộng" (/hopam/<id>), không có Chia sẻ, không tải lại khi có initialDetail', async () => {
+  const library = libraryWith({ status: 'current' })
+  let calls = 0
+  const orig = library.getChordSheet.bind(library)
+  library.getChordSheet = async (id: string) => { calls++; return orig(id) }
+  const detail = await orig('v')
+  let closed = 0
+  const view = render(<RhythmScrollPage embedded library={library} versionId="v" initialDetail={detail} onBack={() => { closed++ }} />)
+  await settle()
+  assert.equal(calls, 0, 'có initialDetail → không gọi lại thư viện')
+  assert.ok(view.container.querySelector('.rs-embedded'))
+  assert.equal(view.queryByRole('button', { name: 'Chia sẻ' }), null)
+  assert.equal((view.getByText('Mở rộng') as HTMLAnchorElement).getAttribute('href'), '/hopam/v')
+  fireEvent.click(view.getByRole('button', { name: /Thu gọn/ }))
+  assert.equal(closed, 1)
+  assert.ok(view.getByRole('button', { name: 'Phát' }), 'không tự phát: nút Phát, chưa chạy')
+})
+
+test('autoStart: dựng xong là chạy ngay (một lần bấm Play ở Feed); mặc định thì KHÔNG tự phát', async () => {
+  Object.assign(globalThis, { requestAnimationFrame: (cb: () => void) => setTimeout(cb, 16), cancelAnimationFrame: (id: number) => clearTimeout(id) })
+  const lib = libraryWith({ status: 'current' })
+  const detail = await lib.getChordSheet('v')
+  const auto = render(<RhythmScrollPage embedded autoStart library={lib} versionId="v" initialDetail={detail} onBack={() => {}} />)
+  await settle(60)
+  assert.ok(auto.getByRole('button', { name: 'Tạm dừng' }), 'đang chạy → nút là Tạm dừng')
+  cleanup()
+  const manual = render(<RhythmScrollPage embedded library={lib} versionId="v" initialDetail={detail} onBack={() => {}} />)
+  await settle(60)
+  assert.ok(manual.getByRole('button', { name: 'Phát' }), 'không tự phát')
+})

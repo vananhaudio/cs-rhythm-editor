@@ -69,6 +69,7 @@ const ClassSocialPage = lazy(() => import('./class-social/ClassSocialPage'))
 const BandRecruitRoute = lazy(() => import('./band/BandRecruitRoute'))
 const ThuVienPage = lazy(() => import('./thuvien/ThuVienPage'))
 const ThuVienEditorGate = lazy(() => import('./thuvien/ThuVienEditorGate'))
+const HopamViewPage = lazy(() => import('./thuvien/HopamRoute'))
 // Điệu đệm hát (/dieudemhat) — chunk riêng, dữ liệu từ src/content/dieudemhat
 const DieuDemHatPage = lazy(() => import('./dieudemhat/DieuDemHatPage'))
 // Rhythm Scroll — trang THỬ, chỉ có ở `npm run dev`. Bản build production: nhánh này bị loại hẳn,
@@ -194,6 +195,18 @@ function AppRouterContent() {
     // Admin: toàn bộ /thuvien. Tài khoản khác: chỉ khi đang giữ vai Biên tập âm nhạc (cổng kiểm tra; mục MusicXML thôi).
     if (appUser.role !== 'admin') return <Suspense fallback={<div style={{ padding: 32 }}>Đang mở thư viện…</div>}><ThuVienEditorGate userId={user.id} /></Suspense>
     return <Suspense fallback={<div style={{ padding: 32 }}>Đang mở thư viện…</div>}><ThuVienPage /></Suspense>
+  }
+
+  // ── /hopam/<versionId> — Play Scroll chỉ-xem cho học viên đăng nhập (đích của thẻ chia sẻ hợp âm). Quyền đọc do RPC quyết. ──
+  if (path === '/hopam' || path.startsWith('/hopam/')) {
+    if (loading) return null
+    if (!user || appUser?.status !== 'active') {
+      window.location.href = '/start'
+      return null
+    }
+    const versionId = /^\/hopam\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/?$/i.exec(path)?.[1]?.toLowerCase()
+    if (!versionId) return <div style={{ padding: 32 }}>Nội dung này không còn khả dụng. <a href="/me">Về Trang chủ</a></div>
+    return <Suspense fallback={<div style={{ padding: 32 }}>Đang mở Play Scroll…</div>}><HopamViewPage versionId={versionId} /></Suspense>
   }
 
   // ── Công cụ Nhịp Phách ──

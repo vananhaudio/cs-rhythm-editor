@@ -7,6 +7,9 @@
   padding:env(safe-area-inset-top) max(8px,env(safe-area-inset-right)) 0 max(8px,env(safe-area-inset-left));
   background:rgba(249,249,251,.86);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-bottom:.5px solid var(--rs-line)}
 .rs-back{justify-self:start;min-height:44px;min-width:44px;padding:0 10px;border:0;background:none;color:var(--rs-accent);font-size:17px;cursor:pointer;display:inline-flex;align-items:center;gap:2px}
+.rs-nav-right{justify-self:end;display:flex}
+.rs-share{gap:6px;font-size:16px}
+.rs-share svg{width:20px;height:20px;fill:currentColor}
 .rs-title{font-size:17px;font-weight:600;max-width:min(60vw,560px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center}
 .rs-body{flex:1;min-height:0;display:flex;flex-direction:column;width:100%;max-width:820px;margin:0 auto;padding:0 max(12px,env(safe-area-inset-left)) 0 max(12px,env(safe-area-inset-right))}
 .rs-meta{display:flex;flex-wrap:wrap;gap:2px 12px;padding:10px 4px 6px;font-size:13px;color:var(--rs-sub)}
@@ -58,3 +61,18 @@
   .rs-dock{margin-bottom:20px;max-width:560px}
 }
 @media (prefers-reduced-motion:reduce){.rs-btn,.rs-state i{transition:none;animation:none}}
+
+/* Nhúng trong bài đăng /me: khung có chiều cao riêng, nằm trong dòng chảy của Feed (không phủ cả màn hình). */
+.rs-embedded{position:relative;inset:auto;height:min(78vh,600px);z-index:auto;border-radius:16px;overflow:hidden;border:1px solid var(--rs-line);margin-top:10px}
+.rs-embedded .rs-nav{min-height:48px;padding-top:0}
+.rs-embedded .rs-dock{margin:8px auto 8px;width:calc(100% - 16px)}
+.rs-embedded .rs-body{padding:0 8px}
+.rs-embedded .rs-nav{grid-template-columns:auto minmax(0,1fr) auto;padding-left:4px;padding-right:4px}
+.rs-embedded .rs-title{max-width:100%;font-size:16px}
+.rs-embedded .rs-back{padding:0 8px;font-size:16px}
+.rs-embedded .rs-dock{padding:8px 8px 10px}
+.rs-embedded .rs-row{gap:4px;flex-wrap:nowrap}
+.rs-embedded .rs-play{width:56px;height:56px}
+.rs-embedded .rs-speed{min-width:0}
+.rs-embedded .rs-speed-val{min-width:40px}
+.rs-embedded .rs-meta{padding:8px 4px 4px;font-size:12px}
