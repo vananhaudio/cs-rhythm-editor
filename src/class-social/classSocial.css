@@ -1635,4 +1635,11 @@ button.cs-subs-title:hover { color: var(--cs-accent); }
 
 /* Thẻ "Bài mới phát hành" (Feed /me): ảnh bìa Team công khai, tỉ lệ cố định, không tràn */
 .cs-pub-cover { display: block; width: 100%; max-width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 12px; margin: 8px 0 4px; background: var(--cs-surface-2, #f1f1f4); }
-.cs-pub-open { display: inline-flex; align-items: center; text-decoration: none; }
+.cs-pub-open, .cs-pub-band { display: inline-flex; align-items: center; text-decoration: none; }
+.cs-pub-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.cs-pub-announce { color: var(--cs-muted, #6b6b76); }
+.cs-pub-player { margin: 8px 0 4px; min-width: 0; }
+.cs-pub-frame { display: block; width: 100%; max-width: 100%; border: 0; border-radius: 12px; background: #0b0b10; }
+.cs-pub-err { margin: 8px 0; font-size: 13px; }
+.cs-pub-close { margin-top: 6px; }
+.cs-pub-note { margin-top: 6px; font-size: 12px; color: var(--cs-muted, #6b6b76); overflow-wrap: anywhere; }

@@ -55,7 +55,11 @@ test("thẻ: tên Band, tên bài, bìa, thời điểm, nút mở /teamlab/song
   assert.match(html, /Mưa Thu/);
   assert.match(html, /Đêm nàng giả bạn/);
   assert.match(html, /Bài mới phát hành/);
-  assert.match(html, /href="\/teamlab\/song\/dem-nang-gia-ban"[^>]*>Nghe bài</);
+  assert.match(html, /href="\/teamlab\/song\/dem-nang-gia-ban"[^>]*>Xem bài hát</);
+  assert.match(html, />Nghe ngay</);
+  assert.match(html, /Vừa phát hành bài hát/);
+  assert.equal(/<iframe/.test(html), false, "chưa bấm Nghe ngay → KHÔNG nạp player (không tải âm thanh khi cuộn Feed)");
+  assert.equal(/Khám phá Band/.test(html), false, "chưa có project_slug → không đoán URL Band");
   assert.match(html, /cs-pub-cover/);
   assert.match(html, /<time[^>]*dateTime="2026-10-13T09:00:00Z"/);
   assert.equal(/take|track|user_id/i.test(html), false);
@@ -72,4 +76,47 @@ test("DB: migration chỉ thay social_feed; không RLS/bảng mới; rollback c�
   assert.match(sql, /is_class_member\(\)/);
   const rb = readFileSync(new URL("../../db/social_feed_teamlab_publications_v1_rollback.sql", import.meta.url), "utf8");
   assert.doesNotMatch(rb.replace(/--.*$/gm, ""), /teamlab_publication/);
+});
+
+test("Khám phá Band: chỉ khi slug Team hợp lệ từ server; không ghép từ tên Band", () => {
+  const e = toPublicationEntry(pub({ project_slug: "la-mua-thu-87e06" }), "t")!;
+  const html = renderToStaticMarkup(<PublicationCard entry={e} now={NOW} />);
+  assert.match(html, /href="\/teamlab\/band\/la-mua-thu-87e06"[^>]*>Khám phá Band</);
+  for (const bad of ["../x", "La Mua Thu", "", null, 5]) {
+    assert.equal(toPublicationEntry(pub({ project_slug: bad }), "t")!.projectSlug, null, String(bad));
+  }
+});
+
+test("nhúng player: URL chỉ từ slug hợp lệ; thông điệp chiều cao chỉ cùng origin + đúng slug + kẹp khoảng", async () => {
+  const m = await import("../../src/class-social/sections/publicationEmbed");
+  assert.equal(m.embedSrc("mua-thu-cho-em-1a093"), "/teamlab/song/mua-thu-cho-em-1a093?embed=1");
+  assert.equal(m.publicSongUrl("a-b"), "https://class.vananhaudio.com/teamlab/song/a-b");
+  assert.equal(m.bandPath("x_y"), null);
+  const ok = { type: "teamlab-embed-height", slug: "s", height: 210.2 };
+  assert.equal(m.heightFromMessage({ origin: "https://class.vananhaudio.com", data: ok }, "https://class.vananhaudio.com", "s"), 211);
+  assert.equal(m.heightFromMessage({ origin: "https://evil.example", data: ok }, "https://class.vananhaudio.com", "s"), null);
+  assert.equal(m.heightFromMessage({ origin: "https://class.vananhaudio.com", data: { ...ok, slug: "khac" } }, "https://class.vananhaudio.com", "s"), null);
+  assert.equal(m.heightFromMessage({ origin: "https://class.vananhaudio.com", data: { ...ok, height: 99999 } }, "https://class.vananhaudio.com", "s"), m.EMBED_MAX_H);
+  assert.equal(m.heightFromMessage({ origin: "https://class.vananhaudio.com", data: { ...ok, height: "x" } }, "https://class.vananhaudio.com", "s"), null);
+});
+
+test("một bài mở tại một thời điểm: mở bài khác → bài cũ đóng; đóng đúng id mới có tác dụng", async () => {
+  const m = await import("../../src/class-social/sections/publicationEmbed");
+  m.resetEmbedStore();
+  m.openEmbed("a"); assert.equal(m.activeEmbedId(), "a");
+  m.openEmbed("b"); assert.equal(m.activeEmbedId(), "b");
+  m.closeEmbed("a"); assert.equal(m.activeEmbedId(), "b");
+  m.closeEmbed("b"); assert.equal(m.activeEmbedId(), null);
+});
+
+test("DB v2: chỉ thay social_feed, thêm project_slug; không RLS/bảng; có rollback về v1", async () => {
+  const { readFileSync } = await import("node:fs");
+  const f = (n: string) => readFileSync(new URL(`../../db/${n}`, import.meta.url), "utf8").replace(/--.*$/gm, "");
+  const sql = f("social_feed_teamlab_publications_v2_setup.sql");
+  assert.equal((sql.match(/create or replace function/gi) || []).length, 1);
+  assert.doesNotMatch(sql, /create table|alter table|create policy|drop |insert into|update public|delete from/i);
+  assert.match(sql, /'project_slug', pr\.public_slug/);
+  const rb = f("social_feed_teamlab_publications_v2_rollback.sql");
+  assert.doesNotMatch(rb, /project_slug/);
+  assert.match(rb, /teamlab_publication/);
 });
