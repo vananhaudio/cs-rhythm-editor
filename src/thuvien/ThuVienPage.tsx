@@ -22,6 +22,7 @@ import './ThuVienPage.css'
 import './ChordLibrary.css'
 import '../class-social/classSocial.css'
 import './ThuVienShell.css'
+import './RhythmScroll.css'
 
 // Verovio (wasm) chỉ tải khi mở một bản nhạc, không làm chậm danh sách.
 const ScoreViewer = lazy(() => import('./ScoreViewer.tsx'))

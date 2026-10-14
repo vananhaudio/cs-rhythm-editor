@@ -22,7 +22,7 @@ const keyOf = (anchor: MeasureAnchor) => `${anchor.line}:${anchor.token}`
  * Ball đi từ chữ neo của ô hiện tại tới chữ neo của ô kế theo đường đọc và nảy đúng MỘT lần mỗi ô.
  * Không karaoke, không phách 1/2/3/4. Các dòng vẽ theo thứ tự văn bản (prototype: bài chạy thẳng một lượt).
  */
-export default function AnchoredChordViewer({ text, lines: givenLines, data, measurePosition, labels, reducedMotion = false, showAnchors = false, activeChord = null }: {
+export default function AnchoredChordViewer({ text, lines: givenLines, data, measurePosition, labels, reducedMotion = false, showAnchors = false, activeChord = null, theme = 'dark' }: {
   text: string
   /** Dòng đã dựng sẵn (production: từ tokenizer của Hợp âm chuẩn hóa, nhãn "1."/"ĐK:" đã tách khỏi chữ). Vắng → tách `text`. */
   lines?: ChordLine[]
@@ -35,6 +35,8 @@ export default function AnchoredChordViewer({ text, lines: givenLines, data, mea
   showAnchors?: boolean
   /** Hợp âm đang vang trên timeline (dòng + chữ mang hợp âm đó) — chỉ để sáng lên, không ảnh hưởng ball. */
   activeChord?: { line: number; token: number } | null
+  /** Giao diện: 'dark' (trang thử, mặc định) hoặc 'light' (Rhythm Scroll trong Thư viện, kiểu iOS). Chỉ đổi màu/chữ. */
+  theme?: 'dark' | 'light'
 }) {
   const scroll = useMemo(() => createAnchoredScroll(data), [data])
   const lines = useMemo(() => givenLines ?? parseChordLines(text), [givenLines, text])
@@ -91,19 +93,19 @@ export default function AnchoredChordViewer({ text, lines: givenLines, data, mea
   const shift = playhead - geometry.viewportHeight * LOOKAHEAD_ANCHOR
 
   return (
-    <div style={S.root} data-state={position.state} data-measure={position.measureIndex}>
-      {issues.length > 0 && <div role="alert" style={S.issue}>Neo không khớp lời: {issues[0]}</div>}
+    <div style={{ ...S.root, ...(theme === 'light' ? L.root : null) }} data-theme={theme} data-state={position.state} data-measure={position.measureIndex}>
+      {issues.length > 0 && <div role="alert" style={{ ...S.issue, ...(theme === 'light' ? L.issue : null) }}>Neo không khớp lời: {issues[0]}</div>}
       <div ref={viewportRef} style={S.viewport}>
-        <div style={S.anchorMark} aria-hidden="true" />
+        <div style={{ ...S.anchorMark, ...(theme === 'light' ? L.anchorMark : null) }} aria-hidden="true" />
         <div ref={contentRef} data-testid="scroll-content"
-          style={{ ...S.content, transform: `translate3d(0, ${(-shift).toFixed(2)}px, 0)` }}>
-          <Lines lines={lines} labels={labels} anchorKeys={showAnchors ? anchorKeys : null}
+          style={{ ...S.content, ...(theme === 'light' ? L.content : null), transform: `translate3d(0, ${(-shift).toFixed(2)}px, 0)` }}>
+          <Lines theme={theme} lines={lines} labels={labels} anchorKeys={showAnchors ? anchorKeys : null}
             activeChord={activeChord ? `${activeChord.line}:${activeChord.token}` : null}
             activeFrom={position.state === 'ended' ? -1 : position.current.line ?? -1}
             activeTo={position.state === 'ended' ? -1 : position.next.line ?? position.current.line ?? -1} />
           {ball && (
             <div data-testid="bounce-ball" data-row={ball.row} aria-hidden="true"
-              style={{ ...S.ball, transform: `translate3d(${(ball.x - BALL_RADIUS).toFixed(2)}px, ${(ball.y - BALL_RADIUS).toFixed(2)}px, 0)` }} />
+              style={{ ...S.ball, ...(theme === 'light' ? L.ball : null), transform: `translate3d(${(ball.x - BALL_RADIUS).toFixed(2)}px, ${(ball.y - BALL_RADIUS).toFixed(2)}px, 0)` }} />
           )}
         </div>
       </div>
@@ -112,7 +114,8 @@ export default function AnchoredChordViewer({ text, lines: givenLines, data, mea
 }
 
 /** Memo: mỗi khung hình chỉ đổi transform và vị trí ball; cây lời chỉ vẽ lại khi đổi dòng đang hát. */
-const Lines = memo(function Lines({ lines, labels, anchorKeys, activeFrom, activeTo, activeChord }: {
+const Lines = memo(function Lines({ theme, lines, labels, anchorKeys, activeFrom, activeTo, activeChord }: {
+  theme: 'dark' | 'light'
   lines: readonly ChordLine[]
   labels?: Record<number, string>
   anchorKeys: Set<string> | null
@@ -120,20 +123,21 @@ const Lines = memo(function Lines({ lines, labels, anchorKeys, activeFrom, activ
   activeTo: number
   activeChord: string | null
 }) {
+  const light = theme === 'light'
   return <>
     {lines.filter(line => line.words.length).map(line => {
       const state = line.index >= activeFrom && line.index <= activeTo ? 'active' : activeFrom >= 0 && line.index < activeFrom ? 'past' : 'ahead'
       return (
         <div key={line.index} data-line={line.index} data-state={state}
-          style={{ ...S.lineBlock, opacity: state === 'active' ? 1 : state === 'past' ? 0.35 : 0.72 }}>
-          {labels?.[line.index] && <div style={S.label}>{labels[line.index]}</div>}
+          style={{ ...S.lineBlock, opacity: state === 'active' ? 1 : state === 'past' ? 0.38 : light ? 0.82 : 0.72 }}>
+          {labels?.[line.index] && <div style={{ ...S.label, ...(light ? L.label : null) }}>{labels[line.index]}</div>}
           <div style={S.line}>
             {line.words.map((word, token) => (
               <span key={token} data-word={`${line.index}:${token}`} style={S.word}>
                 {anchorKeys?.has(`${line.index}:${token}`) && <span data-anchor-mark="" aria-hidden="true" style={S.barMark} />}
                 <span data-chord={word.chord ?? undefined} data-active-chord={activeChord === `${line.index}:${token}` ? '' : undefined}
-                  style={activeChord === `${line.index}:${token}` ? S.chordActive : S.chord}>{word.chord ?? ' '}</span>
-                <span style={S.lyric}>{word.text}</span>
+                  style={activeChord === `${line.index}:${token}` ? { ...S.chordActive, ...(light ? L.chordActive : null) } : { ...S.chord, ...(light ? L.chord : null) }}>{word.chord ?? ' '}</span>
+                <span style={{ ...S.lyric, ...(light ? L.lyric : null) }}>{word.text}</span>
               </span>
             ))}
           </div>
@@ -144,6 +148,18 @@ const Lines = memo(function Lines({ lines, labels, anchorKeys, activeFrom, activ
 })
 
 const ACCENT = '#EA580C'
+/** Giao diện sáng kiểu iOS: chỉ ghi đè màu/chữ lên bảng `S`, bố cục + đo đạc giữ nguyên (engine không đổi). */
+const L: Record<string, CSSProperties> = {
+  root: { background: 'transparent', color: '#1C1C1E', fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif' },
+  issue: { background: '#FFE5E5', color: '#8A1C1C' },
+  anchorMark: { background: ACCENT, opacity: 0.35 },
+  content: { maxWidth: 720, padding: '0 20px' },
+  label: { color: '#8E8E93', fontWeight: 600, letterSpacing: 0.6 },
+  chord: { color: '#C2410C', fontWeight: 700, fontSize: 'clamp(15px, 3.8vw, 19px)' },
+  chordActive: { color: '#FFFFFF', background: ACCENT, fontSize: 'clamp(15px, 3.8vw, 19px)' },
+  lyric: { color: '#1C1C1E', fontSize: 'clamp(20px, 5.4vw, 28px)', lineHeight: 1.32, letterSpacing: -0.2 },
+  ball: { boxShadow: '0 1px 6px rgba(234,88,12,.45)' },
+}
 /** Bề ngang tối đa của cột đọc (px) — giá trị thử đầu tiên; hẹp để mắt không phải quay xa khi sang dòng. */
 export const READING_COLUMN_MAX = 640
 const S: Record<string, CSSProperties> = {
