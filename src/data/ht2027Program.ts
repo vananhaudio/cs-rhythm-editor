@@ -54,7 +54,7 @@ export const HT2027_STAGES: HtStage[] = [
       { title: 'Chức năng của hợp âm', doc: '/hanhtrinh2027/buoi-02' },
       { title: 'Phân tích vòng hòa âm', doc: '/hanhtrinh2027/buoi-03' },
       { title: 'Dịch chuyển vòng hòa âm', doc: '/hanhtrinh2027/buoi-04' },
-      { title: 'Thay thế hợp âm' },
+      { title: 'Thay thế hợp âm', doc: '/hanhtrinh2027/buoi-05' },
       { title: 'Hợp âm đảo và đường bass' },
       { title: 'Phối lại hòa âm cho bài hát' },
       { title: 'Trình bày sản phẩm cuối chặng' },

@@ -8,10 +8,11 @@ import { HT2027_BUOI01 } from '../data/ht2027/buoi01'
 import { HT2027_BUOI02 } from '../data/ht2027/buoi02'
 import { HT2027_BUOI03 } from '../data/ht2027/buoi03'
 import { HT2027_BUOI04 } from '../data/ht2027/buoi04'
+import { HT2027_BUOI05 } from '../data/ht2027/buoi05'
 
 // Đăng ký buổi học ở đây khi soạn (file src/data/ht2027/buoiNN.ts, meta.backHref = '/hanhtrinh2027'),
 // đồng thời điền `doc` (+ `unlockAt` nếu cần) cho buổi đó trong HT2027_STAGES để landing hiện nút.
-const LESSONS: Record<number, LessonDoc> = { 1: HT2027_BUOI01, 2: HT2027_BUOI02, 3: HT2027_BUOI03, 4: HT2027_BUOI04 }
+const LESSONS: Record<number, LessonDoc> = { 1: HT2027_BUOI01, 2: HT2027_BUOI02, 3: HT2027_BUOI03, 4: HT2027_BUOI04, 5: HT2027_BUOI05 }
 
 const BACK = '/hanhtrinh2027'
 
