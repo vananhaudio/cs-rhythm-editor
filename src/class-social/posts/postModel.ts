@@ -200,11 +200,46 @@ export function toFeedPosts(rows: FeedRow[]): FeedPost[] {
 // ── Feed trộn (P2): bài Social + thẻ Learning Thread — RPC social_feed / user_wall ──
 // Learning Thread KHÔNG phải class_posts: chỉ là một "mục" khác loại trong cùng dòng hoạt động (không copy dữ liệu).
 export type ThreadEntry = { entry: 'learning_thread'; id: string; createdAt: string; card: ThreadCard }
-export type FeedEntry = FeedPost | ThreadEntry
+/** Bài TeamLab đã xuất bản công khai (đọc trực tiếp từ teamlab_publications, KHÔNG phải class_posts). id = publication_id. */
+export type PublicationEntry = {
+  entry: 'teamlab_publication'; id: string; createdAt: string
+  slug: string; title: string; bandName: string | null; projectName: string
+  coverUrl: string | null; avatarUrl: string | null
+}
+export type FeedEntry = FeedPost | ThreadEntry | PublicationEntry
 export const isThreadEntry = (e: FeedEntry): e is ThreadEntry => (e as ThreadEntry).entry === 'learning_thread'
-export const isPostEntry = (e: FeedEntry): e is FeedPost => !isThreadEntry(e)
-/** Khoá phân trang ổn định (khớp sort_key của server): 'p:<id>' | 't:<id>' */
-export const entryKey = (e: FeedEntry): string => (isThreadEntry(e) ? 't:' : 'p:') + e.id
+export const isPublicationEntry = (e: FeedEntry): e is PublicationEntry => (e as PublicationEntry).entry === 'teamlab_publication'
+export const isPostEntry = (e: FeedEntry): e is FeedPost => !isThreadEntry(e) && !isPublicationEntry(e)
+/** Khoá phân trang ổn định (khớp sort_key của server): 'p:<id>' | 't:<id>' | 'u:<id>' */
+export const entryKey = (e: FeedEntry): string => (isThreadEntry(e) ? 't:' : isPublicationEntry(e) ? 'u:' : 'p:') + e.id
+
+// Ảnh Team nằm ở bucket CÔNG KHAI teamlab-team-avatars (projects.*_path là khoá object). Chỉ dựng URL khi khoá đúng dạng
+// và thuộc đúng project — sai → null (không ảnh, không lỗi). Không mở thêm quyền storage.
+const TEAM_ASSET_BASE = 'https://wojmdilyflffvdtpovmq.supabase.co/storage/v1/object/public/teamlab-team-avatars/'
+const UUID_RE = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+const COVER_KEY = new RegExp(`^(${UUID_RE})/cover-[A-Za-z0-9._-]{1,74}\\.jpg$`, 'i')
+const AVATAR_KEY = new RegExp(`^(${UUID_RE})/[A-Za-z0-9._-]{1,80}\\.jpg$`, 'i')
+export function teamAssetUrl(projectId: unknown, path: unknown, kind: 'cover' | 'avatar'): string | null {
+  if (typeof projectId !== 'string' || typeof path !== 'string') return null
+  const m = (kind === 'cover' ? COVER_KEY : AVATAR_KEY).exec(path)
+  if (!m || m[1].toLowerCase() !== projectId.toLowerCase()) return null
+  return TEAM_ASSET_BASE + path
+}
+const SLUG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/
+
+export function toPublicationEntry(raw: unknown, sortAt: string): PublicationEntry | null {
+  if (!raw || typeof raw !== 'object') return null
+  const o = raw as Record<string, unknown>
+  const id = o.publication_id, slug = o.slug, title = o.title
+  if (typeof id !== 'string' || !id || typeof slug !== 'string' || !SLUG_RE.test(slug) || slug.length > 60) return null
+  if (typeof title !== 'string' || !title.trim()) return null
+  const band = typeof o.band_name === 'string' && o.band_name.trim() ? o.band_name.trim() : null
+  const project = typeof o.project_name === 'string' && o.project_name.trim() ? o.project_name.trim() : 'TeamLab'
+  return {
+    entry: 'teamlab_publication', id, createdAt: sortAt, slug, title: title.trim(), bandName: band, projectName: project,
+    coverUrl: teamAssetUrl(o.project_id, o.cover_path, 'cover'), avatarUrl: teamAssetUrl(o.project_id, o.avatar_path, 'avatar'),
+  }
+}
 
 export type MixedRow = { kind: string; sort_at: string; sort_key: string; post: unknown; thread: unknown }
 
@@ -218,6 +253,9 @@ export function toFeedEntries(rows: MixedRow[]): FeedEntry[] {
     } else if (r.kind === 'learning_thread') {
       const c = toThreadCard(r.thread)
       if (c) out.push({ entry: 'learning_thread', id: c.id, createdAt: r.sort_at, card: c })
+    } else if (r.kind === 'teamlab_publication') {
+      const u = toPublicationEntry(r.post, r.sort_at)
+      if (u) out.push(u)
     }
   }
   return out
