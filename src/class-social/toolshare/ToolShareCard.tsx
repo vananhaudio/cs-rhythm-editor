@@ -5,6 +5,7 @@ import { describeToolShare, type ToolShareView } from './registry'
 import { useToolSharePayload } from './toolShareApi'
 
 const ShareToFriendSheet = lazy(() => import('../../share/ShareToFriendSheet'))
+const ChordSheetPost = lazy(() => import('./ChordSheetPost'))
 
 export function ToolShareBodyView({ view, onShareToFriend }: { view: ToolShareView | null; onShareToFriend?: (ref: NonNullable<ToolShareView['shareRef']>, title: string) => void }) {
   if (!view) return <p className="cs-tool-share-missing">Kết quả này không còn hiển thị được.</p>
@@ -29,9 +30,16 @@ export default function ToolShareBody({ postId }: { postId: string }) {
   const raw = useToolSharePayload(postId)
   const [sheet, setSheet] = useState<{ target: NonNullable<ToolShareView['shareRef']>; title: string } | null>(null)
   if (raw === undefined) return <div className="cs-tool-share"><span className="cs-skeleton" style={{ width: '45%', height: 18 }} /></div>
+  const view = describeToolShare(raw)
+  // Hợp âm (Play Scroll): xem trước + chạy ngay trong bài đăng (V2); các công cụ khác giữ thẻ như cũ.
+  const chordVersion = view?.tool === 'chord_sheet' && view.shareRef?.type === 'chord_sheet' ? view.shareRef.key : null
   return (
     <>
-      <ToolShareBodyView view={describeToolShare(raw)} onShareToFriend={(ref, title) => setSheet({ target: ref, title })} />
+      {chordVersion
+        ? <Suspense fallback={<div className="cs-tool-share"><span className="cs-skeleton" style={{ width: '45%', height: 18 }} /></div>}>
+            <ChordSheetPost postId={postId} view={view} versionId={chordVersion} onShare={() => view?.shareRef && setSheet({ target: view.shareRef, title: view.headline })} />
+          </Suspense>
+        : <ToolShareBodyView view={view} onShareToFriend={(ref, title) => setSheet({ target: ref, title })} />}
       {sheet && <Suspense fallback={null}><ShareToFriendSheet target={sheet.target} title={sheet.title} onClose={() => setSheet(null)} /></Suspense>}
     </>
   )

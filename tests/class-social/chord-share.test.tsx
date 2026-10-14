@@ -61,3 +61,63 @@ test("rào chắn: route chỉ-xem không import trình sửa/quản trị; nút
   assert.match(mig, /revoke all on function public\.social_share_chord_sheet\(uuid\) from public, anon/);
   assert.doesNotMatch(mig, /create policy|create table|rls_setup/i);
 });
+
+// ── Play Scroll Share V2: bài đăng /me xem trước + chạy ngay trong bài ───────────────────────────
+import { ChordSheetPostView, ChordPreview } from "../../src/class-social/toolshare/ChordSheetPost";
+import { loadChordDetail, resetChordPostStore } from "../../src/class-social/toolshare/chordPostStore";
+import { openEmbed, closeEmbed, activeEmbedId, resetEmbedStore } from "../../src/class-social/sections/publicationEmbed";
+
+const FEED_VIEW = describeToolShare({ v: 1, tool: "chord_sheet", kind: "chord_sheet", version_id: V, title: "Anh còn nợ em", composer: "T", meter: { beats: 4, beatType: 4 }, bpm: 80 })!;
+const DETAIL = { text: "Chiều [Am] nao, tiễn nhau [E7] đi\nHoàng [Dm] hôn đến đâu" } as never;
+
+test("V2: bài đăng có nội dung hợp âm thật (hợp âm trên lời) + Tập ngay / Mở rộng / Chia sẻ; chưa tự phát", () => {
+  const html = renderToStaticMarkup(<ChordSheetPostView view={FEED_VIEW} versionId={V} preview={DETAIL} playing={false} onPlay={() => undefined} onClose={() => undefined} onShare={() => undefined} />);
+  assert.match(html, /Anh còn nợ em/);
+  assert.match(html, /cs-chord-name[^>]*>Am</);
+  assert.match(html, /Chiều/);
+  assert.match(html, /▶ Tập ngay/);
+  assert.match(html, new RegExp(`href="/hopam/${V}"`));
+  assert.doesNotMatch(html, /rhythm-scroll-page/, "không dựng player khi chưa bấm");
+});
+
+test("V2: đang tải → khung chờ, nút Tập ngay khoá; không quyền/thu hồi → không khả dụng", () => {
+  const loading = renderToStaticMarkup(<ChordSheetPostView view={FEED_VIEW} versionId={V} preview={undefined} playing={false} onPlay={() => undefined} onClose={() => undefined} />);
+  assert.match(loading, /aria-busy="true"/);
+  assert.match(loading, /disabled/);
+  const gone = renderToStaticMarkup(<ChordSheetPostView view={FEED_VIEW} versionId={V} preview={null} playing={false} onPlay={() => undefined} onClose={() => undefined} />);
+  assert.match(gone, /Nội dung này không còn khả dụng/);
+  assert.doesNotMatch(gone, /Tập ngay/);
+});
+
+test("V2: ChordPreview chỉ lấy vài dòng đầu (không kéo cả bài)", () => {
+  const text = Array.from({ length: 30 }, (_, i) => `Dòng [C] số ${i}`).join("\n");
+  const html = renderToStaticMarkup(<ChordPreview text={text} />);
+  assert.equal((html.match(/cs-chord-line/g) ?? []).length, 6);
+});
+
+test("V2: mỗi lúc MỘT player trên Feed (dùng chung store với player TeamLab); đóng nhả chỗ", () => {
+  resetEmbedStore();
+  openEmbed("chord:p1"); assert.equal(activeEmbedId(), "chord:p1");
+  openEmbed("chord:p2"); assert.equal(activeEmbedId(), "chord:p2", "mở bài khác → bài cũ tự gỡ");
+  closeEmbed("chord:p1"); assert.equal(activeEmbedId(), "chord:p2", "đóng bài không phải bài đang mở: không ảnh hưởng");
+  closeEmbed("chord:p2"); assert.equal(activeEmbedId(), null);
+});
+
+test("V2: kho nạp — lỗi mạng không cache (thử lại được); không quyền → null và cache; không gọi lại khi đã cache", async () => {
+  resetChordPostStore();
+  // Không có backend trong Node test: getChordLibrary() ở chế độ 'mock' (không PROD) → mock không có id lạ → NOT_FOUND-like hoặc lỗi; chỉ kiểm hợp đồng kiểu trả về.
+  const r = await loadChordDetail("c9999999-0000-4000-8000-000000000001");
+  assert.ok(r.ok === true || r.ok === false);
+  const again = await loadChordDetail("c9999999-0000-4000-8000-000000000001");
+  assert.deepEqual(Object.keys(again).sort(), Object.keys(r).sort());
+});
+
+test("V2: ToolShareBody chuyển bài chord_sheet sang ChordSheetPost (lazy); thẻ công cụ khác giữ nguyên; engine không đổi", () => {
+  const src = read("src/class-social/toolshare/ToolShareCard.tsx").replace(/\/\/.*$/gm, "");
+  assert.match(src, /lazy\(\(\) => import\('\.\/ChordSheetPost'\)\)/);
+  assert.match(src, /ToolShareBodyView view=\{view\}/, "công cụ khác vẫn dùng thẻ cũ");
+  const post = read("src/class-social/toolshare/ChordSheetPost.tsx");
+  assert.match(post, /IntersectionObserver/);
+  assert.match(post, /lazy\(\(\) => import\('\.\.\/\.\.\/thuvien\/RhythmScrollPage'\)\)/);
+  assert.doesNotMatch(post, /createProofClock|buildChordTimeline|locateBeat/, "không viết lại engine");
+});

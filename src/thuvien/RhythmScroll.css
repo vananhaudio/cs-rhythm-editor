@@ -61,3 +61,18 @@
   .rs-dock{margin-bottom:20px;max-width:560px}
 }
 @media (prefers-reduced-motion:reduce){.rs-btn,.rs-state i{transition:none;animation:none}}
+
+/* Nhúng trong bài đăng /me: khung có chiều cao riêng, nằm trong dòng chảy của Feed (không phủ cả màn hình). */
+.rs-embedded{position:relative;inset:auto;height:min(78vh,600px);z-index:auto;border-radius:16px;overflow:hidden;border:1px solid var(--rs-line);margin-top:10px}
+.rs-embedded .rs-nav{min-height:48px;padding-top:0}
+.rs-embedded .rs-dock{margin:8px auto 8px;width:calc(100% - 16px)}
+.rs-embedded .rs-body{padding:0 8px}
+.rs-embedded .rs-nav{grid-template-columns:auto minmax(0,1fr) auto;padding-left:4px;padding-right:4px}
+.rs-embedded .rs-title{max-width:100%;font-size:16px}
+.rs-embedded .rs-back{padding:0 8px;font-size:16px}
+.rs-embedded .rs-dock{padding:8px 8px 10px}
+.rs-embedded .rs-row{gap:4px;flex-wrap:nowrap}
+.rs-embedded .rs-play{width:56px;height:56px}
+.rs-embedded .rs-speed{min-width:0}
+.rs-embedded .rs-speed-val{min-width:40px}
+.rs-embedded .rs-meta{padding:8px 4px 4px;font-size:12px}
