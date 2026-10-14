@@ -53,3 +53,4 @@ __pycache__/
 *.py[cod]
 tests/class-mail/.fixture.json
 build/
+dist-rs-demo
