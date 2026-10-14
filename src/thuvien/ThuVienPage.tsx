@@ -13,6 +13,7 @@ import type { ContentExtractor } from './contentExtractor.ts'
 import ThuVienTabs from './ThuVienTabs.tsx'
 import './ThuVienPage.css'
 import './ChordLibrary.css'
+import './RhythmScroll.css'
 
 // Verovio (wasm) chỉ tải khi mở một bản nhạc, không làm chậm danh sách.
 const ScoreViewer = lazy(() => import('./ScoreViewer.tsx'))
