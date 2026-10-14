@@ -2061,3 +2061,20 @@ test('Band (MusicXML): bandChoiceProblem/initialBandChoice/bandIdOfChoice', asyn
   assert.equal(bandLabel(null), 'Chưa gán Band')
   assert.equal(bandLabel(' Alpha '), 'Alpha')
 })
+
+// HOTFIX: nút "▶ Rhythm Scroll" ở TRANG XEM (?xem=) từng không mở được (open = null nên không render RhythmScrollPage).
+test('trang xem → ▶ Rhythm Scroll mở được Rhythm Scroll; Quay lại về trang xem', async () => {
+  const library = createMockChordLibrary({ storage: memoryStorage() })
+  const withAnchors = { versionId: 'mock-version-01' }
+  goto(`?muc=hopam&xem=${withAnchors.versionId}`)
+  const view = render(<ChordLibraryPage library={library} tabs={<nav />} />)
+  await settle()
+  fireEvent.click(view.getByRole('button', { name: /Rhythm Scroll/ }))
+  await settle(80)
+  assert.ok(view.queryByTestId('rhythm-scroll-page'), 'Rhythm Scroll phải mở')
+  assert.match(dom.window.location.search, /chay=1/)
+  fireEvent.click(view.getByRole('button', { name: /Quay lại/ }))
+  await settle()
+  assert.equal(view.queryByTestId('rhythm-scroll-page'), null)
+  assert.ok(view.getByRole('button', { name: /Rhythm Scroll/ }), 'về trang xem')
+})

@@ -98,9 +98,13 @@ export default function ChordLibraryPage({ tabs, canEdit = true, access = 'admin
     </div>
   </main>
 
-  if (open && open !== NEW_CHORD_SHEET && rhythm) {
+  // Rhythm Scroll mở được cả từ trình sửa (`open`, ?hopam=) lẫn từ trang xem (`view`, ?xem=).
+  const rhythmTarget = open ?? view
+  if (rhythmTarget && rhythmTarget !== NEW_CHORD_SHEET && rhythm) {
+    const fromView = !open && !!view
     return <Suspense fallback={<main className="tv-chords"><p className="cl-empty">Đang mở Rhythm Scroll…</p></main>}>
-      <RhythmScrollPage key={open} library={library} versionId={open} onBack={() => goRhythm(open, false)} />
+      <RhythmScrollPage key={rhythmTarget} library={library} versionId={rhythmTarget}
+        onBack={() => (fromView ? (setRhythm(false), window.history.back()) : goRhythm(rhythmTarget, false))} />
     </Suspense>
   }
 
