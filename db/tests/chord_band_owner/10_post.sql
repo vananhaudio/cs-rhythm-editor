@@ -37,13 +37,10 @@ select t.fails(format($q$select public.chord_sheet_contribute_publish_band('Bố
 select t.reset();
 select t.ok((select band_id = :BB::uuid from public.chord_sheets where id = t.id('b_new','sheet_id')), 'Biên tập B lưu vào Band B');
 
--- 5) học viên thường / Trưởng Band / Giáo viên (không phải Biên tập) KHÔNG gán Band
+-- 5) học viên thường / Giáo viên (không phải Biên tập, không phải Trưởng Band) KHÔNG gán Band
 select t.as_user('ST');
 select t.fails(format($q$select public.chord_sheet_contribute_publish_band('Năm [C]', 'HV chui', null, '{"beats":4,"beatType":4}', null, '[]', null, null, null, null, %L)$q$, 'aaaaaaaa-0000-4000-8000-00000000000a'),
   'học viên thường KHÔNG gán Band', 'CHORDLIB_FORBIDDEN');
-select t.as_user('LD');
-select t.fails(format($q$select public.chord_sheet_contribute_publish_band('Sáu [C]', 'Leader chui', null, '{"beats":4,"beatType":4}', null, '[]', null, null, null, null, %L)$q$, 'aaaaaaaa-0000-4000-8000-00000000000a'),
-  'Trưởng Band (không phải Biên tập) KHÔNG gán Band', 'CHORDLIB_FORBIDDEN');
 select t.as_user('TE');
 select t.fails(format($q$select public.chord_sheet_contribute_publish_band('Bảy [C]', 'GV chui', null, '{"beats":4,"beatType":4}', null, '[]', null, null, null, null, %L)$q$, 'aaaaaaaa-0000-4000-8000-00000000000a'),
   'Giáo viên (không phải Biên tập) KHÔNG gán Band', 'CHORDLIB_FORBIDDEN');
@@ -104,8 +101,8 @@ select t.reset();
 
 -- 9) Band sở hữu KHÔNG phải quyền sửa/gỡ: Trưởng Band A và Biên tập khác không sửa bài của Biên tập A
 select t.as_user('LD');
-select t.fails(format($q$select public.chord_sheet_update_info(%L, 'HACK', null)$q$, (select v ->> 'sheet_id' from t.kv where k = 'a_new')), 'Trưởng Band A KHÔNG sửa bài Band A', 'CHORDLIB_FORBIDDEN');
-select t.fails(format($q$select public.chord_sheet_archive(%L)$q$, (select v ->> 'sheet_id' from t.kv where k = 'a_new')), 'Trưởng Band A KHÔNG gỡ bài Band A', 'CHORDLIB_FORBIDDEN');
+select t.fails(format($q$select public.chord_sheet_update_info(%L, 'HACK', null)$q$, (select v ->> 'sheet_id' from t.kv where k = 'a_new')), 'Trưởng Band A KHÔNG sửa bài của Biên tập (chỉ bài do chính mình tạo)', 'CHORDLIB_FORBIDDEN');
+select t.fails(format($q$select public.chord_sheet_archive(%L)$q$, (select v ->> 'sheet_id' from t.kv where k = 'a_new')), 'Trưởng Band A KHÔNG gỡ bài của Biên tập (chỉ bài do chính mình tạo)', 'CHORDLIB_FORBIDDEN');
 select t.as_user('ED2');
 select t.fails(format($q$select public.chord_sheet_archive(%L)$q$, (select v ->> 'sheet_id' from t.kv where k = 'a_new')), 'Biên tập B KHÔNG gỡ bài Band A', 'CHORDLIB_FORBIDDEN');
 select t.fails(format($q$select public.chord_sheet_contribute_publish_band('Lời [C] chen', null, null, '{"beats":4,"beatType":4}', null, '[]', null, %L, null, null, %L)$q$,

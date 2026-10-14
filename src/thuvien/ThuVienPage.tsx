@@ -62,7 +62,7 @@ type PageProps = { chordLibrary?: ChordLibrary; measureAnalyzer?: MeasureAnalyze
  */
 export function ThuVienPageView({ chordLibrary, measureAnalyzer = PRODUCTION_ANALYZER, contentExtractor = PRODUCTION_EXTRACTOR, session, access = 'admin', loadBands }: PageProps & { session: ClassSession }) {
   const [search, setSearch] = useState(() => window.location.search)
-  // access: 'admin' (như cũ) · 'editor' (Biên tập: đăng/sửa/gỡ bài của mình) · 'viewer' (Trưởng Band: chỉ xem/tìm/dùng).
+  // access: 'admin' (như cũ) · 'editor' (Biên tập: đăng/sửa/gỡ bài của mình) · 'viewer' (chỉ xem/tìm/dùng; hiện chưa vai nào dùng — Trưởng Band = 'editor').
   const section = sectionFromSearch(search)
   // Thêm bản nhạc vào thư viện: admin/teacher, hoặc người đang giữ vai Biên tập âm nhạc. Chỉ ẩn/hiện giao diện — RLS kiểm lại khi lưu.
   const uid = session.status === 'ready' ? session.me.userId : null

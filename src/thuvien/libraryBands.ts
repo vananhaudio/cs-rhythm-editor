@@ -54,7 +54,7 @@ export async function loadWritableBands(): Promise<BandChoices> {
       if (error || !data) return NO_BANDS
       return { bands: data as BandOption[], admin: true }
     }
-    const { data: roles, error } = await supabase.from('teamlab_band_roles').select('band_id').eq('user_id', uid).eq('role', 'music_editor')
+    const { data: roles, error } = await supabase.from('teamlab_band_roles').select('band_id').eq('user_id', uid).in('role', ['music_editor', 'leader'])
     if (error || !roles?.length) return NO_BANDS
     const ids = roles.map(row => row.band_id as string)
     const { data: bands } = await supabase.from('teamlab_bands').select('id,name').in('id', ids)

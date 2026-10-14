@@ -3,7 +3,7 @@
 create table public.teamlab_band_roles (band_id uuid, user_id uuid, role text);
 create function public.teamlab_is_any_music_editor() returns boolean language sql stable security definer set search_path = '' as $$
   select exists (select 1 from public.teamlab_band_roles r join public.app_users u on u.id = r.user_id
-                  where r.user_id = auth.uid() and r.role = 'music_editor' and u.status = 'active') $$;
+                  where r.user_id = auth.uid() and r.role in ('music_editor', 'leader') and u.status = 'active') $$;
 revoke all on function public.teamlab_is_any_music_editor() from public, anon;
 grant execute on function public.teamlab_is_any_music_editor() to authenticated;
 grant select on public.teamlab_band_roles to authenticated;
@@ -75,11 +75,11 @@ do $$ declare k text; begin
     values (t.u(k), 'Tên ' || k, case k when 'TE' then 'teacher' when 'AD' then 'admin' else 'student' end, 'active');
   end loop;
 end $$;
--- Stub production: teamlab_bands + teamlab_is_band_editor (đúng ngữ nghĩa: vai music_editor của CHÍNH người gọi, theo Band).
+-- Stub production: teamlab_bands + teamlab_is_band_editor (đúng ngữ nghĩa production từ 15/10: vai music_editor HOẶC leader của CHÍNH người gọi, theo Band).
 create table public.teamlab_bands (id uuid primary key default gen_random_uuid(), name text not null);
 create function public.teamlab_is_band_editor(p_band_id uuid) returns boolean language sql stable security definer set search_path = '' as $$
   select p_band_id is not null and exists (select 1 from public.teamlab_band_roles r join public.app_users u on u.id = r.user_id
-   where r.band_id = p_band_id and r.user_id = auth.uid() and r.role = 'music_editor' and u.status = 'active') $$;
+   where r.band_id = p_band_id and r.user_id = auth.uid() and r.role in ('music_editor', 'leader') and u.status = 'active') $$;
 revoke all on function public.teamlab_is_band_editor(uuid) from public, anon;
 grant execute on function public.teamlab_is_band_editor(uuid) to authenticated;
 grant select on public.teamlab_bands to authenticated;

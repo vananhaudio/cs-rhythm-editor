@@ -49,18 +49,23 @@ select t.fails(format($q$select public.chord_sheet_contribute_publish('Chiều [
 select t.fails(format($q$select public.chord_sheet_accept_anchors_publish(%L, '{"measures":[{"line":0,"token":0}]}')$q$, t.id('admin_sheet')), 'Biên tập KHÔNG accept_anchors bài của Admin', 'CHORDLIB_FORBIDDEN');
 select t.reset();
 
--- 5) học viên thường / Trưởng Band / Teacher: không tự lưu vạch (cả lần lưu bị từ chối, không để lại bài)
+-- 5) học viên thường / Teacher: không tự lưu vạch (Trưởng Band = quyền Biên tập, kiểm ở mục 5b) (cả lần lưu bị từ chối, không để lại bài)
 create table t.cnt0 as select (select count(*) from public.chord_sheets) s, (select count(*) from public.chord_sheet_versions) v;
 select t.as_user('ST');
 select t.fails($q$select public.chord_sheet_contribute_publish('Lời [C] của học viên', 'Học viên vạch', null, '{"beats":4,"beatType":4}', null, '[]', null, null, null, '{"measures":[{"line":0,"token":0}]}')$q$,
   'học viên thường KHÔNG lưu được vạch nhịp', 'vạch nhịp');
 select t.reset();
-select t.as_user('LD');
-select t.fails($q$select public.chord_sheet_contribute_publish('Lời [C] của trưởng', 'Trưởng vạch', null, '{"beats":4,"beatType":4}', null, '[]', null, null, null, '{"measures":[{"line":0,"token":0}]}')$q$,
-  'Trưởng Band (không phải Biên tập) KHÔNG lưu được vạch nhịp', 'vạch nhịp');
-select t.reset();
+
 select t.ok((select s from t.cnt0) = (select count(*) from public.chord_sheets) and (select v from t.cnt0) = (select count(*) from public.chord_sheet_versions),
   'lưu bị từ chối KHÔNG để lại bài/phiên bản nào');
+-- 5b) Trưởng Band = quyền Biên tập: lưu được vạch nhịp cho bài MỚI của mình (cùng đường với Biên tập)
+select t.as_user('LD');
+select t.put('ld_anchor', public.chord_sheet_contribute_publish('Lời [C] của trưởng', 'Trưởng vạch', null, '{"beats":4,"beatType":4}', null, '[]', null, null, null, '{"measures":[{"line":0,"token":0}]}'));
+select t.reset();
+select t.ok((select s.created_by = t.u('LD') and s.canonical_version_id = v.id from public.chord_sheet_versions v join public.chord_sheets s on s.id = v.sheet_id where v.id = t.id('ld_anchor')),
+  'Trưởng Band (= Biên tập) lưu được vạch nhịp, đăng công khai, ghi công mình');
+drop table t.cnt0;
+create table t.cnt0 as select (select count(*) from public.chord_sheets) s, (select count(*) from public.chord_sheet_versions) v;   -- mốc mới sau bài hợp lệ của Trưởng Band
 
 -- 6) lưu vạch SAI của Biên tập → từ chối cả lần, không để lại bài dở dang
 select t.as_user('ED1');
