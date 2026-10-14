@@ -35,7 +35,7 @@ export const ROUTE_CLASSES: readonly RouteClass[] = [
     // công cụ / trình phát / bài luyện — adapter tool nhận path nào trùng edu_tools.route
     '/metronome', '/tempo', '/tap', '/notesheet', '/guitarboard', '/chords', '/chord-ame', '/chord-basic1', '/chord-trainer',
     '/song-builder', '/strum-builder', '/strum-backing', '/strum-test', '/groove', '/piano-journey', '/piano-player',
-    '/player', '/ytplayer', '/youtube-sync', '/thuvien', '/dieudemhat', '/amazing', '/chum2', '/chum2-strum',
+    '/player', '/ytplayer', '/youtube-sync', '/thuvien', '/hopam', '/dieudemhat', '/amazing', '/chum2', '/chum2-strum',
     '/hbd', '/hbd-td1', '/jinglebell', '/ode', '/scarborough', '/welcome-td2', '/app-v2-preview', '/flow-lab'),
 
   ...pages('private', true,

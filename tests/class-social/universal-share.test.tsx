@@ -20,7 +20,7 @@ const code = (f: string) => read(f).replace(/\/\/.*$/gm, "").replace(/\/\*[\s\S]
 const ID = "a1111111-0000-4000-8000-000000000001", CLASS = "b0000000-0000-4000-8000-0000000000c1", SES = "51000000-0000-4000-8000-000000000001";
 
 test("toShareRef: ba loại hợp lệ (tool_artifact | class | class_session); loại lạ/khoá hỏng → null; chữ thường hoá", () => {
-  assert.deepEqual([...SHARE_REF_TYPES], ["tool_artifact", "class", "class_session"]);
+  assert.deepEqual([...SHARE_REF_TYPES], ["tool_artifact", "class", "class_session", "chord_sheet"]);
   for (const t of SHARE_REF_TYPES) assert.deepEqual(toShareRef(t, CLASS.toUpperCase()), { type: t, key: CLASS });
   for (const [t, k] of [["profile", CLASS], ["class", "x"], ["class_session", null], [null, CLASS], ["", ""], ["__proto__", CLASS]] as const) assert.equal(toShareRef(t, k), null, `${t}/${k}`);
   assert.equal(refId(artifactRef(ID.toUpperCase())), `tool_artifact:${ID}`);

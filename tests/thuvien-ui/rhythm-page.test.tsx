@@ -94,3 +94,18 @@ test('nhịp lấy đà: ô lấy đà ngắn, hợp âm đầu chưa vang, tổ
   seek(view, 1)
   assert.equal(view.getByTestId('rs-chord-now').textContent, 'Am')
 })
+
+test('Chia sẻ: nút hiện ở bản đã duyệt (current/old), ẩn ở bản nháp; bấm mở bảng Chia sẻ', async () => {
+  const approved = await open({ status: 'current' })
+  assert.ok(approved.getByRole('button', { name: 'Chia sẻ' }))
+  fireEvent.click(approved.getByRole('button', { name: 'Chia sẻ' }))
+  await settle(80)
+  assert.ok(approved.getByRole('dialog', { name: 'Chia sẻ' }))
+  assert.ok(approved.getByText('Đăng lên cộng đồng'))
+  cleanup()
+  const old = await open({ status: 'old' })
+  assert.ok(old.queryByRole('button', { name: 'Chia sẻ' }))
+  cleanup()
+  const draft = await open({ status: 'draft' })
+  assert.equal(draft.queryByRole('button', { name: 'Chia sẻ' }), null)
+})
