@@ -237,3 +237,10 @@ test('V5 ghi công: "Band X · Biên tập: Y" chỉ khi có dữ liệu; thiế
   await settle()
   assert.equal(embedded.queryByTestId('rs-credit'), null)
 })
+
+test('hồi quy: tên bài trang học viên khoá màu + color-scheme (index.css h1 gần trắng ở chế độ tối làm tên bài tàng hình)', async () => {
+  const { readFileSync } = await import('node:fs')
+  const css = readFileSync(new URL('../../src/thuvien/RhythmScroll.css', import.meta.url), 'utf8')
+  assert.match(css, /\.rs-branded\s+\.rs-song-title\s*\{[^}]*color:\s*var\(--rs-text\)/)
+  assert.match(css, /\.rs-branded\s*\{\s*color-scheme:\s*light\s*\}/)
+})
