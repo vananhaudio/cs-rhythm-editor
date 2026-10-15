@@ -118,3 +118,14 @@
 .rs-click[data-on="true"]{color:var(--rs-accent)}
 .rs-strip-now,.rs-strip-next{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .rs-dots{flex:none}
+/* V4.2: cụm "hợp âm → hợp âm | chấm | loa" nằm giữa thanh, không kéo giãn ra hai mép. */
+.rs-strip{justify-content:center;gap:8px}
+.rs-dots{margin-left:10px}
+.rs-click{margin:-6px 0}
+@media (max-width:359px){
+  .rs-strip{gap:5px;padding-left:10px;padding-right:10px}
+  .rs-strip-now{font-size:21px}
+  .rs-strip-next{font-size:17px}
+  .rs-dots{gap:6px;margin-left:4px}
+  .rs-dots i{width:9px;height:9px}
+}
