@@ -2,7 +2,7 @@
 // id = khoá nội bộ; slug = đoạn sau /admin/ (giữ nguyên các URL đã chạy trước đây).
 
 export type AdminSection =
-  | 'dashboard' | 'schedule' | 'classes' | 'ht2027' | 'students' | 'leads' | 'community'
+  | 'dashboard' | 'lop' | 'schedule' | 'classes' | 'ht2027' | 'students' | 'leads' | 'community'
   | 'courses' | 'journey' | 'tools' | 'nhipphach'
   | 'newsfeed' | 'articles' | 'showcase' | 'dailymail' | 'chatmail'
   | 'aichat' | 'assistant'
@@ -15,6 +15,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     { id: 'dashboard', slug: '', icon: '⊞', label: 'Tổng quan' },
   ] },
   { title: 'Lớp học', items: [
+    { id: 'lop',       slug: 'lop',       icon: '🏫', label: 'Danh sách lớp' },
     { id: 'schedule',  slug: 'schedule',  icon: '🗓', label: 'Lớp & lịch' },
     { id: 'classes',   slug: 'classes',   icon: '🎓', label: 'Giáo trình lớp' },
     { id: 'ht2027',    slug: 'ht2027',    icon: '🎸', label: 'Thực hành HT2027' },
@@ -79,4 +80,33 @@ export function adminQuickLinks(meBase: string): QuickLink[] {
     { icon: '🎚', label: 'TeamLab',             href: 'https://class.vananhaudio.com/teamlab', external: true },
     { icon: '↗',  label: 'Trang học sinh',     href: '/start' },
   ]
+}
+
+// ── Không gian một lớp: /admin/lop/<classKey>[/<tab>] ─────────────────────────
+// classKey = id lớp (class_schedule.id). Mã lớp (code) không có ràng buộc duy nhất đã xác minh nên không dùng làm khoá URL.
+export type ClassTab = 'overview' | 'schedule' | 'students' | 'curriculum' | 'settings'
+export const CLASS_TABS: { id: ClassTab; slug: string; label: string }[] = [
+  { id: 'overview',   slug: '',           label: 'Tổng quan' },
+  { id: 'schedule',   slug: 'lich',       label: 'Lịch học' },
+  { id: 'students',   slug: 'hoc-vien',   label: 'Học viên' },
+  { id: 'curriculum', slug: 'giao-trinh', label: 'Giáo trình' },
+  { id: 'settings',   slug: 'thiet-lap',  label: 'Thiết lập' },
+]
+
+export interface AdminClassRoute { classKey: string; tab: ClassTab; tabValid: boolean }
+
+/** null = không phải đường dẫn vào một lớp (kể cả danh sách /admin/lop). */
+export function parseAdminClassPath(pathname: string): AdminClassRoute | null {
+  const m = /^\/admin\/lop\/([^/]+)(?:\/([^/]+))?\/?$/.exec(pathname)
+  if (!m) return null
+  let classKey: string
+  try { classKey = decodeURIComponent(m[1]) } catch { return null }
+  const slug = m[2] ?? ''
+  const tab = CLASS_TABS.find(t => t.slug === slug)
+  return { classKey, tab: tab?.id ?? 'overview', tabValid: !!tab }
+}
+
+export function adminClassPath(classKey: string, tab: ClassTab = 'overview'): string {
+  const slug = CLASS_TABS.find(t => t.id === tab)?.slug ?? ''
+  return `/admin/lop/${encodeURIComponent(classKey)}${slug ? `/${slug}` : ''}`
 }

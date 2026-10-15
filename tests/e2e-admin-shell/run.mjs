@@ -26,13 +26,30 @@ const BASE = `http://class.localhost:${server.address().port}`
 const ME = '22222222-2222-4222-8222-222222222222'
 const session = { access_token: 'x.y.z', token_type: 'bearer', expires_in: 3600, expires_at: Math.floor(Date.now() / 1000) + 3600, refresh_token: 'r',
   user: { id: ME, aud: 'authenticated', role: 'authenticated', email: 'thay@test.local', app_metadata: {}, user_metadata: {}, created_at: '2026-01-01T00:00:00Z' } }
+// Dữ liệu giả cho V2 (danh sách lớp / không gian lớp). Không phải dữ liệu thật.
+const CLS_A = 'aaaaaaaa-0000-4000-8000-00000000000a', CLS_B = 'bbbbbbbb-0000-4000-8000-00000000000b', CLS_C = 'cccccccc-0000-4000-8000-00000000000c'
+const FULL = { section: 'active', schedule: null, start_text: null, duration: null, price: null, course_ids: [], main_course_id: null, group_id: null,
+  sort_order: 0, is_active: true, breaks_after: null, timezone: 'Asia/Ho_Chi_Minh', show_on_practice_schedule: false, stage: null, practice_type: null,
+  metadata: {}, public_product: null, public_enroll: false, cover_url: null }
+const future = d => new Date(Date.now() + d * 86400000).toISOString()
+const CLASSES = [
+  { id: CLS_A, code: 'GZ-01', name: 'Lớp Alpha', status: 'active', cohort_group_id: 'g-a', start_date: '2026-09-01', end_date: '2026-12-01', weekday: 2, start_time: '19:00', duration_minutes: 90, total_sessions: 8, zoom_url: null, program_code: null, ...FULL },
+  { id: CLS_B, code: 'GZ-02', name: 'Lớp Beta', status: 'upcoming', cohort_group_id: null, start_date: null, end_date: null, weekday: null, start_time: null, duration_minutes: 90, total_sessions: 8, zoom_url: null, program_code: null, ...FULL },
+  { id: CLS_C, code: 'GZ-00', name: 'Lớp Cũ Gamma', status: 'completed', cohort_group_id: 'g-c', start_date: '2026-01-01', end_date: '2026-03-01', weekday: 1, start_time: '20:00', duration_minutes: 90, total_sessions: 8, zoom_url: null, program_code: null, ...FULL },
+]
+const SESSIONS = [
+  { id: 's1', class_id: CLS_A, session_number: 1, start_at: future(2), end_at: future(2), status: 'scheduled', event_type: 'lesson', title: 'Alpha buổi một' },
+  { id: 's2', class_id: CLS_A, session_number: 2, start_at: future(9), end_at: future(9), status: 'scheduled', event_type: 'lesson', title: 'Alpha buổi hai' },
+  { id: 's3', class_id: CLS_B, session_number: 1, start_at: future(5), end_at: future(5), status: 'scheduled', event_type: 'lesson', title: 'Beta buổi một' },
+]
+const SUMMARY = [{ class_id: CLS_A, group_name: 'Nhóm Alpha', group_id: 'g-a', member_count: 7, curriculum_access_count: 3 }]
 const COOKIE = 'base64-' + Buffer.from(JSON.stringify(session)).toString('base64url')
 const browser = await chromium.launch({ executablePath: process.env.CHROME || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' })
 let pass = 0
 const ok = m => { pass++; console.log('PASS', m) }
 
 const SECTIONS = [ // [đường dẫn, nhãn menu]
-  ['/admin', 'Tổng quan'], ['/admin/schedule', 'Lớp & lịch'], ['/admin/classes', 'Giáo trình lớp'], ['/admin/ht2027', 'Thực hành HT2027'],
+  ['/admin', 'Tổng quan'], ['/admin/lop', 'Danh sách lớp'], ['/admin/schedule', 'Lớp & lịch'], ['/admin/classes', 'Giáo trình lớp'], ['/admin/ht2027', 'Thực hành HT2027'],
   ['/admin/students', 'Học viên'], ['/admin/leads', 'Đăng ký'], ['/admin/community', 'Nhóm cộng đồng'],
   ['/admin/courses', 'Khoá học'], ['/admin/journey', 'Hành trình'], ['/admin/tools', 'Công cụ'], ['/admin/nhipphach', 'Nhịp phách'],
   ['/admin/newsfeed', 'Bản tin trong app'], ['/admin/articles', 'Bài viết tuyển sinh'], ['/admin/showcase', 'Trang Showcase'],
@@ -56,9 +73,18 @@ async function open(path, { width = 1440, height = 900 } = {}) {
       if (u.pathname === '/auth/v1/user') return json(session.user)
       if (u.pathname.startsWith('/auth/')) return json({})
       const t = u.pathname.split('/').pop()
-      if (u.pathname.startsWith('/rest/v1/rpc/')) return json((t === 'is_teacher' || t === 'my_tool_route_access') ? true : [])
+      if (u.pathname.startsWith('/rest/v1/rpc/')) return json((t === 'is_teacher' || t === 'my_tool_route_access') ? true : t === 'admin_class_member_summary' ? SUMMARY : [])
       if (u.pathname.startsWith('/rest/v1/')) {
         if (t === 'app_users') return json({ role: 'teacher', status: 'active', avatar_url: null })
+        const eq = k => { const v = u.searchParams.get(k); return v && v.startsWith('eq.') ? v.slice(3) : null }
+        const single = (req.headers()['accept'] || '').includes('vnd.pgrst.object')
+        if (t === 'class_schedule') {
+          const id = eq('id'); const rows = id ? CLASSES.filter(c => c.id === id) : CLASSES
+          return json(single ? (rows[0] ?? null) : rows)
+        }
+        if (t === 'class_sessions') {
+          const cid = eq('class_id'); return json(cid ? SESSIONS.filter(x => x.class_id === cid) : SESSIONS)
+        }
         return json([])
       }
       return json({})
@@ -93,7 +119,7 @@ const openMenu = async (page, w) => { if (w < 768) await page.getByLabel('Mở m
   const other = log.writes.filter(w => w !== 'POST /rest/v1/edu_tools')
   assert.equal(other.length, 0, 'không ghi gì ngoài seed edu_tools có sẵn: ' + other)
   await ctx.close()
-  ok('18 URL + 2 slug cũ vào đúng mục, một sidebar, không "← Admin" trùng, không ghi dữ liệu')
+  ok('19 URL + 2 slug cũ vào đúng mục, một sidebar, không "← Admin" trùng, không ghi dữ liệu')
 }
 
 // 2. Bấm menu → URL; bấm lại không thêm history; Back/Forward; reload; mục sai
@@ -178,6 +204,110 @@ for (const width of [1440, 768, 390, 360]) {
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/admin-${width}.png` })
   await ctx.close()
   ok(`${width}px: không tràn ngang, cuộn tới mục cuối${width < 768 ? ', chạm ≥44, drawer đóng sau khi chọn' : ''}`)
+}
+
+// 6. V2: Danh sách lớp → tìm/lọc → chọn lớp → các mục giữ đúng lớp → Back/Forward/reload
+{
+  const { ctx, page, log } = await open('/admin/lop')
+  const body = () => page.locator('.ac-root').innerText()
+  let t = await body()
+  assert.ok(t.includes('Lớp Alpha') && t.includes('Lớp Beta'), 'hiện lớp đang hoạt động')
+  assert.ok(!t.includes('Lớp Cũ Gamma'), 'mặc định ẩn lớp đã kết thúc')
+  assert.ok(t.includes('7 học viên'), 'số học viên từ RPC canonical')
+  assert.ok(t.includes('Chưa có nhóm'), 'lớp không có dòng tóm tắt → "Chưa có nhóm", không phải số 0')
+  await page.getByLabel('Lọc theo trạng thái').selectOption('all')
+  assert.ok((await body()).includes('Lớp Cũ Gamma'), 'lọc Tất cả hiện lớp đã kết thúc')
+  await page.getByLabel('Tìm lớp').fill('beta')
+  t = await body(); assert.ok(t.includes('Lớp Beta') && !t.includes('Lớp Alpha'), 'tìm theo tên')
+  await page.getByLabel('Tìm lớp').fill('gz-01')
+  t = await body(); assert.ok(t.includes('Lớp Alpha') && !t.includes('Lớp Beta'), 'tìm theo mã')
+  await page.getByLabel('Tìm lớp').fill('khong-ton-tai')
+  assert.ok((await body()).includes('Không có lớp nào khớp'), 'trạng thái rỗng khi tìm')
+  await page.getByLabel('Tìm lớp').fill('')
+  await page.getByLabel('Lọc theo trạng thái').selectOption('open')
+  assert.equal(label((await cur(page))[0]), 'Danh sách lớp')
+
+  await page.getByRole('link', { name: /Lớp Alpha/ }).click()
+  assert.ok(page.url().endsWith('/admin/lop/' + CLS_A), 'URL lớp: ' + page.url())
+  assert.equal(await page.locator('.ac-root h1').innerText(), 'Lớp Alpha')
+  assert.equal(await page.locator('nav[aria-label="Menu Admin"]').count(), 1, 'một sidebar')
+  assert.equal(label((await cur(page))[0]), 'Danh sách lớp', 'sidebar giữ mục Danh sách lớp')
+  assert.ok((await body()).includes('7 học viên'), 'tổng quan: số học viên')
+  assert.equal(await page.locator('.ac-back').count(), 1, 'đúng một nút quay lại')
+
+  const tabs = page.getByRole('navigation', { name: 'Mục của lớp' })
+  await tabs.getByRole('link', { name: 'Lịch học' }).click()
+  assert.ok(page.url().endsWith(`/admin/lop/${CLS_A}/lich`))
+  t = await body()
+  assert.ok(t.includes('Alpha buổi một') && t.includes('Alpha buổi hai'), 'lịch có buổi của lớp')
+  assert.ok(!t.includes('Beta buổi một'), 'lịch KHÔNG lẫn buổi lớp khác')
+  await tabs.getByRole('link', { name: 'Học viên' }).click()
+  assert.ok(page.url().endsWith(`/admin/lop/${CLS_A}/hoc-vien`))
+  await page.getByText('Học sinh trong lớp').waitFor()
+  assert.equal(await page.locator('.ac-root').getByText('Giáo trình lớp').count(), 0, 'không còn tiêu đề/bộ chọn lớp riêng của màn cũ')
+  assert.equal(await page.getByRole('tab').count(), 0, 'không còn tab nội bộ của màn cũ')
+  await tabs.getByRole('link', { name: 'Giáo trình' }).click()
+  assert.ok(page.url().endsWith(`/admin/lop/${CLS_A}/giao-trinh`))
+  await tabs.getByRole('link', { name: 'Thiết lập' }).click()
+  assert.ok((await body()).includes('Mở Lớp & lịch'))
+  await page.goBack(); assert.ok(page.url().endsWith('/giao-trinh'))
+  await page.goBack(); assert.ok(page.url().endsWith('/hoc-vien'))
+  await page.goForward(); assert.ok(page.url().endsWith('/giao-trinh'))
+  await page.reload({ waitUntil: 'networkidle' })
+  assert.equal(await page.locator('.ac-root h1').innerText(), 'Lớp Alpha', 'reload giữ lớp + tab')
+  assert.ok(page.url().endsWith('/giao-trinh'))
+
+  await page.goto(BASE + `/admin/lop/${CLS_A}/khong-co`, { waitUntil: 'networkidle' })
+  assert.ok(page.url().endsWith('/admin/lop/' + CLS_A), 'tab sai → tổng quan')
+  await page.goto(BASE + '/admin/lop/khong-co-lop', { waitUntil: 'networkidle' })
+  assert.ok((await body()).includes('Không tìm thấy lớp'), 'lớp không tồn tại')
+  await page.getByRole('link', { name: /Danh sách lớp/ }).first().click()
+  await page.getByRole('link', { name: /Lớp Beta/ }).click()
+  assert.ok(page.url().endsWith('/admin/lop/' + CLS_B), 'chuyển sang lớp khác')
+  await page.getByRole('navigation', { name: 'Mục của lớp' }).getByRole('link', { name: 'Lịch học' }).click()
+  t = await body(); assert.ok(t.includes('Beta buổi một') && !t.includes('Alpha buổi một'), 'đổi lớp → lịch đổi theo')
+  const writes = log.writes.filter(w => w !== 'POST /rest/v1/edu_tools')
+  assert.equal(writes.length, 0, 'V2 không ghi dữ liệu: ' + writes)
+  assert.deepEqual(log.errors, [], 'không lỗi JS')
+  await ctx.close()
+  ok('V2: danh sách lớp (tìm/lọc/rỗng), vào lớp, các mục giữ đúng lớp, lịch chỉ buổi của lớp, Back/Forward/reload, tab sai, lớp không có, đổi lớp, không ghi')
+}
+
+// 7. V2 responsive + bàn phím
+for (const width of [1440, 768, 390, 360]) {
+  const { ctx, page } = await open('/admin/lop', { width, height: 800 })
+  assert.ok(await overflow(page) <= 1, `${width}: danh sách không tràn (${await overflow(page)})`)
+  await page.goto(BASE + `/admin/lop/${CLS_A}`, { waitUntil: 'networkidle' })
+  assert.ok(await overflow(page) <= 1, `${width}: tổng quan lớp không tràn`)
+  if (width >= 768) {
+    assert.ok(await page.locator('.ac-tabs').isVisible() && !(await page.locator('.ac-tabs-select').isVisible()), `${width}: segmented`)
+  } else {
+    const sel = page.locator('.ac-tabs-select')
+    assert.ok(await sel.isVisible() && !(await page.locator('.ac-tabs').isVisible()), `${width}: menu chọn mục thay 5 tab`)
+    assert.ok((await sel.boundingBox()).height >= 44, `${width}: chọn mục ≥44`)
+    await sel.selectOption('schedule')
+    assert.ok(page.url().endsWith('/lich'), `${width}: chọn mục đổi URL`)
+    const back = await page.locator('.ac-back').boundingBox()
+    assert.ok(back.height >= 44, `${width}: nút quay lại ≥44`)
+  }
+  await page.goto(BASE + `/admin/lop/${CLS_A}/lich`, { waitUntil: 'networkidle' })
+  assert.ok(await overflow(page) <= 1, `${width}: lịch không tràn`)
+  await page.goto(BASE + `/admin/lop/${CLS_A}/hoc-vien`, { waitUntil: 'networkidle' })
+  assert.ok(await overflow(page) <= 1, `${width}: học viên không tràn (${await overflow(page)})`)
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/lop-${width}.png` })
+  await ctx.close()
+  ok(`V2 ${width}px: không tràn ngang; ${width >= 768 ? 'segmented' : 'menu chọn mục ≥44, back ≥44'}`)
+}
+{
+  const { ctx, page } = await open('/admin/lop')
+  await page.getByLabel('Tìm lớp').focus()
+  await page.keyboard.press('Tab'); await page.keyboard.press('Tab')   // bộ lọc → liên kết lớp đầu tiên
+  const focused = await page.evaluate(() => document.activeElement?.className ?? '')
+  assert.ok(String(focused).includes('ac-row'), 'Tab tới hàng lớp: ' + focused)
+  await page.keyboard.press('Enter')
+  assert.ok(/\/admin\/lop\/[0-9a-f-]{36}$/.test(page.url()), 'Enter mở lớp: ' + page.url())
+  await ctx.close()
+  ok('V2: bàn phím Tab/Enter mở lớp')
 }
 
 await browser.close(); server.close()

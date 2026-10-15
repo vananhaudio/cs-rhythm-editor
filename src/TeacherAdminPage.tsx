@@ -19,6 +19,7 @@ import NhipPhachAdmin from './admin/NhipPhachAdmin'
 import { ADMIN_NAV_GROUPS, adminSectionFromPath, adminPathForSection, adminLabel, adminQuickLinks, type AdminSection } from './admin/adminNav'
 import { isSocialHost } from './class-social/resolveMeRoute'
 import ClassCurriculumAdmin from './admin/ClassCurriculumAdmin'
+import ClassAdminSpace from './admin/ClassAdminSpace'
 
 const S = {
   sidebar: '#18181B', sidebarHover: '#27272A',
@@ -30,6 +31,7 @@ const S = {
 type Section = AdminSection
 
 const SHORTCUTS: { id: Section; icon: string; desc: string }[] = [
+  { id: 'lop',      icon: '🏫', desc: 'Chọn một lớp để xem lịch, học viên, giáo trình' },
   { id: 'leads',    icon: '📝', desc: 'Duyệt đăng ký từ trang tuyển sinh' },
   { id: 'schedule', icon: '🗓', desc: 'Tạo lớp, lịch học, thành viên' },
   { id: 'students', icon: '👥', desc: 'Danh sách, tài khoản, ghi chú' },
@@ -39,6 +41,7 @@ const SHORTCUTS: { id: Section; icon: string; desc: string }[] = [
 export default function TeacherAdminPage() {
   // Mục đang mở lấy từ URL (/admin/<slug>); bấm menu đẩy URL, Back/Forward đọc lại URL.
   const [section, setSection]       = useState<Section>(() => adminSectionFromPath(window.location.pathname) ?? 'dashboard')
+  const [pathname, setPathname]   = useState(() => window.location.pathname)
   const [studentId, setStudentId]   = useState<string | null>(null)
   const [collapsed, setCollapsed]   = useState(false)
   const [isMobile, setIsMobile]     = useState(typeof window !== 'undefined' && window.innerWidth < 768)
@@ -68,19 +71,20 @@ export default function TeacherAdminPage() {
     const onPop = () => {
       const next = adminSectionFromPath(window.location.pathname)
       if (next === null) { window.location.reload(); return }   // Back ra ngoài Admin: để router chính quyết
-      setSection(next); setStudentId(null); setMenuOpen(false)
+      setPathname(window.location.pathname); setSection(next); setStudentId(null); setMenuOpen(false)
     }
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
   }, [])
 
-  const goSection = (id: Section) => {
-    const target = adminPathForSection(id)
+  // Đi tới một đường dẫn trong /admin (kể cả /admin/lop/<id>/<tab>). Bấm lại đúng URL đang mở: không thêm history.
+  const navigate = (target: string) => {
     const here = window.location.pathname.replace(/\/+$/, '') || '/'
-    // Bấm lại đúng mục đang mở: không thêm history; chỉ đóng chi tiết/menu.
     if (here !== target) window.history.pushState(null, '', target)
-    setSection(id); setStudentId(null); setMenuOpen(false)
+    setPathname(target)
+    setSection(adminSectionFromPath(target) ?? 'dashboard'); setStudentId(null); setMenuOpen(false)
   }
+  const goSection = (id: Section) => navigate(adminPathForSection(id))
 
   return (
     <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', height: '100dvh', overflow: 'hidden', fontFamily: '"Inter", system-ui, sans-serif' }}>
@@ -185,6 +189,7 @@ export default function TeacherAdminPage() {
           </div>
         )}
 
+        {section === 'lop' && <ClassAdminSpace pathname={pathname} navigate={navigate} goSection={goSection} />}
         {section === 'classes' && <ClassCurriculumAdmin />}
         {section === 'students' && studentId && (
           <div style={{ flex: 1, overflowY: 'auto' }}>

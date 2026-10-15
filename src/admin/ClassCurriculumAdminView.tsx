@@ -46,9 +46,11 @@ const button: CSSProperties = { border: `1px solid ${C.border}`, borderRadius: 8
 const fmt = (value: string | null) => value ? new Date(value).toLocaleString('vi-VN') : '—'
 const nameOf = (student?: StudentRow) => student?.display_name?.trim() || student?.full_name?.trim() || student?.email || 'Học viên'
 
-interface Props { client: Pick<typeof supabase, 'from' | 'rpc'> }
+// classId + part: dùng trong không gian lớp (Admin V2) — ẩn bộ chọn lớp/tab riêng, chỉ hiện đúng một phần.
+interface Props { client: Pick<typeof supabase, 'from' | 'rpc'>; classId?: string; part?: 'students' | 'curriculum' }
 
-export default function ClassCurriculumAdminView({ client }: Props) {
+export default function ClassCurriculumAdminView({ client, classId, part }: Props) {
+  const embedded = !!classId
   const [classes, setClasses] = useState<ClassRow[]>([])
   const [selectedId, setSelectedId] = useState('')
   const [members, setMembers] = useState<MemberRow[]>([])
@@ -70,7 +72,9 @@ export default function ClassCurriculumAdminView({ client }: Props) {
   const loadClasses = useCallback(async () => {
     setLoading(true)
     const [{ data, error: loadError }, sum] = await Promise.all([
-      client.from('class_schedule').select('id,code,name,cohort_group_id,status').not('status', 'in', '(cancelled,merged,draft)').order('code'),
+      embedded
+        ? client.from('class_schedule').select('id,code,name,cohort_group_id,status').eq('id', classId)
+        : client.from('class_schedule').select('id,code,name,cohort_group_id,status').not('status', 'in', '(cancelled,merged,draft)').order('code'),
       client.rpc('admin_class_member_summary'),
     ])
     if (loadError || sum.error) setError(loadError?.message || sum.error?.message || 'Không tải được lớp')
@@ -79,8 +83,9 @@ export default function ClassCurriculumAdminView({ client }: Props) {
     const rows = ((data ?? []) as ClassRow[]).sort((a, b) => rank(a.status) - rank(b.status) || a.code.localeCompare(b.code))
     setClasses(rows)
     setSelectedId(current => rows.some(row => row.id === current) ? current : (rows[0]?.id ?? ''))
+    if (embedded && rows.length === 0 && !loadError) setError('Không tìm thấy lớp này.')
     setLoading(false)
-  }, [client])
+  }, [client, classId, embedded])
 
   const loadClass = useCallback(async (cls: ClassRow) => {
     const loadId = ++classLoadId.current
@@ -165,31 +170,32 @@ export default function ClassCurriculumAdminView({ client }: Props) {
     setBusy(null)
   }
 
-  return <div style={{ flex: 1, overflowY: 'auto', padding: 24, background: C.bg, color: C.text, fontFamily: 'Inter, system-ui, sans-serif' }}>
-    <h1 style={{ fontSize: 22, margin: '0 0 6px' }}>Giáo trình lớp</h1>
-    <p style={{ color: C.muted, margin: '0 0 20px', fontSize: 14 }}>Quản lý học sinh và quyền xem Giáo trình của từng lớp.</p>
-    {loading ? <div>Đang tải lớp...</div> : classes.length === 0 ? <div>Chưa có lớp.</div> : <>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 18 }}>
+  const shownTab = part ?? tab
+  return <div style={embedded ? { color: C.text } : { flex: 1, overflowY: 'auto', padding: 24, background: C.bg, color: C.text, fontFamily: 'Inter, system-ui, sans-serif' }}>
+    {!embedded && <h1 style={{ fontSize: 22, margin: '0 0 6px' }}>Giáo trình lớp</h1>}
+    {!embedded && <p style={{ color: C.muted, margin: '0 0 20px', fontSize: 14 }}>Quản lý học sinh và quyền xem Giáo trình của từng lớp.</p>}
+    {loading ? <div>Đang tải lớp...</div> : classes.length === 0 ? (embedded ? null : <div>Chưa có lớp.</div>) : <>
+      {!embedded && <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 18 }}>
         {classes.map(cls => <button key={cls.id} onClick={() => { setSelectedId(cls.id); setSearch(''); setMatches([]); setNotice('') }}
           style={{ ...button, background: cls.id === selectedId ? C.green : C.card, color: cls.id === selectedId ? '#fff' : C.text }}>
           {cls.name} · {cls.code}
         </button>)}
-      </div>
-      {selected && <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: 18 }}>
-        <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 4 }}>{selected.name}</div>
-        <div style={{ fontSize: 13, color: C.muted, marginBottom: 12 }}>
+      </div>}
+      {selected && <div style={embedded ? undefined : { background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: 18 }}>
+        {!embedded && <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 4 }}>{selected.name}</div>}
+        {!embedded && <div style={{ fontSize: 13, color: C.muted, marginBottom: 12 }}>
           Trạng thái lớp: {selected.status} · Nhóm thành viên: <b style={{ color: C.text }}>{summary[selected.id]?.group_name ?? 'chưa có'}</b>
           {' '}· <b style={{ color: C.text }}>{summary[selected.id]?.member_count ?? activeMembers.length} học sinh</b>
           {' '}· Giáo trình bật: {activeMembers.filter(m => access[m.user_id]?.status === 'active').length}
-        </div>
-        {selected.cohort_group_id && !['completed', 'cancelled', 'merged'].includes(selected.status) &&
+        </div>}
+        {!embedded && selected.cohort_group_id && !['completed', 'cancelled', 'merged'].includes(selected.status) &&
           <div style={{ marginBottom: 12 }}><ClassJoinCode key={selected.id} client={client} classId={selected.id} /></div>}
-        <div role="tablist" style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+        {!embedded && <div role="tablist" style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
           {([['students', 'Học sinh'], ['curriculum', 'Chặng & Giáo trình']] as const).map(([id, label]) =>
             <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}
               style={{ ...button, background: tab === id ? C.text : C.card, color: tab === id ? '#fff' : C.text }}>{label}</button>)}
-        </div>
-        {tab === 'curriculum' ? <ClassCurriculumEditor key={selected.id} client={client} cls={selected} /> : !selected.cohort_group_id ? <div role="alert" style={{ color: C.red }}>Lớp chưa có nhóm thành viên. Chọn nhóm cho lớp ở Lịch lớp trước khi thêm học sinh.</div> : <>
+        </div>}
+        {shownTab === 'curriculum' ? <ClassCurriculumEditor key={selected.id} client={client} cls={selected} /> : !selected.cohort_group_id ? <div role="alert" style={{ color: C.red }}>Lớp chưa có nhóm thành viên. Chọn nhóm cho lớp ở Lịch lớp trước khi thêm học sinh.</div> : <>
           <label htmlFor="class-student-search" style={{ display: 'block', fontWeight: 700, fontSize: 13, marginBottom: 6 }}>Thêm học sinh</label>
           <input id="class-student-search" value={search} onChange={event => setSearch(event.target.value)}
             placeholder="Tìm theo tên hoặc email" style={{ width: '100%', boxSizing: 'border-box', border: `1px solid ${C.border}`, borderRadius: 8, padding: '10px 12px', fontSize: 14 }} />
