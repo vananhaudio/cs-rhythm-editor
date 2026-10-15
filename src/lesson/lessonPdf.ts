@@ -83,18 +83,21 @@ function collectCuts(root: HTMLElement): number[] {
   // CHỈ những chỗ này được phép ngắt trang (danh sách trắng — chặn hẳn kiểu cắt
   // ngay dưới tiêu đề): đáy một khối lớn của tài liệu, đáy một tác phẩm, hoặc khe
   // giữa hai hệ thống nhạc (mỗi hệ thống alphaTab vẽ là một <svg> riêng).
-  const canCut = (el: HTMLElement) =>
+  const canCut = (el: Element) =>
     el.parentElement === root ||
     el.classList.contains('lsn-piece') ||
     el.classList.contains('lsn-layer') ||
     el.tagName.toLowerCase() === 'svg' ||
     !!el.parentElement?.classList.contains('lsn-score-host')
 
-  const walk = (el: HTMLElement) => {
+  // ⚠️ Duyệt theo Element, KHÔNG phải HTMLElement: mỗi hệ thống nhạc của alphaTab là một
+  // <svg> (SVGElement, không phải HTMLElement). Lọc HTMLElement làm khe giữa các khuông
+  // không bao giờ thành mốc ngắt ⇒ nhát cắt rơi ngang khuông nhạc (lỗi 15/10/2026).
+  const walk = (el: Element) => {
     if (el.classList.contains('no-print')) return
     const r = el.getBoundingClientRect()
     const kids = [...el.children].filter(
-      (c): c is HTMLElement => c instanceof HTMLElement && !c.classList.contains('no-print'),
+      (c) => !c.classList.contains('no-print'),
     )
     // Luôn tìm cả những chỗ ngắt BÊN TRONG khối (khe giữa hai hệ thống nhạc). Trước đây
     // chỉ tách khi khối cao hơn một trang, nên một khối hơi dài là bị đẩy nguyên sang
@@ -102,7 +105,7 @@ function collectCuts(root: HTMLElement): number[] {
     if (kids.length) for (const k of kids) walk(k)
     if (canCut(el)) cuts.push(r.bottom - top)
   }
-  for (const c of [...root.children]) if (c instanceof HTMLElement) walk(c)
+  for (const c of [...root.children]) walk(c)
 
   return [...new Set(cuts)].sort((a, b) => a - b)
 }
@@ -160,7 +163,10 @@ export async function exportLessonPdf(root: HTMLElement, fileName: string) {
   await withPaperWidth(root, async () => {
   await new Promise(r => setTimeout(r, 60))
   const rect = root.getBoundingClientRect()
-  const cuts = collectCuts(root)
+  const liveCuts = collectCuts(root)
+  // Mốc ngắt đo TRÊN BẢN SAO (đúng cái sẽ được chụp). Mốc đo trên trang thật bị lệch dần
+  // so với ảnh chụp ⇒ nhát cắt rơi giữa khuông nhạc (học viên kêu 15/10/2026).
+  let cloneCuts: number[] | null = null
 
   // Chụp MỘT lần cho cả tài liệu: html2canvas nhân bản cả trang mỗi lần gọi, gọi nhiều
   // lần (mỗi khối một lần) làm việc xuất kéo dài hàng phút.
@@ -173,9 +179,16 @@ export async function exportLessonPdf(root: HTMLElement, fileName: string) {
     backgroundColor: '#FFFFFF',
     useCORS: true,
     logging: false,
-    onclone: (_d, cloned) => prepareClone(cloned as HTMLElement, css),
+    onclone: (_d, cloned) => {
+      prepareClone(cloned as HTMLElement, css)
+      try {
+        const c = collectCuts(cloned as HTMLElement)
+        if (c.length) cloneCuts = c
+      } catch { /* lùi về mốc đo trên trang thật */ }
+    },
   })
 
+  const cuts: number[] = cloneCuts ?? liveCuts
   const pdf = new jsPDF({ unit: 'mm', format: 'a4', compress: true })
   const pageH = (canvas.width * BOX_H) / BOX_W         // chiều cao một trang, tính bằng px ảnh
   const slice = document.createElement('canvas')
