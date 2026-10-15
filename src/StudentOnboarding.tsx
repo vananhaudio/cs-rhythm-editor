@@ -4,6 +4,7 @@ import ChordDiagramIcon from './ChordDiagramIcon'
 import { supabase } from './supabase'
 import { isNativeIAP } from './iap'
 import { returnToFromSearch } from './authReturn'
+import { IS_NATIVE_CAPACITOR } from './supabase'
 
 // Đồng bộ tông mobile app: primary indigo #4338CA, accent cam #EA580C, nền xám #F0F2F5
 const T = {
@@ -85,7 +86,10 @@ const GUEST_STUDENT: Student = {
 type Step = 'welcome' | 'login' | 'portal'
 
 export default function StudentOnboarding() {
-  const [step, setStep]           = useState<Step>('portal')
+  // Web /start = MÀN ĐĂNG NHẬP của Class: khách thấy form ngay; đã đăng nhập → về ?return= hoặc /me.
+  // App native và /learn, /me (App học) giữ nguyên như cũ.
+  const loginScreen = !IS_NATIVE_CAPACITOR && window.location.pathname.startsWith('/start')
+  const [step, setStep]           = useState<Step>(loginScreen ? 'login' : 'portal')
   const [student, setStudent]     = useState<Student | null>(GUEST_STUDENT)
   // Chưa biết đã đăng nhập hay chưa → hiện splash, KHÔNG mount portal guest giả
   // (tránh nháy "Khách · Miễn phí" rồi mới đổi sang user thật + load data 2 lần)
@@ -95,6 +99,7 @@ export default function StudentOnboarding() {
   const [password, setPassword]   = useState('')
   const [loginError, setLoginError] = useState('')
   const [loggingIn, setLoggingIn] = useState(false)
+  const [redirecting, setRedirecting] = useState(false)
   const [showPass, setShowPass]   = useState(false)
   const [resetSent, setResetSent] = useState(false)
   const [resetLoading, setResetLoading] = useState(false)
@@ -110,7 +115,7 @@ export default function StudentOnboarding() {
   // Đăng nhập xong → về đúng nơi đó; không có → ở lại cổng học như trước.
   const goReturn = (): boolean => {
     if (!window.location.pathname.startsWith('/start')) return false
-    const dest = returnToFromSearch(window.location.search)
+    const dest = returnToFromSearch(window.location.search) ?? (loginScreen ? '/me' : null)
     if (!dest) return false
     window.location.replace(dest)
     return true
@@ -130,6 +135,7 @@ export default function StudentOnboarding() {
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session?.user?.id) return
+      if (loginScreen) { setRedirecting(true); await claimPendingGroup(); goReturn(); return }
       const { data } = await supabase
         .from('edu_students')
         .select('id,full_name,phone,email,level,is_active,enrolled_at,display_name,avatar_url')
@@ -146,7 +152,7 @@ export default function StudentOnboarding() {
   }, [])
 
   useEffect(() => {
-    if (step === 'login')  setTimeout(() => (authMode === 'signup' ? nameRef.current : passRef.current)?.focus(), 100)
+    if (step === 'login' && !loginScreen)  setTimeout(() => (authMode === 'signup' ? nameRef.current : passRef.current)?.focus(), 100)
   }, [step, authMode])
 
   const handleLogin = async () => {
@@ -158,6 +164,14 @@ export default function StudentOnboarding() {
     if (error) {
       setLoginError('Sai mật khẩu hoặc tài khoản không tồn tại.')
       setLoggingIn(false)
+      return
+    }
+    if (loginScreen) {
+      // Hồ sơ học sinh / vai trò do /me và máy chủ xử lý như hiện hành.
+      setRedirecting(true)
+      await claimPendingGroup()
+      if (goReturn()) return
+      setRedirecting(false); setLoggingIn(false)
       return
     }
     const { data } = await supabase
@@ -204,6 +218,7 @@ export default function StudentOnboarding() {
       // Tự đăng nhập luôn sau khi tạo (cùng flow handleLogin)
       const { data: authData, error: liErr } = await supabase.auth.signInWithPassword({ email: email.trim(), password: password.trim() })
       if (liErr || !authData.user) { setLoginError('Đã tạo tài khoản. Bạn hãy bấm Đăng nhập để vào nhé.'); setLoggingIn(false); return }
+      if (loginScreen) { setRedirecting(true); await claimPendingGroup(); if (goReturn()) return; setRedirecting(false) }
       const { data: stuData } = await supabase
         .from('edu_students')
         .select('id,full_name,phone,email,level,is_active,enrolled_at,display_name,avatar_url')
@@ -254,7 +269,10 @@ export default function StudentOnboarding() {
   return (
     <div style={{ minHeight: step === 'portal' ? undefined : '100vh', background: step === 'portal' ? 'transparent' : T.bg, fontFamily: '"Segoe UI", Inter, system-ui, sans-serif', color: T.text }}>
       {/* Header — chỉ hiện ở màn đăng nhập; màn welcome dùng logo ở giữa cho gọn */}
-      {step === 'login' && (
+      {loginScreen && (!authChecked || redirecting) && (
+        <div style={{ minHeight: '100dvh', background: T.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.textMuted, fontSize: 14, fontWeight: 600 }}>Đang mở Class…</div>
+      )}
+      {step === 'login' && !(loginScreen && (!authChecked || redirecting)) && (
       <header style={{
         background: T.header, padding: 'calc(env(safe-area-inset-top, 0px) + 14px) 20px 14px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -267,7 +285,7 @@ export default function StudentOnboarding() {
             <div style={{ color: 'rgba(255,255,255,.7)', fontSize: 12 }}>Học · Tập · Sống cùng âm nhạc</div>
           </div>
         </div>
-        {student && (
+        {student && !loginScreen && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ textAlign: 'right' }}>
               <div style={{ color: '#fff', fontSize: 14, fontWeight: 600 }}>{displayName(student)}</div>
@@ -342,9 +360,9 @@ export default function StudentOnboarding() {
       )}
 
       {/* LOGIN */}
-      {step === 'login' && (
+      {step === 'login' && !(loginScreen && (!authChecked || redirecting)) && (
         <div style={{ maxWidth: 420, margin: '0 auto', padding: '40px 24px', minHeight: 'calc(100vh - 56px)' }}>
-          <Btn onClick={() => setStep('welcome')} style={{ background: 'none', border: 'none', color: T.textMuted, fontSize: 14, padding: '0 0 20px', display: 'flex', alignItems: 'center', gap: 6 }}>← Quay lại</Btn>
+          {!loginScreen && <Btn onClick={() => setStep('welcome')} style={{ background: 'none', border: 'none', color: T.textMuted, fontSize: 14, padding: '0 0 20px', display: 'flex', alignItems: 'center', gap: 6 }}>← Quay lại</Btn>}
 
           <h2 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 20px' }}>{authMode === 'signup' ? 'Tạo tài khoản miễn phí' : 'Đăng nhập'}</h2>
 
