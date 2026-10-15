@@ -580,7 +580,7 @@ const CSS = `
 @media print{
   @page{size:A4 portrait;margin:14mm 12mm;}
   .no-print{display:none !important;}
-  .lsn{background:#fff;font-size:11.5pt;}
+  .lsn{background:#fff;font-size:11.5pt;min-height:0;overflow:visible;}
   .lsn-paper{max-width:none;margin:0;padding:0;}
   .lsn-block,.lsn-head,.lsn-score,.lsn-fb{break-inside:avoid;page-break-inside:avoid;}
   .lsn-block{box-shadow:none;margin-bottom:10mm;border-color:#C9C4DA;}
@@ -588,7 +588,7 @@ const CSS = `
   .lsn-fb{overflow:visible;}
   .lsn-fb svg{min-width:0;width:100%;}
   .lsn-score-host{overflow:visible;}
-  .lsn-score-host svg{max-width:100%;height:auto;}
+  .lsn-score-host svg{max-width:100%;height:auto;break-inside:avoid;page-break-inside:avoid;}
   .lsn-notes{gap:34px;}
   .lsn-foot{position:running(footer);}
 }
