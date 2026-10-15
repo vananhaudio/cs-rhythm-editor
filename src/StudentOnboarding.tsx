@@ -3,6 +3,7 @@ import MobileStudentPortal from './MobileStudentPortal'
 import ChordDiagramIcon from './ChordDiagramIcon'
 import { supabase } from './supabase'
 import { isNativeIAP } from './iap'
+import { returnToFromSearch } from './authReturn'
 
 // Đồng bộ tông mobile app: primary indigo #4338CA, accent cam #EA580C, nền xám #F0F2F5
 const T = {
@@ -105,6 +106,16 @@ export default function StudentOnboarding() {
   const [signupName, setSignupName] = useState('')
   const nameRef = useRef<HTMLInputElement>(null)
 
+  // Điểm đến sau đăng nhập: chỉ từ ?return= của /start (trang bị chặn tự gắn), đã lọc cùng-site, không phải /start.
+  // Đăng nhập xong → về đúng nơi đó; không có → ở lại cổng học như trước.
+  const goReturn = (): boolean => {
+    if (!window.location.pathname.startsWith('/start')) return false
+    const dest = returnToFromSearch(window.location.search)
+    if (!dest) return false
+    window.location.replace(dest)
+    return true
+  }
+
   // Xác nhận nhóm đang chờ (học viên bấm link /join-group/<token> rồi mới đăng nhập)
   const claimPendingGroup = async () => {
     let tok = ''
@@ -124,12 +135,12 @@ export default function StudentOnboarding() {
         .select('id,full_name,phone,email,level,is_active,enrolled_at,display_name,avatar_url')
         .eq('user_id', session.user.id)
         .maybeSingle()
-      if (data) { setPreview(false); setStudent(data); setStep('portal'); claimPendingGroup(); return }
+      if (data) { setPreview(false); setStudent(data); setStep('portal'); await claimPendingGroup(); goReturn(); return }
       // Không có hồ sơ học sinh → tài khoản thầy: khôi phục CHẾ ĐỘ XEM (giữ phiên khi F5)
       const { data: appUser } = await supabase.from('app_users').select('role').eq('id', session.user.id).maybeSingle()
       if (appUser?.role === 'teacher' || appUser?.role === 'admin') {
         setStudent({ id: session.user.id, full_name: 'Thầy Văn Anh (xem khoá)', email: session.user.email ?? null, level: 'advanced' } as Student)
-        setPreview(true); setStep('portal')
+        setPreview(true); setStep('portal'); goReturn()
       }
     }).finally(() => setAuthChecked(true))
   }, [])
@@ -154,7 +165,7 @@ export default function StudentOnboarding() {
       .select('id,full_name,phone,email,level,is_active,enrolled_at,display_name,avatar_url')
       .eq('user_id', authData.user.id)
       .single()
-    if (data) { setPreview(false); setStudent(data); setStep('portal'); claimPendingGroup() }
+    if (data) { setPreview(false); setStudent(data); setStep('portal'); await claimPendingGroup(); if (goReturn()) return }
     else {
       // Kiểm tra xem có phải tài khoản thầy không
       const { data: appUser } = await supabase
@@ -168,6 +179,7 @@ export default function StudentOnboarding() {
         setPreview(true)
         setStep('portal')
         setLoggingIn(false)
+        goReturn()
         return
       }
       setLoginError('Tài khoản chưa được liên kết với hồ sơ học sinh. Liên hệ thầy.')
@@ -197,7 +209,7 @@ export default function StudentOnboarding() {
         .select('id,full_name,phone,email,level,is_active,enrolled_at,display_name,avatar_url')
         .eq('user_id', authData.user.id)
         .single()
-      if (stuData) { setPreview(false); setStudent(stuData); setStep('portal'); claimPendingGroup() }
+      if (stuData) { setPreview(false); setStudent(stuData); setStep('portal'); await claimPendingGroup(); if (goReturn()) return }
       else { setLoginError('Tài khoản chưa được liên kết với hồ sơ học sinh. Liên hệ thầy.') }
     } catch { setLoginError('Có lỗi kết nối, bạn thử lại nhé.') }
     setLoggingIn(false)
