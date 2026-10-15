@@ -87,8 +87,10 @@ async function main() {
   const Y_TITLE = SAFE.top + 70, Y_COMPOSER = Y_TITLE + 56, Y_CREDIT = Y_COMPOSER + 52
   const Y_STRIP = Y_CREDIT + 36, H_STRIP = 150
   const Y_LYRICS = Y_STRIP + H_STRIP + 20
-  const Y_BRAND = H - SAFE.bottom - PAD   // baseline dòng thương hiệu nằm TRONG vùng an toàn, có đệm
-  const H_LYRICS = Y_BRAND - 90 - Y_LYRICS
+  // Footer nhận diện RIÊNG: dải trắng nhẹ + đường mảnh ở trên, nằm đáy vùng an toàn; lời/hợp âm bị cắt phía trên footer.
+  const H_FOOTER = 112
+  const Y_FOOTER = H - SAFE.bottom - H_FOOTER
+  const H_LYRICS = Y_FOOTER - 16 - Y_LYRICS
 
   let scroll = 0, lastT = 0
   const draw = (beat: number, tNow: number) => {
@@ -154,8 +156,13 @@ async function main() {
       ballLog.push({ t: tNow, x: Math.round(bx * k), y: Math.round(by * k), row: ball.row })
     }
     ctx.restore()
-    ctx.fillStyle = ORANGE; ctx.font = font(700, 46); ctx.textAlign = 'center'
-    ctx.fillText('Lớp Guitar Thầy Văn Anh', ((boxL + boxR) / 2) * k, Y_BRAND * k); ctx.textAlign = 'left'
+    // Footer nhận diện: nền trắng nhẹ, đường phân cách mảnh phía trên, chữ cam căn giữa.
+    const fx = SAFE.left, fw = W - SAFE.left - SAFE.right
+    ctx.fillStyle = 'rgba(255,255,255,.92)'; ctx.fillRect(fx * k, Y_FOOTER * k, fw * k, H_FOOTER * k)
+    ctx.fillStyle = 'rgba(60,60,67,.22)'; ctx.fillRect(fx * k, Y_FOOTER * k, fw * k, Math.max(1, 2 * k))
+    ctx.fillStyle = ORANGE; ctx.font = font(700, 44); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
+    ctx.fillText('Lớp Guitar Thầy Văn Anh', (fx + fw / 2) * k, (Y_FOOTER + H_FOOTER / 2 + 2) * k)
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic'
     if (SHOW_SAFE) {
       ctx.save(); ctx.strokeStyle = 'rgba(220,38,38,.9)'; ctx.lineWidth = 4 * k; ctx.setLineDash([18 * k, 12 * k])
       ctx.strokeRect(SAFE.left * k, SAFE.top * k, (W - SAFE.left - SAFE.right) * k, (H - SAFE.top - SAFE.bottom) * k)
