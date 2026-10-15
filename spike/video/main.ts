@@ -2,14 +2,25 @@
 // Dữ liệu bài nạp lúc chạy từ ./data.json (nằm ngoài repo). Dùng NGUYÊN buildChordTimeline / buildPerformanceScript / locateBeat.
 import { buildChordTimeline, locateBeat, beatsAtSeconds } from '../../src/thuvien/chordTimeline.ts'
 import { buildPerformanceScript } from '../../src/thuvien/performanceScript.ts'
+import { BALL_LANE, BALL_RADIUS, assignReadingRows, ballBetweenAnchors } from '../../src/rhythm-scroll-viewer/ballPath.ts'
+import type { PathPoint } from '../../src/rhythm-scroll-viewer/ballPath.ts'
+import { createAnchoredScroll } from '../../src/rhythm-scroll-viewer/anchored.ts'
+import type { RhythmScrollAnchoredData } from '../../src/rhythm-scroll-viewer/anchored.ts'
 
-const W = 1080, H = 1920, ORANGE = '#EA580C', TEXT = '#1C1C1E', SUB = '#8E8E93'
+const W = 1080, H = 1920, ORANGE = '#EA580C', SUB = '#8E8E93'
 const log = (m: string) => { (document.getElementById('log') as HTMLElement).textContent += m + '\n'; (window as any).__log = ((window as any).__log ?? '') + m + '\n' }
 const params = new URLSearchParams(location.search)
 const SECONDS = Number(params.get('sec') ?? 14)
 const START_BEAT = Number(params.get('start') ?? 0)
 const FPS = Number(params.get('fps') ?? 30)
 const SCALE = Number(params.get('scale') ?? 1)       // 1 = 1080x1920, 0.667 = 720x1280
+
+// ── LAYOUT: MỘT chỗ chỉnh tập trung. Đơn vị = px của khung 1080×1920 (trước SCALE). Vùng an toàn là ƯỚC LƯỢNG BẢO THủ
+// cho giao diện TikTok (thanh trên, mô tả/tên người đăng ở dưới, cột nút bên phải); KHÔNG phải chuẩn cố định → chỉnh ở đây
+// sau khi xem thực tế. ?safe=1 vẽ khung vùng an toàn để kiểm tra bằng mắt.
+const SAFE = { top: 230, bottom: 470, left: 64, right: 150 }
+const S_BALL = 2.6   // hệ số phóng từ đơn vị viewer (BALL_LANE=34, BALL_RADIUS=7) sang px video
+const SHOW_SAFE = params.get('safe') === '1'
 
 async function main() {
   const d = await (await fetch('./data.json')).json()
@@ -20,35 +31,64 @@ async function main() {
   canvas.width = Math.round(W * SCALE); canvas.height = Math.round(H * SCALE)
   const ctx = canvas.getContext('2d')!
   const k = SCALE
+  const PAD = 28   // đệm trong vùng an toàn: chữ không chạm mép
+  const boxL = SAFE.left + PAD, boxR = W - SAFE.right - PAD, boxW = boxR - boxL
+  const font = (wt: number, px: number) => `${wt} ${Math.round(px * k)}px -apple-system, "SF Pro Text", system-ui, sans-serif`
 
-  // Bố cục dòng lời (một lần): mỗi dòng ảo → các hàng (wrap theo chiều rộng), mỗi từ có x.
-  type Cell = { text: string; chord: string | null; x: number; line: number; token: number }
+  // Dữ liệu cho engine neo của viewer (cùng hình dạng RhythmScrollPage dựng).
+  const anchoredData: RhythmScrollAnchoredData = {
+    version: 2, prototype: true, songId: 'spike', lyricsHash: 'spike', meter: d.meter,
+    ...(script.anchors.pickup ? { pickup: script.anchors.pickup } : {}), measures: script.anchors.measures,
+    provenance: { sourceType: 'manual', sourceHash: 'spike', generator: 'chord-library-version', generatedAt: '2026-10-15T00:00:00.000Z' },
+  }
+  const anchored = createAnchoredScroll(anchoredData)
+
+  // Bố cục lời: mỗi dòng ảo → các hàng (wrap theo bề ngang vùng an toàn). Mỗi hàng: làn bóng (BALL_LANE*S) → hợp âm → lời.
+  const LANE = BALL_LANE * S_BALL
+  const CHORD_H = 64, LYRIC_BASE = LANE + CHORD_H + 66, ROW_H = LYRIC_BASE + 60
+  type Cell = { text: string; chord: string | null; x: number; w: number; line: number; token: number }
   type Row = { cells: Cell[]; y: number; line: number }
-  const FONT_L = `500 ${Math.round(58 * k)}px -apple-system, "SF Pro Text", system-ui, sans-serif`
-  const FONT_C = `700 ${Math.round(46 * k)}px -apple-system, "SF Pro Text", system-ui, sans-serif`
   const rows: Row[] = []
-  const rowOf = new Map<string, number>()   // "line:token" → chỉ số hàng
-  const left = 90 * k, maxX = (W - 90) * k, rowH = 170 * k
-  ctx.font = FONT_L
+  const flat: { left: number; right: number; top: number }[] = []   // theo thứ tự đọc, đơn vị viewer (÷S_BALL)
+  const flatKey: string[] = []
+  ctx.font = font(500, 58)
   let y = 0
   script.lines.forEach(line => {
     let cur: Row = { cells: [], y, line: line.index }
-    let x = left
-    if (script.labels[line.index]) { ctx.font = FONT_L; x += ctx.measureText(script.labels[line.index] + ' ').width }
+    let x = boxL
     line.words.forEach((w, t) => {
-      ctx.font = FONT_L
-      const wd = ctx.measureText(w.text + ' ').width
-      if (x + wd > maxX && cur.cells.length) { rows.push(cur); y += rowH; cur = { cells: [], y, line: line.index }; x = left }
-      cur.cells.push({ text: w.text, chord: w.chord, x, line: line.index, token: t })
-      rowOf.set(`${line.index}:${t}`, rows.length)
-      x += wd
+      ctx.font = font(500, 58)
+      const full = ctx.measureText(w.text + ' ').width / k, ink = ctx.measureText(w.text).width / k
+      if (x + full > boxR && cur.cells.length) { rows.push(cur); y += ROW_H; cur = { cells: [], y, line: line.index }; x = boxL }
+      cur.cells.push({ text: w.text, chord: w.chord, x, w: ink, line: line.index, token: t })
+      flat.push({ left: x / S_BALL, right: (x + ink) / S_BALL, top: y / S_BALL }); flatKey.push(`${line.index}:${t}`)
+      x += full
     })
-    rows.push(cur); y += rowH + 20 * k
+    rows.push(cur); y += ROW_H + 24
   })
+  const { rows: readingRows, rowOf } = assignReadingRows(flat)
+  const points = new Map<string, PathPoint>()
+  flat.forEach((b, i) => {
+    const [ln, tk] = flatKey[i].split(':').map(Number)
+    points.set(`${ln}:${tk}`, { row: rowOf[i], x: b.left })
+    points.set(`${ln}:${tk + 1}`, { row: rowOf[i], x: b.right })
+  })
+  const keyOf = (a: { line: number | null; token: number | null }) => `${a.line}:${a.token}`
+  const rowIndexOfKey = new Map<string, number>()
+  rows.forEach((r, ri) => r.cells.forEach(c => rowIndexOfKey.set(`${c.line}:${c.token}`, ri)))
 
-  const roundRect = (x: number, y: number, w: number, h: number, r: number) => { ctx.beginPath(); ctx.roundRect(x, y, w, h, r) }
-  const fit = (text: string, maxW: number, font: (px: number) => string, px: number) => { let s = px; ctx.font = font(s); while (ctx.measureText(text).width > maxW && s > 20 * k) { s -= 2; ctx.font = font(s) } }
-  const credit = [d.band ? `Band ${d.band}` : null, d.editor ? `Biên tập: ${d.editor}` : null].filter(Boolean).join(' · ')
+  const roundRect = (x: number, y: number, w: number, h: number, r: number) => { ctx.beginPath(); ctx.roundRect(x * k, y * k, w * k, h * k, r * k) }
+  const fit = (text: string, maxW: number, wt: number, px: number) => { let s = px; ctx.font = font(wt, s); while (ctx.measureText(text).width / k > maxW && s > 22) { s -= 2; ctx.font = font(wt, s) } }
+  const credit = [d.band ? (/^band\b/i.test(d.band) ? d.band : `Band ${d.band}`) : null, d.editor ? `Biên tập: ${d.editor}` : null].filter(Boolean).join(' · ')
+  const ballLog: { t: number; x: number; y: number; row: number }[] = []
+  ;(window as any).__ballLog = ballLog
+
+  // Các vùng theo trục dọc, tất cả nằm TRONG vùng an toàn.
+  const Y_TITLE = SAFE.top + 70, Y_COMPOSER = Y_TITLE + 56, Y_CREDIT = Y_COMPOSER + 52
+  const Y_STRIP = Y_CREDIT + 36, H_STRIP = 150
+  const Y_LYRICS = Y_STRIP + H_STRIP + 20
+  const Y_BRAND = H - SAFE.bottom - PAD   // baseline dòng thương hiệu nằm TRONG vùng an toàn, có đệm
+  const H_LYRICS = Y_BRAND - 90 - Y_LYRICS
 
   let scroll = 0, lastT = 0
   const draw = (beat: number, tNow: number) => {
@@ -61,55 +101,68 @@ async function main() {
     const meas = timeline.measures[pos.measureIndex]
     const beatInM = pos.state === 'active' ? Math.floor(pos.measureProgress * meas.beats) + 1 : 0
 
+    // Bóng: DÙNG NGUYÊN ballBetweenAnchors của viewer (một cú nảy mỗi ô, đi theo đường đọc) — không có beat engine thứ hai.
+    const ap = anchored.locate(pos.measurePosition)
+    const from = ap.current.line === null ? undefined : points.get(keyOf(ap.current))
+    const to = ap.next.line === null ? from : points.get(keyOf(ap.next))
+    const ball = ap.state === 'active' && from && to ? ballBetweenAnchors(readingRows, from, to, ap.measureProgress, true) : null
+
     ctx.fillStyle = '#F2F2F7'; ctx.fillRect(0, 0, canvas.width, canvas.height)
-    // 1. Tên bài + tác giả
-    ctx.textBaseline = 'alphabetic'; ctx.fillStyle = TEXT
-    fit(d.title, (W - 160) * k, px => `700 ${px}px -apple-system, system-ui, sans-serif`, 78 * k); ctx.fillText(d.title, 80 * k, 190 * k)
-    if (d.composer) { ctx.fillStyle = SUB; ctx.font = `500 ${40 * k}px -apple-system, system-ui, sans-serif`; ctx.fillText(d.composer, 80 * k, 252 * k) }
-    // 2. Ghi công
-    if (credit) { ctx.fillStyle = SUB; fit(credit, (W - 160) * k, px => `500 ${px}px -apple-system, system-ui, sans-serif`, 36 * k); ctx.fillText(credit, 80 * k, 312 * k) }
-    // 3a. Dải hợp âm hiện tại → tiếp theo + chấm nhịp
-    const sy = 360 * k, sh = 150 * k
-    ctx.fillStyle = '#fff'; roundRect(60 * k, sy, (W - 120) * k, sh, 36 * k); ctx.fill()
-    ctx.font = `800 ${84 * k}px -apple-system, system-ui, sans-serif`; ctx.fillStyle = ORANGE
-    const cur = ev?.chord ?? '—'; ctx.fillText(cur, 110 * k, sy + 105 * k)
-    let ax = 110 * k + ctx.measureText(cur).width + 30 * k
-    ctx.fillStyle = SUB; ctx.font = `600 ${56 * k}px -apple-system, system-ui, sans-serif`; ctx.fillText('→', ax, sy + 98 * k)
-    ax += ctx.measureText('→').width + 26 * k
-    ctx.font = `700 ${68 * k}px -apple-system, system-ui, sans-serif`; ctx.fillText(next?.chord ?? '', ax, sy + 100 * k)
-    const nDots = meas.beats
-    for (let i = 0; i < nDots; i++) {
+    ctx.textBaseline = 'alphabetic'; ctx.fillStyle = '#1C1C1E'
+    fit(d.title, boxW, 700, 76); ctx.fillText(d.title, boxL * k, Y_TITLE * k)
+    if (d.composer) { ctx.fillStyle = SUB; ctx.font = font(500, 40); ctx.fillText(d.composer, boxL * k, Y_COMPOSER * k) }
+    if (credit) { ctx.fillStyle = SUB; fit(credit, boxW, 500, 36); ctx.fillText(credit, boxL * k, Y_CREDIT * k) }
+    // Dải hợp âm hiện tại → kế tiếp + chấm nhịp
+    ctx.fillStyle = '#fff'; roundRect(boxL, Y_STRIP, boxW, H_STRIP, 36); ctx.fill()
+    ctx.font = font(800, 84); ctx.fillStyle = ORANGE
+    const cur = ev?.chord ?? '—'; ctx.fillText(cur, (boxL + 44) * k, (Y_STRIP + 106) * k)
+    let ax = (boxL + 44) * k + ctx.measureText(cur).width + 26 * k
+    ctx.fillStyle = SUB; ctx.font = font(600, 54); ctx.fillText('→', ax, (Y_STRIP + 98) * k)
+    ax += ctx.measureText('→').width + 22 * k
+    ctx.font = font(700, 68); ctx.fillText(next?.chord ?? '', ax, (Y_STRIP + 100) * k)
+    for (let i = 0; i < meas.beats; i++) {
       const on = beatInM === i + 1
-      ctx.beginPath(); ctx.arc((W - 130 - (nDots - 1 - i) * 56) * k, sy + 75 * k, (on ? 20 : 15) * k, 0, 7)
+      ctx.beginPath(); ctx.arc((boxR - 44 - (meas.beats - 1 - i) * 54) * k, (Y_STRIP + 75) * k, (on ? 19 : 14) * k, 0, 7)
       ctx.fillStyle = on ? ORANGE : '#D1D1D6'; ctx.fill()
     }
-    // 3b. Lời + hợp âm (cuộn mượt theo hàng đang hát)
-    const areaTop = 540 * k, areaH = (H - 540 - 250) * k
-    const ri = rowOf.get(activeKey) ?? 0
-    const target = (rows[ri]?.y ?? 0) * k * 0 + (rows[ri]?.y ?? 0)
-    scroll += (target - scroll) * (1 - Math.exp(-dt * 5))
-    ctx.save(); ctx.beginPath(); ctx.rect(0, areaTop, canvas.width, areaH); ctx.clip()
-    const centerY = areaTop + areaH * 0.38
+    // Lời + hợp âm + BÓNG; cuộn bám hàng của bóng (như viewer).
+    const follow = ball ? ball.row : (rowIndexOfKey.get(activeKey) ?? 0)
+    const followY = ball ? readingRows[follow].top * S_BALL : (rows[follow]?.y ?? 0)
+    scroll += (followY - scroll) * (1 - Math.exp(-dt * 5))
+    ctx.save(); ctx.beginPath(); ctx.rect(0, Y_LYRICS * k, canvas.width, H_LYRICS * k); ctx.clip()
+    const base = Y_LYRICS + H_LYRICS * 0.06 - scroll
     rows.forEach(r => {
-      const yy = centerY + r.y - scroll
-      if (yy < areaTop - rowH || yy > areaTop + areaH + rowH) return
+      const yy = base + r.y
+      if (yy < Y_LYRICS - ROW_H || yy > Y_LYRICS + H_LYRICS + ROW_H) return
       const isActiveLine = r.line === activeLine
       r.cells.forEach(c => {
-        ctx.font = FONT_L; ctx.fillStyle = isActiveLine ? TEXT : '#6B6B70'
-        ctx.fillText(c.text, c.x, yy + 120 * k)
+        ctx.font = font(500, 58); ctx.fillStyle = isActiveLine ? '#1C1C1E' : '#6B6B70'
+        ctx.fillText(c.text, c.x * k, (yy + LYRIC_BASE) * k)
         if (c.chord) {
           const act = `${c.line}:${c.token}` === activeKey
-          ctx.font = FONT_C; const wch = ctx.measureText(c.chord).width
-          if (act) { ctx.fillStyle = ORANGE; roundRect(c.x - 14 * k, yy + 14 * k, wch + 28 * k, 68 * k, 18 * k); ctx.fill(); ctx.fillStyle = '#fff' }
+          ctx.font = font(700, 46); const wch = ctx.measureText(c.chord).width / k
+          if (act) { ctx.fillStyle = ORANGE; roundRect(c.x - 12, yy + LANE, wch + 24, CHORD_H, 18); ctx.fill(); ctx.fillStyle = '#fff' }
           else ctx.fillStyle = '#C2410C'
-          ctx.fillText(c.chord, c.x, yy + 64 * k)
+          ctx.fillText(c.chord, c.x * k, (yy + LANE + 48) * k)
         }
       })
     })
+    if (ball) {
+      const bx = ball.x * S_BALL, by = base + ball.y * S_BALL
+      ctx.save(); ctx.shadowColor = 'rgba(234,88,12,.75)'; ctx.shadowBlur = 22 * k
+      ctx.fillStyle = ORANGE; ctx.beginPath(); ctx.arc(bx * k, by * k, BALL_RADIUS * S_BALL * k, 0, 7); ctx.fill(); ctx.restore()
+      ballLog.push({ t: tNow, x: Math.round(bx * k), y: Math.round(by * k), row: ball.row })
+    }
     ctx.restore()
-    // 4. Dòng thương hiệu cố định
-    ctx.fillStyle = ORANGE; ctx.font = `700 ${46 * k}px -apple-system, system-ui, sans-serif`; ctx.textAlign = 'center'
-    ctx.fillText('Lớp Guitar Thầy Văn Anh', canvas.width / 2, (H - 110) * k); ctx.textAlign = 'left'
+    ctx.fillStyle = ORANGE; ctx.font = font(700, 46); ctx.textAlign = 'center'
+    ctx.fillText('Lớp Guitar Thầy Văn Anh', ((boxL + boxR) / 2) * k, Y_BRAND * k); ctx.textAlign = 'left'
+    if (SHOW_SAFE) {
+      ctx.save(); ctx.strokeStyle = 'rgba(220,38,38,.9)'; ctx.lineWidth = 4 * k; ctx.setLineDash([18 * k, 12 * k])
+      ctx.strokeRect(SAFE.left * k, SAFE.top * k, (W - SAFE.left - SAFE.right) * k, (H - SAFE.top - SAFE.bottom) * k)
+      ctx.fillStyle = 'rgba(220,38,38,.08)'
+      ctx.fillRect(0, 0, canvas.width, SAFE.top * k); ctx.fillRect(0, (H - SAFE.bottom) * k, canvas.width, SAFE.bottom * k); ctx.fillRect((W - SAFE.right) * k, 0, SAFE.right * k, canvas.height)
+      ctx.restore()
+    }
   }
 
   ;(window as any).__info = { totalBeats: timeline.totalBeats, bpm, rows: rows.length, events: timeline.events.length }

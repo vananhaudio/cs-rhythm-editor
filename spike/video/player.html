@@ -1,0 +1,7 @@
+<!doctype html><body style="margin:0"><video id="v" muted playsinline></video><canvas id="c"></canvas><script>
+// Trang kiểm tra MP4 đã xuất: seek tới thời điểm, vẽ khung vào canvas, đếm pixel màu cam quanh vị trí kỳ vọng của bóng.
+const f=new URLSearchParams(location.search).get('f'); const v=document.getElementById('v'); v.src=f
+window.ready=new Promise(r=>v.onloadedmetadata=()=>r({d:v.duration,w:v.videoWidth,h:v.videoHeight}))
+window.frameAt=t=>new Promise(r=>{v.onseeked=()=>setTimeout(()=>{const c=document.getElementById('c');c.width=v.videoWidth;c.height=v.videoHeight;const x=c.getContext('2d');x.drawImage(v,0,0);r(true)},120);v.currentTime=t})
+window.near=(x,y,r)=>{const c=document.getElementById('c').getContext('2d');let n=0,t=0;for(let a=-r;a<=r;a+=Math.max(2,r/4))for(let b=-r;b<=r;b+=Math.max(2,r/4)){const p=c.getImageData(Math.round(x+a),Math.round(y+b),1,1).data;t++;if(Math.abs(p[0]-234)<28&&Math.abs(p[1]-88)<36&&Math.abs(p[2]-12)<44)n++}return n/t}
+</script>
