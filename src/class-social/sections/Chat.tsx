@@ -65,7 +65,7 @@ export default function Chat({ meId, selection, onOpenConversation, onBackToList
   let canSend: boolean | undefined
   if (selection.kind === 'conversation') {
     const hit = items.find(c => c.id === selection.id)
-    if (hit) { peer = { id: hit.peerId, name: hit.name, avatarUrl: hit.avatarUrl, isTeacher: hit.isTeacher }; canSend = hit.canSend }
+    if (hit) { peer = { id: hit.peerId, name: hit.name, avatarUrl: hit.avatarUrl, isTeacher: hit.isTeacher, kind: hit.kind, memberCount: hit.memberCount, readOnly: hit.readOnly }; canSend = hit.canSend }
     else if (hint?.conversationId === selection.id) peer = hint
   }
 

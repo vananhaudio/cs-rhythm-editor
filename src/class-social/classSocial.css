@@ -521,6 +521,7 @@
 .cs-chat-item.is-active { background: var(--cs-p-soft); }
 .cs-chat-item-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .cs-chat-item-top, .cs-chat-item-bottom { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.cs-chat-item-tag { flex: none; display: inline-flex; align-items: center; gap: 3px; font-size: 11px; font-weight: 700; color: var(--cs-p); background: var(--cs-neutral-soft); border-radius: 999px; padding: 1px 7px; }
 .cs-chat-item-name { flex: 1; min-width: 0; font-weight: 600; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cs-chat-item-time { flex: none; font-size: 12px; color: var(--cs-faint); }
 .cs-chat-item-preview { flex: 1; min-width: 0; font-size: 13.5px; color: var(--cs-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -535,6 +536,17 @@
 .cs-chat-peer { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 4px 8px 4px 4px; border: none; background: transparent; border-radius: 12px; color: var(--cs-text); font: inherit; cursor: pointer; }
 .cs-chat-peer:hover:not(:disabled) { background: var(--cs-hover); }
 .cs-chat-peer:disabled { cursor: default; }
+.cs-chat-peer { flex: 0 1 auto; max-width: 100%; }
+.cs-chat-peer-text { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; max-width: 100%; text-align: left; }
+.cs-chat-peer-text > span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cs-chat-peer-tag { font-size: 12px; color: var(--cs-muted); }
+.cs-chat-members { border-bottom: 1px solid var(--cs-border); padding: 8px 14px 10px; max-height: 40%; overflow-y: auto; flex: none; }
+.cs-chat-list-sub { font-size: 12px; font-weight: 700; color: var(--cs-muted); padding: 12px 14px 4px; }
+.cs-chat-members-note { font-size: 12.5px; color: var(--cs-muted); margin: 0 0 8px; line-height: 1.4; }
+.cs-chat-members-head { display: flex; align-items: center; justify-content: space-between; font-size: 13px; font-weight: 700; color: var(--cs-muted); margin-bottom: 4px; }
+.cs-chat-member { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; padding: 4px 6px; border: none; background: transparent; border-radius: 10px; color: var(--cs-text); font: inherit; text-align: left; cursor: pointer; }
+.cs-chat-member:hover { background: var(--cs-hover); }
+.cs-chat-member-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; font-size: 15px; }
 .cs-chat-peer-name { font-weight: 700; font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .cs-chat-body-state { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 24px; text-align: center; color: var(--cs-muted); }
 .cs-chat-body-state p { margin: 0; }
@@ -555,6 +567,12 @@
 .cs-msg-row.is-theirs .cs-msg-bubble { background: var(--cs-neutral-soft); color: var(--cs-text); }
 .cs-msg-row.is-mine .cs-msg-bubble { background: var(--cs-p); color: #fff; }
 .cs-msg-bubble.is-pending { opacity: .6; }
+/* Nhóm Band: tin người khác có avatar + tên người gửi */
+.cs-msg-row.has-sender { flex-direction: row; align-items: flex-start; gap: 8px; }
+.cs-msg-avatar { flex: none; width: 32px; min-height: 1px; }
+.cs-msg-col { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; max-width: min(78%, 520px); }
+.cs-msg-col .cs-msg-bubble { max-width: 100%; }
+.cs-msg-sender { font-size: 12px; font-weight: 600; color: var(--cs-muted); margin: 0 0 2px 4px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cs-msg-bubble.is-failed { opacity: 1; background: var(--cs-warn-soft); color: var(--cs-warn); outline: 1px solid var(--cs-warn); }
 
 /* Chat V1b — card chia sẻ nội bộ trong dòng tin (cả card là một liên kết tới object gốc) */
@@ -738,6 +756,7 @@ a.cs-share-card:focus-visible { outline: 2px solid var(--cs-p); outline-offset: 
   .cs-chat-back { display: inline-flex; flex: none; }
   .cs-chat-head { padding-top: calc(10px + env(safe-area-inset-top, 0px)); }
   .cs-msg-bubble { max-width: 84%; }
+  .cs-msg-col { max-width: 84%; }
   .cs-msg-share { width: min(84%, 300px); }
   .cs-chat-item { min-height: 68px; }
   .cs-person-msg { flex: 1 1 auto; }

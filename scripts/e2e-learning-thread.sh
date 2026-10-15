@@ -116,6 +116,8 @@ for i in $(seq 1 60); do curl -sf "http://127.0.0.1:$VITE_PORT/" >/dev/null 2>&1
 curl -sf "http://127.0.0.1:$API_PORT/" >/dev/null || { cat "$TMP/pgrst.log"; exit 1; }
 echo "── Stack: PostgREST :$API_PORT · proxy :$PROXY_PORT · vite :$VITE_PORT"
 
+# Cho kịch bản Chrome thao tác DB tạm giữa chừng (vd. gỡ thành viên Band): socket + cổng + thư mục bin của cluster này
+export E2E_PG_SOCK="$TMP" E2E_PG_PORT="$PORT" E2E_PG_BIN="$PGBIN"
 set +e
 # E2E_SKIP_BASE=1 (chỉ khi gỡ lỗi kịch bản thêm): bỏ qua run.mjs / run-checkpoints.mjs
 if [ -n "${E2E_SKIP_BASE:-}" ] || [ -n "${E2E_ONLY_CHECKPOINTS:-}" ]; then RC=0; else

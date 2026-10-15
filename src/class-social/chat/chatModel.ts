@@ -2,13 +2,26 @@
 // Quyền nhắn tin do DB quyết (dm_* RPC); ở đây chỉ dựng giao diện từ dữ liệu server trả.
 import { safeImageUrl } from '../media/safeImageUrl'
 import { toShareRef, type ShareRef } from '../../share/shareRef'
+import { teamAssetUrl } from '../posts/postModel'
 
 /** Khớp CHECK của dm_messages.body (1..2000 ký tự) */
 export const MAX_BODY = 2000
 export const PAGE = 30
 
+/** Id hội thoại của nhóm Band = `band:<band id>` (tách khỏi uuid hội thoại cá nhân; khớp resolveMeRoute.BAND_CONVERSATION_PREFIX) */
+export const BAND_PREFIX = 'band:'
+export const isBandConversation = (id: string): boolean => id.startsWith(BAND_PREFIX)
+export const bandIdOf = (id: string): string => id.slice(BAND_PREFIX.length)
+
 export type ConversationItem = {
   id: string
+  /** 'band' = nhóm chat của Band (tên + ảnh lấy từ Band). Mặc định (hội thoại cá nhân) = 'dm'. */
+  kind?: 'dm' | 'band'
+  /** Nhóm Band chỉ đọc: 'archived' (Band lưu trữ) | 'support' (Thầy/Admin xem để hỗ trợ, không phải thành viên) */
+  readOnly?: 'archived' | 'support' | null
+  /** Chỉ nhóm Band: tên người gửi tin cuối (rỗng nếu chưa có tin) và số thành viên */
+  lastSender?: string
+  memberCount?: number
   peerId: string
   name: string
   avatarUrl: string | null
@@ -31,7 +44,9 @@ export type ChatShareRef = ShareRef
 /** body cố định của tin share (DB ghi) — client V1a cũ hiện đúng chuỗi này như text */
 export const SHARE_FALLBACK_BODY = 'Đã chia sẻ một nội dung'
 
-export type ChatMessage = { seq: number; mine: boolean; body: string; at: string; ref?: ChatShareRef | null }
+/** Người gửi (chỉ nhóm Band — hội thoại 1-1 không cần) */
+export type ChatSender = { id: string; name: string; avatarUrl: string | null }
+export type ChatMessage = { seq: number; mine: boolean; body: string; at: string; ref?: ChatShareRef | null; sender?: ChatSender | null }
 
 /** Tin đang gửi / gửi lỗi (chưa có seq) — hiện ở cuối, mờ */
 export type PendingMessage = { localId: string; body: string; state: 'sending' | 'failed' }
@@ -41,6 +56,20 @@ export type ConversationRow = {
   last_seq: number | string; last_body: string | null; last_mine: boolean | null; last_at: string | null
   unread: number | null; can_send: boolean | null
 }
+export type BandRoomRow = {
+  band_id: string; band_name: string | null; cover_path: string | null; project_id: string | null; project_avatar_path: string | null
+  last_seq: number | string | null; last_body: string | null; last_sender_name: string | null; last_mine: boolean | null; last_at: string | null
+  unread: number | null; member_count: number | null
+  /** Server quyết: gửi được / Band đã lưu trữ / nhóm xem với tư cách Thầy-Admin hỗ trợ (không phải thành viên) */
+  can_send?: boolean | null; archived?: boolean | null; support?: boolean | null
+}
+export type BandMessageRow = {
+  seq: number | string; sender_id: string | null; sender_name: string | null; sender_avatar_url: string | null
+  mine: boolean | null; body: string | null; created_at: string | null
+}
+export type BandMemberRow = { user_id: string; name: string | null; avatar_url: string | null; role: string | null }
+export type BandMember = { id: string; name: string; avatarUrl: string | null; isTeacher: boolean }
+
 export type MessageRow = {
   seq: number | string; mine: boolean | null; body: string | null; created_at: string | null
   ref_type?: string | null; ref_key?: string | null
@@ -50,6 +79,9 @@ export { toShareRef }
 
 export function toConversations(rows: ConversationRow[] | null | undefined): ConversationItem[] {
   return (rows ?? []).filter(r => !!r?.conversation_id && !!r.peer_id).map(r => ({
+    kind: 'dm' as const,
+    lastSender: '',
+    memberCount: 0,
     id: r.conversation_id,
     peerId: r.peer_id,
     name: (r.peer_name ?? '').trim() || 'Thành viên Class',
@@ -62,6 +94,46 @@ export function toConversations(rows: ConversationRow[] | null | undefined): Con
     unread: Math.max(0, Number(r.unread) || 0),
     canSend: r.can_send === true,
   }))
+}
+
+/** Nhóm Band → hàng trong danh sách. Tên + ảnh: của Band (bìa Band, rồi ảnh Team); không có thì chữ cái đầu. Nhóm chưa có tin vẫn hiện. */
+export function toBandConversations(rows: BandRoomRow[] | null | undefined): ConversationItem[] {
+  return (rows ?? []).filter(r => !!r?.band_id && !!(r.band_name ?? '').trim()).map(r => ({
+    kind: 'band' as const,
+    id: BAND_PREFIX + String(r.band_id).toLowerCase(),
+    peerId: '',
+    name: (r.band_name ?? '').trim(),
+    avatarUrl: teamAssetUrl(r.project_id, r.cover_path, 'cover') ?? teamAssetUrl(r.project_id, r.project_avatar_path, 'avatar'),
+    isTeacher: false,
+    lastSeq: Number(r.last_seq) || 0,
+    lastBody: r.last_body ?? '',
+    lastMine: r.last_mine === true,
+    lastSender: (r.last_sender_name ?? '').trim(),
+    lastAt: r.last_at ?? '',
+    unread: Math.max(0, Number(r.unread) || 0),
+    canSend: r.can_send === true,   // server quyết (lưu trữ / hỗ trợ → chỉ đọc); không biết = KHÔNG gửi được
+    readOnly: r.support === true ? 'support' as const : r.archived === true ? 'archived' as const : null,
+    memberCount: Math.max(0, Number(r.member_count) || 0),
+  }))
+}
+
+export function toBandMessages(rows: BandMessageRow[] | null | undefined): ChatMessage[] {
+  return (rows ?? []).filter(r => r?.seq != null).map(r => ({
+    seq: Number(r.seq), mine: r.mine === true, body: r.body ?? '', at: r.created_at ?? '', ref: null,
+    sender: { id: r.sender_id ?? '', name: (r.sender_name ?? '').trim() || 'Thành viên Band', avatarUrl: safeImageUrl(r.sender_avatar_url) },
+  })).sort((a, b) => a.seq - b.seq)
+}
+
+export function toBandMembers(rows: BandMemberRow[] | null | undefined): BandMember[] {
+  return (rows ?? []).filter(r => !!r?.user_id).map(r => ({
+    id: r.user_id, name: (r.name ?? '').trim() || 'Thành viên Band', avatarUrl: safeImageUrl(r.avatar_url), isTeacher: r.role === 'teacher',
+  }))
+}
+
+/** Danh sách gộp: nhóm có tin mới nhất trước, nhóm chưa có tin xếp cuối (theo tên) — ổn định, không nhảy khi poll */
+export function mergeConversationLists(dm: ConversationItem[], bands: ConversationItem[]): ConversationItem[] {
+  const t = (c: ConversationItem) => { const n = Date.parse(c.lastAt); return Number.isNaN(n) ? -Infinity : n }
+  return [...dm, ...bands].sort((a, b) => (t(b) - t(a)) || a.name.localeCompare(b.name, 'vi') || a.id.localeCompare(b.id))
 }
 
 /** Trần số hội thoại khi lấy "hộp thư" toàn cục — bằng trần của RPC dm_conversations (least(p_limit, 100)) */
@@ -98,9 +170,11 @@ export const canSendBody = (s: string): boolean => {
 }
 
 /** Một dòng xem trước trong danh sách: "Bạn: …" khi tin cuối là của mình; xuống dòng → khoảng trắng */
-export function previewText(c: Pick<ConversationItem, 'lastBody' | 'lastMine'>): string {
+export function previewText(c: Pick<ConversationItem, 'lastBody' | 'lastMine'> & { kind?: 'dm' | 'band'; lastSender?: string }): string {
   const one = c.lastBody.replace(/\s+/g, ' ').trim()
-  return (c.lastMine ? 'Bạn: ' : '') + one
+  if (c.kind === 'band' && !one) return 'Chưa có tin nhắn — hãy chào cả nhóm'
+  const who = c.lastMine ? 'Bạn: ' : c.kind === 'band' && c.lastSender ? c.lastSender + ': ' : ''
+  return who + one
 }
 
 const pad = (n: number) => String(n).padStart(2, '0')
@@ -149,6 +223,7 @@ export function chatErrorText(err: { code?: string; message?: string; status?: n
   if (err?.code === '54000') return 'Bạn gửi quá nhanh. Hãy chờ một chút rồi gửi tiếp.'
   if (ctx === 'share' && err?.code === '22023') return 'Nội dung này không thể chia sẻ nữa.'
   if (err?.code === '22023') return err.message && /quá dài|trống/i.test(err.message) ? err.message : 'Tin nhắn chưa hợp lệ.'
+  if (err?.code === '42501' && /chỉ đọc/i.test(err.message ?? '')) return 'Nhóm này đang ở chế độ chỉ đọc.'
   if (err?.code === '42501') return 'Bạn chưa thể nhắn tin cho người này.'
   return 'Chưa thực hiện được. Hãy thử lại.'
 }
@@ -160,7 +235,8 @@ export function layoutMessages(messages: ChatMessage[], now = new Date()): Messa
   return messages.map((m, i) => {
     const prev = i > 0 ? messages[i - 1] : null
     const label = dividerLabel(prev ? prev.at : null, m.at, now)
-    return { m, label, cont: !label && prev !== null && prev.mine === m.mine }
+    const sameSender = prev !== null && prev.mine === m.mine && (prev.sender?.id ?? '') === (m.sender?.id ?? '')
+    return { m, label, cont: !label && sameSender }
   })
 }
 

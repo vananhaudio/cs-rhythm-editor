@@ -2,6 +2,7 @@
 // Cuộn: tự xuống cuối khi mở/khi mình gửi/khi đang ở cuối; nếu đang đọc tin cũ thì hiện nút "Tin mới" thay vì giật màn.
 import { useCallback, useLayoutEffect, useRef, useState } from 'react'
 import { ArrowDown } from 'lucide-react'
+import { Avatar } from '../ui'
 import ShareMessageCard from './ShareMessageCard'
 import { firstSeqOf, lastSeqOf, layoutMessages, type ChatMessage, type PendingMessage } from './chatModel'
 
@@ -61,16 +62,31 @@ export default function MessageList({ messages, pending, hasMore, loadingOlder, 
             {loadingOlder ? 'Đang tải…' : 'Xem tin cũ hơn'}
           </button>
         )}
-        {rows.map(({ m, label, cont }) => (
-          <div key={m.seq}>
-            {label && <div className="cs-chat-divider">{label}</div>}
-            <div className={'cs-msg-row ' + (m.mine ? 'is-mine' : 'is-theirs') + (cont ? ' is-cont' : '')}>
-              {m.ref
-                ? <div className="cs-msg-share"><ShareMessageCard shareRef={m.ref} onSettle={settle} /></div>
-                : <div className="cs-msg-bubble">{m.body}</div>}
+        {rows.map(({ m, label, cont }) => {
+          // Nhóm Band: tin của người khác có tên + ảnh người gửi (hiện ở tin đầu của một cụm liền nhau)
+          const who = !m.mine && m.sender ? m.sender : null
+          const content = m.ref
+            ? <div className="cs-msg-share"><ShareMessageCard shareRef={m.ref} onSettle={settle} /></div>
+            : <div className="cs-msg-bubble">{m.body}</div>
+          return (
+            <div key={m.seq}>
+              {label && <div className="cs-chat-divider">{label}</div>}
+              <div className={'cs-msg-row ' + (m.mine ? 'is-mine' : 'is-theirs') + (cont ? ' is-cont' : '') + (who ? ' has-sender' : '')}>
+                {who
+                  ? (
+                    <>
+                      <span className="cs-msg-avatar" aria-hidden="true">{!cont && <Avatar name={who.name} url={who.avatarUrl} size={32} />}</span>
+                      <div className="cs-msg-col">
+                        {!cont && <div className="cs-msg-sender">{who.name}</div>}
+                        {content}
+                      </div>
+                    </>
+                  )
+                  : content}
+              </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
         {pending.map((p, i) => (
           <div key={p.localId} className={'cs-msg-row is-mine' + (lastMine || i > 0 ? ' is-cont' : '')}>
             <div className={'cs-msg-bubble is-pending' + (p.state === 'failed' ? ' is-failed' : '')}>{p.body}</div>
