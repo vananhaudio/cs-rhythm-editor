@@ -379,7 +379,7 @@ Gửi thông tin đăng nhập + link nhóm cho học viên nhé.`)
     <div style={{ flex: 1, overflowY: 'auto', background: C.bg, padding: 24 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h2 style={{ fontSize: 20, fontWeight: 800, color: C.text1 }}>Đăng ký từ trang tuyển sinh</h2>
+          <h2 style={{ fontSize: 20, fontWeight: 800, color: C.text1 }}>Đăng ký</h2>
           <div style={{ fontSize: 13, color: C.text3, marginTop: 2 }}>{leads.length} người · cập nhật trạng thái để theo dõi phễu</div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>

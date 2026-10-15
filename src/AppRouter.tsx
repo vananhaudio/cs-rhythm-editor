@@ -46,9 +46,6 @@ import StoryHomePage from './story/StoryHomePage'
 import TopicPage from './story/TopicPage'
 import ShowcaseIndexPage from './showcase/ShowcaseIndexPage'
 import ShowcaseDetailPage from './showcase/ShowcaseDetailPage'
-import ShowcaseAdmin from './admin/ShowcaseAdmin'
-import DailyMailPage from './admin/DailyMailPage'
-import ChatMailPage from './admin/ChatMailPage'
 import UnsubscribePage from './UnsubscribePage'
 import EditorPage from './EditorPage'
 import GrooveExercise from './groove/GrooveExercise'
@@ -473,33 +470,12 @@ if (path === '/course-editor' || path.startsWith('/course-editor')) {
   return <CourseEditorPage />
 }
 
-// ── Route /admin/showcase — Showcase CMS (teacher/admin) ──
-if (path === '/admin/showcase' || path.startsWith('/admin/showcase')) {
-  if (loading) return null
-  if (!user || !isTeacher) { bounceToStart(!!user); return null }
-  return <ShowcaseAdmin onClose={() => { window.location.href = '/admin' }} />
-}
-
-// ── Route /admin/chat-mail — Chat Mail gửi nhanh kiểu chat (teacher/admin) ──
-if (path === '/admin/chat-mail' || path.startsWith('/admin/chat-mail')) {
-  if (loading) return null
-  if (!user || !isTeacher) { bounceToStart(!!user); return null }
-  return <ChatMailPage />
-}
-
-// ── Route /admin/daily-mail — Daily Mail admin (teacher/admin) ──
-if (path === '/admin/daily-mail' || path.startsWith('/admin/daily-mail')) {
-  if (loading) return null
-  if (!user || !isTeacher) { bounceToStart(!!user); return null }
-  return <DailyMailPage />
-}
-
 // ── Route /unsubscribe — Huỷ nhận Daily Mail (công khai) ──
 if (path === '/unsubscribe' || path.startsWith('/unsubscribe')) {
   return <UnsubscribePage />
 }
 
-// ── Route /admin — Teacher admin panel ──
+// ── Route /admin, /admin/<mục> — Teacher admin panel (kể cả showcase / daily-mail / chat-mail: cùng một khung) ──
 if (path === '/admin' || path.startsWith('/admin')) {
   if (loading) return null
   if (!user || !isTeacher) { bounceToStart(!!user); return null }

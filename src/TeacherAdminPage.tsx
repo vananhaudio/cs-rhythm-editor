@@ -16,45 +16,29 @@ import ChatMailPage from './admin/ChatMailPage'
 import NewsFeedAdmin from './admin/NewsFeedAdmin'
 import JourneyAdmin from './admin/JourneyAdmin'
 import NhipPhachAdmin from './admin/NhipPhachAdmin'
+import { ADMIN_NAV_GROUPS, adminSectionFromPath, adminPathForSection, adminLabel, adminQuickLinks, type AdminSection } from './admin/adminNav'
+import { isSocialHost } from './class-social/resolveMeRoute'
 import ClassCurriculumAdmin from './admin/ClassCurriculumAdmin'
 
 const S = {
   sidebar: '#18181B', sidebarHover: '#27272A',
-  accent: '#2D6A4F', accentLight: '#E9F3EC',
+  accent: '#4F46E5', accentLight: '#EEF2FF',
   border: '#E4E4E7', text1: '#18181B', text2: '#52525B', text3: '#A1A1AA',
   bg: '#F4F4F5', surface: '#FFFFFF',
 }
 
-type Section = 'students' | 'courses' | 'dashboard' | 'tools' | 'community' | 'assistant' | 'leads' | 'articles' | 'aichat' | 'schedule' | 'classes' | 'showcase' | 'dailymail' | 'chatmail' | 'ht2027' | 'newsfeed' | 'journey' | 'nhipphach'
+type Section = AdminSection
 
-const NAV = [
-  { id: 'dashboard' as Section, icon: '⊞', label: 'Tổng quan'      },
-  { id: 'leads'     as Section, icon: '📝', label: 'Đăng ký'        },
-  { id: 'schedule'  as Section, icon: '🗓', label: 'Lịch lớp'       },
-  { id: 'classes'   as Section, icon: '🎓', label: 'Lớp học'        },
-  { id: 'ht2027'    as Section, icon: '🎸', label: 'Thực hành HT2027' },
-  { id: 'aichat'    as Section, icon: '💬', label: 'AI khách'       },
-  { id: 'showcase'  as Section, icon: '📄', label: 'Showcase'      },
-  { id: 'dailymail' as Section, icon: '📧', label: 'Daily Mail'     },
-  { id: 'chatmail'  as Section, icon: '💬', label: 'Chat Mail'       },
-  { id: 'newsfeed'  as Section, icon: '🗞', label: 'Bản tin'        },
-  { id: 'journey'   as Section, icon: '🗺', label: 'Hành trình'     },
-  { id: 'articles'  as Section, icon: '📰', label: 'Bài viết'       },
-  { id: 'students'  as Section, icon: '👥', label: 'Học viên'       },
-  { id: 'courses'   as Section, icon: '📚', label: 'Khoá học'       },
-  { id: 'tools'     as Section, icon: '🛠', label: 'Công cụ'        },
-  { id: 'nhipphach' as Section, icon: '🎼', label: 'Nhịp phách'     },
-  { id: 'community' as Section, icon: '🌱', label: 'Cộng đồng'      },
-  { id: 'assistant' as Section, icon: '🤖', label: 'Trợ lý AI'      },
+const SHORTCUTS: { id: Section; icon: string; desc: string }[] = [
+  { id: 'leads',    icon: '📝', desc: 'Duyệt đăng ký từ trang tuyển sinh' },
+  { id: 'schedule', icon: '🗓', desc: 'Tạo lớp, lịch học, thành viên' },
+  { id: 'students', icon: '👥', desc: 'Danh sách, tài khoản, ghi chú' },
+  { id: 'classes',  icon: '🎓', desc: 'Soạn và xem giáo trình từng lớp' },
 ]
 
 export default function TeacherAdminPage() {
-  // Mục mở sẵn lấy từ URL để /admin/nhipphach vào thẳng đúng trang, nhưng vẫn
-  // nằm trong CÙNG một Admin shell chứ không phải một app quản trị riêng.
-  const [section, setSection]       = useState<Section>(() => {
-    const sub = window.location.pathname.replace(/^\/admin\/?/, '').replace(/\/$/, '')
-    return (NAV.some(n => n.id === sub) ? sub : 'dashboard') as Section
-  })
+  // Mục đang mở lấy từ URL (/admin/<slug>); bấm menu đẩy URL, Back/Forward đọc lại URL.
+  const [section, setSection]       = useState<Section>(() => adminSectionFromPath(window.location.pathname) ?? 'dashboard')
   const [studentId, setStudentId]   = useState<string | null>(null)
   const [collapsed, setCollapsed]   = useState(false)
   const [isMobile, setIsMobile]     = useState(typeof window !== 'undefined' && window.innerWidth < 768)
@@ -71,7 +55,32 @@ export default function TeacherAdminPage() {
   const asideStyle: CSSProperties = isMobile
     ? { position: 'fixed', top: 0, left: 0, bottom: 0, width: 240, zIndex: 1001, transform: menuOpen ? 'translateX(0)' : 'translateX(-100%)', transition: 'transform .25s ease', boxShadow: menuOpen ? '4px 0 24px rgba(0,0,0,.35)' : 'none', paddingTop: 'env(safe-area-inset-top)' }
     : { width: collapsed ? 56 : 200, transition: 'width .2s ease' }
-  const currentLabel = NAV.find(n => n.id === section)?.label ?? 'Admin'
+  const currentLabel = adminLabel(section)
+  const meBase = isSocialHost(window.location.hostname, false) ? '' : 'https://class.vananhaudio.com'
+  const quickLinks = adminQuickLinks(meBase)
+
+  // URL không hợp lệ (/admin/abc) → về Tổng quan và sửa URL, không thêm history.
+  useEffect(() => {
+    if (adminSectionFromPath(window.location.pathname) === null) window.history.replaceState(null, '', '/admin')
+  }, [])
+
+  useEffect(() => {
+    const onPop = () => {
+      const next = adminSectionFromPath(window.location.pathname)
+      if (next === null) { window.location.reload(); return }   // Back ra ngoài Admin: để router chính quyết
+      setSection(next); setStudentId(null); setMenuOpen(false)
+    }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
+
+  const goSection = (id: Section) => {
+    const target = adminPathForSection(id)
+    const here = window.location.pathname.replace(/\/+$/, '') || '/'
+    // Bấm lại đúng mục đang mở: không thêm history; chỉ đóng chi tiết/menu.
+    if (here !== target) window.history.pushState(null, '', target)
+    setSection(id); setStudentId(null); setMenuOpen(false)
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', height: '100dvh', overflow: 'hidden', fontFamily: '"Inter", system-ui, sans-serif' }}>
@@ -98,80 +107,73 @@ export default function TeacherAdminPage() {
           {isMobile && <button onClick={() => setMenuOpen(false)} aria-label="Đóng" style={{ border: 'none', background: 'transparent', color: '#A1A1AA', fontSize: 22, cursor: 'pointer', width: 36, height: 36 }}>✕</button>}
         </div>
 
-        {/* Nav */}
-        <nav style={{ flex: 1, padding: '8px', overflowY: 'auto' }}>
-          {NAV.map(item => {
-            const active = section === item.id
-            return (
-              <div key={item.id} onClick={() => { setSection(item.id); setStudentId(null); setMenuOpen(false) }}
-                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: showLabels ? (isMobile ? '12px 12px' : '9px 10px') : '10px', borderRadius: 8, cursor: 'pointer', background: active ? S.accent : 'transparent', color: active ? '#fff' : '#A1A1AA', fontWeight: active ? 600 : 400, marginBottom: 2, justifyContent: showLabels ? 'flex-start' : 'center', whiteSpace: 'nowrap', overflow: 'hidden', transition: 'background .1s' }}
-                onMouseEnter={e => { if (!active) e.currentTarget.style.background = S.sidebarHover }}
-                onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent' }}>
-                <span style={{ fontSize: 17, flexShrink: 0 }}>{item.icon}</span>
-                {showLabels && <span style={{ fontSize: isMobile ? 15 : 14 }}>{item.label}</span>}
-              </div>
-            )
-          })}
+        {/* Nav — nhóm; cuộn được; mỗi mục là link thật (chuột giữa / mở tab mới dùng được) */}
+        <nav aria-label="Menu Admin" style={{ flex: 1, padding: '8px', overflowY: 'auto', overscrollBehavior: 'contain' }}>
+          {ADMIN_NAV_GROUPS.map((group, gi) => (
+            <div key={group.title ?? 'root'} style={{ marginTop: gi === 0 ? 0 : 14 }}>
+              {group.title && (showLabels
+                ? <div style={{ padding: '0 10px 6px', fontSize: 11, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: '#71717A', whiteSpace: 'nowrap' }}>{group.title}</div>
+                : <div style={{ height: 1, background: '#27272A', margin: '0 8px 8px' }} />)}
+              {group.items.map(item => {
+                const active = section === item.id
+                return (
+                  <a key={item.id} href={adminPathForSection(item.id)} title={showLabels ? undefined : item.label}
+                    aria-current={active ? 'page' : undefined}
+                    onClick={e => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); goSection(item.id) }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, minHeight: isMobile ? 44 : 38, padding: showLabels ? '0 10px' : 0, borderRadius: 8, textDecoration: 'none', background: active ? S.accent : 'transparent', color: active ? '#fff' : '#A1A1AA', fontWeight: active ? 600 : 400, marginBottom: 2, justifyContent: showLabels ? 'flex-start' : 'center', whiteSpace: 'nowrap', overflow: 'hidden', transition: 'background .1s' }}
+                    onMouseEnter={e => { if (!active) e.currentTarget.style.background = S.sidebarHover }}
+                    onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent' }}>
+                    <span style={{ fontSize: 17, flexShrink: 0, width: 22, textAlign: 'center' }}>{item.icon}</span>
+                    {showLabels && <span style={{ fontSize: isMobile ? 15 : 14, overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.label}</span>}
+                  </a>
+                )
+              })}
+            </div>
+          ))}
 
-          {/* Kho Tri Thức — app riêng, mở tab mới (cùng tài khoản đăng nhập) */}
-          <a href="https://khotrithuc.netlify.app" target="_blank" rel="noreferrer"
-            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: showLabels ? '9px 10px' : '10px', borderRadius: 8, cursor: 'pointer', background: 'transparent', color: '#A1A1AA', fontWeight: 400, marginTop: 10, paddingTop: 12, borderTop: '1px solid #27272A', justifyContent: showLabels ? 'flex-start' : 'center', whiteSpace: 'nowrap', overflow: 'hidden', textDecoration: 'none' }}
-            onMouseEnter={e => { e.currentTarget.style.background = S.sidebarHover }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>
-            <span style={{ fontSize: 17, flexShrink: 0 }}>🧠</span>
-            {showLabels && <span style={{ fontSize: 14 }}>Kho Tri Thức ↗</span>}
-          </a>
+          {/* Mở nhanh — trang nằm ngoài khung Admin; quyền do trang đích quyết */}
+          <div style={{ marginTop: 14 }}>
+            {showLabels
+              ? <div style={{ padding: '0 10px 6px', fontSize: 11, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: '#71717A', whiteSpace: 'nowrap' }}>Mở nhanh</div>
+              : <div style={{ height: 1, background: '#27272A', margin: '0 8px 8px' }} />}
+            {quickLinks.map(l => (
+              <a key={l.label} href={l.href} {...(l.external ? { target: '_blank', rel: 'noreferrer' } : {})} title={showLabels ? undefined : l.label}
+                style={{ display: 'flex', alignItems: 'center', gap: 10, minHeight: isMobile ? 44 : 38, padding: showLabels ? '0 10px' : 0, borderRadius: 8, textDecoration: 'none', color: '#A1A1AA', marginBottom: 2, justifyContent: showLabels ? 'flex-start' : 'center', whiteSpace: 'nowrap', overflow: 'hidden' }}
+                onMouseEnter={e => { e.currentTarget.style.background = S.sidebarHover }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>
+                <span style={{ fontSize: 17, flexShrink: 0, width: 22, textAlign: 'center' }}>{l.icon}</span>
+                {showLabels && <span style={{ fontSize: isMobile ? 15 : 14, overflow: 'hidden', textOverflow: 'ellipsis' }}>{l.label}{l.external ? ' ↗' : ''}</span>}
+              </a>
+            ))}
+          </div>
         </nav>
 
         {/* Bottom */}
         <div style={{ padding: '8px', borderTop: '1px solid #27272A', paddingBottom: 'calc(8px + env(safe-area-inset-bottom))' }}>
-          {!isMobile && <div onClick={() => setCollapsed(!collapsed)}
+          {!isMobile && <div role="button" tabIndex={0} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setCollapsed(c => !c) }} onClick={() => setCollapsed(!collapsed)}
             style={{ display: 'flex', alignItems: 'center', gap: 10, padding: collapsed ? '10px' : '9px 10px', borderRadius: 8, cursor: 'pointer', color: '#71717A', justifyContent: collapsed ? 'center' : 'flex-start' }}>
             <span style={{ fontSize: 15 }}>{collapsed ? '→' : '←'}</span>
             {!collapsed && <span style={{ fontSize: 13 }}>Thu gọn</span>}
           </div>}
-          <div onClick={() => window.location.href = '/start'}
-            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: showLabels ? '9px 10px' : '10px', borderRadius: 8, cursor: 'pointer', color: '#71717A', justifyContent: showLabels ? 'flex-start' : 'center' }}>
-            <span style={{ fontSize: 15 }}>↗</span>
-            {showLabels && <span style={{ fontSize: 13 }}>Trang học sinh</span>}
-          </div>
         </div>
       </aside>
 
       {/* ── CONTENT ─────────────────────────────────────────────────── */}
       <div style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
 
-        {/* Dashboard */}
+        {/* Tổng quan — chỉ lối tắt; không hiển thị số liệu khi chưa có nguồn thật */}
         {section === 'dashboard' && (
           <div style={{ flex: 1, overflowY: 'auto', padding: isMobile ? 16 : 32, background: S.bg }}>
-            {!isMobile && <div style={{ fontWeight: 800, fontSize: 22, marginBottom: 24 }}>Tổng quan</div>}
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(3, 1fr)' : 'repeat(auto-fit, minmax(180px, 1fr))', gap: isMobile ? 10 : 16, marginBottom: isMobile ? 20 : 32 }}>
-              {[
-                { icon: '👥', label: 'Học viên', value: '577', sub: 'đang hoạt động' },
-                { icon: '📚', label: 'Khoá học', value: '13',  sub: 'đã tạo'         },
-                { icon: '🎬', label: 'Bài học',  value: '—',   sub: 'đang cập nhật'  },
-              ].map(s => (
-                <div key={s.label} style={{ background: S.surface, borderRadius: 12, padding: isMobile ? '12px' : '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-                  <div style={{ fontSize: isMobile ? 18 : 24, marginBottom: isMobile ? 4 : 8 }}>{s.icon}</div>
-                  <div style={{ fontSize: isMobile ? 20 : 28, fontWeight: 800, color: S.text1 }}>{s.value}</div>
-                  <div style={{ fontSize: 14, color: S.text2, marginTop: 2 }}>{s.label}</div>
-                  <div style={{ fontSize: 12, color: S.text3 }}>{s.sub}</div>
-                </div>
+            {!isMobile && <div style={{ fontWeight: 800, fontSize: 22, marginBottom: 20 }}>Tổng quan</div>}
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(260px, 1fr))', gap: isMobile ? 12 : 16 }}>
+              {SHORTCUTS.map(sc => (
+                <a key={sc.id} href={adminPathForSection(sc.id)}
+                  onClick={e => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); goSection(sc.id) }}
+                  style={{ display: 'block', textDecoration: 'none', color: S.text1, background: S.surface, borderRadius: 12, padding: isMobile ? '14px 16px' : '20px 24px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: `1px solid ${S.border}` }}>
+                  <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 6 }}>{sc.icon} {adminLabel(sc.id)} →</div>
+                  <div style={{ fontSize: 14, color: S.text3 }}>{sc.desc}</div>
+                </a>
               ))}
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? 12 : 16 }}>
-              <div onClick={() => setSection('students')} style={{ background: S.surface, borderRadius: 12, padding: isMobile ? '14px 16px' : '20px 24px', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: `1px solid ${S.border}` }}>
-                <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 6 }}>👥 Quản lý học viên →</div>
-                <div style={{ fontSize: 14, color: S.text3 }}>Xem danh sách, thêm khoá học, ghi chú</div>
-              </div>
-              <div onClick={() => setSection('courses')} style={{ background: S.surface, borderRadius: 12, padding: isMobile ? '14px 16px' : '20px 24px', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: `1px solid ${S.border}` }}>
-                <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 6 }}>📚 Soạn khoá học →</div>
-                <div style={{ fontSize: 14, color: S.text3 }}>Tạo chương, thêm bài, gắn YouTube</div>
-              </div>
-              <div onClick={() => setSection('tools')} style={{ background: S.surface, borderRadius: 12, padding: isMobile ? '14px 16px' : '20px 24px', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: `1px solid ${S.border}` }}>
-                <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 6 }}>🛠 Quản lý công cụ →</div>
-                <div style={{ fontSize: 14, color: S.text3 }}>Bật/tắt, phân cấp unlock cho học sinh</div>
-              </div>
             </div>
           </div>
         )}
@@ -210,7 +212,7 @@ export default function TeacherAdminPage() {
         {/* Lịch thực hành Hành trình 2027 */}
         {section === 'ht2027' && (
           <div style={{ flex: 1, overflowY: 'auto' }}>
-            <Ht2027ScheduleAdmin onOpenSchedule={() => setSection('schedule')} />
+            <Ht2027ScheduleAdmin onOpenSchedule={() => goSection('schedule')} />
           </div>
         )}
 
@@ -224,14 +226,14 @@ export default function TeacherAdminPage() {
         {/* Showcase CMS — block-based page builder */}
         {section === 'showcase' && (
           <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-            <ShowcaseAdmin onClose={() => setSection('dashboard')} />
+            <ShowcaseAdmin embedded onClose={() => goSection('dashboard')} />
           </div>
         )}
 
         {/* Chat Mail */}
         {section === 'chatmail' && (
           <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-            <ChatMailPage />
+            <ChatMailPage embedded />
           </div>
         )}
 

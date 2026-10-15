@@ -52,7 +52,7 @@ export default function JourneyAdmin() {
 
   return (
     <div style={{ maxWidth: 900 }}>
-      <h2 style={{ margin: '0 0 6px', fontSize: 20, color: C.text1 }}>🗺️ Hành trình (server-driven)</h2>
+      <h2 style={{ margin: '0 0 6px', fontSize: 20, color: C.text1 }}>Hành trình</h2>
       <div style={{ fontSize: 13, color: C.text2, marginBottom: 14 }}>
         Đổi môn / level / thứ tự / tiên quyết ở đây → app học viên (kể cả bản đã cài trên máy) đổi theo trong ~5 phút. KHÔNG cần build hay nộp store.
       </div>

@@ -166,7 +166,7 @@ export default function ClassCurriculumAdminView({ client }: Props) {
   }
 
   return <div style={{ flex: 1, overflowY: 'auto', padding: 24, background: C.bg, color: C.text, fontFamily: 'Inter, system-ui, sans-serif' }}>
-    <h1 style={{ fontSize: 22, margin: '0 0 6px' }}>Lớp học</h1>
+    <h1 style={{ fontSize: 22, margin: '0 0 6px' }}>Giáo trình lớp</h1>
     <p style={{ color: C.muted, margin: '0 0 20px', fontSize: 14 }}>Quản lý học sinh và quyền xem Giáo trình của từng lớp.</p>
     {loading ? <div>Đang tải lớp...</div> : classes.length === 0 ? <div>Chưa có lớp.</div> : <>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 18 }}>

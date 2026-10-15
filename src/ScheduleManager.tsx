@@ -272,7 +272,7 @@ export default function ScheduleManager() {
     <div style={{ minHeight: '100%', background: S.bg, fontFamily: '"Inter", system-ui, sans-serif' }}>
       <div style={{ padding: '16px 24px', borderBottom: `1px solid ${S.border}`, background: S.surface, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
-          <div style={{ fontSize: 16, fontWeight: 700, color: S.text1 }}>🗓 Lịch lớp học</div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: S.text1 }}>Lớp & lịch</div>
           <div style={{ fontSize: 13, color: S.text3, marginTop: 2 }}>Mỗi lớp gắn sẵn khoá học + nhóm Zalo — set 1 lần, đăng ký tự chảy.</div>
         </div>
         {!form && <button onClick={() => { setForm(blank()); setSoKhoa(''); setZaloUrl(''); setView('list') }} style={{ background: S.accent, color: '#fff', border: 'none', borderRadius: 8, padding: '9px 18px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>＋ Thêm lớp</button>}

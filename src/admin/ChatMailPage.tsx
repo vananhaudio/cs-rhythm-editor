@@ -67,7 +67,7 @@ const RAIL = [
   { key: 'lists', label: 'Danh sách', icon: '👥' },
 ]
 
-export default function ChatMailPage() {
+export default function ChatMailPage({ embedded = false }: { embedded?: boolean } = {}) {
   const [tab, setTab] = useState<string>('compose')
   const [chan, setChan] = useState('all')
   const [threads, setThreads] = useState<ChatMailThread[]>([])
@@ -300,10 +300,12 @@ export default function ChatMailPage() {
           style={{ width:52,height:44,borderRadius:10,background:'transparent',color:'#fff',padding:'4px 0',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:1,border:0,cursor:'pointer',fontSize:20 }}>
           <span style={{ fontSize:18 }}>✏️</span><span style={{ fontSize:9,fontWeight:600 }}>Soạn</span>
         </button>
+        {!embedded && (
         <button onClick={goAdmin}
           style={{ width:44,height:44,borderRadius:10,background:'transparent',color:'#fff',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',border:0,cursor:'pointer',opacity:.75,fontSize:18 }}>
           <span>🏠</span><span style={{ fontSize:9,fontWeight:600 }}>Admin</span>
         </button>
+        )}
       </aside>
 
       {/* ── CỘT DANH SÁCH ── */}

@@ -126,7 +126,7 @@ export default function NewsFeedAdmin() {
   return (
     <div style={{ maxWidth: 860 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-        <h2 style={{ margin: 0, fontSize: 20, color: C.text1 }}>📰 Bản tin hôm nay</h2>
+        <h2 style={{ margin: 0, fontSize: 20, color: C.text1 }}>Bản tin trong app</h2>
         <button onClick={() => setEditing({ ...EMPTY })}
           style={{ background: C.accent, color: '#fff', border: 'none', borderRadius: 10, padding: '10px 16px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
           + Đăng bản tin

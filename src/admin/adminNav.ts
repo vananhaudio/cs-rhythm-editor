@@ -1,0 +1,82 @@
+// Cấu trúc menu + ánh xạ URL của khung Admin (/admin). Thuần dữ liệu để test được.
+// id = khoá nội bộ; slug = đoạn sau /admin/ (giữ nguyên các URL đã chạy trước đây).
+
+export type AdminSection =
+  | 'dashboard' | 'schedule' | 'classes' | 'ht2027' | 'students' | 'leads' | 'community'
+  | 'courses' | 'journey' | 'tools' | 'nhipphach'
+  | 'newsfeed' | 'articles' | 'showcase' | 'dailymail' | 'chatmail'
+  | 'aichat' | 'assistant'
+
+export interface AdminNavItem { id: AdminSection; slug: string; icon: string; label: string }
+export interface AdminNavGroup { title: string | null; items: AdminNavItem[] }
+
+export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
+  { title: null, items: [
+    { id: 'dashboard', slug: '', icon: '⊞', label: 'Tổng quan' },
+  ] },
+  { title: 'Lớp học', items: [
+    { id: 'schedule',  slug: 'schedule',  icon: '🗓', label: 'Lớp & lịch' },
+    { id: 'classes',   slug: 'classes',   icon: '🎓', label: 'Giáo trình lớp' },
+    { id: 'ht2027',    slug: 'ht2027',    icon: '🎸', label: 'Thực hành HT2027' },
+    { id: 'students',  slug: 'students',  icon: '👥', label: 'Học viên' },
+    { id: 'leads',     slug: 'leads',     icon: '📝', label: 'Đăng ký' },
+    { id: 'community', slug: 'community', icon: '🌱', label: 'Nhóm cộng đồng' },
+  ] },
+  { title: 'Học liệu', items: [
+    { id: 'courses',   slug: 'courses',   icon: '📚', label: 'Khoá học' },
+    { id: 'journey',   slug: 'journey',   icon: '🗺', label: 'Hành trình' },
+    { id: 'tools',     slug: 'tools',     icon: '🛠', label: 'Công cụ' },
+    { id: 'nhipphach', slug: 'nhipphach', icon: '🎼', label: 'Nhịp phách' },
+  ] },
+  { title: 'Nội dung & truyền thông', items: [
+    { id: 'newsfeed',  slug: 'newsfeed',   icon: '🗞', label: 'Bản tin trong app' },
+    { id: 'articles',  slug: 'articles',   icon: '📰', label: 'Bài viết tuyển sinh' },
+    { id: 'showcase',  slug: 'showcase',   icon: '📄', label: 'Trang Showcase' },
+    { id: 'dailymail', slug: 'daily-mail', icon: '📧', label: 'Thư hàng ngày' },
+    { id: 'chatmail',  slug: 'chat-mail',  icon: '✉️', label: 'Chat Mail' },
+  ] },
+  { title: 'Trợ lý AI', items: [
+    { id: 'aichat',    slug: 'aichat',    icon: '💬', label: 'AI tuyển sinh' },
+    { id: 'assistant', slug: 'assistant', icon: '🤖', label: 'Trợ lý quản trị' },
+  ] },
+]
+
+export const ADMIN_NAV: AdminNavItem[] = ADMIN_NAV_GROUPS.flatMap(g => g.items)
+
+// Slug cũ vẫn mở được (trước đây slug = id nội bộ).
+const SLUG_ALIASES: Record<string, AdminSection> = { dailymail: 'dailymail', chatmail: 'chatmail' }
+
+const BY_SLUG = new Map<string, AdminSection>(ADMIN_NAV.filter(n => n.slug).map(n => [n.slug, n.id]))
+
+/** Mục suy từ pathname. null = không phải mục hợp lệ (ví dụ /admin/abc). */
+export function adminSectionFromPath(pathname: string): AdminSection | null {
+  const m = /^\/admin(?:\/([^/]+))?(?:\/.*)?$/.exec(pathname)
+  if (!m) return null
+  const slug = m[1]
+  if (!slug) return 'dashboard'
+  return BY_SLUG.get(slug) ?? SLUG_ALIASES[slug] ?? null
+}
+
+export function adminPathForSection(id: AdminSection): string {
+  const item = ADMIN_NAV.find(n => n.id === id)
+  return item && item.slug ? `/admin/${item.slug}` : '/admin'
+}
+
+export function adminLabel(id: AdminSection): string {
+  return ADMIN_NAV.find(n => n.id === id)?.label ?? 'Admin'
+}
+
+export interface QuickLink { label: string; icon: string; href: string; external?: boolean }
+
+/** Trang nằm ngoài khung Admin; quyền do chính trang đích quyết. /me/* chỉ chạy ở host Class. */
+export function adminQuickLinks(meBase: string): QuickLink[] {
+  return [
+    { icon: '🎼', label: 'Thư viện nhạc',      href: '/thuvien' },
+    { icon: '🎤', label: 'Quản lý Band',       href: `${meBase}/me/bands` },
+    { icon: '📥', label: 'Hàng đợi trả bài',   href: `${meBase}/me/queue` },
+    { icon: '⚑',  label: 'Báo cáo nội dung',   href: '/story/reports' },
+    { icon: '🧠', label: 'Kho Tri Thức',        href: 'https://khotrithuc.netlify.app', external: true },
+    { icon: '🎚', label: 'TeamLab',             href: 'https://class.vananhaudio.com/teamlab', external: true },
+    { icon: '↗',  label: 'Trang học sinh',     href: '/start' },
+  ]
+}
