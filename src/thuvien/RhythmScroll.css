@@ -111,3 +111,10 @@
 .rs-dots i{width:11px;height:11px;border-radius:50%;background:#D1D1D6;transition:background .08s}
 .rs-dots i[data-on="true"]{background:var(--rs-accent);box-shadow:0 0 0 3px rgba(234,88,12,.22)}
 @media (prefers-reduced-motion:reduce){.rs-dots i{transition:none}}
+
+/* V4.1 nút loa đập nhịp: 44×44, cam khi bật, xám có gạch chéo khi tắt (mặc định). */
+.rs-click{flex:none;width:44px;height:44px;margin:-6px -8px -6px 0;border:0;background:none;color:#8E8E93;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.rs-click svg{width:24px;height:24px;fill:currentColor}
+.rs-click[data-on="true"]{color:var(--rs-accent)}
+.rs-strip-now,.rs-strip-next{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.rs-dots{flex:none}

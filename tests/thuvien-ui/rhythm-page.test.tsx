@@ -184,3 +184,30 @@ test('V4 branded: không nút Quay lại; dải "Am → G" lấy từ timeline; 
     cleanup()
   }
 })
+
+test('V4.1 loa đập nhịp: mặc định tắt (không tiếng), bật → click theo beat clock, Pause dừng, chấm nhịp vẫn chạy khi tắt', async () => {
+  Object.assign(globalThis, { requestAnimationFrame: (cb: () => void) => setTimeout(cb, 16), cancelAnimationFrame: (id: number) => clearTimeout(id) })
+  let started = 0
+  const node = () => ({ connect: (n: unknown) => n, start() { started++ }, stop() {}, frequency: { value: 0 }, type: '', gain: { setValueAtTime() {}, exponentialRampToValueAtTime() {} } })
+  class FakeCtx { state = 'running'; currentTime = 0; destination = {}; createOscillator = node; createGain = node; resume() { return Promise.resolve() } close() { return Promise.resolve() } }
+  ;(dom.window as unknown as { AudioContext: unknown }).AudioContext = FakeCtx
+  const lib = libraryWith({ status: 'current', suggestedBpm: 200 })
+  const detail = await lib.getChordSheet('v')
+  const view = render(<RhythmScrollPage branded library={lib} versionId="v" initialDetail={detail} onBack={() => {}} />)
+  await settle()
+  assert.ok(view.getByRole('button', { name: 'Bật tiếng đập nhịp' }), 'mặc định tắt')
+  fireEvent.click(view.getByRole('button', { name: 'Phát' }))
+  await settle(700)
+  assert.equal(started, 0, 'loa tắt: không tiếng')
+  assert.equal(view.container.querySelectorAll('.rs-dots i[data-on="true"]').length, 1, 'chấm vẫn chạy khi tắt tiếng')
+  fireEvent.click(view.getByRole('button', { name: 'Bật tiếng đập nhịp' }))
+  assert.ok(view.getByRole('button', { name: 'Tắt tiếng đập nhịp' }))
+  await settle(1100)
+  const whilePlaying = started
+  assert.ok(whilePlaying >= 2 && whilePlaying <= 6, `200 BPM ~ 3 click/giây, nhận ${whilePlaying}`)
+  fireEvent.click(view.getByRole('button', { name: 'Tạm dừng' }))
+  const atPause = started
+  await settle(500)
+  assert.equal(started, atPause, 'Pause: không click')
+  cleanup()
+})
