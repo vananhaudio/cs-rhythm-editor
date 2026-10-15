@@ -2083,7 +2083,7 @@ test('trang xem → ▶ Rhythm Scroll mở được Rhythm Scroll; Quay lại v�
 test('Trưởng Band: thuVienAccess/canAddToLibrary/loadWritableBands tính từ vai leader thật; cổng trả editor; menu mở lối vào', () => {
   const lib = readFileSync(new URL('../../src/thuvien/masterLibrary.ts', import.meta.url), 'utf8')
   assert.match(lib, /\.in\('role', \['music_editor', 'leader'\]\)\.limit\(1\)/, 'canAddToLibrary gồm leader')
-  assert.match(lib, /\.in\('role', \['music_editor', 'leader'\]\)\s*\n\s*if \(error \|\| !data\?\.length\) return null\s*\n\s*return 'editor'/, 'leader → editor, không phải viewer')
+  assert.match(lib, /\.in\('role', \['music_editor', 'leader'\]\)\s*\n\s*if \(!error && data\?\.length\) return 'editor'/, 'leader → editor, không phải viewer')
   assert.ok(!/music_editor['"]\)\s*\?\s*'editor'\s*:\s*'viewer'/.test(lib))
   const bands = readFileSync(new URL('../../src/thuvien/libraryBands.ts', import.meta.url), 'utf8')
   assert.match(bands, /\.in\('role', \['music_editor', 'leader'\]\)/, 'Band được lưu bài = Band mình giữ vai Biên tập/Trưởng Band')
@@ -2093,4 +2093,32 @@ test('Trưởng Band: thuVienAccess/canAddToLibrary/loadWritableBands tính từ
   assert.match(layout, /href: '\/thuvien'/)
   const nav = readFileSync(new URL('../../src/class-social/nav.ts', import.meta.url), 'utf8')
   assert.match(nav, /kind: 'restricted', id: 'thuvien'/, 'mặc định vẫn khoá với người không có vai')
+})
+
+// ── Rhythm Scroll cho Biên tập / Trưởng Band / Trưởng Team (15/10) ──
+test('Trưởng Team thuần → viewer (chỉ xem/chạy Rhythm Scroll); không có quyền thêm/sửa/gỡ', () => {
+  const lib = readFileSync(new URL('../../src/thuvien/masterLibrary.ts', import.meta.url), 'utf8')
+  assert.match(lib, /from\('teamlab_project_members'\)\.select\('project_id'\)\.eq\('user_id', userId\)\.eq\('role', 'leader'\)/)
+  assert.match(lib, /return 'viewer'/)
+  const add = lib.slice(lib.indexOf('export async function canAddToLibrary'), lib.indexOf('export type ThuVienAccess'))
+  assert.ok(!/teamlab_project_members/.test(add), 'canAddToLibrary KHÔNG tính Trưởng Team')
+})
+
+test('danh sách Hợp âm: bài có vạch nhịp có nút ▶ Rhythm Scroll mở thẳng; Quay lại về danh sách (cả Trưởng Team chỉ-xem)', async () => {
+  const library = createMockChordLibrary({ storage: memoryStorage() })
+  for (const canEdit of [false, true]) {
+    goto('?muc=hopam')
+    const view = render(<ChordLibraryPage library={library} tabs={<nav />} canEdit={canEdit} access={canEdit ? 'editor' : 'viewer'} />)
+    await settle()
+    const buttons = view.getAllByRole('button', { name: /Rhythm Scroll bài/ })
+    assert.ok(buttons.length > 0)
+    fireEvent.click(buttons[0])
+    await settle(80)
+    assert.ok(view.queryByTestId('rhythm-scroll-page'), 'Rhythm Scroll phải mở')
+    fireEvent.click(view.getByRole('button', { name: /Quay lại/ }))
+    await settle()
+    assert.equal(view.queryByTestId('rhythm-scroll-page'), null)
+    assert.ok(view.getByRole('list', { name: /Danh sách bài/ }), 'về danh sách, không vào trình sửa')
+    cleanup()
+  }
 })

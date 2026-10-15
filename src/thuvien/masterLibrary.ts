@@ -69,15 +69,18 @@ export async function canAddToLibrary(userId: string, isTeacher: boolean): Promi
 /**
  * Cửa vào /thuvien cho tài khoản KHÔNG phải admin (chỉ để chọn giao diện; quyền thật do máy chủ):
  * 'editor' = đang giữ vai Biên tập âm nhạc HOẶC Trưởng Band ở ít nhất một Band (Trưởng Band = quyền Biên tập, không hơn) ·
- * 'viewer' = chỉ xem/tìm/dùng (hiện không vai nào trả về; giữ cho giao diện chỉ-xem) · null = không vào.
+ * 'viewer' = chỉ xem/tìm/chạy Rhythm Scroll (Trưởng Team thuần) · null = không vào.
  */
 export type ThuVienAccess = 'editor' | 'viewer'
 export async function thuVienAccess(userId: string): Promise<ThuVienAccess | null> {
   try {
     const { supabase } = await import('../supabase.ts')
     const { data, error } = await supabase.from('teamlab_band_roles').select('role').eq('user_id', userId).in('role', ['music_editor', 'leader'])
-    if (error || !data?.length) return null
-    return 'editor'
+    if (!error && data?.length) return 'editor'
+    // Trưởng Team thuần (không Biên tập/Trưởng Band): chỉ XEM/tìm/chạy Rhythm Scroll — không thêm/sửa/gỡ.
+    const team = await supabase.from('teamlab_project_members').select('project_id').eq('user_id', userId).eq('role', 'leader').limit(1)
+    if (!team.error && team.data?.length) return 'viewer'
+    return null
   } catch { return null }
 }
 

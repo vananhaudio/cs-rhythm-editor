@@ -57,6 +57,8 @@ export default function ChordLibraryPage({ tabs, canEdit = true, access = 'admin
   // Trang XEM chỉ-đọc (`?xem=`); khác với `open` = trình sửa (`?hopam=`).
   const [view, setView] = useState<string | null>(() => chordViewFromSearch(window.location.search))
   const [notice, setNotice] = useState('')
+  // Rhythm Scroll mở thẳng từ danh sách: Quay lại → về danh sách (không rơi vào trình sửa của bài).
+  const [fromList, setFromList] = useState(false)
 
   // Nút Back của trình duyệt đóng/mở bài theo `?hopam=` / `?xem=`; Header của website cũng điều hướng bằng đường này.
   useEffect(() => {
@@ -73,6 +75,7 @@ export default function ChordLibraryPage({ tabs, canEdit = true, access = 'admin
     setOpen(target)
     setRhythm(false)
     setView(null)
+    setFromList(false)
     window.scrollTo(0, 0)
   }
 
@@ -104,7 +107,7 @@ export default function ChordLibraryPage({ tabs, canEdit = true, access = 'admin
     const fromView = !open && !!view
     return <Suspense fallback={<main className="tv-chords"><p className="cl-empty">Đang mở Rhythm Scroll…</p></main>}>
       <RhythmScrollPage key={rhythmTarget} library={library} versionId={rhythmTarget}
-        onBack={() => (fromView ? (setRhythm(false), window.history.back()) : goRhythm(rhythmTarget, false))} />
+        onBack={() => (fromList ? go(null) : fromView ? (setRhythm(false), window.history.back()) : goRhythm(rhythmTarget, false))} />
     </Suspense>
   }
 
@@ -135,7 +138,7 @@ export default function ChordLibraryPage({ tabs, canEdit = true, access = 'admin
           onClose={message => { setNotice(message ?? ''); go(null) }}
           // Lưu xong chỉ đổi địa chỉ (để tải lại trang vẫn mở đúng bài) — KHÔNG dựng lại editor, kẻo mất thông báo "Đã lưu".
           onSaved={detail => window.history.replaceState(window.history.state, '', sectionUrl(window.location.href, 'chords', detail.versionId))} />
-      : <ChordList library={library} notice={notice} onView={id => { setNotice(''); goView(id) }} onEdit={id => { setNotice(''); go(id) }} canEdit={canEdit} ownerOnly={access === 'editor'} />}
+      : <ChordList library={library} notice={notice} onView={id => { setNotice(''); goView(id) }} onEdit={id => { setNotice(''); go(id) }} onRhythm={id => { setNotice(''); setFromList(true); setView(id); goRhythm(id, true) }} canEdit={canEdit} ownerOnly={access === 'editor'} />}
   </main>
 }
 
@@ -151,7 +154,7 @@ const Status = ({ label, on, yes = 'Có', no = 'Chưa có' }: { label: string; o
   <span className="cl-status" data-on={on}><span className="cl-status-label">{label}</span><span className="cl-status-value">{on ? `✓ ${yes}` : `— ${no}`}</span></span>
 
 // ── Danh sách ───────────────────────────────────────────────────────────────────────────────
-function ChordList({ library, notice, onView, onEdit, canEdit, ownerOnly }: { library: ChordLibrary; notice: string; onView: (id: string) => void; onEdit: (id: string) => void; canEdit: boolean; ownerOnly: boolean }) {
+function ChordList({ library, notice, onView, onEdit, onRhythm, canEdit, ownerOnly }: { library: ChordLibrary; notice: string; onView: (id: string) => void; onEdit: (id: string) => void; onRhythm: (id: string) => void; canEdit: boolean; ownerOnly: boolean }) {
   const [query, setQuery] = useState('')
   const [items, setItems] = useState<ChordSheetSummary[]>([])
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading')
@@ -213,6 +216,7 @@ function ChordList({ library, notice, onView, onEdit, canEdit, ownerOnly }: { li
           </div>
           <div className="cl-item-buttons">
             <button type="button" className="cl-open" onClick={() => onView(item.versionId)} aria-label={`Xem bài ${item.title}`}>Xem</button>
+            {item.hasAnchors && <button type="button" className="cl-open" onClick={() => onRhythm(item.versionId)} aria-label={`Rhythm Scroll bài ${item.title}`}>▶ Rhythm Scroll</button>}
             {mayManage(item) && <button type="button" className="cl-open cl-open-edit" onClick={() => onEdit(item.versionId)} aria-label={`Sửa bài ${item.title}`}>Sửa</button>}
             {mayManage(item) && library.archiveChordSheet && <button type="button" className="cl-open cl-open-remove" disabled={archiving !== null} onClick={() => void archive(item)} aria-label={`Gỡ bài ${item.title}`}>{archiving === item.sheetId ? 'Đang gỡ…' : 'Gỡ'}</button>}
           </div>
