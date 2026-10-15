@@ -1,9 +1,11 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { taoBoTheoDoiQuyen } from './authCapabilityGate'
 import { supabase } from './supabase'
+import { loginUrlFor } from './authReturn'
 export default function ToolRouteGate({children}:{children:ReactNode}) {
  const [allowed,setAllowed]=useState<boolean|null>(null)
  const [error,setError]=useState(false)
+ const [signedIn,setSignedIn]=useState(true)
  useEffect(()=>{
   // Luật giữ/quên quyền theo phiên nằm ở authCapabilityGate: đăng xuất hoặc ĐỔI
   // người thì quên ngay; cùng người (SIGNED_IN lặp lại khi tab lấy lại focus,
@@ -13,7 +15,7 @@ export default function ToolRouteGate({children}:{children:ReactNode}) {
    // getSession() đọc phiên TỪ MÁY, không gọi mạng. Dùng getUser() ở đây là sai:
    // nó gọi mạng, nên mất mạng sẽ bị hiểu nhầm thành "đã đổi sang không ai",
    // xoá quyền và gỡ mất cả công cụ đang dùng.
-   docUid:async()=>{const {data:{session}}=await supabase.auth.getSession();return session?.user?.id??null},
+   docUid:async()=>{const {data:{session}}=await supabase.auth.getSession();setSignedIn(!!session?.user);return session?.user?.id??null},
    hoi:async()=>{
     const {data,error}=await supabase.rpc('my_tool_route_access',{p_path:window.location.pathname.replace(/\/$/,'')||'/'})
     // Máy chủ trả lời hợp lệ — kể cả khi là "không cho" — thì tuân theo ngay.
@@ -30,6 +32,6 @@ export default function ToolRouteGate({children}:{children:ReactNode}) {
  if(allowed===true)return <>{children}</>
  return <div style={{minHeight:'100dvh',display:'flex',alignItems:'center',justifyContent:'center',padding:24,boxSizing:'border-box',fontFamily:'Inter,system-ui,sans-serif',background:'#F4F4F5',textAlign:'center'}}><div>
   <h2>{error?'Chưa tải được quyền truy cập':allowed===false?'Công cụ chưa được mở':'Đang tải…'}</h2>
-  {error?<button onClick={()=>window.location.reload()}>Thử lại</button>:allowed===false?<><p>Vui lòng kiểm tra gói học hoặc đăng nhập tài khoản của bạn.</p><a href="/start">Về trang học</a></>:null}
+  {error?<button onClick={()=>window.location.reload()}>Thử lại</button>:allowed===false?<><p>Vui lòng kiểm tra gói học hoặc đăng nhập tài khoản của bạn.</p>{signedIn?<a href="/start">Về trang học</a>:<a href={loginUrlFor(window.location.pathname+window.location.search+window.location.hash)}>Đăng nhập</a>}</>:null}
  </div></div>
 }
