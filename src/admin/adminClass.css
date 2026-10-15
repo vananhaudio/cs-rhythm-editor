@@ -5,8 +5,10 @@
   --ac-radius: 12px;
   flex: 1; min-width: 0; overflow-y: auto; background: var(--ac-bg); color: var(--ac-text);
   padding: 24px 32px 48px; font-family: Inter, system-ui, sans-serif; font-size: 15px; line-height: 1.45;
-  box-sizing: border-box; text-align: left;
+  box-sizing: border-box; text-align: left; color-scheme: light;
 }
+/* index.css đặt h1/h2 màu --text-h (gần trắng khi hệ thống ở chế độ tối) → tiêu đề vô hình trên nền sáng. Khoá màu trong không gian lớp. */
+.ac-root h1, .ac-root h2, .ac-root h3 { color: var(--ac-text); font-family: inherit; }
 .ac-root *, .ac-root *::before, .ac-root *::after { box-sizing: border-box; }
 .ac-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
 .ac-head-detail { display: block; margin-bottom: 0; }

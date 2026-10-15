@@ -66,8 +66,8 @@ const SECTIONS = [ // [đường dẫn, nhãn menu]
   ['/admin/aichat', 'AI tuyển sinh'], ['/admin/assistant', 'Trợ lý quản trị'],
 ]
 
-async function open(path, { width = 1440, height = 900 } = {}) {
-  const ctx = await browser.newContext({ viewport: { width, height }, hasTouch: width < 600, isMobile: width < 600, serviceWorkers: 'block' })
+async function open(path, { width = 1440, height = 900, dark = false } = {}) {
+  const ctx = await browser.newContext({ colorScheme: dark ? 'dark' : 'light', viewport: { width, height }, hasTouch: width < 600, isMobile: width < 600, serviceWorkers: 'block' })
   await ctx.addCookies([{ name: 'sb-wojmdilyflffvdtpovmq-auth-token', value: COOKIE, url: BASE }])
   const page = await ctx.newPage()
   const log = { writes: [], errors: [] }
@@ -326,6 +326,27 @@ for (const width of [1440, 768, 390, 360]) {
   assert.ok(right <= width + 1, `${width}: tiêu đề nằm trong màn hình`)
   await ctx.close()
   ok(`V2 tên lớp dài ${width}px: tiêu đề là tên, mã/trạng thái phụ, không tràn`)
+}
+
+// 6d. Hệ thống ở chế độ TỐI: tiêu đề lớp và tiêu đề phần phải đủ tương phản trên nền sáng của Admin
+//     (lỗi thật: index.css đặt h1/h2 = --text-h gần trắng → tên lớp "biến mất")
+{
+  const lum = c => { const [r, g, b] = c.match(/\d+(\.\d+)?/g).slice(0, 3).map(Number).map(v => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4 }); return .2126 * r + .7152 * g + .0722 * b }
+  const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + .05) / (y + .05) }
+  for (const [tab, sel] of [['', '.ac-root h1'], ['/lich', '.ac-root h2'], ['/hoc-vien', '.ac-root h2'], ['', '.ac-root h2']]) {
+    const { ctx, page } = await open(`/admin/lop/${CLS_A}${tab}`, { width: 1440, height: 800, dark: true })
+    await page.locator('.ac-root h1').waitFor()
+    await page.locator(sel).first().waitFor()
+    const { fg, bg } = await page.locator(sel).first().evaluate(e => {
+      let n = e, bgc = 'rgba(0, 0, 0, 0)'
+      while (n && /rgba\(0, 0, 0, 0\)|transparent/.test(bgc)) { bgc = getComputedStyle(n).backgroundColor; n = n.parentElement }
+      return { fg: getComputedStyle(e).color, bg: bgc }
+    })
+    const r = ratio(fg, bg)
+    assert.ok(r >= 4.5, `tối ${tab || '/'} ${sel}: tương phản ${r.toFixed(1)} (${fg} trên ${bg})`)
+    await ctx.close()
+  }
+  ok('V2 chế độ tối của hệ thống: tên lớp và tiêu đề phần đủ tương phản (≥4.5:1)')
 }
 
 // 7. V2 responsive + bàn phím
