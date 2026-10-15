@@ -205,6 +205,8 @@ export type PublicationEntry = {
   entry: 'teamlab_publication'; id: string; createdAt: string
   slug: string; title: string; bandName: string | null; projectName: string
   coverUrl: string | null; avatarUrl: string | null
+  /** Slug công khai của Team (trang /teamlab/band/<slug>); null = chưa có → không hiện "Khám phá Band". */
+  projectSlug: string | null
 }
 export type FeedEntry = FeedPost | ThreadEntry | PublicationEntry
 export const isThreadEntry = (e: FeedEntry): e is ThreadEntry => (e as ThreadEntry).entry === 'learning_thread'
@@ -238,6 +240,7 @@ export function toPublicationEntry(raw: unknown, sortAt: string): PublicationEnt
   return {
     entry: 'teamlab_publication', id, createdAt: sortAt, slug, title: title.trim(), bandName: band, projectName: project,
     coverUrl: teamAssetUrl(o.project_id, o.cover_path, 'cover'), avatarUrl: teamAssetUrl(o.project_id, o.avatar_path, 'avatar'),
+    projectSlug: typeof o.project_slug === 'string' && SLUG_RE.test(o.project_slug) && o.project_slug.length <= 60 ? o.project_slug : null,
   }
 }
 

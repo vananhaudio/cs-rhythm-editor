@@ -7,6 +7,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import './classSocial.css'
+import '../thuvien/RhythmScroll.css'
 import '../band/band.css'
 import ClassSocialLayout from './ClassSocialLayout'
 import { SECTION_PATHS, keepsPathForGuest, sameView, viewFromPath, viewPath, type MeView, type SocialSection } from './resolveMeRoute'

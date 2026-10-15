@@ -1,9 +1,9 @@
--- Dữ liệu nền TRƯỚC V1.5 (cluster TẠM). Teamlab stub + người dùng + một bài đã duyệt của Admin + một nháp của học viên.
+-- Dữ liệu nền TRƯỚC V1.5 (cluster TẠM). Teamlab stub (teamlab_is_any_music_editor = music_editor HOẶC leader, như production từ 15/10) + người dùng + một bài đã duyệt của Admin + một nháp của học viên.
 \set ON_ERROR_STOP on
 create table public.teamlab_band_roles (band_id uuid, user_id uuid, role text);
 create function public.teamlab_is_any_music_editor() returns boolean language sql stable security definer set search_path = '' as $$
   select exists (select 1 from public.teamlab_band_roles r join public.app_users u on u.id = r.user_id
-                  where r.user_id = auth.uid() and r.role = 'music_editor' and u.status = 'active') $$;
+                  where r.user_id = auth.uid() and r.role in ('music_editor', 'leader') and u.status = 'active') $$;
 revoke all on function public.teamlab_is_any_music_editor() from public, anon;
 grant execute on function public.teamlab_is_any_music_editor() to authenticated;
 grant select on public.teamlab_band_roles to authenticated;

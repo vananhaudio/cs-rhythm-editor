@@ -4,7 +4,7 @@
 // (db/social_tool_share_v1_setup.sql). Thêm BMS / Nhịp & Phách / Ban nhạc = thêm MỘT mục ở đây + một nhánh ở RPC.
 import type { LucideIcon } from 'lucide-react'
 import { ListMusic, Music4, Timer } from 'lucide-react'
-import { artifactRef, type ShareRef } from '../../share/shareRef'
+import { artifactRef, chordSheetRef, type ShareRef } from '../../share/shareRef'
 
 export type ToolShareView = {
   tool: string
@@ -100,6 +100,30 @@ TOOL_REGISTRY.nhipphach = {
       thumbnail: null, note: null,
       action: { label: 'Xem bản nhạc', href: `/nhipphach?artifact=${id.toLowerCase()}` },
       shareRef: artifactRef(id),
+    }
+  },
+}
+
+/** Hợp âm (Play Scroll Share V1): tham chiếu MỘT phiên bản đã duyệt; mở bằng route chỉ-xem /hopam/<versionId>. */
+export const chordSheetHref = (versionId: string) => `/hopam/${versionId.toLowerCase()}`
+export function chordMeterText(meter: unknown): string | null {
+  const m = meter as { beats?: unknown; beatType?: unknown } | null
+  return m && Number.isInteger(m.beats) && Number.isInteger(m.beatType) ? `${m.beats}/${m.beatType}` : null
+}
+TOOL_REGISTRY.chord_sheet = {
+  describe: raw => {
+    const id = raw.version_id, title = raw.title, composer = raw.composer, bpm = raw.bpm
+    if (raw.kind !== 'chord_sheet' || typeof id !== 'string' || !UUID_RE.test(id)) return null
+    if (typeof title !== 'string' || !title.trim() || title.length > 120) return null
+    const meter = chordMeterText(raw.meter)
+    return {
+      tool: 'chord_sheet', toolLabel: 'Hợp âm', icon: Music4, kindLabel: 'Play Scroll',
+      headline: title.trim(),
+      detail: [typeof composer === 'string' && composer.trim() ? composer.trim() : null, meter ? `Nhịp ${meter}` : null,
+        typeof bpm === 'number' && bpm >= 20 && bpm <= 300 ? `${Math.round(bpm)} BPM` : null].filter(Boolean).join(' · ') || null,
+      thumbnail: null, note: null,
+      action: { label: 'Mở Play Scroll', href: chordSheetHref(id) },
+      shareRef: chordSheetRef(id),
     }
   },
 }

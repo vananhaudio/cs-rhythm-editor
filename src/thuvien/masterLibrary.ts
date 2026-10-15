@@ -53,33 +53,38 @@ async function sha256(xml: string): Promise<string> {
 
 /**
  * Người dùng có được THÊM bài vào thư viện không (chỉ để ẩn/hiện mục "Nạp bản nhạc mới"; quyền thật do RLS):
- * admin/teacher (isTeacher) hoặc người đang giữ vai Biên tập âm nhạc ở ít nhất một Band (teamlab_band_roles). Lỗi đọc → false.
+ * admin/teacher (isTeacher) hoặc người đang giữ vai Biên tập âm nhạc / Trưởng Band ở ít nhất một Band (teamlab_band_roles;
+ * Trưởng Band được hưởng đúng quyền Biên tập — máy chủ tính từ vai leader thật, không có bản ghi music_editor giả). Lỗi đọc → false.
  */
 export async function canAddToLibrary(userId: string, isTeacher: boolean): Promise<boolean> {
   if (isTeacher) return true
   try {
     const { supabase } = await import('../supabase.ts')
     const { data, error } = await supabase.from('teamlab_band_roles').select('band_id')
-      .eq('user_id', userId).eq('role', 'music_editor').limit(1)
+      .eq('user_id', userId).in('role', ['music_editor', 'leader']).limit(1)
     return !error && (data?.length ?? 0) > 0
   } catch { return false }
 }
 
 /**
  * Cửa vào /thuvien cho tài khoản KHÔNG phải admin (chỉ để chọn giao diện; quyền thật do máy chủ):
- * 'editor' = đang giữ vai Biên tập âm nhạc ở ít nhất một Band · 'viewer' = Trưởng Band (chỉ xem/tìm/dùng) · null = không vào.
+ * 'editor' = đang giữ vai Biên tập âm nhạc HOẶC Trưởng Band ở ít nhất một Band (Trưởng Band = quyền Biên tập, không hơn) ·
+ * 'viewer' = chỉ xem/tìm/chạy Rhythm Scroll (Trưởng Team thuần) · null = không vào.
  */
 export type ThuVienAccess = 'editor' | 'viewer'
 export async function thuVienAccess(userId: string): Promise<ThuVienAccess | null> {
   try {
     const { supabase } = await import('../supabase.ts')
     const { data, error } = await supabase.from('teamlab_band_roles').select('role').eq('user_id', userId).in('role', ['music_editor', 'leader'])
-    if (error || !data?.length) return null
-    return data.some(row => row.role === 'music_editor') ? 'editor' : 'viewer'
+    if (!error && data?.length) return 'editor'
+    // Trưởng Team thuần (không Biên tập/Trưởng Band): chỉ XEM/tìm/chạy Rhythm Scroll — không thêm/sửa/gỡ.
+    const team = await supabase.from('teamlab_project_members').select('project_id').eq('user_id', userId).eq('role', 'leader').limit(1)
+    if (!team.error && team.data?.length) return 'viewer'
+    return null
   } catch { return null }
 }
 
-export const ADD_DENIED_MESSAGE = 'Tài khoản chưa có quyền thêm bản nhạc vào thư viện. Cần vai trò Biên tập âm nhạc của một Band (hoặc Admin/Giáo viên).'
+export const ADD_DENIED_MESSAGE = 'Tài khoản chưa có quyền thêm bản nhạc vào thư viện. Cần vai trò Biên tập âm nhạc hoặc Trưởng Band của một Band (hoặc Admin/Giáo viên).'
 
 export const EDITOR_UNKNOWN = 'Chưa xác định'
 

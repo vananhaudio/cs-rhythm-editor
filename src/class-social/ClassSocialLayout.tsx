@@ -6,6 +6,7 @@ import { NAV_GROUPS, type NavItem } from './nav'
 import { SECTION_PATHS, type SocialSection } from './resolveMeRoute'
 import type { ClassIdentity } from './useClassSession'
 import { Avatar, ClassHomeLink, MoreMenu } from './ui'
+import { thuVienAccess } from '../thuvien/masterLibrary'
 import { safeImageUrl } from './media/safeImageUrl'
 import type { ImageKind } from './profile/imageFile'
 
@@ -70,7 +71,15 @@ function NavEntry({ item, active, collapsed, onSection, badges }: {
 /** Nhóm LỚP HỌC động (danh sách lớp thật) — layout chỉ chừa chỗ; dữ liệu do trang cấp. */
 export type ClassNavSlot = (opts: { collapsed: boolean; onNavigate: () => void }) => ReactNode
 
-function NavGroups({ section, collapsed, onSection, badges, classNav, onNavigate }: {
+/** Mục "Thư viện bản nhạc": khoá như cũ; chỉ mở thành lối vào khi tài khoản đang giữ vai Biên tập / Trưởng Band (cổng /thuvien vẫn kiểm lại). */
+const LIBRARY_ID = 'thuvien'
+const withLibrary = (item: NavItem, open: boolean | undefined): NavItem =>
+  open && item.id === LIBRARY_ID && item.kind === 'restricted'
+    ? { kind: 'destination', id: item.id, label: item.label, icon: item.icon, href: '/thuvien', hint: 'Thư viện bản nhạc và hợp âm chuẩn hóa' }
+    : item
+
+function NavGroups({ section, collapsed, onSection, badges, classNav, onNavigate, libraryOpen }: {
+  libraryOpen?: boolean
   section: SocialSection | null
   collapsed: boolean
   onSection: (s: SocialSection) => void
@@ -84,7 +93,7 @@ function NavGroups({ section, collapsed, onSection, badges, classNav, onNavigate
         <div key={g.id} className="cs-nav-block">
           <nav className="cs-nav-group" aria-label={g.title}>
             <div className="cs-nav-title">{g.title}</div>
-            {g.items.map(item => (
+            {g.items.map(raw => withLibrary(raw, libraryOpen)).map(item => (
               <NavEntry key={item.id} item={item} collapsed={collapsed} onSection={onSection} badges={badges}
                 active={item.kind === 'section' && item.id === section} />
             ))}
@@ -96,7 +105,8 @@ function NavGroups({ section, collapsed, onSection, badges, classNav, onNavigate
   )
 }
 
-function MobileMenu({ section, onClose, onSection, badges, classNav }: {
+function MobileMenu({ section, onClose, onSection, badges, classNav, libraryOpen }: {
+  libraryOpen?: boolean
   section: SocialSection | null
   onClose: () => void
   onSection: (s: SocialSection) => void
@@ -117,7 +127,7 @@ function MobileMenu({ section, onClose, onSection, badges, classNav }: {
           <h2>Menu</h2>
           <button type="button" className="cs-icon-btn" onClick={onClose} aria-label="Đóng menu"><X size={22} /></button>
         </div>
-        <NavGroups section={section} collapsed={false} onSection={s => { onSection(s); onClose() }} badges={badges} classNav={classNav} onNavigate={onClose} />
+        <NavGroups section={section} collapsed={false} onSection={s => { onSection(s); onClose() }} badges={badges} classNav={classNav} onNavigate={onClose} libraryOpen={libraryOpen} />
       </div>
     </>
   )
@@ -139,6 +149,13 @@ export default function ClassSocialLayout({ me, section, onSection, children, ca
   const totalBadge = Object.values(badges ?? {}).reduce((a, n) => a + (n ?? 0), 0)
   const [collapsed, setCollapsed] = useState(readCollapsed)
   const [menuOpen, setMenuOpen] = useState(false)
+  // Lối vào Thư viện cho Biên tập / Trưởng Band. Lỗi/không có vai → giữ nguyên mục khoá.
+  const [libraryOpen, setLibraryOpen] = useState(false)
+  useEffect(() => {
+    let alive = true
+    void thuVienAccess(me.userId).then(access => { if (alive) setLibraryOpen(access !== null) })
+    return () => { alive = false }
+  }, [me.userId])
 
   const toggleCollapsed = () => {
     setCollapsed(c => {
@@ -185,12 +202,12 @@ export default function ClassSocialLayout({ me, section, onSection, children, ca
 
       <div className="cs-body">
         <aside className={'cs-sidebar' + (collapsed ? ' is-collapsed' : '')}>
-          <NavGroups section={section} collapsed={collapsed} onSection={onSection} badges={badges} classNav={classNav} />
+          <NavGroups section={section} collapsed={collapsed} onSection={onSection} badges={badges} classNav={classNav} libraryOpen={libraryOpen} />
         </aside>
         <main className="cs-main">{children}</main>
       </div>
 
-      {menuOpen && <MobileMenu section={section} onClose={() => setMenuOpen(false)} onSection={onSection} badges={badges} classNav={classNav} />}
+      {menuOpen && <MobileMenu section={section} onClose={() => setMenuOpen(false)} onSection={onSection} badges={badges} classNav={classNav} libraryOpen={libraryOpen} />}
     </div>
   )
 }

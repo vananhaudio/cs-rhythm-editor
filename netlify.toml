@@ -9,3 +9,8 @@
 
 # Universal OG: MỘT Edge Function cho mọi trang — netlify/edge-functions/og.ts (path + excludedPath khai
 # ngay trong file, export config). Không còn danh sách route OG ở đây.
+
+# Deploy preview của Pull Request dùng cùng backend hợp âm (RPC → production Supabase) như production.
+# Thiếu dòng này, build preview rơi vào chế độ "disabled" (biến chỉ đặt cho context production trên Netlify).
+[context.deploy-preview.environment]
+  VITE_CHORD_LIBRARY_BACKEND = "rpc"
