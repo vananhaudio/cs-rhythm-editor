@@ -1,11 +1,19 @@
 // Một hội thoại có sẵn: header · dòng tin · ô soạn (hoặc ghi chú khi không còn gửi được — DB quyết qua can_send).
-import { RefreshCw } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { RefreshCw, X } from 'lucide-react'
+import { Avatar } from '../ui'
+import { fetchBandMembers } from './chatApi'
+import type { BandMember } from './chatModel'
 import ChatHeader from './ChatHeader'
 import Composer from './Composer'
 import MessageList from './MessageList'
 import { useConversation } from './useChat'
 
-export type Peer = { id: string; name: string; avatarUrl: string | null; isTeacher: boolean }
+export type Peer = {
+  id: string; name: string; avatarUrl: string | null; isTeacher: boolean
+  /** Nhóm Band: tên/ảnh là của Band; số thành viên cho dòng phụ ở header */
+  kind?: 'dm' | 'band'; memberCount?: number
+}
 
 export default function ConversationView({ id, peer, canSend, onBack, onOpenProfile, onActivity }: {
   id: string
@@ -18,11 +26,17 @@ export default function ConversationView({ id, peer, canSend, onBack, onOpenProf
   onActivity: () => void
 }) {
   const c = useConversation(id, onActivity)
+  const isBand = peer?.kind === 'band'
+  const [showMembers, setShowMembers] = useState(false)
 
   return (
     <>
-      <ChatHeader name={peer?.name ?? null} avatarUrl={peer?.avatarUrl ?? null} isTeacher={peer?.isTeacher}
-        onBack={onBack} onOpenProfile={peer ? () => onOpenProfile(peer.id) : undefined} />
+      <ChatHeader name={peer?.name ?? null} avatarUrl={peer?.avatarUrl ?? null} isTeacher={isBand ? false : peer?.isTeacher}
+        onBack={onBack}
+        onOpenProfile={peer ? (isBand ? () => setShowMembers(v => !v) : () => onOpenProfile(peer.id)) : undefined}
+        tag={isBand ? `Nhóm Band${peer?.memberCount ? ` · ${peer.memberCount} thành viên` : ''}` : undefined}
+        actionLabel={isBand && peer ? `Thành viên nhóm ${peer.name}` : undefined} />
+      {isBand && showMembers && <BandMembers id={id} onClose={() => setShowMembers(false)} onOpenProfile={onOpenProfile} />}
 
       {c.status === 'loading' && <div className="cs-chat-body-state"><div className="cs-spinner" role="status" aria-label="Đang tải" /></div>}
       {c.status === 'notfound' && (
@@ -54,5 +68,34 @@ export default function ConversationView({ id, peer, canSend, onBack, onOpenProf
         </>
       )}
     </>
+  )
+}
+
+/** Danh sách thành viên hiện hành của nhóm Band (server trả theo quyền thành viên). Bấm một người → trang cá nhân. */
+function BandMembers({ id, onClose, onOpenProfile }: { id: string; onClose: () => void; onOpenProfile: (userId: string) => void }) {
+  const [state, setState] = useState<{ status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; items: BandMember[] }>({ status: 'loading' })
+  const [rev, setRev] = useState(0)
+  useEffect(() => {
+    let alive = true
+    void fetchBandMembers(id).then(r => { if (alive) setState(r.ok ? { status: 'ready', items: r.value } : { status: 'error', message: r.message }) })
+    return () => { alive = false }
+  }, [id, rev])
+  return (
+    <section className="cs-chat-members" aria-label="Thành viên nhóm">
+      <div className="cs-chat-members-head">
+        <span>Thành viên</span>
+        <button type="button" className="cs-icon-btn" onClick={onClose} aria-label="Đóng danh sách thành viên"><X size={18} aria-hidden="true" /></button>
+      </div>
+      {state.status === 'loading' && <div className="cs-skeleton" style={{ height: 48 }} aria-label="Đang tải" />}
+      {state.status === 'error' && (
+        <p role="alert">{state.message} <button type="button" className="cs-link-btn" onClick={() => { setState({ status: 'loading' }); setRev(x => x + 1) }}>Thử lại</button></p>
+      )}
+      {state.status === 'ready' && state.items.map(m => (
+        <button key={m.id} type="button" className="cs-chat-member" onClick={() => onOpenProfile(m.id)}>
+          <Avatar name={m.name} url={m.avatarUrl} size={36} />
+          <span className="cs-chat-member-name">{m.name}{m.isTeacher && <span className="cs-post-role"> · Giáo viên</span>}</span>
+        </button>
+      ))}
+    </section>
   )
 }

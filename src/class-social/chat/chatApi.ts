@@ -4,7 +4,9 @@ import { supabase } from '../../supabase'
 import type { Result } from '../posts/postsApi'
 import type { ShareRef } from '../../share/shareRef'
 import {
-  chatErrorText, toConversations, toMessages, toSystemNotices, toSystemSummary, NOTICE_PAGE, PAGE,
+  bandIdOf, chatErrorText, isBandConversation, mergeConversationLists, toBandConversations, toBandMembers, toBandMessages,
+  toConversations, toMessages, toSystemNotices, toSystemSummary, NOTICE_PAGE, PAGE,
+  type BandMember, type BandMemberRow, type BandMessageRow, type BandRoomRow,
   type ChatMessage, type ConversationItem, type ConversationRow, type MessageRow,
   type SystemNotice, type SystemNoticeRow, type SystemSummary, type SystemSummaryRow,
 } from './chatModel'
@@ -24,18 +26,39 @@ async function rpc<T>(fn: string, args: Record<string, unknown>, ctx?: 'share'):
   }
 }
 
+/** Hội thoại cá nhân (dm_*) + nhóm Band (bandchat_*). Nhóm Band là phần BỔ SUNG: lỗi/chưa có tính năng ở server → danh sách cá nhân vẫn hiện bình thường. */
 export async function fetchConversations(limit = 50): Promise<Result<ConversationItem[]>> {
-  const r = await rpc<ConversationRow[]>('dm_conversations', { p_limit: limit })
-  return r.ok ? { ok: true, value: toConversations(r.value) } : r
+  const [r, b] = await Promise.all([
+    rpc<ConversationRow[]>('dm_conversations', { p_limit: limit }),
+    rpc<BandRoomRow[]>('bandchat_rooms', { p_limit: limit }),
+  ])
+  if (!r.ok) return r
+  return { ok: true, value: mergeConversationLists(toConversations(r.value), b.ok ? toBandConversations(b.value) : []) }
 }
 
 export async function fetchUnreadCount(): Promise<Result<number>> {
-  const r = await rpc<number>('dm_unread_count', {})
-  return r.ok ? { ok: true, value: Math.max(0, Number(r.value) || 0) } : r
+  const [r, b] = await Promise.all([rpc<number>('dm_unread_count', {}), rpc<number>('bandchat_unread_count', {})])
+  if (!r.ok) return r
+  return { ok: true, value: Math.max(0, Number(r.value) || 0) + (b.ok ? Math.max(0, Number(b.value) || 0) : 0) }
+}
+
+/** Thành viên hiện hành của một nhóm Band (id hội thoại dạng `band:<id>`) */
+export async function fetchBandMembers(conversationId: string): Promise<Result<BandMember[]>> {
+  const r = await rpc<BandMemberRow[]>('bandchat_members', { p_band: bandIdOf(conversationId) })
+  return r.ok ? { ok: true, value: toBandMembers(r.value) } : r
 }
 
 /** Tin của một hội thoại. afterSeq → chỉ tin mới (polling); beforeSeq → trang cũ hơn; không có → trang mới nhất */
 export async function fetchMessages(conversationId: string, opts: { afterSeq?: number; beforeSeq?: number; limit?: number } = {}): Promise<Result<ChatMessage[]>> {
+  if (isBandConversation(conversationId)) {
+    const b = await rpc<BandMessageRow[]>('bandchat_messages', {
+      p_band: bandIdOf(conversationId),
+      p_after_seq: opts.afterSeq ?? null,
+      p_before_seq: opts.beforeSeq ?? null,
+      p_limit: opts.limit ?? PAGE,
+    })
+    return b.ok ? { ok: true, value: toBandMessages(b.value) } : b
+  }
   const r = await rpc<MessageRow[]>('dm_messages', {
     p_conversation: conversationId,
     p_after_seq: opts.afterSeq ?? null,
@@ -46,6 +69,10 @@ export async function fetchMessages(conversationId: string, opts: { afterSeq?: n
 }
 
 export async function sendMessage(conversationId: string, body: string): Promise<Result<number>> {
+  if (isBandConversation(conversationId)) {
+    const b = await rpc<number>('bandchat_send', { p_band: bandIdOf(conversationId), p_body: body })
+    return b.ok ? { ok: true, value: Number(b.value) } : b
+  }
   const r = await rpc<number>('dm_send', { p_conversation: conversationId, p_body: body })
   return r.ok ? { ok: true, value: Number(r.value) } : r
 }
@@ -59,6 +86,10 @@ export async function startConversation(userId: string, body: string): Promise<R
 }
 
 export async function markRead(conversationId: string, seq: number): Promise<Result<number>> {
+  if (isBandConversation(conversationId)) {
+    const b = await rpc<number>('bandchat_mark_read', { p_band: bandIdOf(conversationId), p_seq: seq })
+    return b.ok ? { ok: true, value: Number(b.value) } : b
+  }
   const r = await rpc<number>('dm_mark_read', { p_conversation: conversationId, p_seq: seq })
   return r.ok ? { ok: true, value: Number(r.value) } : r
 }

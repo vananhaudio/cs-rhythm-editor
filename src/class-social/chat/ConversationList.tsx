@@ -1,5 +1,5 @@
 // Danh sách hội thoại (mới nhất trước): avatar · tên · xem trước tin cuối · giờ · badge chưa đọc.
-import { BellRing, MessagesSquare } from 'lucide-react'
+import { BellRing, MessagesSquare, Users } from 'lucide-react'
 import { Avatar, EmptyState } from '../ui'
 import { SYSTEM_NAME, previewText, shortTime, type ConversationItem, type SystemSummary } from './chatModel'
 import type { ListState } from './useChat'
@@ -31,7 +31,7 @@ export default function ConversationList({ state, selectedId, onSelect, onRetry,
       {state.status === 'ready' && state.items.length === 0 && (
         <EmptyState icon={MessagesSquare} title="Chưa có cuộc trò chuyện" quiet
           action={<button type="button" className="cs-btn cs-btn-soft cs-btn-sm" onClick={onOpenFriends}>Mở Bạn bè</button>}>
-          Vào Bạn bè và chọn Nhắn tin để bắt đầu trò chuyện.
+          Vào Bạn bè và chọn Nhắn tin để bắt đầu trò chuyện. Khi bạn thuộc một Band, nhóm chat của Band sẽ hiện ở đây.
         </EmptyState>
       )}
       {state.status === 'ready' && state.items.length > 0 && (
@@ -49,11 +49,12 @@ function Item({ c, active, onSelect }: { c: ConversationItem; active: boolean; o
     <li>
       <button type="button" className={'cs-chat-item' + (active ? ' is-active' : '') + (unread ? ' is-unread' : '')}
         aria-current={active ? 'true' : undefined}
-        aria-label={`${c.name}${unread ? `, ${c.unread} tin chưa đọc` : ''}`} onClick={() => onSelect(c.id)}>
+        aria-label={`${c.kind === 'band' ? 'Nhóm Band ' : ''}${c.name}${unread ? `, ${c.unread} tin chưa đọc` : ''}`} onClick={() => onSelect(c.id)}>
         <Avatar name={c.name} url={c.avatarUrl} size={48} />
         <span className="cs-chat-item-text">
           <span className="cs-chat-item-top">
             <span className="cs-chat-item-name">{c.name}</span>
+            {c.kind === 'band' && <span className="cs-chat-item-tag"><Users size={12} aria-hidden="true" />Band</span>}
             <span className="cs-chat-item-time">{shortTime(c.lastAt)}</span>
           </span>
           <span className="cs-chat-item-bottom">

@@ -151,10 +151,14 @@ export function bandAdminSlugFromPath(pathname: string): string | null {
 // ── Trò chuyện (Chat V1a): /me/chat (danh sách) · /me/chat/<id hội thoại> · /me/chat/u/<id người> (nhắn tin tới người này; hội thoại chỉ tạo khi gửi tin đầu) ──
 export const CHAT_PREFIX = SECTION_PATHS.chat + '/'
 export const CHAT_WITH_PREFIX = CHAT_PREFIX + 'u/'
+/** Nhóm chat của Band: /me/chat/b/<band id>. Trong ứng dụng, id hội thoại của nhóm là `band:<band id>` (không lẫn với hội thoại cá nhân). */
+export const CHAT_BAND_PREFIX = CHAT_PREFIX + 'b/'
+export const BAND_CONVERSATION_PREFIX = 'band:'
 /** Class 2.0 — kênh thông báo hệ thống (cố định, không phải UUID hội thoại) */
 export const CHAT_SYSTEM_PATH = CHAT_PREFIX + 'system'
 
 export function chatConversationPath(conversationId: string): string {
+  if (conversationId.startsWith(BAND_CONVERSATION_PREFIX)) return CHAT_BAND_PREFIX + conversationId.slice(BAND_CONVERSATION_PREFIX.length)
   return CHAT_PREFIX + conversationId
 }
 export function chatWithPath(userId: string): string {
@@ -162,6 +166,10 @@ export function chatWithPath(userId: string): string {
 }
 export function chatConversationIdFromPath(pathname: string): string | null {
   const p = pathname.replace(/\/+$/, '')
+  if (p.startsWith(CHAT_BAND_PREFIX)) {
+    const band = p.slice(CHAT_BAND_PREFIX.length)
+    return UUID_RE.test(band) ? BAND_CONVERSATION_PREFIX + band.toLowerCase() : null
+  }
   if (!p.startsWith(CHAT_PREFIX) || p.startsWith(CHAT_WITH_PREFIX)) return null
   const id = p.slice(CHAT_PREFIX.length)
   return UUID_RE.test(id) ? id.toLowerCase() : null
