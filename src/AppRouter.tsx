@@ -3,6 +3,7 @@ import { lazy, Suspense, useEffect, useState } from 'react'
 import { supabase, IS_NATIVE_CAPACITOR } from './supabase'
 import type { User } from '@supabase/supabase-js'
 import { resolveMeRoute, isLearnPath } from './class-social/resolveMeRoute'
+import { blockedRedirect } from './authReturn'
 import { bandSlugFromPublicPath } from './band/bandModel'
 import { PlayerView } from './PlayerView'
 import { TapWithSong } from './TapWithSong'
@@ -137,6 +138,12 @@ function TapLandingPage({ onGuest }: { onGuest: () => void }) {
   )
 }
 
+/** Trang bị chặn → /start. Khách: kèm điểm đến để đăng nhập xong quay lại; đã đăng nhập thiếu quyền: /start trần (tránh vòng lặp). */
+function bounceToStart(signedIn: boolean) {
+  const here = window.location.pathname + window.location.search + window.location.hash
+  window.location.replace(blockedRedirect(signedIn, here))
+}
+
 export default function AppRouter() {
   return <ToolRouteGate><AppRouterContent /></ToolRouteGate>
 }
@@ -189,7 +196,7 @@ function AppRouterContent() {
   if (path === '/thuvien' || path === '/thuvien/') {
     if (loading) return null
     if (!user || appUser?.status !== 'active') {
-      window.location.href = '/start'
+      bounceToStart(!!user)
       return null
     }
     // Admin: toàn bộ /thuvien. Tài khoản khác: chỉ khi đang giữ vai Biên tập âm nhạc (cổng kiểm tra; mục MusicXML thôi).
@@ -201,7 +208,7 @@ function AppRouterContent() {
   if (path === '/hopam' || path.startsWith('/hopam/')) {
     if (loading) return null
     if (!user || appUser?.status !== 'active') {
-      window.location.href = '/start'
+      bounceToStart(!!user)
       return null
     }
     const versionId = /^\/hopam\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/?$/i.exec(path)?.[1]?.toLowerCase()
@@ -296,7 +303,7 @@ function AppRouterContent() {
   // ── Route /editorial — Ban biên tập (chỉ teacher/admin) ──
   if (path === '/editorial' || path === '/editorial/') {
     if (loading) return null
-    if (!user || !isTeacher) { window.location.href = '/start'; return null }
+    if (!user || !isTeacher) { bounceToStart(!!user); return null }
     return <EditorPage />
   }
 
@@ -428,7 +435,7 @@ function AppRouterContent() {
   // ── Route /strum-builder — Công cụ tạo Strum Score (chỉ teacher) ──
   if (path === '/strum-builder' || path.startsWith('/strum-builder')) {
     if (loading) return null
-    if (!import.meta.env.DEV && (!user || !isTeacher)) { window.location.href = '/start'; return null }   // dev: xem thử không cần đăng nhập
+    if (!import.meta.env.DEV && (!user || !isTeacher)) { bounceToStart(!!user); return null }   // dev: xem thử không cần đăng nhập
     return <StrumWorkshop onExit={() => { window.location.href = '/start' }} />
   }
 
@@ -469,21 +476,21 @@ if (path === '/course-editor' || path.startsWith('/course-editor')) {
 // ── Route /admin/showcase — Showcase CMS (teacher/admin) ──
 if (path === '/admin/showcase' || path.startsWith('/admin/showcase')) {
   if (loading) return null
-  if (!user || !isTeacher) { window.location.href = '/start'; return null }
+  if (!user || !isTeacher) { bounceToStart(!!user); return null }
   return <ShowcaseAdmin onClose={() => { window.location.href = '/admin' }} />
 }
 
 // ── Route /admin/chat-mail — Chat Mail gửi nhanh kiểu chat (teacher/admin) ──
 if (path === '/admin/chat-mail' || path.startsWith('/admin/chat-mail')) {
   if (loading) return null
-  if (!user || !isTeacher) { window.location.href = '/start'; return null }
+  if (!user || !isTeacher) { bounceToStart(!!user); return null }
   return <ChatMailPage />
 }
 
 // ── Route /admin/daily-mail — Daily Mail admin (teacher/admin) ──
 if (path === '/admin/daily-mail' || path.startsWith('/admin/daily-mail')) {
   if (loading) return null
-  if (!user || !isTeacher) { window.location.href = '/start'; return null }
+  if (!user || !isTeacher) { bounceToStart(!!user); return null }
   return <DailyMailPage />
 }
 
@@ -495,21 +502,21 @@ if (path === '/unsubscribe' || path.startsWith('/unsubscribe')) {
 // ── Route /admin — Teacher admin panel ──
 if (path === '/admin' || path.startsWith('/admin')) {
   if (loading) return null
-  if (!user || !isTeacher) { window.location.href = '/start'; return null }
+  if (!user || !isTeacher) { bounceToStart(!!user); return null }
   return <TeacherAdminPage />
 }
 
 // ── Route /flow-lab — Xem thử engine Flow mới (mọi người đã đăng nhập; chỉ dữ liệu mẫu) ──
 if (path === '/flow-lab' || path.startsWith('/flow-lab')) {
   if (loading) return null
-  if (!user && !import.meta.env.DEV) { window.location.href = '/start'; return null }   // dev: cho xem thử không cần đăng nhập (chỉ dữ liệu mẫu)
+  if (!user && !import.meta.env.DEV) { bounceToStart(false); return null }   // dev: cho xem thử không cần đăng nhập (chỉ dữ liệu mẫu)
   return <FlowLabPage />
 }
 
 // ── Route /flow-migrate — Migrate 11 bài Nhập Môn → Flow (teacher) ──
 if (path === '/flow-migrate' || path.startsWith('/flow-migrate')) {
   if (loading) return null
-  if (!user || !isTeacher) { window.location.href = '/start'; return null }
+  if (!user || !isTeacher) { bounceToStart(!!user); return null }
   return <FlowMigratePage />
 }
 
