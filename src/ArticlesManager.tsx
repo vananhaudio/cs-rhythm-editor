@@ -82,7 +82,7 @@ export default function ArticlesManager() {
       {/* Danh sách */}
       <div style={{ width: 320, flexShrink: 0, borderRight: `1px solid ${C.border}`, background: C.surface, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
         <div style={{ padding: 16, borderBottom: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <b style={{ fontSize: 15, color: C.text1 }}>Bài viết</b>
+          <b style={{ fontSize: 15, color: C.text1 }}>Bài viết tuyển sinh</b>
           <button onClick={newArticle} style={{ background: C.accent, color: '#fff', border: 'none', borderRadius: 8, padding: '7px 12px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>+ Bài mới</button>
         </div>
         {loading ? <div style={{ padding: 16, color: C.text3, fontSize: 14 }}>Đang tải...</div>

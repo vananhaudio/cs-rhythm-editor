@@ -126,7 +126,7 @@ export default function Ht2027ScheduleAdmin({ onOpenSchedule }: { onOpenSchedule
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 22 }}>🎸</span>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 800, fontSize: 17 }}>Lịch thực hành — Hành trình 2027</div>
+            <div style={{ fontWeight: 800, fontSize: 17 }}>Thực hành HT2027</div>
             <div style={{ fontSize: 13, color: 'rgba(255,255,255,.85)', marginTop: 2 }}>
               {cls?.code ?? 'HT2027.TH01'} · Thứ Năm {startTime} · 40 buổi ·{' '}
               {cls?.start_date ? `${fmtDM(new Date(cls.start_date + 'T00:00:00'))} → ${cls.end_date ? fmtDM(new Date(cls.end_date + 'T00:00:00')) : '—'}` : 'chưa có lịch'}

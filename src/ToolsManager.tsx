@@ -115,7 +115,7 @@ export default function ToolsManager() {
       {/* Header */}
       <div style={{ background: S.surface, borderBottom: `1px solid ${S.border}`, padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
-          <div style={{ fontWeight: 700, fontSize: 18 }}>🛠 Quản lý công cụ</div>
+          <div style={{ fontWeight: 700, fontSize: 18 }}>Công cụ</div>
           <div style={{ fontSize: 13, color: S.text3, marginTop: 2 }}>
             {enabledCount} bật · {comingCount} sắp ra mắt · {tools.length - enabledCount - comingCount} tắt
             {changed.size > 0 && <span style={{ color: '#D97706', marginLeft: 8 }}>· {changed.size} thay đổi chưa lưu</span>}

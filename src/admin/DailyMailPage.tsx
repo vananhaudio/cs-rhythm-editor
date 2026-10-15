@@ -175,7 +175,7 @@ export default function DailyMailPage() {
 
     {/* ── Header ── */}
     <div style={{ padding: '20px 28px', background: S.surface, borderBottom: `1px solid ${S.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-      <div><div style={{ fontSize: 20, fontWeight: 700, color: S.text1 }}>📧 Daily Mail</div><div style={{ fontSize: 13, color: S.text3, marginTop: 2 }}>Gửi email hàng ngày cho học viên</div></div>
+      <div><div style={{ fontSize: 20, fontWeight: 700, color: S.text1 }}>Thư hàng ngày</div><div style={{ fontSize: 13, color: S.text3, marginTop: 2 }}>Gửi email hàng ngày cho học viên</div></div>
       <div style={{ display: 'flex', gap: 8 }}>
         {view !== 'list' && <button onClick={() => { setView('list'); resetForm() }} style={{ padding: '8px 16px', borderRadius: 8, border: `1px solid ${S.border}`, background: S.surface, color: S.text2, cursor: 'pointer', fontSize: 14 }}>← Danh sách</button>}
         {view === 'list' && <button onClick={newMail} style={{ padding: '10px 20px', borderRadius: 8, border: 'none', background: S.accent, color: '#fff', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>+ Tạo Daily Mail</button>}

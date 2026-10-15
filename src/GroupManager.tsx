@@ -161,7 +161,7 @@ export default function GroupManager() {
   return (
     <div style={{ flex: 1, overflowY: 'auto', padding: 32, background: S.bg, fontFamily: '"Inter", system-ui, sans-serif' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-        <div style={{ fontWeight: 800, fontSize: 22 }}>🌱 Cộng đồng / Nhóm</div>
+        <div style={{ fontWeight: 800, fontSize: 22 }}>Nhóm cộng đồng</div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button style={ghostBtn} onClick={() => setBulk('')}>📋 Dán hàng loạt</button>
           <button style={btn(S.accent)} onClick={() => setForm({ ...emptyForm })}>+ Thêm nhóm</button>

@@ -351,7 +351,7 @@ export default function StudentList({ onSelect }: Props) {
       <div style={{ background: T.bgCard, borderBottom: `1px solid ${T.border}`, padding: '14px 24px' }}>
         <div style={{ maxWidth: 960, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <div style={{ fontSize: 18, fontWeight: 700 }}>🎸 Danh sách học sinh</div>
+            <div style={{ fontSize: 18, fontWeight: 700 }}>Học viên</div>
             <div style={{ fontSize: 13, color: T.textMuted, marginTop: 2 }}>
               {activeCount} đang học · {students.length} tổng
             </div>

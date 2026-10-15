@@ -6,7 +6,7 @@ import ShowcasePageEditor from './ShowcasePageEditor'
 
 type Tab = 'nav' | 'pages' | 'editor' | 'categories'
 
-export default function ShowcaseAdmin({ onClose }: { onClose: () => void }) {
+export default function ShowcaseAdmin({ onClose, embedded = false }: { onClose: () => void; embedded?: boolean }) {
   const [tab, setTab] = useState<Tab>('nav')
   const [editPageId, setEditPageId] = useState<string | undefined>()
 
@@ -39,8 +39,8 @@ export default function ShowcaseAdmin({ onClose }: { onClose: () => void }) {
       <style>{CSS}</style>
 
       <div className="sa-header">
-        <button className="sa-close" onClick={onClose}>← Admin</button>
-        <h1 className="sa-title">Showcase</h1>
+        {!embedded && <button className="sa-close" onClick={onClose}>← Admin</button>}
+        <h1 className="sa-title">Trang Showcase</h1>
       </div>
 
       <div className="sa-nav-grid">

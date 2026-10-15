@@ -112,7 +112,7 @@ export default function AiAssistant({ embedded = false, onDone, seedExamples }: 
       {/* Header (ẩn khi nhúng vào màn khác) */}
       {!embedded && (
       <div style={{ padding: '16px 24px', borderBottom: `1px solid ${S.border}`, background: S.surface }}>
-        <div style={{ fontSize: 16, fontWeight: 700, color: S.text1 }}>🤖 Trợ lý AI</div>
+        <div style={{ fontSize: 16, fontWeight: 700, color: S.text1 }}>Trợ lý quản trị</div>
         <div style={{ fontSize: 13, color: S.text3, marginTop: 2 }}>Tạo tài khoản · gán nhóm · đặt lại mật khẩu · xếp lịch lớp — thầy duyệt rồi mới làm.</div>
       </div>
       )}
