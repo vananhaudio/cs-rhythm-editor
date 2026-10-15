@@ -29,7 +29,7 @@ const parseMeterKey = (key: string): TimelineMeter | null => {
 type Load = { state: 'loading' } | { state: 'error'; message: string } | { state: 'ready'; detail: ChordSheetDetail }
 
 /** Gắn `key={versionId}` ở nơi dùng: đổi phiên bản = dựng lại, nên chỉ cần nạp một lần. */
-export default function RhythmScrollPage({ library, versionId, onBack, embedded = false, initialDetail, autoStart = false }: {
+export default function RhythmScrollPage({ library, versionId, onBack, embedded = false, initialDetail, autoStart = false, branded = false }: {
   library: ChordLibrary; versionId: string; onBack: () => void
   /** Nhúng trong bài đăng (/me): khung có chiều cao riêng, nút "Thu gọn" + "Mở rộng"; không có Chia sẻ. */
   embedded?: boolean
@@ -37,6 +37,8 @@ export default function RhythmScrollPage({ library, versionId, onBack, embedded 
   initialDetail?: ChordSheetDetail
   /** Chạy ngay khi dựng xong (Feed: người xem đã bấm Play ở bản xem trước). Mặc định KHÔNG tự phát. */
   autoStart?: boolean
+  /** Trang học viên độc lập (/hopam): header thương hiệu Văn Anh Guitar + khối tên bài. Chỉ giao diện; mặc định tắt (Thư viện quản trị, bản nhúng giữ nguyên). */
+  branded?: boolean
 }) {
   const [load, setLoad] = useState<Load>(initialDetail ? { state: 'ready', detail: initialDetail } : { state: 'loading' })
   useEffect(() => {
@@ -48,12 +50,29 @@ export default function RhythmScrollPage({ library, versionId, onBack, embedded 
     return () => { active = false }
   }, [library, versionId, initialDetail])
 
-  if (load.state === 'loading') return <Shell embedded={embedded} versionId={versionId} onBack={onBack} title="Rhythm Scroll"><p className="rs-note">Đang tải bài…</p></Shell>
-  if (load.state === 'error') return <Shell embedded={embedded} versionId={versionId} onBack={onBack} title="Rhythm Scroll"><p role="alert" className="rs-bad">{load.message}</p></Shell>
-  return <Player detail={load.detail} onBack={onBack} embedded={embedded} autoStart={autoStart} />
+  if (load.state === 'loading') return <Shell embedded={embedded} branded={branded} versionId={versionId} onBack={onBack} title="Rhythm Scroll"><p className="rs-note">Đang tải bài…</p></Shell>
+  if (load.state === 'error') return <Shell embedded={embedded} branded={branded} versionId={versionId} onBack={onBack} title="Rhythm Scroll"><p role="alert" className="rs-bad">{load.message}</p></Shell>
+  return <Player detail={load.detail} onBack={onBack} embedded={embedded} autoStart={autoStart} branded={branded} />
 }
 
-function Shell({ title, onBack, children, right, embedded = false, versionId }: { title: string; onBack: () => void; children: React.ReactNode; right?: React.ReactNode; embedded?: boolean; versionId?: string }) {
+function Shell({ title, onBack, children, right, embedded = false, versionId, branded = false, composer }: { title: string; onBack: () => void; children: React.ReactNode; right?: React.ReactNode; embedded?: boolean; versionId?: string; branded?: boolean; composer?: string | null }) {
+  if (branded && !embedded) {
+    return <div className="rs-page rs-branded" data-testid="rhythm-scroll-page">
+      <header className="rs-nav rs-brandbar">
+        <button type="button" className="rs-back rs-back-icon" onClick={onBack} aria-label="Quay lại"><span aria-hidden="true">‹</span></button>
+        <img className="rs-logo" src="/logo.png" alt="Thầy Văn Anh Guitar" width="32" height="32" />
+        <span className="rs-brand">Play Scroll</span>
+        <div className="rs-nav-right">{right}</div>
+      </header>
+      <div className="rs-body">
+        <div className="rs-song" data-testid="rs-song">
+          <h1 className="rs-song-title">{title}</h1>
+          {composer ? <p className="rs-song-by">{composer}</p> : null}
+        </div>
+        {children}
+      </div>
+    </div>
+  }
   return <div className={embedded ? 'rs-page rs-embedded' : 'rs-page'} data-testid="rhythm-scroll-page">
     <header className="rs-nav">
       <button type="button" className="rs-back" onClick={onBack}><span aria-hidden="true">‹</span> {embedded ? 'Thu gọn' : 'Quay lại'}</button>
@@ -72,7 +91,7 @@ const Icon = ({ name }: { name: 'play' | 'pause' | 'restart' | 'gear' | 'share' 
   gear: <path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7zm8.2 5.5-.1-.9 1.9-1.5-2-3.4-2.3.9a7 7 0 0 0-1.5-.9L15.8 5h-4l-.4 2.4c-.5.2-1 .5-1.5.9l-2.3-.9-2 3.4 1.9 1.5a7 7 0 0 0 0 1.8L5.6 15.6l2 3.4 2.3-.9c.5.4 1 .7 1.5.9l.4 2.4h4l.4-2.4c.5-.2 1-.5 1.5-.9l2.3.9 2-3.4-1.9-1.5z" />,
 }[name]}</svg>
 
-function Player({ detail, onBack, embedded = false, autoStart = false }: { detail: ChordSheetDetail; onBack: () => void; embedded?: boolean; autoStart?: boolean }) {
+function Player({ detail, onBack, embedded = false, autoStart = false, branded = false }: { detail: ChordSheetDetail; onBack: () => void; embedded?: boolean; autoStart?: boolean; branded?: boolean }) {
   const [sharing, setSharing] = useState(false)
   // Chỉ bản đã duyệt (current/old) chia sẻ được; máy chủ kiểm lại approved khi đăng/gửi.
   const canShare = !embedded && (detail.status === 'current' || detail.status === 'old')
@@ -125,10 +144,10 @@ function Player({ detail, onBack, embedded = false, autoStart = false }: { detai
   }, [autoStart, total])
 
   if (!anchors || !timeline || !script) {
-    return <Shell embedded={embedded} versionId={detail.versionId} onBack={onBack} title={detail.title}><p role="alert" className="rs-bad">Phiên bản này chưa có vạch nhịp nên chưa chạy được Rhythm Scroll. Hãy đặt vạch nhịp trong trình sửa rồi mở lại.</p></Shell>
+    return <Shell embedded={embedded} branded={branded} composer={detail.composer} versionId={detail.versionId} onBack={onBack} title={detail.title}><p role="alert" className="rs-bad">Phiên bản này chưa có vạch nhịp nên chưa chạy được Rhythm Scroll. Hãy đặt vạch nhịp trong trình sửa rồi mở lại.</p></Shell>
   }
   if (!meter || !data || !timeline.totalBeats) {
-    return <Shell embedded={embedded} versionId={detail.versionId} onBack={onBack} title={detail.title}>
+    return <Shell embedded={embedded} branded={branded} composer={detail.composer} versionId={detail.versionId} onBack={onBack} title={detail.title}>
       <p role="alert" className="rs-bad">Bài chưa có số chỉ nhịp nên chưa tính được phách. Chọn nhịp để xem thử (không lưu):</p>
       <div style={{ padding: 16 }}>
         <select aria-label="Số chỉ nhịp" className="rs-select" value={meterChoice} onChange={event => setMeterChoice(event.target.value)}>
@@ -170,7 +189,7 @@ function Player({ detail, onBack, embedded = false, autoStart = false }: { detai
   const [showOptions, setShowOptions] = useState(false)
   const measureCount = timeline.measures.length - (timeline.pickupBeats ? 1 : 0)
   const shareButton = canShare ? <button type="button" className="rs-back rs-share" onClick={() => setSharing(true)} aria-label="Chia sẻ"><Icon name="share" /><span>Chia sẻ</span></button> : null
-  return <Shell embedded={embedded} versionId={detail.versionId} onBack={onBack} title={detail.title} right={shareButton}>
+  return <Shell embedded={embedded} branded={branded} composer={detail.composer} versionId={detail.versionId} onBack={onBack} title={detail.title} right={shareButton}>
     {sharing && <Suspense fallback={null}>
       <ShareSheet title={detail.title} target={chordSheetRef(detail.versionId)} canPublish publish={() => publishChordSheet(detail.versionId)}
         ensureTarget={async () => ({ ok: true, target: chordSheetRef(detail.versionId) })} onClose={() => setSharing(false)} />
