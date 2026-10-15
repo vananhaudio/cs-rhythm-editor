@@ -57,7 +57,15 @@ export default function RhythmScrollPage({ library, versionId, onBack, embedded 
   return <Player detail={load.detail} onBack={onBack} embedded={embedded} autoStart={autoStart} branded={branded} />
 }
 
-function Shell({ title, onBack, children, right, embedded = false, versionId, branded = false, composer }: { title: string; onBack: () => void; children: React.ReactNode; right?: React.ReactNode; embedded?: boolean; versionId?: string; branded?: boolean; composer?: string | null }) {
+/** Ghi công (chỉ trang học viên): "Band X · Biên tập: Y". Chỉ phần có dữ liệu từ máy chủ; không có gì → không hiện. */
+export function creditLine(detail: { bandName?: string | null; editorName?: string | null }): string | null {
+  const band = detail.bandName?.trim()
+  const editor = detail.editorName?.trim()
+  const parts = [band ? (/^band\b/i.test(band) ? band : `Band ${band}`) : null, editor ? `Biên tập: ${editor}` : null].filter(Boolean)
+  return parts.length ? parts.join(' · ') : null
+}
+
+function Shell({ title, onBack, children, right, embedded = false, versionId, branded = false, composer, credit }: { title: string; onBack: () => void; children: React.ReactNode; right?: React.ReactNode; embedded?: boolean; versionId?: string; branded?: boolean; composer?: string | null; credit?: string | null }) {
   if (branded && !embedded) {
     return <div className="rs-page rs-branded" data-testid="rhythm-scroll-page">
       <header className="rs-nav rs-brandbar">
@@ -69,6 +77,7 @@ function Shell({ title, onBack, children, right, embedded = false, versionId, br
         <div className="rs-song" data-testid="rs-song">
           <h1 className="rs-song-title">{title}</h1>
           {composer ? <span className="rs-song-by">{composer}</span> : null}
+          {credit ? <p className="rs-credit" data-testid="rs-credit">{credit}</p> : null}
         </div>
         {children}
       </div>
@@ -183,10 +192,10 @@ function Player({ detail, onBack, embedded = false, autoStart = false, branded =
   }
 
   if (!anchors || !timeline || !script) {
-    return <Shell embedded={embedded} branded={branded} composer={detail.composer} versionId={detail.versionId} onBack={onBack} title={detail.title}><p role="alert" className="rs-bad">Phiên bản này chưa có vạch nhịp nên chưa chạy được Rhythm Scroll. Hãy đặt vạch nhịp trong trình sửa rồi mở lại.</p></Shell>
+    return <Shell embedded={embedded} branded={branded} composer={detail.composer} credit={creditLine(detail)} versionId={detail.versionId} onBack={onBack} title={detail.title}><p role="alert" className="rs-bad">Phiên bản này chưa có vạch nhịp nên chưa chạy được Rhythm Scroll. Hãy đặt vạch nhịp trong trình sửa rồi mở lại.</p></Shell>
   }
   if (!meter || !data || !timeline.totalBeats) {
-    return <Shell embedded={embedded} branded={branded} composer={detail.composer} versionId={detail.versionId} onBack={onBack} title={detail.title}>
+    return <Shell embedded={embedded} branded={branded} composer={detail.composer} credit={creditLine(detail)} versionId={detail.versionId} onBack={onBack} title={detail.title}>
       <p role="alert" className="rs-bad">Bài chưa có số chỉ nhịp nên chưa tính được phách. Chọn nhịp để xem thử (không lưu):</p>
       <div style={{ padding: 16 }}>
         <select aria-label="Số chỉ nhịp" className="rs-select" value={meterChoice} onChange={event => setMeterChoice(event.target.value)}>
@@ -228,7 +237,7 @@ function Player({ detail, onBack, embedded = false, autoStart = false, branded =
   const [showOptions, setShowOptions] = useState(false)
   const measureCount = timeline.measures.length - (timeline.pickupBeats ? 1 : 0)
   const shareButton = canShare ? <button type="button" className="rs-back rs-share" onClick={() => setSharing(true)} aria-label="Chia sẻ"><Icon name="share" /><span>Chia sẻ</span></button> : null
-  return <Shell embedded={embedded} branded={branded} composer={detail.composer} versionId={detail.versionId} onBack={onBack} title={detail.title} right={shareButton}>
+  return <Shell embedded={embedded} branded={branded} composer={detail.composer} credit={creditLine(detail)} versionId={detail.versionId} onBack={onBack} title={detail.title} right={shareButton}>
     {sharing && <Suspense fallback={null}>
       <ShareSheet title={detail.title} target={chordSheetRef(detail.versionId)} canPublish publish={() => publishChordSheet(detail.versionId)}
         ensureTarget={async () => ({ ok: true, target: chordSheetRef(detail.versionId) })} onClose={() => setSharing(false)} />

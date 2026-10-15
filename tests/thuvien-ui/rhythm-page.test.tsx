@@ -214,3 +214,33 @@ test('V4.1 loa đập nhịp: mặc định tắt (không tiếng), bật → cl
   await settle(400)
   cleanup()
 })
+
+test('V5 ghi công: "Band X · Biên tập: Y" chỉ khi có dữ liệu; thiếu phần nào bỏ phần đó; không có gì thì không hiện; bản nhúng không đổi', async () => {
+  const cases: Array<[Partial<Detail>, string | null]> = [
+    [{ bandName: 'Lá Mùa Thu', editorName: 'Nguyễn Văn A' }, 'Band Lá Mùa Thu · Biên tập: Nguyễn Văn A'],
+    [{ bandName: 'Band Gió', editorName: null }, 'Band Gió'],
+    [{ bandName: null, editorName: 'Trần B' }, 'Biên tập: Trần B'],
+    [{ bandName: null, editorName: null }, null],
+  ]
+  for (const [patch, expected] of cases) {
+    const lib = libraryWith({ status: 'current', composer: 'Nhạc sĩ A', ...patch })
+    const detail = await lib.getChordSheet('v')
+    const view = render(<RhythmScrollPage branded library={lib} versionId="v" initialDetail={detail} onBack={() => {}} />)
+    await settle()
+    assert.equal(view.queryByTestId('rs-credit')?.textContent ?? null, expected)
+    assert.equal(view.getByTestId('rs-song').querySelector('.rs-song-title')!.textContent, 'Bài thử', 'tên bài không bị chen vào giữa')
+    cleanup()
+  }
+  const lib = libraryWith({ status: 'current', bandName: 'Lá Mùa Thu', editorName: 'A' })
+  const detail = await lib.getChordSheet('v')
+  const embedded = render(<RhythmScrollPage embedded branded library={lib} versionId="v" initialDetail={detail} onBack={() => {}} />)
+  await settle()
+  assert.equal(embedded.queryByTestId('rs-credit'), null)
+})
+
+test('hồi quy: tên bài trang học viên khoá màu + color-scheme (index.css h1 gần trắng ở chế độ tối làm tên bài tàng hình)', async () => {
+  const { readFileSync } = await import('node:fs')
+  const css = readFileSync(new URL('../../src/thuvien/RhythmScroll.css', import.meta.url), 'utf8')
+  assert.match(css, /\.rs-branded\s+\.rs-song-title\s*\{[^}]*color:\s*var\(--rs-text\)/)
+  assert.match(css, /\.rs-branded\s*\{\s*color-scheme:\s*light\s*\}/)
+})

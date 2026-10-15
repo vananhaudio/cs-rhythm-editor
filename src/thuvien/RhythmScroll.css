@@ -129,3 +129,12 @@
   .rs-dots{gap:6px;margin-left:4px}
   .rs-dots i{width:9px;height:9px}
 }
+
+/* Ghi công Band + người biên tập: một dòng nhỏ dưới tên bài (trang học viên). */
+.rs-branded .rs-song{flex-wrap:wrap;row-gap:0}
+.rs-branded .rs-credit{flex:0 0 100%;margin:1px 0 0;font-size:12.5px;line-height:1.3;color:var(--rs-sub);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Sửa: index.css đặt h1 { color: var(--text-h) } (gần như trắng ở chế độ tối) → tên bài tàng hình trên nền sáng của Play Scroll.
+   Trang học viên luôn là giao diện sáng: khoá màu tên bài và color-scheme. */
+.rs-branded{color-scheme:light}
+.rs-branded .rs-song-title{color:var(--rs-text);font-family:inherit;font-weight:700;letter-spacing:-.3px}
+.rs-branded{text-align:left}
