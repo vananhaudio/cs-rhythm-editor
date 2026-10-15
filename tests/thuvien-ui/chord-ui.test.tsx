@@ -838,7 +838,7 @@ test('Khung Class: tài khoản như Class (avatar + menu; chưa đăng nhập �
 // ── Rào chắn: /thuvien vẫn chỉ admin đang hoạt động; mục MusicXML không bị đổi hành vi ──
 test('cổng /thuvien trong AppRouter: admin + active vào đủ; tài khoản khác qua cổng (Biên tập / Trưởng Band); chưa đăng nhập/không active → /start', () => {
   const router = readFileSync(new URL('../../src/AppRouter.tsx', import.meta.url), 'utf8')
-  const guard = /if \(path === '\/thuvien' \|\| path === '\/thuvien\/'\) \{\s*if \(loading\) return null\s*if \(!user \|\| appUser\?\.status !== 'active'\) \{\s*window\.location\.href = '\/start'\s*return null\s*\}[\s\S]*?if \(appUser\.role !== 'admin'\) return <Suspense[^\n]*<ThuVienEditorGate userId=\{user\.id\} \/><\/Suspense>\s*return <Suspense[^\n]*<ThuVienPage \/><\/Suspense>\s*\}/
+  const guard = /if \(path === '\/thuvien' \|\| path === '\/thuvien\/'\) \{\s*if \(loading\) return null\s*if \(!user \|\| appUser\?\.status !== 'active'\) \{\s*bounceToStart\(!!user\)\s*return null\s*\}[\s\S]*?if \(appUser\.role !== 'admin'\) return <Suspense[^\n]*<ThuVienEditorGate userId=\{user\.id\} \/><\/Suspense>\s*return <Suspense[^\n]*<ThuVienPage \/><\/Suspense>\s*\}/
   assert.match(router, guard)
   assert.equal(router.match(/<ThuVienPage/g)?.length, 1, 'ThuVienPage đầy đủ (admin) chỉ dựng ở một chỗ')
   const gate = readFileSync(new URL('../../src/thuvien/ThuVienEditorGate.tsx', import.meta.url), 'utf8')
