@@ -249,6 +249,7 @@ test('phách nhẹ: Player tô xanh hợp âm giữa phách ngay ở phách nguy
   // 8 chữ / 4 phách: [G] ở chữ 2 (đúng phách 1) → cam; [Am] ở chữ 5 (2,5) → kích hoạt phách 2, xanh.
   const view = await open({ text: '[C] a b [G] c d e [Am] f g h', anchors: { measures: [{ line: 0, token: 0 }] } })
   const soft = () => view.container.querySelector('[data-active-chord]')?.getAttribute('data-active-chord')
+  const pill = () => (view.container.querySelector('[data-active-chord]') as HTMLElement).style.background
   const nowSoft = () => view.getByTestId('rs-chord-now').hasAttribute('data-soft')
   seek(view, 0)
   assert.equal(view.getByTestId('rs-chord-now').textContent, 'C'); assert.equal(soft(), ''); assert.equal(nowSoft(), false)
@@ -258,6 +259,8 @@ test('phách nhẹ: Player tô xanh hợp âm giữa phách ngay ở phách nguy
   assert.equal(view.getByTestId('rs-chord-now').textContent, 'G', 'chưa tới phách 2: chưa sang hợp âm nhẹ, chưa xanh')
   seek(view, 2)
   assert.equal(view.getByTestId('rs-chord-now').textContent, 'Am'); assert.equal(soft(), 'soft', 'phách nhẹ → xanh'); assert.equal(nowSoft(), true)
+  assert.match(pill(), /74, 222, 128|#4ade80/i, 'hợp âm trên lời đổi xanh CÙNG lúc thanh trên')
   seek(view, 1)
   assert.equal(soft(), '', 'seek lùi: về cam')
+  assert.match(pill(), /234, 88, 12|#ea580c/i, 'hợp âm trên lời về cam')
 })

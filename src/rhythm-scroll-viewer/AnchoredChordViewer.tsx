@@ -138,7 +138,7 @@ const Lines = memo(function Lines({ theme, lines, labels, anchorKeys, activeFrom
               <span key={token} data-word={`${line.index}:${token}`} style={S.word}>
                 {anchorKeys?.has(`${line.index}:${token}`) && <span data-anchor-mark="" aria-hidden="true" style={S.barMark} />}
                 <span data-chord={word.chord ?? undefined} data-active-chord={activeChord === `${line.index}:${token}` ? (activeSoft ? 'soft' : '') : undefined}
-                  style={activeChord === `${line.index}:${token}` ? { ...S.chordActive, ...(light ? L.chordActive : null), ...(activeSoft ? S.chordSoft : null) } : { ...S.chord, ...(light ? L.chord : null) }}>{word.chord ?? ' '}</span>
+                  style={activeChord === `${line.index}:${token}` ? { ...S.chordActive, ...(light ? L.chordActive : null), ...(activeSoft ? SOFT : null) } : { ...S.chord, ...(light ? L.chord : null) }}>{word.chord ?? ' '}</span>
                 <span style={{ ...S.lyric, ...(light ? L.lyric : null) }}>{word.text}</span>
               </span>
             ))}
@@ -150,6 +150,8 @@ const Lines = memo(function Lines({ theme, lines, labels, anchorKeys, activeFrom
 })
 
 const ACCENT = '#EA580C'
+// Phách nhẹ: vị trí hợp âm là suy luận — xanh của TeamLab (#4ade80 / chữ #052e16), cùng màu thanh hợp âm.
+const SOFT: CSSProperties = { color: '#052E16', background: '#4ADE80' }
 /** Giao diện sáng kiểu iOS: chỉ ghi đè màu/chữ lên bảng `S`, bố cục + đo đạc giữ nguyên (engine không đổi). */
 const L: Record<string, CSSProperties> = {
   root: { background: 'transparent', color: '#1C1C1E', fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif' },
@@ -159,8 +161,6 @@ const L: Record<string, CSSProperties> = {
   label: { color: '#8E8E93', fontWeight: 600, letterSpacing: 0.6 },
   chord: { color: '#C2410C', fontWeight: 700, fontSize: 'clamp(15px, 3.8vw, 19px)' },
   chordActive: { color: '#FFFFFF', background: ACCENT, fontSize: 'clamp(15px, 3.8vw, 19px)' },
-  // Phách nhẹ: vị trí hợp âm là suy luận — xanh của TeamLab (#4ade80 / chữ #052e16).
-  chordSoft: { color: '#052E16', background: '#4ADE80' },
   lyric: { color: '#1C1C1E', fontSize: 'clamp(20px, 5.4vw, 28px)', lineHeight: 1.32, letterSpacing: -0.2 },
   ball: { boxShadow: '0 1px 6px rgba(234,88,12,.45)' },
 }
