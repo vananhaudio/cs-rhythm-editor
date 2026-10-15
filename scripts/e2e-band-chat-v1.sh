@@ -39,6 +39,6 @@ begin
     values (cid, 1, 'user', a, 'Chào Bình', now() - interval '6 minutes'), (cid, 2, 'user', b, 'Chào An, tin riêng của hai đứa', now() - interval '5 minutes');
 end $$;
 SQL
-cat "$ROOT/db/account_avatar_v1_setup.sql" "$ROOT/db/friends_ux_v2_setup.sql" "$ROOT/db/dm_v1_setup.sql" "$TMPX/teamlab.sql" "$ROOT/db/band_chat_v1_setup.sql" "$ROOT/db/band_chat_v1_1_roles_setup.sql" > "$TMPX/pre.sql"
+cat "$ROOT/db/account_avatar_v1_setup.sql" "$ROOT/db/friends_ux_v2_setup.sql" "$ROOT/db/dm_v1_setup.sql" "$TMPX/teamlab.sql" "$ROOT/db/band_chat_v1_setup.sql" "$ROOT/db/band_chat_v1_1_roles_setup.sql" "$ROOT/db/band_chat_v1_2_support_list_setup.sql" > "$TMPX/pre.sql"
 E2E_CHECKPOINTS=1 E2E_SKIP_BASE=1 E2E_PRE_SQL="$TMPX/pre.sql" E2E_EXTRA_SQL="$TMPX/extra.sql" \
   E2E_EXTRA_RUNNER="$ROOT/tests/e2e-learning-thread/run-band-chat-v1.mjs" bash "$ROOT/scripts/e2e-learning-thread.sh"

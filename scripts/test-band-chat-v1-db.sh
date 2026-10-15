@@ -172,6 +172,26 @@ mig tva_r "$ROOT/db/band_chat_v1_1_roles_rollback.sql" >/dev/null || fail "rollb
   && ok "rollback V1.1: bandchat_members về dạng V1, hết hàm vai trò" || fail "rollback V1.1 còn sót"
 mig tva_r "$ROOT/db/band_chat_v1_1_roles_setup.sql" >/dev/null || fail "cài lại V1.1"; ok "cài lại V1.1 sau rollback"
 
+echo "── V1.2: Thầy/Admin thấy mọi Band ở mục Hỗ trợ (kể cả chưa có phòng/tin)"
+baseline tva_s; teamlab tva_s; extra_users tva_s; mig tva_s "$ROOT/db/band_chat_v1_setup.sql" >/dev/null
+q tva_s "delete from public.teamlab_band_members where band_id = '11111111-0000-4000-8000-0000000000a2'" >/dev/null
+q tva_s "insert into public.teamlab_band_members (band_id, user_id) values ('11111111-0000-4000-8000-0000000000a2', 'cccccccc-0000-4000-8000-00000000000c')" >/dev/null
+q tva_s "insert into public.teamlab_bands values ('11111111-0000-4000-8000-0000000000a3', '11111111-0000-4000-8000-0000000000b2', 'Band Z', null) on conflict do nothing" >/dev/null
+mig tva_s "$ROOT/db/band_chat_v1_2_support_list_setup.sql" >/dev/null || fail "V1.2 lần 1"; ok "V1.2 lần 1"
+mig tva_s "$ROOT/db/band_chat_v1_2_support_list_setup.sql" >/dev/null || fail "V1.2 lần 2"; ok "V1.2 lần 2 (idempotent)"
+grep -qiE '^\s*(begin|commit|rollback)\s*;' "$ROOT/db/band_chat_v1_2_support_list_setup.sql" "$ROOT/db/band_chat_v1_2_support_list_rollback.sql" && fail "V1.2 có begin/commit" || ok "V1.2 không có begin/commit"
+[ "$(postgate tva_s)" = "PASS" ] && ok "postflight V1 vẫn PASS sau V1.2" || fail "postflight sau V1.2"
+{ echo '\set ON_ERROR_STOP on'; echo 'create schema t;'; sed -n '/^grant usage on schema t/,/^grant execute on all functions in schema t/p' "$ROOT/db/tests/band_chat_v1_test.sql"; \
+  grep -v '^\\set ON_ERROR_STOP' "$ROOT/db/tests/band_chat_v1_2_test.sql"; } > "$TMP/v12_test.sql"
+PGOPTIONS="-c client_min_messages=notice" "$PGBIN/psql" -X -q -h "$TMP" -p "$PORT" -U postgres -d tva_s -v ON_ERROR_STOP=1 \
+  -f "$TMP/v12_test.sql" 2>&1 | sed -E 's/^psql:[^:]*:[0-9]*: (NOTICE|ERROR):  //' | tee "$TMP/v12.out"
+[ "${PIPESTATUS[0]}" = "0" ] || fail "test SQL V1.2"
+grep -q '^FAIL' "$TMP/v12.out" && fail "có FAIL trong test V1.2" || ok "test V1.2: $(grep -c '^PASS' "$TMP/v12.out") kiểm tra PASS, 0 FAIL"
+MSG1="$(q tva_s "select count(*) from public.bandchat_messages")"
+mig tva_s "$ROOT/db/band_chat_v1_2_support_list_rollback.sql" >/dev/null || fail "rollback V1.2"; ok "rollback V1.2"
+[ "$(q tva_s "select count(*) from public.bandchat_messages")" = "$MSG1" ] && ok "rollback V1.2 giữ nguyên tin nhắn ($MSG1)" || fail "rollback V1.2 đổi tin"
+[ "$(q tva_s "select count(*) from pg_proc where prosrc like '%tb.id%' and proname = 'bandchat_rooms'")" = "0" ] && ok "rollback V1.2: bandchat_rooms về V1" || fail "rollback V1.2 còn sót"
+
 echo "── Hồi quy chat cá nhân: dm_v1_test trên DB có cả Band Chat"
 baseline tva_dm; teamlab tva_dm; mig tva_dm "$ROOT/db/band_chat_v1_setup.sql" >/dev/null
 PGOPTIONS="-c client_min_messages=notice" "$PGBIN/psql" -X -q -h "$TMP" -p "$PORT" -U postgres -d tva_dm -v ON_ERROR_STOP=1 \

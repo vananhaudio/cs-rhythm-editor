@@ -177,9 +177,10 @@ export const canSendBody = (s: string): boolean => {
 }
 
 /** Một dòng xem trước trong danh sách: "Bạn: …" khi tin cuối là của mình; xuống dòng → khoảng trắng */
-export function previewText(c: Pick<ConversationItem, 'lastBody' | 'lastMine'> & { kind?: 'dm' | 'band'; lastSender?: string }): string {
+export function previewText(c: Pick<ConversationItem, 'lastBody' | 'lastMine'> & { kind?: 'dm' | 'band'; lastSender?: string; readOnly?: 'archived' | 'support' | null }): string {
   const one = c.lastBody.replace(/\s+/g, ' ').trim()
-  if (c.kind === 'band' && !one) return 'Chưa có tin nhắn — hãy chào cả nhóm'
+  // Nhóm chỉ đọc (hỗ trợ/lưu trữ): không mời "chào cả nhóm" vì người xem không gửi được
+  if (c.kind === 'band' && !one) return c.readOnly ? 'Chưa có tin nhắn' : 'Chưa có tin nhắn — hãy chào cả nhóm'
   const who = c.lastMine ? 'Bạn: ' : c.kind === 'band' && c.lastSender ? c.lastSender + ': ' : ''
   return who + one
 }
