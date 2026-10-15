@@ -209,5 +209,8 @@ test('V4.1 loa đập nhịp: mặc định tắt (không tiếng), bật → cl
   const atPause = started
   await settle(500)
   assert.equal(started, atPause, 'Pause: không click')
+  // jsdom: window.setTimeout không bị clearTimeout toàn cục huỷ → các tick mồ côi chỉ dừng khi đồng hồ chạm cuối bài.
+  seek(view, 16)
+  await settle(400)
   cleanup()
 })
