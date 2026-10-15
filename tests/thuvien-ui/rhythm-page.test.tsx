@@ -244,3 +244,20 @@ test('hồi quy: tên bài trang học viên khoá màu + color-scheme (index.cs
   assert.match(css, /\.rs-branded\s+\.rs-song-title\s*\{[^}]*color:\s*var\(--rs-text\)/)
   assert.match(css, /\.rs-branded\s*\{\s*color-scheme:\s*light\s*\}/)
 })
+
+test('phách nhẹ: Player tô xanh hợp âm giữa phách ngay ở phách nguyên; trúng phách tô cam; seek lùi/tiến đổi màu đúng', async () => {
+  // 8 chữ / 4 phách: [G] ở chữ 2 (đúng phách 1) → cam; [Am] ở chữ 5 (2,5) → kích hoạt phách 2, xanh.
+  const view = await open({ text: '[C] a b [G] c d e [Am] f g h', anchors: { measures: [{ line: 0, token: 0 }] } })
+  const soft = () => view.container.querySelector('[data-active-chord]')?.getAttribute('data-active-chord')
+  const nowSoft = () => view.getByTestId('rs-chord-now').hasAttribute('data-soft')
+  seek(view, 0)
+  assert.equal(view.getByTestId('rs-chord-now').textContent, 'C'); assert.equal(soft(), ''); assert.equal(nowSoft(), false)
+  seek(view, 1)
+  assert.equal(view.getByTestId('rs-chord-now').textContent, 'G'); assert.equal(soft(), '', 'trúng phách → cam'); assert.equal(nowSoft(), false)
+  seek(view, 1.9)
+  assert.equal(view.getByTestId('rs-chord-now').textContent, 'G', 'chưa tới phách 2: chưa sang hợp âm nhẹ, chưa xanh')
+  seek(view, 2)
+  assert.equal(view.getByTestId('rs-chord-now').textContent, 'Am'); assert.equal(soft(), 'soft', 'phách nhẹ → xanh'); assert.equal(nowSoft(), true)
+  seek(view, 1)
+  assert.equal(soft(), '', 'seek lùi: về cam')
+})

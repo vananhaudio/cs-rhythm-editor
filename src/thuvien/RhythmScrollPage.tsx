@@ -213,7 +213,7 @@ function Player({ detail, onBack, embedded = false, autoStart = false, branded =
   const position = locateBeat(timeline, beat)
   const event = position.chordIndex >= 0 ? timeline.events[position.chordIndex] : null
   const next = position.chordIndex + 1 < timeline.events.length ? timeline.events[position.chordIndex + 1] : null
-  const activeChord = event ? { line: script.virtualLine(event.measure, event.line), token: event.token } : null
+  const activeChord = event ? { line: script.virtualLine(event.measure, event.line), token: event.token, soft: event.light } : null
   const unverified = timeline.unverifiedMeasures.length
   const pickupGuess = timeline.warnings.some(w => w.code === 'pickup_inferred')
 
@@ -263,7 +263,7 @@ function Player({ detail, onBack, embedded = false, autoStart = false, branded =
         {pickupGuess && <span className="rs-warn">nhịp lấy đà là suy luận</span>}
       </div>}
       <div className="rs-strip" data-testid="rhythm-chords" aria-live="off">
-        <span className="rs-strip-now" data-testid="rs-chord-now">{event?.chord ?? '—'}</span>
+        <span className="rs-strip-now" data-testid="rs-chord-now" data-soft={event?.light ? '' : undefined}>{event?.chord ?? '—'}</span>
         <span className="rs-strip-arrow" aria-hidden="true">→</span>
         <span className="rs-strip-next" data-testid="rs-chord-next">{next?.chord ?? ''}</span>
         <span className="rs-dots" data-testid="rs-beat" role="img" aria-label={(playing || beat > 0) && beatInMeasure ? `phách ${beatInMeasure}` : 'sẵn sàng'}>
@@ -283,7 +283,7 @@ function Player({ detail, onBack, embedded = false, autoStart = false, branded =
       {pickupGuess && <span className="rs-warn">nhịp lấy đà là suy luận</span>}
     </div>
     <div className="rs-now" data-testid="rhythm-chords" aria-live="off">
-      <span className="rs-now-chord" data-testid="rs-chord-now">{event?.chord ?? '—'}</span>
+      <span className="rs-now-chord" data-testid="rs-chord-now" data-soft={event?.light ? '' : undefined}>{event?.chord ?? '—'}</span>
       <span className="rs-now-next">{next ? `→ ${next.chord} sau ${Math.max(0, Math.ceil(next.startBeat - beat))} phách` : ''}</span>
       <span className="rs-now-pos" data-testid="rs-beat">{position.state === 'before' ? 'sẵn sàng' : `ô ${Math.max(measureNumber, 0) || 'lấy đà'} · phách ${beatInMeasure}`}</span>
     </div>

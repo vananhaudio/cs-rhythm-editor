@@ -26,7 +26,7 @@ const ctxStub = new Proxy({} as Record<string, unknown>, {
     if (prop in target) return target[prop]
     return (...args: unknown[]) => { calls.push({ fn: prop, args }) }
   },
-  set(target, prop: string, value) { target[prop] = value; return true },
+  set(target, prop: string, value) { target[prop] = value; if (prop === 'fillStyle') calls.push({ fn: 'fillStyle', args: [value] }); return true },
 })
 ;(dom.window.HTMLCanvasElement.prototype as unknown as { getContext: unknown }).getContext = () => ctxStub
 let captured = 0
@@ -66,6 +66,22 @@ test('bộ vẽ: khung 1080×1920, dùng đúng dữ liệu bài + ghi công + f
     const x = Number(c.args[1]) / k
     assert.ok(x >= VIDEO_SAFE.left && x <= VIDEO_W - VIDEO_SAFE.right, `x=${x} trong vùng an toàn`)
   }
+})
+
+test('phách nhẹ: hợp âm giữa phách kích hoạt ở phách nguyên, tô xanh; hợp âm trúng phách tô cam (video)', () => {
+  // 8 chữ / 4 phách, một ô: chữ k nằm ở phách k/2.
+  const anchors = { measures: [{ line: 0, token: 0 }] }
+  const whole = { ...SONG, anchors, text: '[C] a b [G] c d e f g h' }        // [G] ở chữ 2 = đúng phách 1
+  const light = { ...SONG, anchors, text: '[C] a b c d e [Am] f g h' }     // [Am] ở chữ 5 = 2,5 → phách 2
+  const colorsAt = (song: typeof whole, beat: number) => {
+    calls.length = 0
+    createVideoRenderer(song, document.createElement('canvas')).draw(beat, 0.1)
+    return calls.filter(c => c.fn === 'fillStyle').map(c => String(c.args[0]).toUpperCase())
+  }
+  assert.ok(colorsAt(light, 2.1).includes('#4ADE80'), 'ở phách 2: hợp âm phách nhẹ tô xanh')
+  assert.ok(!colorsAt(light, 1.9).includes('#4ADE80'), 'trước phách 2: chưa xanh (không tô trước)')
+  assert.ok(!colorsAt(whole, 1.1).includes('#4ADE80'), 'hợp âm trúng phách: cam, không xanh')
+  assert.ok(colorsAt(whole, 1.1).includes('#EA580C'))
 })
 
 test('ghi công: thiếu phần nào bỏ phần đó, không bịa; Band đã có chữ "Band" không lặp', () => {

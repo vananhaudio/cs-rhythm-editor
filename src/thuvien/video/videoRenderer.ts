@@ -19,6 +19,10 @@ export const VIDEO_H = 1920
 export const VIDEO_SAFE = { top: 230, bottom: 470, left: 64, right: 150 } as const
 
 const ORANGE = '#EA580C'
+// Phách nhẹ (vị trí hợp âm suy luận): xanh TeamLab, cùng quy ước với Player.
+const SOFT = '#4ADE80'
+const SOFT_INK = '#052E16'
+const SOFT_TEXT = '#15803D'
 const SUB = '#8E8E93'
 const S_BALL = 2.6   // phóng từ đơn vị viewer (BALL_LANE=34, BALL_RADIUS=7) sang px video
 const PAD = 28       // đệm trong vùng an toàn: chữ không chạm mép
@@ -155,7 +159,7 @@ export function createVideoRenderer(song: VideoSong, canvas: HTMLCanvasElement, 
     roundRect(boxL, Y_STRIP, boxW, H_STRIP, 36)
     ctx.fill()
     ctx.font = font(800, 84)
-    ctx.fillStyle = ORANGE
+    ctx.fillStyle = ev?.light ? SOFT_TEXT : ORANGE
     const cur = ev?.chord ?? '—'
     ctx.fillText(cur, (boxL + 44) * k, (Y_STRIP + 106) * k)
     let ax = (boxL + 44) * k + ctx.measureText(cur).width + 26 * k
@@ -193,7 +197,7 @@ export function createVideoRenderer(song: VideoSong, canvas: HTMLCanvasElement, 
           const active = `${c.line}:${c.token}` === activeKey
           ctx.font = font(700, 46)
           const wch = ctx.measureText(c.chord).width / k
-          if (active) { ctx.fillStyle = ORANGE; roundRect(c.x - 12, yy + LANE, wch + 24, CHORD_H, 18); ctx.fill(); ctx.fillStyle = '#fff' }
+          if (active) { ctx.fillStyle = ev?.light ? SOFT : ORANGE; roundRect(c.x - 12, yy + LANE, wch + 24, CHORD_H, 18); ctx.fill(); ctx.fillStyle = ev?.light ? SOFT_INK : '#fff' }
           else ctx.fillStyle = '#C2410C'
           ctx.fillText(c.chord, c.x * k, (yy + LANE + 48) * k)
         }
