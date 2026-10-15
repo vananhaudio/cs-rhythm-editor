@@ -151,9 +151,26 @@ try {
   await A.waitForSelector('.cs-chat-members .cs-chat-member')
   assert.deepEqual((await A.$$eval('.cs-chat-member-name', es => es.map(e => e.textContent))).sort(), ['An', 'Bình'])
   await noOverflow(A, 'thành viên 390')
+  // V1.1 — vai trò theo TeamLab (An = Trưởng Band, Bình = Phó Band)
+  const roleOf = async () => A.$$eval('.cs-chat-member', es => Object.fromEntries(es.map(e => [e.querySelector('.cs-chat-member-name').textContent, e.querySelector('.cs-chat-role')?.textContent ?? 'Thành viên'])))
+  assert.deepEqual(await roleOf(), { 'An': 'Chủ nhóm', 'Bình': 'Quản trị viên' })
+  assert.equal(await A.$eval('[data-testid="band-manage-link"]', e => e.getAttribute('href')), '/teamlab/#/project/11111111-0000-4000-8000-0000000000b1')
+  assert.equal(await A.$('[data-testid="band-no-owner"]'), null)
+  assert.equal((await A.$$eval('.cs-chat-member-name', es => es.map(e => e.textContent)))[0], 'An', 'Chủ nhóm xếp đầu')
+  await A.screenshot({ path: `${SHOTS}/band-chat-roles-390.png` })
+  // Đổi Trưởng/Phó trên TeamLab (SQL giả lập) → mở lại panel thấy vai trò mới, không cần thao tác trong chat
+  sql(`delete from public.teamlab_band_roles where band_id = '${BAND_X}' and role in ('leader','deputy');
+       insert into public.teamlab_band_roles (band_id, project_id, user_id, role) values
+         ('${BAND_X}', '11111111-0000-4000-8000-0000000000b1', 'bbbbbbbb-0000-4000-8000-00000000000b', 'leader')`)
   await A.click('.cs-chat-members-head button')
   await waitFor(A, () => !document.querySelector('.cs-chat-members'))
-  ok('5 danh sách thành viên: An, Bình; đóng được')
+  await A.click('.cs-chat-peer')
+  await A.waitForSelector('.cs-chat-members .cs-chat-member')
+  assert.deepEqual(await roleOf(), { 'An': 'Thành viên', 'Bình': 'Chủ nhóm' })
+  assert.equal(await A.$$eval('.cs-chat-manage-link, .cs-chat-members input, .cs-chat-members select', es => es.length), 1, 'chỉ có liên kết TeamLab, không có thao tác quản trị riêng')
+  await A.click('.cs-chat-members-head button')
+  await waitFor(A, () => !document.querySelector('.cs-chat-members'))
+  ok('5 danh sách thành viên: An, Bình; vai trò Chủ nhóm/Quản trị viên theo TeamLab, đổi Trưởng/Phó cập nhật; link Quản lý tại TeamLab')
 
   // ── 6. Người ngoài Band (C) ──
   await chat(C)
@@ -221,7 +238,7 @@ try {
   assert.equal(await T.$('.cs-chat-input'), null, 'Thầy không có ô gửi trong nhóm không thuộc')
   await T.click('.cs-chat-peer')
   await T.waitForSelector('.cs-chat-members-note')
-  assert.match(await T.$eval('.cs-chat-members-note', e => e.textContent), /Thầy\/Admin có thể xem nhóm Band để hỗ trợ và quản lý/)
+  assert.match((await T.$$eval('.cs-chat-members-note', es => es.map(e => e.textContent))).join(' '), /Thầy\/Admin có thể xem nhóm Band để hỗ trợ và quản lý/)
   assert.equal(sql(`select count(*) from public.bandchat_reads where user_id = '${TEACHER}'`), '0', 'xem không ghi trạng thái đọc')
   assert.equal(calls(T, 'bandchat_send').length, 0)
   await T.screenshot({ path: `${SHOTS}/band-chat-support-1280.png` })

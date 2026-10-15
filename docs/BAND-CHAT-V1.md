@@ -9,6 +9,28 @@ Mỗi **Band** (`teamlab_bands`, không phải Team = `projects`) có đúng m�
 3. **Không xoá vĩnh viễn chat:** `band_id` không có khoá ngoại → xoá Band/Team (kể cả cascade `projects → teamlab_bands`) KHÔNG xoá tin. Thành viên cũ không đọc được; Thầy/Admin vẫn đọc (tên Band lưu ở `name_snapshot`).
 4. **Thầy/Admin xem nhóm Band để hỗ trợ/quản lý:** nguồn quyền chuẩn `public.is_teacher()` (`app_users.role` ∈ teacher|admin), kiểm ở backend. Chỉ ĐỌC: không gửi thay, không giả danh, xem không tạo/đổi trạng thái đọc của ai. Hiển thị ở mục "Hỗ trợ" trong danh sách + ghi chú trong thông tin nhóm (danh sách thành viên) để thành viên biết.
 
+## V1.1 — Nhóm Band quản trị theo TeamLab (16/10, chờ nghiệm thu; chưa migrate/deploy production)
+
+TeamLab là nguồn chuẩn; Trò chuyện chỉ phản ánh, không quản lý lại ở hai nơi.
+
+| # | Quy tắc | Trạng thái |
+|---|---|---|
+| 1 | Mỗi Band đúng một nhóm, hiện cho thành viên kể cả chưa có tin; phòng vật lý chỉ tạo khi có tin đầu | Có sẵn (V1), xác minh lại bằng test V1.1 |
+| 2 | Tên + ảnh lấy từ Band lúc đọc (không bản sao) | Có sẵn (V1) |
+| 3 | Thành viên = `teamlab_band_members` hiện hành; rời → mất đọc/gửi, tin giữ | Có sẵn (V1) |
+| 4 | Trưởng Band = Chủ nhóm, Phó Band = Quản trị viên, còn lại = Thành viên | **Mới (V1.1)** |
+| 5 | Đổi Trưởng/Phó ở TeamLab → vai trò đổi ở lần gọi tiếp theo | **Mới (V1.1)** — tính lúc gọi, không đồng bộ |
+| 6 | Không có thao tác đổi tên/thêm-gỡ thành viên/bổ nhiệm trong chat; có liên kết "Quản lý tại TeamLab" | **Mới (V1.1)** — liên kết tới Band Home TeamLab, TeamLab tự kiểm quyền |
+| 7 | Biên tập âm nhạc và Trưởng Team không sinh quyền quản trị chat | **Mới (V1.1)** — chỉ `leader`/`deputy` được xét |
+| 8 | Thầy/Admin ngoài Band: đọc, không gửi; là thành viên thì gửi như thành viên | Có sẵn (V1), xác minh lại |
+| 9 | Không đổi chính sách lưu trữ/xoá Band hay giới hạn số Band/người | Giữ nguyên |
+
+**Nguồn dữ liệu chuẩn:** `public.teamlab_band_roles (band_id, user_id, role)` — `leader` (tối đa 1/Band), `deputy` (tối đa 1/Band), `music_editor`. Không có cột trạng thái; vai trò chỉ tính khi người đó CÒN là thành viên Band (dòng vai trò sót lại sau khi bị gỡ khỏi Band không có hiệu lực).
+
+**Cơ chế:** hàm nội bộ `bandchat_group_role(band, user)` → `owner | admin | member | null` (MỘT chỗ duy nhất) và `bandchat_can_admin(band)` → boolean (nền để mở rộng quyền quản trị về sau; **chưa có thao tác quản trị nào dùng**: chưa xoá tin người khác, cấm gửi, ghim, duyệt). `bandchat_members` trả thêm cột `group_role`, sắp Chủ nhóm → Quản trị viên → Thành viên. Giao diện chỉ hiển thị; mọi kiểm tra ở backend. Band chưa có Trưởng: không tự chọn ai, panel báo "Band này chưa có Trưởng Band".
+
+**Migration V1.1** (`db/band_chat_v1_1_roles_{setup,rollback}.sql`): chỉ CREATE/DROP **hàm**; không bảng, policy, dữ liệu; chạy sau V1; idempotent. Rollback trả `bandchat_members` về dạng V1 và gỡ 2 hàm, **không xoá tin nhắn**. FE cũ vẫn chạy (cột thêm bị bỏ qua).
+
 ## Nguồn dữ liệu & quyền
 - Quyền = MỘT hàm nội bộ `bandchat_access(band)` → `send | read | null`, tính ở thời điểm gọi, từ `teamlab_band_members` (+ `bandchat_frozen` khi lưu trữ, + `is_teacher()`).
 - Tên + ảnh lấy lúc đọc từ `teamlab_bands.name` / `cover_path` (dự phòng `projects.avatar_path`) — không có bản sao.
@@ -32,7 +54,14 @@ Mỗi **Band** (`teamlab_bands`, không phải Team = `projects`) có đúng m�
 
 ---
 
-## Định hướng tiếp theo: nhóm chat có quản trị — CHƯA TRIỂN KHAI (Owner xác nhận hướng 15/10)
+
+---
+
+## Nhóm tự tạo ('Tạo nhóm') — HOÃN (Owner chốt 16/10)
+
+> Hướng ưu tiên hiện tại là nhóm Band quản trị theo TeamLab (mục V1.1 ở trên). Nhóm tự tạo/nút "Tạo nhóm" **chưa làm**; nội dung dưới đây chỉ là ghi chú định hướng cũ, không phải kế hoạch hiện hành.
+
+### Ghi chú định hướng cũ (15/10)
 
 Đây là định hướng + đề xuất lát nhỏ nhất, **không phải tính năng đã làm**. Chưa có code/migration. Chờ Owner chốt các quyết định ở cuối.
 

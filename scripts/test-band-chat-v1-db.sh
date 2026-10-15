@@ -142,6 +142,36 @@ baseline tva_nob
 mig tva_nob "$ROOT/db/band_chat_v1_setup.sql" >/dev/null 2>"$TMP/n.err" && fail "migration chạy được khi thiếu bảng Teamlab"
 grep -q "thiếu bảng/hàm nền" "$TMP/n.err" && ok "thiếu bảng Teamlab → migration DỪNG" || fail "cổng thiếu nền"
 
+echo "── V1.1: vai trò quản trị theo TeamLab (Trưởng → Chủ nhóm, Phó → Quản trị viên)"
+baseline tva_r; teamlab tva_r; extra_users tva_r; mig tva_r "$ROOT/db/band_chat_v1_setup.sql" >/dev/null
+mig tva_r "$ROOT/db/band_chat_v1_1_roles_setup.sql" >/dev/null 2>"$TMP/r0.err" && fail "V1.1 chạy được khi thiếu teamlab_band_roles"
+grep -q "teamlab_band_roles" "$TMP/r0.err" && ok "thiếu bảng nguồn vai trò → V1.1 DỪNG" || fail "cổng V1.1: $(cat "$TMP/r0.err")"
+psqld tva_r >/dev/null <<'SQL'
+create table public.teamlab_band_roles (band_id uuid not null references public.teamlab_bands(id), project_id uuid not null, user_id uuid not null,
+  role text not null check (role in ('leader','deputy','music_editor')), granted_by uuid, created_at timestamptz not null default now(),
+  primary key (band_id, user_id, role));
+create unique index on public.teamlab_band_roles (band_id) where role = 'leader';
+create unique index on public.teamlab_band_roles (band_id) where role = 'deputy';
+SQL
+mig tva_r "$ROOT/db/band_chat_v1_1_roles_setup.sql" >/dev/null || fail "V1.1 lần 1"; ok "V1.1 lần 1"
+mig tva_r "$ROOT/db/band_chat_v1_1_roles_setup.sql" >/dev/null || fail "V1.1 lần 2"; ok "V1.1 lần 2 (idempotent)"
+grep -qiE '^\s*(begin|commit|rollback)\s*;' "$ROOT/db/band_chat_v1_1_roles_setup.sql" "$ROOT/db/band_chat_v1_1_roles_rollback.sql" && fail "V1.1 có begin/commit" || ok "V1.1 không có begin/commit"
+[ "$(postgate tva_r)" = "PASS" ] && ok "postflight V1 vẫn PASS sau V1.1" || fail "postflight sau V1.1"
+{ echo '\set ON_ERROR_STOP on'; echo 'create schema t;'; sed -n '/^grant usage on schema t/,/^grant execute on all functions in schema t/p' "$ROOT/db/tests/band_chat_v1_test.sql"; \
+  grep -v '^\\set ON_ERROR_STOP' "$ROOT/db/tests/band_chat_v1_1_test.sql"; } > "$TMP/v11_test.sql"
+PGOPTIONS="-c client_min_messages=notice" "$PGBIN/psql" -X -q -h "$TMP" -p "$PORT" -U postgres -d tva_r -v ON_ERROR_STOP=1 \
+  -f "$TMP/v11_test.sql" 2>&1 | sed -E 's/^psql:[^:]*:[0-9]*: (NOTICE|ERROR):  //' | tee "$TMP/v11.out"
+[ "${PIPESTATUS[0]}" = "0" ] || fail "test SQL V1.1"
+grep -q '^FAIL' "$TMP/v11.out" && fail "có FAIL trong test V1.1" || ok "test V1.1: $(grep -c '^PASS' "$TMP/v11.out") kiểm tra PASS, 0 FAIL"
+MSG0="$(q tva_r "select count(*) from public.bandchat_messages")"
+mig tva_r "$ROOT/db/band_chat_v1_1_roles_rollback.sql" >/dev/null || fail "rollback V1.1"; ok "rollback V1.1"
+mig tva_r "$ROOT/db/band_chat_v1_1_roles_rollback.sql" >/dev/null || fail "rollback V1.1 lần 2"; ok "rollback V1.1 lần 2 (idempotent)"
+[ "$(q tva_r "select count(*) from public.bandchat_messages")" = "$MSG0" ] && [ "$MSG0" -gt 0 ] && ok "rollback V1.1 giữ nguyên $MSG0 tin nhắn" || fail "rollback V1.1 đổi tin nhắn"
+[ "$(q tva_r "select count(*) from pg_proc where proname in ('bandchat_group_role','bandchat_can_admin')")" = "0" ] \
+  && [ "$(q tva_r "select count(*) from information_schema.parameters where specific_schema='public' and parameter_mode='OUT' and specific_name like 'bandchat_members%' and parameter_name='group_role'")" = "0" ] \
+  && ok "rollback V1.1: bandchat_members về dạng V1, hết hàm vai trò" || fail "rollback V1.1 còn sót"
+mig tva_r "$ROOT/db/band_chat_v1_1_roles_setup.sql" >/dev/null || fail "cài lại V1.1"; ok "cài lại V1.1 sau rollback"
+
 echo "── Hồi quy chat cá nhân: dm_v1_test trên DB có cả Band Chat"
 baseline tva_dm; teamlab tva_dm; mig tva_dm "$ROOT/db/band_chat_v1_setup.sql" >/dev/null
 PGOPTIONS="-c client_min_messages=notice" "$PGBIN/psql" -X -q -h "$TMP" -p "$PORT" -U postgres -d tva_dm -v ON_ERROR_STOP=1 \
