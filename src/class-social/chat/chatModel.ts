@@ -22,6 +22,8 @@ export type ConversationItem = {
   /** Chỉ nhóm Band: tên người gửi tin cuối (rỗng nếu chưa có tin) và số thành viên */
   lastSender?: string
   memberCount?: number
+  /** Chỉ nhóm Band: Team chứa Band — để dẫn tới trang quản lý Band ở TeamLab */
+  projectId?: string | null
   peerId: string
   name: string
   avatarUrl: string | null
@@ -67,8 +69,11 @@ export type BandMessageRow = {
   seq: number | string; sender_id: string | null; sender_name: string | null; sender_avatar_url: string | null
   mine: boolean | null; body: string | null; created_at: string | null
 }
-export type BandMemberRow = { user_id: string; name: string | null; avatar_url: string | null; role: string | null }
-export type BandMember = { id: string; name: string; avatarUrl: string | null; isTeacher: boolean }
+export type BandMemberRow = { user_id: string; name: string | null; avatar_url: string | null; role: string | null; group_role?: string | null }
+/** Vai trò trong nhóm — server suy ra từ TeamLab: Trưởng Band → owner, Phó Band → admin, còn lại → member */
+export type BandGroupRole = 'owner' | 'admin' | 'member'
+export type BandMember = { id: string; name: string; avatarUrl: string | null; isTeacher: boolean; /** null = server chưa trả vai trò (backend chưa có V1.1) → không hiện chức danh và không báo thiếu Trưởng */
+  groupRole: BandGroupRole | null }
 
 export type MessageRow = {
   seq: number | string; mine: boolean | null; body: string | null; created_at: string | null
@@ -114,6 +119,7 @@ export function toBandConversations(rows: BandRoomRow[] | null | undefined): Con
     canSend: r.can_send === true,   // server quyết (lưu trữ / hỗ trợ → chỉ đọc); không biết = KHÔNG gửi được
     readOnly: r.support === true ? 'support' as const : r.archived === true ? 'archived' as const : null,
     memberCount: Math.max(0, Number(r.member_count) || 0),
+    projectId: r.project_id ?? null,
   }))
 }
 
@@ -127,6 +133,7 @@ export function toBandMessages(rows: BandMessageRow[] | null | undefined): ChatM
 export function toBandMembers(rows: BandMemberRow[] | null | undefined): BandMember[] {
   return (rows ?? []).filter(r => !!r?.user_id).map(r => ({
     id: r.user_id, name: (r.name ?? '').trim() || 'Thành viên Band', avatarUrl: safeImageUrl(r.avatar_url), isTeacher: r.role === 'teacher',
+    groupRole: r.group_role == null ? null : r.group_role === 'owner' ? 'owner' as const : r.group_role === 'admin' ? 'admin' as const : 'member' as const,
   }))
 }
 

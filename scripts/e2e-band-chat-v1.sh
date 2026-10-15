@@ -11,6 +11,9 @@ create table public.projects (id uuid primary key, name text not null, avatar_pa
 create table public.teamlab_bands (id uuid primary key, project_id uuid not null references public.projects(id), name text not null, cover_path text);
 create table public.teamlab_band_members (band_id uuid not null references public.teamlab_bands(id), user_id uuid not null references auth.users(id),
   created_at timestamptz not null default now(), primary key (band_id, user_id));
+create table public.teamlab_band_roles (band_id uuid not null references public.teamlab_bands(id), project_id uuid not null, user_id uuid not null,
+  role text not null check (role in ('leader','deputy','music_editor')), granted_by uuid, created_at timestamptz not null default now(),
+  primary key (band_id, user_id, role));
 SQL
 cat > "$TMPX/extra.sql" <<'SQL'
 insert into public.projects values ('11111111-0000-4000-8000-0000000000b1', 'Team Một', null);
@@ -21,6 +24,9 @@ insert into public.teamlab_band_members (band_id, user_id, created_at) values
   ('11111111-0000-4000-8000-0000000000a1', 'aaaaaaaa-0000-4000-8000-00000000000a', now() - interval '30 days'),
   ('11111111-0000-4000-8000-0000000000a1', 'bbbbbbbb-0000-4000-8000-00000000000b', now() - interval '30 days'),
   ('11111111-0000-4000-8000-0000000000a2', 'cccccccc-0000-4000-8000-00000000000c', now() - interval '30 days');
+insert into public.teamlab_band_roles (band_id, project_id, user_id, role) values
+  ('11111111-0000-4000-8000-0000000000a1', '11111111-0000-4000-8000-0000000000b1', 'aaaaaaaa-0000-4000-8000-00000000000a', 'leader'),
+  ('11111111-0000-4000-8000-0000000000a1', '11111111-0000-4000-8000-0000000000b1', 'bbbbbbbb-0000-4000-8000-00000000000b', 'deputy');
 delete from public.friendships;
 insert into public.friendships (requester_id, addressee_id, status, responded_at)
   values ('aaaaaaaa-0000-4000-8000-00000000000a', 'bbbbbbbb-0000-4000-8000-00000000000b', 'accepted', now());
@@ -33,6 +39,6 @@ begin
     values (cid, 1, 'user', a, 'Chào Bình', now() - interval '6 minutes'), (cid, 2, 'user', b, 'Chào An, tin riêng của hai đứa', now() - interval '5 minutes');
 end $$;
 SQL
-cat "$ROOT/db/account_avatar_v1_setup.sql" "$ROOT/db/friends_ux_v2_setup.sql" "$ROOT/db/dm_v1_setup.sql" "$TMPX/teamlab.sql" "$ROOT/db/band_chat_v1_setup.sql" > "$TMPX/pre.sql"
+cat "$ROOT/db/account_avatar_v1_setup.sql" "$ROOT/db/friends_ux_v2_setup.sql" "$ROOT/db/dm_v1_setup.sql" "$TMPX/teamlab.sql" "$ROOT/db/band_chat_v1_setup.sql" "$ROOT/db/band_chat_v1_1_roles_setup.sql" > "$TMPX/pre.sql"
 E2E_CHECKPOINTS=1 E2E_SKIP_BASE=1 E2E_PRE_SQL="$TMPX/pre.sql" E2E_EXTRA_SQL="$TMPX/extra.sql" \
   E2E_EXTRA_RUNNER="$ROOT/tests/e2e-learning-thread/run-band-chat-v1.mjs" bash "$ROOT/scripts/e2e-learning-thread.sh"

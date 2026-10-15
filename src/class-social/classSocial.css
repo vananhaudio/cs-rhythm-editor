@@ -546,6 +546,9 @@
 .cs-chat-members-head { display: flex; align-items: center; justify-content: space-between; font-size: 13px; font-weight: 700; color: var(--cs-muted); margin-bottom: 4px; }
 .cs-chat-member { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; padding: 4px 6px; border: none; background: transparent; border-radius: 10px; color: var(--cs-text); font: inherit; text-align: left; cursor: pointer; }
 .cs-chat-member:hover { background: var(--cs-hover); }
+.cs-chat-role { flex: none; margin-left: auto; font-size: 11.5px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--cs-hover); color: var(--cs-muted); white-space: nowrap; }
+.cs-chat-role-owner { background: var(--cs-neutral-soft); color: var(--cs-accent); }
+.cs-chat-manage-link { display: inline-flex; align-items: center; gap: 4px; margin: 0 0 8px; font-size: 13px; }
 .cs-chat-member-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; font-size: 15px; }
 .cs-chat-peer-name { font-weight: 700; font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .cs-chat-body-state { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 24px; text-align: center; color: var(--cs-muted); }

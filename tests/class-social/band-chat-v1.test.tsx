@@ -83,7 +83,7 @@ test("toBandMessages: có người gửi (tên/ảnh an toàn), sắp tăng dầ
   assert.deepEqual(rows.map(m => m.seq), [1, 2]);
   assert.deepEqual([rows[0].sender?.name, rows[0].sender?.avatarUrl, rows[1].sender?.name, rows[1].sender?.avatarUrl],
     ["An", "https://x.test/a.jpg", "Thành viên Band", null]);
-  assert.deepEqual(toBandMembers([{ user_id: USER, name: "An", avatar_url: null, role: "teacher" }, { user_id: "" }] as never), [{ id: USER, name: "An", avatarUrl: null, isTeacher: true }]);
+  assert.deepEqual(toBandMembers([{ user_id: USER, name: "An", avatar_url: null, role: "teacher" }, { user_id: "" }] as never), [{ id: USER, name: "An", avatarUrl: null, isTeacher: true, groupRole: null }]);
 });
 
 test("layoutMessages: cụm liền nhau theo NGƯỜI GỬI (hai người khác nhau không gộp cụm)", () => {
@@ -221,4 +221,26 @@ test("ConversationList + ConversationView: nhóm hỗ trợ có mục riêng 'ch
   const src = readFileSync(new URL("../../src/class-social/chat/ConversationView.tsx", import.meta.url), "utf8");
   assert.match(src, /Thầy\/Admin có thể xem nhóm Band để hỗ trợ và quản lý/);
   assert.match(src, /chỉ đọc, không gửi tin vào nhóm/);
+});
+
+test("Vai trò nhóm theo TeamLab: owner/admin/member từ server; giá trị lạ → member (UI không tự nâng quyền); thiếu cột (backend cũ) → null, không báo thiếu Trưởng", () => {
+  const rows = toBandMembers([
+    { user_id: "u1", name: "Trưởng", avatar_url: null, role: "student", group_role: "owner" },
+    { user_id: "u2", name: "Phó", avatar_url: null, role: "student", group_role: "admin" },
+    { user_id: "u3", name: "Thường", avatar_url: null, role: "student", group_role: "member" },
+    { user_id: "u4", name: "Lạ", avatar_url: null, role: "student", group_role: "superuser" },
+    { user_id: "u5", name: "Cũ", avatar_url: null, role: "student" },
+  ] as never);
+  assert.deepEqual(rows.map(m => m.groupRole), ["owner", "admin", "member", "member", null]);
+});
+
+test("Nhóm Band mang projectId (đường dẫn Quản lý tại TeamLab) và panel có liên kết + báo thiếu Trưởng Band", () => {
+  const it = toBandConversations([room()] as never)[0];
+  assert.equal(it.projectId, "11111111-0000-4000-8000-0000000000b1");
+  const src = readFileSync(new URL("../../src/class-social/chat/ConversationView.tsx", import.meta.url), "utf8");
+  assert.match(src, /Quản lý tại TeamLab/);
+  assert.match(src, /band-no-owner/);
+  assert.match(src, /Chủ nhóm/);
+  assert.match(src, /Quản trị viên/);
+  assert.doesNotMatch(src, /Đổi tên nhóm|Thêm thành viên|Xoá thành viên/, "chat không có thao tác quản trị riêng");
 });
