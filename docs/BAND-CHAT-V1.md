@@ -29,3 +29,44 @@ Mỗi **Band** (`teamlab_bands`, không phải Team = `projects`) có đúng m�
 - `bash scripts/test-band-chat-v1-db.sh` — DB (quyền, cô lập, rời/vào Band, đồng thời, rollback, hồi quy `dm_v1_test`).
 - `npm run test:class-social` — model/route/API/render.
 - `PUPPETEER_DIR=… bash scripts/e2e-band-chat-v1.sh` — Chrome thật trên stack local (2 tài khoản + mobile 320…1440).
+
+---
+
+## Định hướng tiếp theo: nhóm chat có quản trị — CHƯA TRIỂN KHAI (Owner xác nhận hướng 15/10)
+
+Đây là định hướng + đề xuất lát nhỏ nhất, **không phải tính năng đã làm**. Chưa có code/migration. Chờ Owner chốt các quyết định ở cuối.
+
+**Hai loại nhóm**
+- *Nhóm theo tổ chức* (Band, lớp học): thành viên suy ra từ dữ liệu nghiệp vụ chuẩn (như `bandchat_access`). Không có thao tác thêm/xoá thành viên trong chat.
+- *Nhóm tạo riêng*: người dùng tạo cho học tập/tập luyện/dự án; thành viên do quản trị nhóm quản lý.
+
+**Trải nghiệm V1 "Tạo nhóm"**: bấm "Tạo nhóm" → đặt tên → chọn bạn (từ danh sách bạn bè) → tạo xong vào trò chuyện ngay; người tạo là chủ nhóm. Trong nhóm: danh sách thành viên, thêm/xoá, đổi tên, rời nhóm.
+
+**Quyền tối thiểu (nhóm tạo riêng)**
+| Hành động | Chủ nhóm | Quản trị | Thành viên |
+|---|---|---|---|
+| Đọc / gửi tin | ✓ | ✓ | ✓ |
+| Xem danh sách thành viên | ✓ | ✓ | ✓ |
+| Thêm thành viên | ✓ | ✓ | – |
+| Xoá thành viên | ✓ (mọi người) | ✓ (chỉ thành viên thường) | – |
+| Đặt/bỏ quản trị | ✓ | – | – |
+| Đổi tên nhóm | ✓ | ✓ | – |
+| Lưu trữ / giải tán nhóm | ✓ | – | – |
+| Chuyển quyền chủ | ✓ | – | – |
+| Rời nhóm | cần chuyển quyền trước | ✓ | ✓ |
+
+**Tái sử dụng / bổ sung**
+- Tái dùng nguyên: UI (`ConversationList`, `MessageList`, `Composer`, `useConversation` polling, badge, danh sách thành viên, route), mẫu RPC `SECURITY DEFINER` + seq + đã đọc, khái niệm lưu trữ chỉ-đọc.
+- KHÔNG mở rộng `bandchat_*`: PK = `band_id`, quyền suy từ `teamlab_band_members` — không có khái niệm thành viên/vai trò tự quản.
+- Bổ sung (additive): bảng `groupchat_rooms`, `groupchat_members` (role: owner|admin|member, `left_at`), `groupchat_messages`, `groupchat_reads`; RPC tạo/liệt kê/đọc/gửi/đã đọc/thành viên/thêm/xoá/đặt vai trò/đổi tên/rời/lưu trữ. Id hội thoại `grp:<uuid>`, `chatApi` định tuyến thêm tiền tố này. Không đụng `dm_*`, `bandchat_*`, `teamlab_*`.
+- Nhóm lớp học: để sau, dùng cùng mô hình "thành viên suy ra" như Band, không qua bảng `groupchat_members`.
+
+**Quyết định cần Owner chốt**
+1. Ai được tạo nhóm: mọi tài khoản đã đăng nhập, hay chỉ Thầy/Trưởng Band/…?
+2. Thêm thành viên: chỉ bạn bè của người thêm, hay cả người cùng lớp/Band?
+3. Người mới vào có đọc lịch sử không (Band: có)? Đề xuất nhóm riêng: không, chỉ từ lúc vào.
+4. Thầy/Admin có xem được nhóm riêng không? Đề xuất: KHÔNG mặc định (riêng tư); chỉ xem khi có báo cáo (đợt sau).
+5. Giới hạn: số thành viên/nhóm (đề xuất 50) và số nhóm mỗi người tạo.
+6. Chủ nhóm rời: bắt buộc chuyển quyền, hay tự chuyển cho quản trị lâu nhất?
+
+**Phạm vi & mức công việc dự kiến**: 1 migration additive (4 bảng, ~12 RPC, RLS 0 grant như Band Chat) + test DB; FE: nút Tạo nhóm, màn chọn bạn, thông tin nhóm (thêm/xoá/đổi tên/rời). Khoảng 2–3 phiên (DB+test → FE → E2E+deploy). **Ngoài V1**: mời/duyệt tham gia, ghim thông báo, báo cáo vi phạm, nhóm lớp, ảnh nhóm. Phương án nhỏ hơn nếu cần: V1a chỉ chủ nhóm quản lý (chưa có vai trò quản trị), bảng vẫn có cột `role` để mở rộng không cần migrate lại.
