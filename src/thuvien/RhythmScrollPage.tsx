@@ -59,7 +59,6 @@ function Shell({ title, onBack, children, right, embedded = false, versionId, br
   if (branded && !embedded) {
     return <div className="rs-page rs-branded" data-testid="rhythm-scroll-page">
       <header className="rs-nav rs-brandbar">
-        <button type="button" className="rs-back rs-back-icon" onClick={onBack} aria-label="Quay lại"><span aria-hidden="true">‹</span></button>
         <img className="rs-logo" src="/logo.png" alt="Thầy Văn Anh Guitar" width="32" height="32" />
         <span className="rs-brand">Play Scroll</span>
         <div className="rs-nav-right">{right}</div>
@@ -67,7 +66,7 @@ function Shell({ title, onBack, children, right, embedded = false, versionId, br
       <div className="rs-body">
         <div className="rs-song" data-testid="rs-song">
           <h1 className="rs-song-title">{title}</h1>
-          {composer ? <p className="rs-song-by">{composer}</p> : null}
+          {composer ? <span className="rs-song-by">{composer}</span> : null}
         </div>
         {children}
       </div>
@@ -194,6 +193,21 @@ function Player({ detail, onBack, embedded = false, autoStart = false, branded =
       <ShareSheet title={detail.title} target={chordSheetRef(detail.versionId)} canPublish publish={() => publishChordSheet(detail.versionId)}
         ensureTarget={async () => ({ ok: true, target: chordSheetRef(detail.versionId) })} onClose={() => setSharing(false)} />
     </Suspense>}
+    {branded && !embedded ? <>
+      {(unverified > 0 || pickupGuess) && <div className="rs-meta rs-meta-warn" data-testid="rhythm-status">
+        {unverified > 0 && <span className="rs-warn" data-testid="rhythm-unverified">{unverified} ô hợp âm chia phách theo suy luận — chưa xác minh</span>}
+        {pickupGuess && <span className="rs-warn">nhịp lấy đà là suy luận</span>}
+      </div>}
+      <div className="rs-strip" data-testid="rhythm-chords" aria-live="off">
+        <span className="rs-strip-now" data-testid="rs-chord-now">{event?.chord ?? '—'}</span>
+        <span className="rs-strip-arrow" aria-hidden="true">→</span>
+        <span className="rs-strip-next" data-testid="rs-chord-next">{next?.chord ?? ''}</span>
+        <span className="rs-dots" data-testid="rs-beat" role="img" aria-label={(playing || beat > 0) && beatInMeasure ? `phách ${beatInMeasure}` : 'sẵn sàng'}>
+          {Array.from({ length: position.state === 'active' ? timeline.measures[position.measureIndex].beats : meter.beats }, (_, i) =>
+            <i key={i} data-on={(playing || beat > 0) && beatInMeasure === i + 1} />)}
+        </span>
+      </div>
+    </> : <>
     <div className="rs-meta" data-testid="rhythm-status">
       <span>Nhịp {meterKey(timeline.meter)}</span>
       <span>{timeline.pickupBeats ? `lấy đà ${timeline.pickupBeats} phách + ` : ''}{measureCount} ô</span>
@@ -207,6 +221,7 @@ function Player({ detail, onBack, embedded = false, autoStart = false, branded =
       <span className="rs-now-next">{next ? `→ ${next.chord} sau ${Math.max(0, Math.ceil(next.startBeat - beat))} phách` : ''}</span>
       <span className="rs-now-pos" data-testid="rs-beat">{position.state === 'before' ? 'sẵn sàng' : `ô ${Math.max(measureNumber, 0) || 'lấy đà'} · phách ${beatInMeasure}`}</span>
     </div>
+    </>}
     <div className="rs-sheet">
       <AnchoredChordViewer theme="light" text={detail.text} lines={script.lines} data={data} labels={script.labels} measurePosition={position.measurePosition}
         reducedMotion={reducedMotion} activeChord={activeChord} />

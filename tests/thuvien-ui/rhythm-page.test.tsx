@@ -148,7 +148,7 @@ test('V3 branded (/hopam): header logo + "Play Scroll", tên bài + tác giả, 
   await settle()
   assert.ok(view.container.querySelector('.rs-branded img.rs-logo[src="/logo.png"]'), 'logo thật từ tài sản có sẵn')
   assert.equal(view.container.querySelector('.rs-brand')!.textContent, 'Play Scroll')
-  assert.equal(view.getByTestId('rs-song').textContent, 'Bài thửNhạc sĩ A')
+  assert.equal(view.getByTestId("rs-song").textContent, "Bài thửNhạc sĩ A")
   assert.ok(view.getByRole('button', { name: 'Chia sẻ' }) && view.getByRole('button', { name: 'Phát' }) && view.getByLabelText('Vị trí (phách)'))
   cleanup()
   const plain = render(<RhythmScrollPage library={lib} versionId="v" initialDetail={detail} onBack={() => {}} />)
@@ -159,4 +159,28 @@ test('V3 branded (/hopam): header logo + "Play Scroll", tên bài + tác giả, 
   await settle()
   assert.equal(embedded.container.querySelector('.rs-branded'), null, 'bản nhúng /me giữ nguyên')
   assert.ok(embedded.container.querySelector('.rs-embedded'))
+})
+
+test('V4 branded: không nút Quay lại; dải "Am → G" lấy từ timeline; chấm nhịp = số phách/ô, không sáng trước Play, theo seek/BPM', async () => {
+  for (const beats of [3, 4]) {
+    const lib = libraryWith({ status: 'current', meter: { beats, beatType: 4 } })
+    const detail = await lib.getChordSheet('v')
+    const view = render(<RhythmScrollPage branded library={lib} versionId="v" initialDetail={detail} onBack={() => {}} />)
+    await settle()
+    assert.equal(view.queryByRole('button', { name: 'Quay lại' }), null)
+    assert.equal(view.container.querySelector('.rs-meta:not(.rs-meta-warn)'), null, 'bỏ thẻ Nhịp/ô/phách')
+    const dots = () => [...view.container.querySelectorAll('.rs-dots i')] as HTMLElement[]
+    assert.equal(dots().length, beats)
+    assert.equal(dots().filter(d => d.dataset.on === 'true').length, 0, 'trước Play: không phách nào sáng')
+    assert.equal(view.getByTestId('rs-chord-now').textContent, 'C')
+    assert.equal(view.getByTestId('rs-chord-next').textContent, 'G', 'hợp âm kế tiếp theo timeline')
+    seek(view, 1)
+    assert.equal(dots().findIndex(d => d.dataset.on === 'true'), 1, 'phách 2 của ô')
+    seek(view, beats)
+    assert.equal(view.getByTestId('rs-chord-now').textContent === view.getByTestId('rs-chord-next').textContent, false)
+    assert.equal(dots().findIndex(d => d.dataset.on === 'true'), 0, 'sang ô mới: chấm đầu sáng')
+    fireEvent.click(view.getByRole('button', { name: 'Về đầu bài' }))
+    assert.equal(dots().filter(d => d.dataset.on === 'true').length, 0)
+    cleanup()
+  }
 })
