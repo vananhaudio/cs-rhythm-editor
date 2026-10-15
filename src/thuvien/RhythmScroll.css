@@ -76,3 +76,56 @@
 .rs-embedded .rs-speed{min-width:0}
 .rs-embedded .rs-speed-val{min-width:40px}
 .rs-embedded .rs-meta{padding:8px 4px 4px;font-size:12px}
+
+/* Play Scroll V3 — trang học viên độc lập (/hopam): header thương hiệu. Chỉ áp cho .rs-branded; Thư viện quản trị và bản nhúng không đổi. */
+.rs-branded .rs-brandbar{display:flex;align-items:center;gap:8px;min-height:52px}
+.rs-branded .rs-back-icon{font-size:30px;line-height:1;padding:0;width:44px;justify-content:center;margin-left:-4px}
+.rs-branded .rs-logo{width:32px;height:32px;border-radius:8px;object-fit:contain;flex:none}
+.rs-branded .rs-brand{font-size:17px;font-weight:700;letter-spacing:-.2px;white-space:nowrap}
+.rs-branded .rs-nav-right{margin-left:auto}
+.rs-branded .rs-share{background:#FDE7D8;border-radius:22px;padding:0 14px;font-weight:600;font-size:15px}
+.rs-branded .rs-song{padding:14px 6px 2px}
+.rs-branded .rs-song-title{margin:0;font-size:24px;font-weight:700;letter-spacing:-.4px;line-height:1.2;overflow-wrap:anywhere}
+.rs-branded .rs-song-by{margin:2px 0 0;font-size:15px;color:var(--rs-sub)}
+.rs-branded .rs-meta{padding:8px 4px 8px;gap:6px}
+.rs-branded .rs-meta>span:not(.rs-warn){padding:3px 10px;border-radius:12px;background:var(--rs-card);box-shadow:0 0 0 .5px var(--rs-line);font-size:12.5px}
+.rs-branded .rs-now{border-radius:14px 14px 0 0}
+.rs-branded .rs-sheet{box-shadow:0 0 0 .5px var(--rs-line)}
+@media (max-width:359px){
+  .rs-branded .rs-share span{display:none}
+  .rs-branded .rs-share{padding:0;width:44px;justify-content:center}
+  .rs-branded .rs-song-title{font-size:21px}
+}
+@media (min-width:900px){.rs-branded .rs-song-title{font-size:28px}}
+
+/* V4 Focus: header không nút quay lại, tên bài một dòng, dải Am → G + chấm nhịp thay khối hợp âm/ô/phách. */
+.rs-branded .rs-song{display:flex;align-items:baseline;gap:8px;padding:8px 6px 2px;min-width:0}
+.rs-branded .rs-song-title{font-size:17px;flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rs-branded .rs-song-by{font-size:13px;color:var(--rs-sub);flex:1 1 0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rs-branded .rs-meta-warn{padding:2px 6px}
+.rs-strip{display:flex;align-items:center;gap:10px;margin-top:6px;padding:8px 14px;min-height:48px;border-radius:14px 14px 0 0;background:var(--rs-card);border-bottom:.5px solid var(--rs-line)}
+.rs-strip-now{font-size:24px;font-weight:700;color:var(--rs-accent);letter-spacing:-.4px;line-height:1.1;min-width:2ch}
+.rs-strip-arrow{color:var(--rs-sub);font-size:16px}
+.rs-strip-next{font-size:20px;font-weight:600;color:var(--rs-sub);min-width:2ch}
+.rs-dots{margin-left:auto;display:inline-flex;align-items:center;gap:8px}
+.rs-dots i{width:11px;height:11px;border-radius:50%;background:#D1D1D6;transition:background .08s}
+.rs-dots i[data-on="true"]{background:var(--rs-accent);box-shadow:0 0 0 3px rgba(234,88,12,.22)}
+@media (prefers-reduced-motion:reduce){.rs-dots i{transition:none}}
+
+/* V4.1 nút loa đập nhịp: 44×44, cam khi bật, xám có gạch chéo khi tắt (mặc định). */
+.rs-click{flex:none;width:44px;height:44px;margin:-6px -8px -6px 0;border:0;background:none;color:#8E8E93;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.rs-click svg{width:24px;height:24px;fill:currentColor}
+.rs-click[data-on="true"]{color:var(--rs-accent)}
+.rs-strip-now,.rs-strip-next{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.rs-dots{flex:none}
+/* V4.2: cụm "hợp âm → hợp âm | chấm | loa" nằm giữa thanh, không kéo giãn ra hai mép. */
+.rs-strip{justify-content:center;gap:8px}
+.rs-dots{margin-left:10px}
+.rs-click{margin:-6px 0}
+@media (max-width:359px){
+  .rs-strip{gap:5px;padding-left:10px;padding-right:10px}
+  .rs-strip-now{font-size:21px}
+  .rs-strip-next{font-size:17px}
+  .rs-dots{gap:6px;margin-left:4px}
+  .rs-dots i{width:9px;height:9px}
+}

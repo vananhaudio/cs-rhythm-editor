@@ -10,6 +10,8 @@ import type { ChordLibrary, ChordSheetDetail } from './chordLibrary.ts'
 import { beatsAtSeconds, buildChordTimeline, locateBeat } from './chordTimeline.ts'
 import type { TimelineMeter } from './chordTimeline.ts'
 import { buildPerformanceScript } from './performanceScript.ts'
+import { createBeatClicker } from './beatClick.ts'
+import { useAudioContextResume } from '../useAudioContextResume.ts'
 import { chordSheetRef } from '../share/shareRef.ts'
 import { publishChordSheet } from '../share/chordShareApi.ts'
 
@@ -29,7 +31,7 @@ const parseMeterKey = (key: string): TimelineMeter | null => {
 type Load = { state: 'loading' } | { state: 'error'; message: string } | { state: 'ready'; detail: ChordSheetDetail }
 
 /** Gắn `key={versionId}` ở nơi dùng: đổi phiên bản = dựng lại, nên chỉ cần nạp một lần. */
-export default function RhythmScrollPage({ library, versionId, onBack, embedded = false, initialDetail, autoStart = false }: {
+export default function RhythmScrollPage({ library, versionId, onBack, embedded = false, initialDetail, autoStart = false, branded = false }: {
   library: ChordLibrary; versionId: string; onBack: () => void
   /** Nhúng trong bài đăng (/me): khung có chiều cao riêng, nút "Thu gọn" + "Mở rộng"; không có Chia sẻ. */
   embedded?: boolean
@@ -37,6 +39,8 @@ export default function RhythmScrollPage({ library, versionId, onBack, embedded 
   initialDetail?: ChordSheetDetail
   /** Chạy ngay khi dựng xong (Feed: người xem đã bấm Play ở bản xem trước). Mặc định KHÔNG tự phát. */
   autoStart?: boolean
+  /** Trang học viên độc lập (/hopam): header thương hiệu Văn Anh Guitar + khối tên bài. Chỉ giao diện; mặc định tắt (Thư viện quản trị, bản nhúng giữ nguyên). */
+  branded?: boolean
 }) {
   const [load, setLoad] = useState<Load>(initialDetail ? { state: 'ready', detail: initialDetail } : { state: 'loading' })
   useEffect(() => {
@@ -48,12 +52,28 @@ export default function RhythmScrollPage({ library, versionId, onBack, embedded 
     return () => { active = false }
   }, [library, versionId, initialDetail])
 
-  if (load.state === 'loading') return <Shell embedded={embedded} versionId={versionId} onBack={onBack} title="Rhythm Scroll"><p className="rs-note">Đang tải bài…</p></Shell>
-  if (load.state === 'error') return <Shell embedded={embedded} versionId={versionId} onBack={onBack} title="Rhythm Scroll"><p role="alert" className="rs-bad">{load.message}</p></Shell>
-  return <Player detail={load.detail} onBack={onBack} embedded={embedded} autoStart={autoStart} />
+  if (load.state === 'loading') return <Shell embedded={embedded} branded={branded} versionId={versionId} onBack={onBack} title="Rhythm Scroll"><p className="rs-note">Đang tải bài…</p></Shell>
+  if (load.state === 'error') return <Shell embedded={embedded} branded={branded} versionId={versionId} onBack={onBack} title="Rhythm Scroll"><p role="alert" className="rs-bad">{load.message}</p></Shell>
+  return <Player detail={load.detail} onBack={onBack} embedded={embedded} autoStart={autoStart} branded={branded} />
 }
 
-function Shell({ title, onBack, children, right, embedded = false, versionId }: { title: string; onBack: () => void; children: React.ReactNode; right?: React.ReactNode; embedded?: boolean; versionId?: string }) {
+function Shell({ title, onBack, children, right, embedded = false, versionId, branded = false, composer }: { title: string; onBack: () => void; children: React.ReactNode; right?: React.ReactNode; embedded?: boolean; versionId?: string; branded?: boolean; composer?: string | null }) {
+  if (branded && !embedded) {
+    return <div className="rs-page rs-branded" data-testid="rhythm-scroll-page">
+      <header className="rs-nav rs-brandbar">
+        <img className="rs-logo" src="/logo.png" alt="Thầy Văn Anh Guitar" width="32" height="32" />
+        <span className="rs-brand">Play Scroll</span>
+        <div className="rs-nav-right">{right}</div>
+      </header>
+      <div className="rs-body">
+        <div className="rs-song" data-testid="rs-song">
+          <h1 className="rs-song-title">{title}</h1>
+          {composer ? <span className="rs-song-by">{composer}</span> : null}
+        </div>
+        {children}
+      </div>
+    </div>
+  }
   return <div className={embedded ? 'rs-page rs-embedded' : 'rs-page'} data-testid="rhythm-scroll-page">
     <header className="rs-nav">
       <button type="button" className="rs-back" onClick={onBack}><span aria-hidden="true">‹</span> {embedded ? 'Thu gọn' : 'Quay lại'}</button>
@@ -64,15 +84,17 @@ function Shell({ title, onBack, children, right, embedded = false, versionId }: 
   </div>
 }
 
-const Icon = ({ name }: { name: 'play' | 'pause' | 'restart' | 'gear' | 'share' }) => <svg viewBox="0 0 24 24" aria-hidden="true">{{
+const Icon = ({ name }: { name: 'play' | 'pause' | 'restart' | 'gear' | 'share' | 'speaker' | 'mute' }) => <svg viewBox="0 0 24 24" aria-hidden="true">{{
   play: <path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z" />,
   pause: <path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" />,
   restart: <path d="M12 5V2L7 6.5 12 11V8a5 5 0 1 1-5 5H5a7 7 0 1 0 7-8z" />,
   share: <path d="M12 3 7.5 7.5l1.4 1.4L11 6.8V15h2V6.8l2.1 2.1 1.4-1.4L12 3zM5 11v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-9h-2v8H7v-8H5z" />,
+  speaker: <path d="M4 9.5v5h3.5l4.5 4v-13l-4.5 4H4zm11.2-1.7-1.1 1.1a4.2 4.2 0 0 1 0 6.2l1.1 1.1a5.8 5.8 0 0 0 0-8.4zm2.2-2.2-1.1 1.1a7.4 7.4 0 0 1 0 10.6l1.1 1.1a9 9 0 0 0 0-12.8z" />,
+  mute: <path d="M4 9.5v5h3.5l4.5 4v-13l-4.5 4H4zm11.3.2 1.4-1.4 2.3 2.3 2.3-2.3 1.4 1.4-2.3 2.3 2.3 2.3-1.4 1.4-2.3-2.3-2.3 2.3-1.4-1.4 2.3-2.3-2.3-2.3z" />,
   gear: <path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7zm8.2 5.5-.1-.9 1.9-1.5-2-3.4-2.3.9a7 7 0 0 0-1.5-.9L15.8 5h-4l-.4 2.4c-.5.2-1 .5-1.5.9l-2.3-.9-2 3.4 1.9 1.5a7 7 0 0 0 0 1.8L5.6 15.6l2 3.4 2.3-.9c.5.4 1 .7 1.5.9l.4 2.4h4l.4-2.4c.5-.2 1-.5 1.5-.9l2.3.9 2-3.4-1.9-1.5z" />,
 }[name]}</svg>
 
-function Player({ detail, onBack, embedded = false, autoStart = false }: { detail: ChordSheetDetail; onBack: () => void; embedded?: boolean; autoStart?: boolean }) {
+function Player({ detail, onBack, embedded = false, autoStart = false, branded = false }: { detail: ChordSheetDetail; onBack: () => void; embedded?: boolean; autoStart?: boolean; branded?: boolean }) {
   const [sharing, setSharing] = useState(false)
   // Chỉ bản đã duyệt (current/old) chia sẻ được; máy chủ kiểm lại approved khi đăng/gửi.
   const canShare = !embedded && (detail.status === 'current' || detail.status === 'old')
@@ -124,11 +146,47 @@ function Player({ detail, onBack, embedded = false, autoStart = false }: { detai
     setPlaying(true)
   }, [autoStart, total])
 
+  // Tiếng đập nhịp (chỉ trang học viên, mặc định TẮT): hẹn click theo đúng beat clock + BPM hiện tại; không đồng hồ riêng.
+  const [clickOn, setClickOn] = useState(false)
+  const clicker = useRef<ReturnType<typeof createBeatClicker> | null>(null)
+  const audioRef = useRef<AudioContext | null>(null)
+  const lastClick = useRef<number | null>(null)
+  useAudioContextResume(audioRef)
+  useEffect(() => () => { clicker.current?.close(); clicker.current = null; audioRef.current = null }, [])
+  useEffect(() => {
+    if (!playing || !clickOn || !clicker.current) { lastClick.current = null; return }
+    const pickup = timeline?.pickupBeats ?? 0
+    const beatsPerMeasure = meter?.beats ?? 4
+    const fire = (n: number, delay: number) => {
+      lastClick.current = n
+      clicker.current?.click(delay, (((n - pickup) % beatsPerMeasure) + beatsPerMeasure) % beatsPerMeasure === 0)
+    }
+    // Vòng hẹn ngắn: chỉ ĐỌC beat clock + BPM hiện tại (không đồng hồ riêng), hẹn click khi phách kế còn < 0.1 giây.
+    const schedule = () => {
+      const b = readBeat()
+      if (lastClick.current === null && b < 0.05) { fire(0, 0); return }
+      const n = Math.floor(b) + 1
+      const ahead = ((n - b) * 60) / bpmRef.current
+      if (n < total && ahead < 0.1 && n !== lastClick.current) fire(n, ahead)
+    }
+    schedule()
+    const timer = window.setInterval(schedule, 25)
+    return () => window.clearInterval(timer)
+  }, [playing, clickOn, total])
+  const toggleClick = () => {
+    if (clickOn) { setClickOn(false); return }
+    if (!clicker.current) { clicker.current = createBeatClicker() }
+    clicker.current.unlock()
+    audioRef.current = clicker.current.context()
+    lastClick.current = null
+    setClickOn(true)
+  }
+
   if (!anchors || !timeline || !script) {
-    return <Shell embedded={embedded} versionId={detail.versionId} onBack={onBack} title={detail.title}><p role="alert" className="rs-bad">Phiên bản này chưa có vạch nhịp nên chưa chạy được Rhythm Scroll. Hãy đặt vạch nhịp trong trình sửa rồi mở lại.</p></Shell>
+    return <Shell embedded={embedded} branded={branded} composer={detail.composer} versionId={detail.versionId} onBack={onBack} title={detail.title}><p role="alert" className="rs-bad">Phiên bản này chưa có vạch nhịp nên chưa chạy được Rhythm Scroll. Hãy đặt vạch nhịp trong trình sửa rồi mở lại.</p></Shell>
   }
   if (!meter || !data || !timeline.totalBeats) {
-    return <Shell embedded={embedded} versionId={detail.versionId} onBack={onBack} title={detail.title}>
+    return <Shell embedded={embedded} branded={branded} composer={detail.composer} versionId={detail.versionId} onBack={onBack} title={detail.title}>
       <p role="alert" className="rs-bad">Bài chưa có số chỉ nhịp nên chưa tính được phách. Chọn nhịp để xem thử (không lưu):</p>
       <div style={{ padding: 16 }}>
         <select aria-label="Số chỉ nhịp" className="rs-select" value={meterChoice} onChange={event => setMeterChoice(event.target.value)}>
@@ -170,11 +228,28 @@ function Player({ detail, onBack, embedded = false, autoStart = false }: { detai
   const [showOptions, setShowOptions] = useState(false)
   const measureCount = timeline.measures.length - (timeline.pickupBeats ? 1 : 0)
   const shareButton = canShare ? <button type="button" className="rs-back rs-share" onClick={() => setSharing(true)} aria-label="Chia sẻ"><Icon name="share" /><span>Chia sẻ</span></button> : null
-  return <Shell embedded={embedded} versionId={detail.versionId} onBack={onBack} title={detail.title} right={shareButton}>
+  return <Shell embedded={embedded} branded={branded} composer={detail.composer} versionId={detail.versionId} onBack={onBack} title={detail.title} right={shareButton}>
     {sharing && <Suspense fallback={null}>
       <ShareSheet title={detail.title} target={chordSheetRef(detail.versionId)} canPublish publish={() => publishChordSheet(detail.versionId)}
         ensureTarget={async () => ({ ok: true, target: chordSheetRef(detail.versionId) })} onClose={() => setSharing(false)} />
     </Suspense>}
+    {branded && !embedded ? <>
+      {(unverified > 0 || pickupGuess) && <div className="rs-meta rs-meta-warn" data-testid="rhythm-status">
+        {unverified > 0 && <span className="rs-warn" data-testid="rhythm-unverified">{unverified} ô hợp âm chia phách theo suy luận — chưa xác minh</span>}
+        {pickupGuess && <span className="rs-warn">nhịp lấy đà là suy luận</span>}
+      </div>}
+      <div className="rs-strip" data-testid="rhythm-chords" aria-live="off">
+        <span className="rs-strip-now" data-testid="rs-chord-now">{event?.chord ?? '—'}</span>
+        <span className="rs-strip-arrow" aria-hidden="true">→</span>
+        <span className="rs-strip-next" data-testid="rs-chord-next">{next?.chord ?? ''}</span>
+        <span className="rs-dots" data-testid="rs-beat" role="img" aria-label={(playing || beat > 0) && beatInMeasure ? `phách ${beatInMeasure}` : 'sẵn sàng'}>
+          {Array.from({ length: position.state === 'active' ? timeline.measures[position.measureIndex].beats : meter.beats }, (_, i) =>
+            <i key={i} data-on={(playing || beat > 0) && beatInMeasure === i + 1} />)}
+        </span>
+        <button type="button" className="rs-click" data-on={clickOn} aria-pressed={clickOn} onClick={toggleClick}
+          aria-label={clickOn ? 'Tắt tiếng đập nhịp' : 'Bật tiếng đập nhịp'}><Icon name={clickOn ? 'speaker' : 'mute'} /></button>
+      </div>
+    </> : <>
     <div className="rs-meta" data-testid="rhythm-status">
       <span>Nhịp {meterKey(timeline.meter)}</span>
       <span>{timeline.pickupBeats ? `lấy đà ${timeline.pickupBeats} phách + ` : ''}{measureCount} ô</span>
@@ -188,6 +263,7 @@ function Player({ detail, onBack, embedded = false, autoStart = false }: { detai
       <span className="rs-now-next">{next ? `→ ${next.chord} sau ${Math.max(0, Math.ceil(next.startBeat - beat))} phách` : ''}</span>
       <span className="rs-now-pos" data-testid="rs-beat">{position.state === 'before' ? 'sẵn sàng' : `ô ${Math.max(measureNumber, 0) || 'lấy đà'} · phách ${beatInMeasure}`}</span>
     </div>
+    </>}
     <div className="rs-sheet">
       <AnchoredChordViewer theme="light" text={detail.text} lines={script.lines} data={data} labels={script.labels} measurePosition={position.measurePosition}
         reducedMotion={reducedMotion} activeChord={activeChord} />

@@ -140,3 +140,77 @@ test('autoStart: dựng xong là chạy ngay (một lần bấm Play ở Feed); 
   await settle(60)
   assert.ok(manual.getByRole('button', { name: 'Phát' }), 'không tự phát')
 })
+
+test('V3 branded (/hopam): header logo + "Play Scroll", tên bài + tác giả, Chia sẻ, đủ điều khiển; mặc định và bản nhúng KHÔNG đổi', async () => {
+  const lib = libraryWith({ status: 'current', composer: 'Nhạc sĩ A' })
+  const detail = await lib.getChordSheet('v')
+  const view = render(<RhythmScrollPage branded library={lib} versionId="v" initialDetail={detail} onBack={() => {}} />)
+  await settle()
+  assert.ok(view.container.querySelector('.rs-branded img.rs-logo[src="/logo.png"]'), 'logo thật từ tài sản có sẵn')
+  assert.equal(view.container.querySelector('.rs-brand')!.textContent, 'Play Scroll')
+  assert.equal(view.getByTestId("rs-song").textContent, "Bài thửNhạc sĩ A")
+  assert.ok(view.getByRole('button', { name: 'Chia sẻ' }) && view.getByRole('button', { name: 'Phát' }) && view.getByLabelText('Vị trí (phách)'))
+  cleanup()
+  const plain = render(<RhythmScrollPage library={lib} versionId="v" initialDetail={detail} onBack={() => {}} />)
+  await settle()
+  assert.equal(plain.container.querySelector('.rs-branded'), null, 'mặc định (Thư viện quản trị) giữ nguyên')
+  cleanup()
+  const embedded = render(<RhythmScrollPage embedded branded library={lib} versionId="v" initialDetail={detail} onBack={() => {}} />)
+  await settle()
+  assert.equal(embedded.container.querySelector('.rs-branded'), null, 'bản nhúng /me giữ nguyên')
+  assert.ok(embedded.container.querySelector('.rs-embedded'))
+})
+
+test('V4 branded: không nút Quay lại; dải "Am → G" lấy từ timeline; chấm nhịp = số phách/ô, không sáng trước Play, theo seek/BPM', async () => {
+  for (const beats of [3, 4]) {
+    const lib = libraryWith({ status: 'current', meter: { beats, beatType: 4 } })
+    const detail = await lib.getChordSheet('v')
+    const view = render(<RhythmScrollPage branded library={lib} versionId="v" initialDetail={detail} onBack={() => {}} />)
+    await settle()
+    assert.equal(view.queryByRole('button', { name: 'Quay lại' }), null)
+    assert.equal(view.container.querySelector('.rs-meta:not(.rs-meta-warn)'), null, 'bỏ thẻ Nhịp/ô/phách')
+    const dots = () => [...view.container.querySelectorAll('.rs-dots i')] as HTMLElement[]
+    assert.equal(dots().length, beats)
+    assert.equal(dots().filter(d => d.dataset.on === 'true').length, 0, 'trước Play: không phách nào sáng')
+    assert.equal(view.getByTestId('rs-chord-now').textContent, 'C')
+    assert.equal(view.getByTestId('rs-chord-next').textContent, 'G', 'hợp âm kế tiếp theo timeline')
+    seek(view, 1)
+    assert.equal(dots().findIndex(d => d.dataset.on === 'true'), 1, 'phách 2 của ô')
+    seek(view, beats)
+    assert.equal(view.getByTestId('rs-chord-now').textContent === view.getByTestId('rs-chord-next').textContent, false)
+    assert.equal(dots().findIndex(d => d.dataset.on === 'true'), 0, 'sang ô mới: chấm đầu sáng')
+    fireEvent.click(view.getByRole('button', { name: 'Về đầu bài' }))
+    assert.equal(dots().filter(d => d.dataset.on === 'true').length, 0)
+    cleanup()
+  }
+})
+
+test('V4.1 loa đập nhịp: mặc định tắt (không tiếng), bật → click theo beat clock, Pause dừng, chấm nhịp vẫn chạy khi tắt', async () => {
+  Object.assign(globalThis, { requestAnimationFrame: (cb: () => void) => setTimeout(cb, 16), cancelAnimationFrame: (id: number) => clearTimeout(id) })
+  let started = 0
+  const node = () => ({ connect: (n: unknown) => n, start() { started++ }, stop() {}, frequency: { value: 0 }, type: '', gain: { setValueAtTime() {}, exponentialRampToValueAtTime() {} } })
+  class FakeCtx { state = 'running'; currentTime = 0; destination = {}; createOscillator = node; createGain = node; resume() { return Promise.resolve() } close() { return Promise.resolve() } }
+  ;(dom.window as unknown as { AudioContext: unknown }).AudioContext = FakeCtx
+  const lib = libraryWith({ status: 'current', suggestedBpm: 200 })
+  const detail = await lib.getChordSheet('v')
+  const view = render(<RhythmScrollPage branded library={lib} versionId="v" initialDetail={detail} onBack={() => {}} />)
+  await settle()
+  assert.ok(view.getByRole('button', { name: 'Bật tiếng đập nhịp' }), 'mặc định tắt')
+  fireEvent.click(view.getByRole('button', { name: 'Phát' }))
+  await settle(700)
+  assert.equal(started, 0, 'loa tắt: không tiếng')
+  assert.equal(view.container.querySelectorAll('.rs-dots i[data-on="true"]').length, 1, 'chấm vẫn chạy khi tắt tiếng')
+  fireEvent.click(view.getByRole('button', { name: 'Bật tiếng đập nhịp' }))
+  assert.ok(view.getByRole('button', { name: 'Tắt tiếng đập nhịp' }))
+  await settle(1100)
+  const whilePlaying = started
+  assert.ok(whilePlaying >= 2 && whilePlaying <= 6, `200 BPM ~ 3 click/giây, nhận ${whilePlaying}`)
+  fireEvent.click(view.getByRole('button', { name: 'Tạm dừng' }))
+  const atPause = started
+  await settle(500)
+  assert.equal(started, atPause, 'Pause: không click')
+  // jsdom: window.setTimeout không bị clearTimeout toàn cục huỷ → các tick mồ côi chỉ dừng khi đồng hồ chạm cuối bài.
+  seek(view, 16)
+  await settle(400)
+  cleanup()
+})

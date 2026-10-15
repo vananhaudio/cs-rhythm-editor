@@ -14,5 +14,5 @@ export const hopamVersionFromPath = (path: string): string | null => {
 export default function HopamViewPage({ versionId }: { versionId: string }) {
   const library = useMemo(() => getChordLibrary(), [])
   const back = () => { if (window.history.length > 1) window.history.back(); else window.location.href = '/me' }
-  return <RhythmScrollPage key={versionId} library={library} versionId={versionId} onBack={back} />
+  return <RhythmScrollPage key={versionId} library={library} versionId={versionId} onBack={back} branded />
 }
