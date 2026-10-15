@@ -115,13 +115,22 @@ async function main() {
   ;(window as any).__info = { totalBeats: timeline.totalBeats, bpm, rows: rows.length, events: timeline.events.length }
   draw(START_BEAT, 0)
 
+  // Điều khiển cho trang thử iPhone: tiến độ, hủy, giữ màn hình sáng, tự hủy khi tab bị ẩn.
+  let cancelled = false
+  const ui = { progress: (f: number) => { const e = document.getElementById('bar') as HTMLElement | null; if (e) e.style.width = Math.round(f * 100) + '%' } }
   async function record() {
+    cancelled = false
     const types = ['video/mp4;codecs=avc1.42E01E', 'video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=h264', 'video/webm;codecs=vp9', 'video/webm']
     const support = types.map(t => `${t}=${(window as any).MediaRecorder?.isTypeSupported?.(t)}`)
+    log('UA: ' + navigator.userAgent)
     log('isTypeSupported: ' + support.join(' | '))
-    log('captureStream: ' + (typeof (canvas as any).captureStream) + ' roundRect: ' + (typeof (ctx as any).roundRect))
+    log('captureStream: ' + (typeof (canvas as any).captureStream) + ' roundRect: ' + (typeof (ctx as any).roundRect) + ' wakeLock: ' + ('wakeLock' in navigator) + ' share: ' + (typeof navigator.share) + ' canShareFiles: ' + (typeof navigator.canShare))
     const mime = types.find(t => (window as any).MediaRecorder?.isTypeSupported?.(t))
     if (!mime) { log('KHÔNG có mimeType nào'); return null }
+    let lock: { release(): Promise<void> } | null = null
+    try { lock = await (navigator as any).wakeLock?.request('screen') } catch (e) { log('wakeLock lỗi: ' + e) }
+    const onHide = () => { if (document.hidden) { cancelled = true; log('ĐÃ HỦY: tab/app bị chuyển nền khi đang ghi') } }
+    document.addEventListener('visibilitychange', onHide)
     const stream = (canvas as any).captureStream(FPS) as MediaStream
     const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 4_000_000 })
     const chunks: Blob[] = []
@@ -129,20 +138,24 @@ async function main() {
     const done = new Promise<void>(r => { rec.onstop = () => r() })
     const frameMs: number[] = []
     const maxBeats = Math.min(beatsAtSeconds(SECONDS, bpm), timeline.totalBeats - START_BEAT)
+    const totalSec = (maxBeats * 60) / bpm
     const t0 = performance.now(); rec.start(500)
-    let stop = false
     await new Promise<void>(res => {
       const tick = () => {
         const el = (performance.now() - t0) / 1000
         const beat = START_BEAT + beatsAtSeconds(el, bpm)
         const a = performance.now(); draw(Math.min(beat, START_BEAT + maxBeats), el); frameMs.push(performance.now() - a)
-        if (el >= (maxBeats * 60) / bpm) { res(); return }
+        ui.progress(Math.min(1, el / totalSec))
+        if (cancelled || el >= totalSec) { res(); return }
         requestAnimationFrame(tick)
       }
       requestAnimationFrame(tick)
     })
     await new Promise(r => setTimeout(r, 150))
     rec.stop(); await done
+    document.removeEventListener('visibilitychange', onHide)
+    try { await lock?.release() } catch { /* bỏ qua */ }
+    if (cancelled) { log('Không tạo file (đã hủy).'); return null }
     const blob = new Blob(chunks, { type: mime })
     const wall = (performance.now() - t0) / 1000
     const sorted = [...frameMs].sort((a, b) => a - b)
@@ -151,7 +164,26 @@ async function main() {
     ;(window as any).__blob = blob
     return blob
   }
+  ;(window as any).__cancel = () => { cancelled = true }
   ;(window as any).__record = record
-  document.getElementById('go')!.onclick = () => record()
+  const $ = (id: string) => document.getElementById(id) as HTMLElement
+  $('go').onclick = async () => {
+    ($('go') as HTMLButtonElement).disabled = true; $('cancel').style.display = ''; $('result').style.display = 'none'
+    const blob = await record()
+    $('cancel').style.display = 'none'; ($('go') as HTMLButtonElement).disabled = false
+    if (!blob) return
+    const url = URL.createObjectURL(blob)
+    const ext = blob.type.includes('mp4') ? 'mp4' : 'webm'
+    const file = new File([blob], `play-scroll-${Date.now()}.${ext}`, { type: blob.type })
+    ;($('preview') as HTMLVideoElement).src = url
+    ;($('dl') as HTMLAnchorElement).href = url; ($('dl') as HTMLAnchorElement).download = file.name
+    $('share').onclick = async () => {
+      try { if (navigator.canShare?.({ files: [file] })) await navigator.share({ files: [file], title: 'Play Scroll' }); else log('canShare(files)=false') }
+      catch (e) { log('share: ' + e) }
+    }
+    $('result').style.display = ''
+  }
+  $('cancel').onclick = () => { cancelled = true }
+
 }
 main()

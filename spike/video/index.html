@@ -1,2 +1,10 @@
-<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Spike video Play Scroll</title></head>
-<body style="margin:0;font-family:system-ui"><button id="go" style="font-size:20px;padding:12px">Xuất 14 giây</button><pre id="log"></pre><canvas id="c" style="width:270px;height:480px;display:block"></canvas><script type="module" src="./main.ts"></script></body></html>
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Thử video Play Scroll</title>
+<style>body{margin:0;padding:16px;font:16px -apple-system,system-ui,sans-serif;background:#F2F2F7;color:#1C1C1E}button{font-size:18px;padding:12px 18px;border:0;border-radius:12px;background:#EA580C;color:#fff;margin:4px 6px 4px 0}button[disabled]{opacity:.5}#cancel{background:#8E8E93}#barw{height:8px;background:#D1D1D6;border-radius:4px;margin:10px 0}#bar{height:8px;width:0;background:#EA580C;border-radius:4px}canvas{width:180px;height:320px;border-radius:10px;display:block}video{width:220px;border-radius:10px}pre{white-space:pre-wrap;word-break:break-all;font-size:12px;background:#fff;padding:8px;border-radius:8px}a.btn{display:inline-block;font-size:18px;padding:12px 18px;border-radius:12px;background:#1C1C1E;color:#fff;text-decoration:none}</style></head>
+<body><h2 style="margin:0 0 4px">Thử video Play Scroll (bản thử nội bộ)</h2>
+<p style="margin:0 0 10px;color:#6B6B70">Dữ liệu mẫu. Bấm tạo, GIỮ app ở màn hình này ~14 giây (đừng chuyển app, đừng khóa máy).</p>
+<button id="go">Tạo video 14 giây</button><button id="cancel" style="display:none">Hủy</button>
+<div id="barw"><div id="bar"></div></div>
+<canvas id="c"></canvas>
+<div id="result" style="display:none"><h3>Kết quả</h3><video id="preview" controls playsinline muted></video><div><button id="share">Chia sẻ / Lưu vào Ảnh</button> <a class="btn" id="dl">Tải xuống</a></div></div>
+<h3>Chẩn đoán (gửi lại cho kỹ sư)</h3><pre id="log"></pre>
+<script type="module" src="./main.ts"></script></body></html>
