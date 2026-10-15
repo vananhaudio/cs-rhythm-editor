@@ -15,9 +15,10 @@ import {
   type OutlineLesson, type StageRow,
 } from '../classLearning/outline'
 import { PROGRAM_TEMPLATES } from '../classLearning/programTemplates'
+import { sessionStatusLabel } from './sessionStatus'
 import './adminClass.css'
 
-const C = { card: '#FFFFFF', border: '#E4E4E7', text: '#18181B', muted: '#52525B', green: '#2D6A4F',
+const C = { card: '#FFFFFF', border: '#E4E4E7', text: '#18181B', muted: '#3F3F46', green: '#2D6A4F',
   greenBg: '#E9F3EC', red: '#B91C1C', amber: '#B45309', amberBg: '#FEF3C7', grayBg: '#F4F4F5' }
 const btn: CSSProperties = { border: `1px solid ${C.border}`, borderRadius: 8, padding: '7px 11px', background: C.card,
   color: C.text, font: '600 13px Inter, system-ui, sans-serif', cursor: 'pointer' }
@@ -162,7 +163,7 @@ function StageCard({ client, group, stages, sessions, busy, run, onEdit }: {
         borderTop: `1px solid ${C.border}`, padding: '8px 0' }}>
         <div className="cu-lesson-main" style={{ flex: '1 1 220px', minWidth: 0 }}>
           <div style={{ fontWeight: 700, fontSize: 15 }}>Buổi {String(l.no).padStart(2, '0')} · {l.title}</div>
-          <div style={{ color: C.muted, fontSize: 12 }}>{fmtDate(l.session.start_at)} · {l.session.status}</div>
+          <div style={{ color: C.muted, fontSize: 12 }}>{fmtDate(l.session.start_at)} · {sessionStatusLabel(l.session.status)}</div>
         </div>
         <StatusBadge status={l.content} />
         <select aria-label={`Chặng của buổi ${l.no}`} className="cu-lesson-stage" style={{ ...input, padding: '6px 8px' }} disabled={busy}

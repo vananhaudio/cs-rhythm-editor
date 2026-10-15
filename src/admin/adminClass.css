@@ -1,7 +1,7 @@
 /* Admin V2 — không gian Lớp. Chỉ áp trong .ac-root. Tím Class làm accent; token cục bộ để tách khỏi màn con. */
 .ac-root {
   --ac-accent: #4F46E5; --ac-accent-bg: #EEF2FF; --ac-bg: #F4F4F5; --ac-surface: #FFFFFF;
-  --ac-border: #E4E4E7; --ac-text: #18181B; --ac-text2: #52525B; --ac-danger: #B91C1C;
+  --ac-border: #E4E4E7; --ac-text: #18181B; --ac-text2: #3F3F46; --ac-danger: #B91C1C;
   --ac-radius: 12px;
   flex: 1; min-width: 0; overflow-y: auto; background: var(--ac-bg); color: var(--ac-text);
   padding: 24px 32px 48px; font-family: Inter, system-ui, sans-serif; font-size: 15px; line-height: 1.45;
@@ -10,11 +10,12 @@
 .ac-root *, .ac-root *::before, .ac-root *::after { box-sizing: border-box; }
 .ac-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
 .ac-head-detail { display: block; margin-bottom: 0; }
-.ac-code { color: var(--ac-text2); font-size: 14px; font-weight: 600; }
-.ac-title { margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -.01em; overflow-wrap: anywhere; }
-.ac-title-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 4px; }
+.ac-code { color: var(--ac-text2); font-size: 14px; }
+.ac-code b { color: var(--ac-text); }
+.ac-title { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -.01em; overflow-wrap: anywhere; }
+.ac-meta { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 6px 0 14px; }
 .ac-sub { color: var(--ac-text2); font-size: 14px; margin: 2px 0 14px; }
-.ac-h2 { font-size: 16px; font-weight: 700; margin: 0 0 10px; }
+.ac-h2 { font-size: 17px; font-weight: 700; color: var(--ac-text); margin: 0 0 10px; }
 .ac-hint { color: var(--ac-text2); font-size: 13px; margin: 10px 0 0; }
 .ac-back { display: inline-flex; align-items: center; min-height: 44px; color: var(--ac-accent); text-decoration: none; font-weight: 600; margin-left: -4px; padding: 0 4px; }
 .ac-back:hover { text-decoration: underline; }
@@ -106,7 +107,10 @@
 .ac-embed input:not([type="checkbox"]):not([type="radio"]), .ac-embed select { min-height: 40px; }
 .ac-embed a:focus-visible, .ac-embed button:focus-visible, .ac-embed select:focus-visible, .ac-embed input:focus-visible, .ac-embed textarea:focus-visible {
   outline: 3px solid #4F46E5; outline-offset: 2px; }
-.ac-embed h2 { font-size: 16px; font-weight: 700; }
+.ac-embed h2, .ac-embed h3 { color: #18181B; font-weight: 700; }
+.ac-embed h2 { font-size: 17px; }
+.ac-embed label { color: #18181B; }
+.ac-card .ac-h2 + span { font-size: 14px !important; color: var(--ac-text); }
 
 .cu-stage { box-shadow: none; }
 .cu-stage-actions { display: flex; gap: 8px; flex-wrap: wrap; }

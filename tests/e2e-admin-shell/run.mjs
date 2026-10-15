@@ -27,7 +27,7 @@ const ME = '22222222-2222-4222-8222-222222222222'
 const session = { access_token: 'x.y.z', token_type: 'bearer', expires_in: 3600, expires_at: Math.floor(Date.now() / 1000) + 3600, refresh_token: 'r',
   user: { id: ME, aud: 'authenticated', role: 'authenticated', email: 'thay@test.local', app_metadata: {}, user_metadata: {}, created_at: '2026-01-01T00:00:00Z' } }
 // Dữ liệu giả cho V2 (danh sách lớp / không gian lớp). Không phải dữ liệu thật.
-const CLS_D = 'dddddddd-0000-4000-8000-00000000000d'
+const CLS_D = 'dddddddd-0000-4000-8000-00000000000d', CLS_E = 'eeeeeeee-0000-4000-8000-00000000000e'
 const CLS_A = 'aaaaaaaa-0000-4000-8000-00000000000a', CLS_B = 'bbbbbbbb-0000-4000-8000-00000000000b', CLS_C = 'cccccccc-0000-4000-8000-00000000000c'
 const FULL = { section: 'active', schedule: null, start_text: null, duration: null, price: null, course_ids: [], main_course_id: null, group_id: null,
   sort_order: 0, is_active: true, breaks_after: null, timezone: 'Asia/Ho_Chi_Minh', show_on_practice_schedule: false, stage: null, practice_type: null,
@@ -41,12 +41,16 @@ const CLASSES = [
 const SESSIONS = [
   { id: 's1', class_id: CLS_A, session_number: 1, start_at: future(2), end_at: future(2), status: 'scheduled', event_type: 'lesson', title: 'Alpha buổi một' },
   { id: 's2', class_id: CLS_A, session_number: 2, start_at: future(9), end_at: future(9), status: 'scheduled', event_type: 'lesson', title: 'Alpha buổi hai' },
+  { id: 's4', class_id: CLS_A, session_number: 3, start_at: future(16), end_at: future(16), status: 'completed', event_type: 'lesson', title: 'Alpha buổi ba' },
+  { id: 's5', class_id: CLS_A, session_number: 4, start_at: future(23), end_at: future(23), status: 'holiday', event_type: 'lesson', title: 'Alpha buổi bốn' },
   { id: 's3', class_id: CLS_B, session_number: 1, start_at: future(5), end_at: future(5), status: 'scheduled', event_type: 'lesson', title: 'Beta buổi một' },
 ]
 // Lớp 40 buổi / 5 chặng (kiểu HT2027) để kiểm danh sách dài trong Giáo trình
 CLASSES.push({ id: CLS_D, code: 'HT-40', name: 'Lớp Bốn Mươi', status: 'active', cohort_group_id: 'g-d', start_date: '2026-09-01', end_date: '2027-06-01', weekday: 3, start_time: '19:00', duration_minutes: 90, total_sessions: 40, zoom_url: null, program_code: null, ...FULL })
 for (let i = 1; i <= 40; i++) SESSIONS.push({ id: 'd' + i, class_id: CLS_D, session_number: i, start_at: future(i * 7), end_at: future(i * 7), status: 'scheduled', event_type: 'lesson', title: 'Buổi học số ' + i, stage_id: Math.ceil(i / 8) })
 const STAGES = [1, 2, 3, 4, 5].map(n => ({ id: n, class_id: CLS_D, stage_no: n, public_title: 'Chặng thử ' + n, summary: null, from_session: (n - 1) * 8 + 1, to_session: n * 8, starts_on: null, ends_on: null }))
+const LONG = 'Hành trình 2027 — 40 buổi thực hành guitar đệm hát cùng nhóm nhỏ, chặng một đến chặng năm'
+CLASSES.push({ id: CLS_E, code: 'HT2027.TH01', name: LONG, status: 'upcoming', cohort_group_id: null, start_date: null, end_date: null, weekday: null, start_time: null, duration_minutes: 90, total_sessions: 40, zoom_url: null, program_code: null, ...FULL })
 const SUMMARY = [{ class_id: CLS_A, group_name: 'Nhóm Alpha', group_id: 'g-a', member_count: 7, curriculum_access_count: 3 }]
 const COOKIE = 'base64-' + Buffer.from(JSON.stringify(session)).toString('base64url')
 const browser = await chromium.launch({ executablePath: process.env.CHROME || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' })
@@ -247,6 +251,8 @@ for (const width of [1440, 768, 390, 360]) {
   t = await body()
   assert.ok(t.includes('Alpha buổi một') && t.includes('Alpha buổi hai'), 'lịch có buổi của lớp')
   assert.ok(!t.includes('Beta buổi một'), 'lịch KHÔNG lẫn buổi lớp khác')
+  for (const raw of ['scheduled', 'completed', 'holiday']) assert.ok(!t.includes(raw), `không còn mã kỹ thuật "${raw}"`)
+  for (const vi of ['Dự kiến', 'Đã hoàn thành', 'Nghỉ']) assert.ok(t.includes(vi), `nhãn "${vi}"`)
   await tabs.getByRole('link', { name: 'Học viên' }).click()
   assert.ok(page.url().endsWith(`/admin/lop/${CLS_A}/hoc-vien`))
   await page.getByText('Học sinh trong lớp').waitFor()
@@ -286,6 +292,8 @@ for (const width of [1440, 390]) {
   const root = page.locator('.ac-root')
   assert.equal(await root.getByRole('button', { name: 'Soạn giáo trình' }).count(), 40, `${width}: đủ 40 buổi`)
   assert.equal(await root.locator('.cu-stage').count(), 5, `${width}: 5 chặng`)
+  assert.ok(!(await root.innerText()).includes('scheduled'), `${width}: Giáo trình không còn "scheduled"`)
+  assert.ok((await root.innerText()).includes('Dự kiến'), `${width}: Giáo trình có "Dự kiến"`)
   assert.ok(await overflow(page) <= 1, `${width}: giáo trình không tràn (${await overflow(page)})`)
   assert.equal(await page.locator('.ac-root h1').innerText(), 'Lớp Bốn Mươi')
   const bg = await root.locator('select').first().evaluate(e => getComputedStyle(e).backgroundColor)
@@ -302,6 +310,22 @@ for (const width of [1440, 390]) {
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/giaotrinh-${width}.png` })
   await ctx.close()
   ok(`V2 Giáo trình ${width}px: 5 chặng/40 buổi, không tràn, input nền sáng${width === 1440 ? ', header lớp dính' : ', nút ≥40'}`)
+}
+
+// 6c. Tên lớp dài: tiêu đề chính là TÊN, mã + trạng thái là thông tin phụ; không tràn ở mọi cỡ
+for (const width of [1440, 768, 390, 360]) {
+  const { ctx, page } = await open(`/admin/lop/${CLS_E}/giao-trinh`, { width, height: 800 })
+  await page.locator('.ac-root h1').waitFor()
+  assert.equal(await page.locator('.ac-root h1').innerText(), LONG, `${width}: tiêu đề = tên lớp đầy đủ`)
+  const meta = await page.locator('.ac-meta').innerText()
+  assert.ok(meta.includes('HT2027.TH01'), `${width}: mã lớp ở dòng phụ`)
+  const h = await page.locator('.ac-root h1').boundingBox(), m = await page.locator('.ac-meta').boundingBox()
+  assert.ok(m.y >= h.y + h.height - 1, `${width}: dòng phụ nằm dưới tiêu đề`)
+  assert.ok(await overflow(page) <= 1, `${width}: tên dài không tràn (${await overflow(page)})`)
+  const right = h.x + h.width
+  assert.ok(right <= width + 1, `${width}: tiêu đề nằm trong màn hình`)
+  await ctx.close()
+  ok(`V2 tên lớp dài ${width}px: tiêu đề là tên, mã/trạng thái phụ, không tràn`)
 }
 
 // 7. V2 responsive + bàn phím

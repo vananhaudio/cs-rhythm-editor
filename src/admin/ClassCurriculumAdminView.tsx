@@ -39,7 +39,7 @@ interface AccessRow {
   revoked_at: string | null
 }
 
-const C = { bg: '#F4F4F5', card: '#FFFFFF', border: '#E4E4E7', text: '#18181B', muted: '#52525B',
+const C = { bg: '#F4F4F5', card: '#FFFFFF', border: '#E4E4E7', text: '#18181B', muted: '#3F3F46',
   green: '#2D6A4F', greenBg: '#E9F3EC', red: '#B91C1C', redBg: '#FEE2E2' }
 const button: CSSProperties = { border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px 12px',
   background: C.card, color: C.text, font: '600 13px Inter, system-ui, sans-serif', cursor: 'pointer' }

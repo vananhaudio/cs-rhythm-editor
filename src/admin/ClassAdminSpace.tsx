@@ -7,6 +7,7 @@ import ClassCurriculumAdminView from './ClassCurriculumAdminView'
 import ClassJoinCode from './ClassJoinCode'
 import { adminClassPath, CLASS_TABS, parseAdminClassPath, type AdminSection, type ClassTab } from './adminNav'
 import { WEEKDAYS, scheduleText, statusInfo, STATUS } from '../journey/sessions'
+import { sessionStatusLabel } from './sessionStatus'
 import './adminClass.css'
 
 interface ClassRow {
@@ -178,10 +179,10 @@ function ClassDetail({ classKey, tab, navigate, goSection }: { classKey: string;
   return <>
     <header className="ac-head ac-head-detail">
       {back}
-      <div className="ac-title-row">
-        <h1 className="ac-title">{cls.name}</h1>
+      <h1 className="ac-title">{cls.name?.trim() || cls.code || 'Lớp chưa đặt tên'}</h1>
+      <div className="ac-meta">
+        <span className="ac-code">Mã lớp: <b>{cls.code ?? 'Chưa có'}</b></span>
         <StatusBadge status={cls.status} />
-        <span className="ac-code">{cls.code ?? 'Chưa có mã'}</span>
       </div>
       {/* Điện thoại: một nút chọn mục (HIG menu button) thay vì ép 5 tab vào một hàng; ≥768px: segmented */}
       <select className="ac-input ac-tabs-select" value={tab} aria-label="Mục của lớp"
@@ -224,7 +225,7 @@ function ClassDetail({ classKey, tab, navigate, goSection }: { classKey: string;
             <span className="ac-session-no">{s.event_type === 'break' ? 'Nghỉ' : s.session_number != null ? `Buổi ${s.session_number}` : 'Sự kiện'}</span>
             <span className="ac-session-when">{fmtDateTime(s.start_at)}</span>
             <span className="ac-session-title">{s.title ?? ''}</span>
-            <span className={`ac-session-status${s.status === 'cancelled' ? ' is-off' : ''}`}>{s.status ?? ''}</span>
+            <span className={`ac-session-status${s.status === 'cancelled' ? ' is-off' : ''}`}>{sessionStatusLabel(s.status)}</span>
           </li>)}
         </ul>}
       <p className="ac-hint">Múi giờ hiển thị: Việt Nam. Thứ trong tuần: {WEEKDAYS.join(', ')} (quy ước hệ thống).</p>
