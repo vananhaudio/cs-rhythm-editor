@@ -6,6 +6,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import React from "react";
+import { readFileSync } from "node:fs";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
   BAND_PREFIX, bandIdOf, isBandConversation, layoutMessages, mergeConversationLists, previewText, toBandConversations, toBandMembers, toBandMessages,
@@ -27,7 +28,7 @@ const DM = "0b6f7c1e-5d2a-4c3b-9a8e-1f2d3c4b5a69";
 const USER = "aaaaaaaa-0000-4000-8000-00000000000a";
 const room = (over: Record<string, unknown> = {}) => ({
   band_id: BAND, band_name: " Band X ", cover_path: null, project_id: PROJECT, project_avatar_path: `${PROJECT}/1700000000-ab12.jpg`,
-  last_seq: "4", last_body: "Mai tập 7h", last_sender_name: "An", last_mine: false, last_at: "2026-10-15T03:00:00Z", unread: 2, member_count: 5, ...over,
+  last_seq: "4", last_body: "Mai tập 7h", last_sender_name: "An", last_mine: false, last_at: "2026-10-15T03:00:00Z", unread: 2, member_count: 5, can_send: true, archived: false, support: false, ...over,
 });
 
 test("toBandConversations: id band:<uuid>, tên Band, ảnh Band → ảnh Team → null, canSend, nhóm chưa có tin vẫn hiện", () => {
@@ -44,6 +45,16 @@ test("toBandConversations: id band:<uuid>, tên Band, ảnh Band → ảnh Team 
   assert.equal(toBandConversations([{ band_id: "", band_name: "x" }, { band_id: BAND, band_name: "  " }] as never).length, 0, "bỏ hàng thiếu id/tên");
   assert.equal(isBandConversation(a.id) && !isBandConversation(DM), true);
   assert.equal(bandIdOf(a.id), BAND);
+});
+
+test("toBandConversations: lưu trữ / hỗ trợ (Thầy-Admin) → chỉ đọc do SERVER quyết; thiếu can_send = không gửi được", () => {
+  const [arch] = toBandConversations([room({ can_send: false, archived: true })] as never);
+  assert.deepEqual([arch.canSend, arch.readOnly], [false, "archived"]);
+  const [sup] = toBandConversations([room({ can_send: false, support: true, unread: 0 })] as never);
+  assert.deepEqual([sup.canSend, sup.readOnly, sup.unread], [false, "support", 0]);
+  const [unk] = toBandConversations([room({ can_send: undefined })] as never);
+  assert.equal(unk.canSend, false, "không biết = KHÔNG gửi được");
+  assert.equal(toBandConversations([room()] as never)[0].readOnly, null);
 });
 
 test("previewText nhóm Band: 'Bạn: …' / 'Tên: …' / lời mời chào khi chưa có tin", () => {
@@ -195,4 +206,19 @@ test("MessageList: tin người khác trong nhóm có tên + ảnh người gử
   assert.match(html, /cs-msg-sender">An</);
   assert.match(html, /cs-msg-sender">Bình</);
   assert.doesNotMatch(html, /cs-msg-sender">Tôi</, "tin của mình không hiện tên");
+});
+
+test("ConversationList + ConversationView: nhóm hỗ trợ có mục riêng 'chỉ xem'; nhóm lưu trữ có nhãn; ghi chú quyền Thầy/Admin ở thành viên", () => {
+  const items = toBandConversations([
+    room(),
+    room({ band_id: "11111111-0000-4000-8000-0000000000a2", band_name: "Band Y", can_send: false, support: true, unread: 0 }),
+    room({ band_id: "11111111-0000-4000-8000-0000000000a3", band_name: "Band Z", can_send: false, archived: true }),
+  ] as never);
+  const html = renderToStaticMarkup(<ConversationList state={{ status: "ready", items }} selectedId={null} onSelect={() => {}} onRetry={() => {}} onOpenFriends={() => {}} />);
+  assert.match(html, /Hỗ trợ · nhóm Band bạn không thuộc \(chỉ xem\)/);
+  assert.match(html, /Band · xem/);
+  assert.match(html, /Band · lưu trữ/);
+  const src = readFileSync(new URL("../../src/class-social/chat/ConversationView.tsx", import.meta.url), "utf8");
+  assert.match(src, /Thầy\/Admin có thể xem nhóm Band để hỗ trợ và quản lý/);
+  assert.match(src, /chỉ đọc, không gửi tin vào nhóm/);
 });

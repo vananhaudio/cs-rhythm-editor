@@ -73,11 +73,14 @@ do $$ begin
   perform t.fails($q$select * from public.bandchat_reads$q$, '0 KHÔNG đọc thẳng bandchat_reads');
   perform t.fails($q$insert into public.bandchat_messages (band_id, seq, sender_id, body) values (gen_random_uuid(), 1, 'aaaaaaaa-0000-4000-8000-00000000000a', 'x')$q$, '0 KHÔNG chèn thẳng bandchat_messages');
   perform t.fails($q$update public.bandchat_reads set last_read_seq = 99$q$, '0 KHÔNG sửa thẳng bandchat_reads');
-  perform t.fails($q$select public.bandchat_is_member(t.band('X'), t.u('A'))$q$, '0 bandchat_is_member là hàm nội bộ');
+  perform t.fails($q$select public.bandchat_access(t.band('X'))$q$, '0 bandchat_access là hàm nội bộ');
+  perform t.fails($q$select * from public.bandchat_frozen$q$, '0 KHÔNG đọc thẳng bandchat_frozen');
+  perform t.fails($q$select public.bandchat_set_archived(t.band('X'), true)$q$, '0 học sinh KHÔNG lưu trữ được nhóm');
   perform t.fails($q$select public.bandchat_append(t.band('X'), t.u('A'), 'x')$q$, '0 bandchat_append là hàm nội bộ (không gửi vòng qua kiểm quyền)');
   perform t.as_anon();
   perform t.fails($q$select * from public.bandchat_rooms()$q$, '0 anon không gọi được bandchat_rooms');
   perform t.fails($q$select public.bandchat_send(t.band('X'), 'x')$q$, '0 anon không gửi được');
+  perform t.fails($q$select public.bandchat_set_archived(t.band('X'), true)$q$, '0 anon không lưu trữ được');
   perform t.reset();
 end $$;
 
@@ -124,20 +127,33 @@ do $$ declare s bigint; begin
   perform t.reset();
 end $$;
 
--- ── c. Người ngoài (kể cả Thầy/Admin không thuộc Band, tài khoản ngoài Class, ID giả) bị chặn ở backend ──
-do $$ declare k text; begin
-  foreach k in array array['N', 'T'] loop
-    perform t.as_user(k);
-    perform t.ok((select count(*) from public.bandchat_rooms()) = 0, 'c1 ' || k || ' không thấy nhóm nào');
-    perform t.ok(t.err($q$select * from public.bandchat_messages(t.band('X'))$q$) like 'P0002:%', 'c2 ' || k || ' KHÔNG đọc được dù biết ID Band');
-    perform t.ok(t.err($q$select public.bandchat_send(t.band('X'), 'x')$q$) like 'P0002:%', 'c3 ' || k || ' KHÔNG gửi được');
-    perform t.ok(public.bandchat_unread_count() = 0, 'c4 ' || k || ' badge = 0');
-  end loop;
+-- ── c. Người ngoài bị chặn ở backend; Thầy/Admin chỉ ĐỌC (không gửi, không đổi trạng thái đọc) ──
+do $$ begin
+  perform t.as_user('N');
+  perform t.ok((select count(*) from public.bandchat_rooms()) = 0, 'c1 N (ngoài Band) không thấy nhóm nào');
+  perform t.ok(t.err($q$select * from public.bandchat_messages(t.band('X'))$q$) like 'P0002:%', 'c2 N KHÔNG đọc được dù biết ID Band');
+  perform t.ok(t.err($q$select public.bandchat_send(t.band('X'), 'x')$q$) like 'P0002:%', 'c3 N KHÔNG gửi được');
+  perform t.ok(t.err($q$select * from public.bandchat_members(t.band('X'))$q$) like 'P0002:%', 'c3b N KHÔNG xem thành viên');
+  perform t.ok(public.bandchat_unread_count() = 0, 'c4 N badge = 0');
   perform t.as_user('A');
   perform t.ok(t.err($q$select * from public.bandchat_messages(gen_random_uuid())$q$) like 'P0002:%'
                and t.err($q$select public.bandchat_send(gen_random_uuid(), 'x')$q$) like 'P0002:%', 'c5 ID Band không tồn tại → cùng lỗi (không lộ sự tồn tại)');
   perform t.reset();
   perform t.ok(t.rows() = '2/3/3', 'c6 chặn không tạo phòng/tin rác (2 phòng, 3 tin)');
+  -- Thầy/Admin (nguồn quyền chuẩn is_teacher)
+  perform t.as_user('T');
+  perform t.ok((select count(*) from public.bandchat_rooms() where band_id in (t.band('X'), t.band('Y')) and support and not can_send and unread = 0) = 2,
+               'c7 Thầy thấy 2 nhóm đã có tin của Band khác: support, không gửi được, không chưa đọc');
+  perform t.ok((select count(*) from public.bandchat_rooms()) = 2, 'c8 nhóm chưa có tin (Z) không xuất hiện ở danh sách hỗ trợ');
+  perform t.ok((select count(*) from public.bandchat_messages(t.band('X'))) = 2, 'c9 Thầy đọc được lịch sử nhóm X (hỗ trợ/quản lý)');
+  perform t.ok((select count(*) from public.bandchat_members(t.band('X'))) = 2, 'c10 Thầy xem được thành viên');
+  perform t.ok(t.err($q$select public.bandchat_send(t.band('X'), 'Thầy nhắn thay')$q$) like '42501:%', 'c11 Thầy KHÔNG gửi được vào nhóm không thuộc (không gửi thay/giả danh)');
+  perform t.ok(public.bandchat_mark_read(t.band('X'), 2) = 0 and public.bandchat_unread_count() = 0, 'c12 Thầy xem không tạo trạng thái đọc');
+  perform t.reset();
+  perform t.ok(t.rows() = '2/3/3', 'c13 Thầy xem không đổi dữ liệu (rooms/messages/reads)');
+  perform t.as_user('A');
+  perform t.ok((select unread from public.bandchat_rooms() where band_id = t.band('X')) = 1, 'c14 Thầy xem không làm đổi chưa đọc của thành viên (B gửi → A còn 1)');
+  perform t.reset();
 end $$;
 
 -- ── d. Rời Band bị thu hồi quyền; tin cũ vẫn còn ──
@@ -224,14 +240,66 @@ do $$ declare i int; begin
   perform t.reset();
 end $$;
 
--- ── k. Xoá Band KHÔNG xoá lịch sử chat; không ai còn đọc được ──
+-- ── m. Lưu trữ Band: giữ lịch sử, chỉ đọc cho người có quyền lúc lưu trữ; khôi phục → theo thành viên hiện hành ──
 do $$ begin
   perform t.reset();
-  perform t.ok(t.msgs(t.band('X')) = 3, 'k0 X có 3 tin trước khi xoá Band');
+  -- trạng thái trước: X có A, B, D (đều thành viên). Z chưa có phòng.
+  perform t.as_user('A');
+  perform t.ok(t.err($q$select public.bandchat_set_archived(t.band('X'), true)$q$) like '42501:%', 'm0 thành viên thường KHÔNG lưu trữ được');
+  perform t.as_user('T');
+  perform t.ok(public.bandchat_set_archived(t.band('X'), true) is not null, 'm1 Thầy lưu trữ Band X');
+  perform t.ok(public.bandchat_set_archived(t.band('X'), true) is not null, 'm1b lưu trữ lần hai idempotent');
+  perform t.as_user('A');
+  perform t.ok((select can_send from public.bandchat_rooms() where band_id = t.band('X')) = false
+               and (select archived from public.bandchat_rooms() where band_id = t.band('X')) = true
+               and (select support from public.bandchat_rooms() where band_id = t.band('X')) = false, 'm2 A thấy nhóm: lưu trữ, chỉ đọc, KHÔNG phải nhóm hỗ trợ');
+  perform t.ok((select count(*) from public.bandchat_messages(t.band('X'))) = 3, 'm3 A vẫn đọc toàn bộ lịch sử');
+  perform t.ok(t.err($q$select public.bandchat_send(t.band('X'), 'gửi khi lưu trữ')$q$) like '42501:%', 'm4 A KHÔNG gửi được khi Band lưu trữ');
+  perform t.ok(public.bandchat_mark_read(t.band('X'), 3) = 3, 'm5 A vẫn đánh dấu đã đọc được');
+  perform t.reset();
+  -- B (đang là thành viên) rời Band SAU khi lưu trữ → vẫn đọc (có quyền tại thời điểm lưu trữ)
+  delete from public.teamlab_band_members where band_id = t.band('X') and user_id = t.u('B');
+  -- E vào Band SAU khi lưu trữ → không có quyền
+  insert into public.teamlab_band_members (band_id, user_id) values (t.band('X'), t.u('E'));
+  perform t.as_user('B');
+  perform t.ok((select count(*) from public.bandchat_messages(t.band('X'))) = 3 and (select can_send from public.bandchat_rooms() where band_id = t.band('X')) = false,
+               'm6 B rời Band sau lưu trữ vẫn đọc (chỉ đọc)');
+  perform t.as_user('E');
+  perform t.ok(t.err($q$select * from public.bandchat_messages(t.band('X'))$q$) like 'P0002:%' and (select count(*) from public.bandchat_rooms()) = 0,
+               'm7 người vào Band sau lưu trữ KHÔNG có quyền (cho tới khi khôi phục)');
+  perform t.as_user('C');
+  perform t.ok(t.err($q$select * from public.bandchat_messages(t.band('X'))$q$) like 'P0002:%', 'm8 người ngoài vẫn bị chặn khi nhóm lưu trữ');
+  perform t.as_user('T');
+  perform t.ok((select count(*) from public.bandchat_messages(t.band('X'))) = 3
+               and (select array_length(array_agg(user_id), 1) from public.bandchat_members(t.band('X'))) = 3, 'm9 Thầy vẫn đọc; danh sách thành viên = ảnh chụp lúc lưu trữ (A, B, D)');
+  perform t.ok(t.err($q$select public.bandchat_send(t.band('X'), 'x')$q$) like '42501:%', 'm10 Thầy không gửi được');
+  perform t.reset();
+  perform t.ok(t.msgs(t.band('X')) = 3, 'm11 lưu trữ không xoá tin nào');
+  -- Khôi phục
+  perform t.as_user('T');
+  perform t.ok(public.bandchat_set_archived(t.band('X'), false) is null, 'm12 Thầy khôi phục');
+  perform t.as_user('A');
+  perform t.ok((select can_send from public.bandchat_rooms() where band_id = t.band('X')) = true and public.bandchat_send(t.band('X'), 'Band đã khôi phục') = 4,
+               'm13 khôi phục → A gửi lại được');
+  perform t.as_user('B');
+  perform t.ok(t.err($q$select * from public.bandchat_messages(t.band('X'))$q$) like 'P0002:%', 'm14 khôi phục → quyền theo thành viên HIỆN HÀNH (B đã rời nên mất quyền)');
+  perform t.as_user('E');
+  perform t.ok((select count(*) from public.bandchat_messages(t.band('X'))) = 4, 'm15 khôi phục → E (thành viên hiện hành) đọc được toàn bộ lịch sử');
+  perform t.reset();
+  perform t.ok((select count(*) from public.bandchat_frozen) = 0, 'm16 khôi phục xoá ảnh chụp');
+end $$;
+
+-- ── k. Xoá Band KHÔNG xoá lịch sử chat; thành viên cũ không đọc được, Thầy/Admin vẫn đọc ──
+do $$ begin
+  perform t.reset();
+  perform t.ok(t.msgs(t.band('X')) = 4, 'k0 X có 4 tin trước khi xoá Band');
   delete from public.teamlab_band_members where band_id = t.band('X');
   delete from public.teamlab_bands where id = t.band('X');
-  perform t.ok(t.msgs(t.band('X')) = 3, 'k1 xoá Band → 3 tin chat vẫn còn trong DB');
+  perform t.ok(t.msgs(t.band('X')) = 4, 'k1 xoá Band → 4 tin chat vẫn còn trong DB');
   perform t.as_user('A');
-  perform t.ok(t.err($q$select * from public.bandchat_messages(t.band('X'))$q$) like 'P0002:%', 'k2 không ai đọc được nhóm của Band đã xoá');
+  perform t.ok(t.err($q$select * from public.bandchat_messages(t.band('X'))$q$) like 'P0002:%', 'k2 thành viên cũ không đọc được nhóm của Band đã xoá');
+  perform t.as_user('T');
+  perform t.ok((select count(*) from public.bandchat_messages(t.band('X'))) = 4
+               and (select band_name from public.bandchat_rooms() where band_id = t.band('X')) = 'Band X mới', 'k3 Thầy vẫn đọc; nhóm hiện bằng tên Band đã lưu');
   perform t.reset();
 end $$;

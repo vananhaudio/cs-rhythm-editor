@@ -541,6 +541,8 @@
 .cs-chat-peer-text > span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cs-chat-peer-tag { font-size: 12px; color: var(--cs-muted); }
 .cs-chat-members { border-bottom: 1px solid var(--cs-border); padding: 8px 14px 10px; max-height: 40%; overflow-y: auto; flex: none; }
+.cs-chat-list-sub { font-size: 12px; font-weight: 700; color: var(--cs-muted); padding: 12px 14px 4px; }
+.cs-chat-members-note { font-size: 12.5px; color: var(--cs-muted); margin: 0 0 8px; line-height: 1.4; }
 .cs-chat-members-head { display: flex; align-items: center; justify-content: space-between; font-size: 13px; font-weight: 700; color: var(--cs-muted); margin-bottom: 4px; }
 .cs-chat-member { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; padding: 4px 6px; border: none; background: transparent; border-radius: 10px; color: var(--cs-text); font: inherit; text-align: left; cursor: pointer; }
 .cs-chat-member:hover { background: var(--cs-hover); }

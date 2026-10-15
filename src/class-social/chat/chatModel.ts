@@ -17,6 +17,8 @@ export type ConversationItem = {
   id: string
   /** 'band' = nhóm chat của Band (tên + ảnh lấy từ Band). Mặc định (hội thoại cá nhân) = 'dm'. */
   kind?: 'dm' | 'band'
+  /** Nhóm Band chỉ đọc: 'archived' (Band lưu trữ) | 'support' (Thầy/Admin xem để hỗ trợ, không phải thành viên) */
+  readOnly?: 'archived' | 'support' | null
   /** Chỉ nhóm Band: tên người gửi tin cuối (rỗng nếu chưa có tin) và số thành viên */
   lastSender?: string
   memberCount?: number
@@ -58,6 +60,8 @@ export type BandRoomRow = {
   band_id: string; band_name: string | null; cover_path: string | null; project_id: string | null; project_avatar_path: string | null
   last_seq: number | string | null; last_body: string | null; last_sender_name: string | null; last_mine: boolean | null; last_at: string | null
   unread: number | null; member_count: number | null
+  /** Server quyết: gửi được / Band đã lưu trữ / nhóm xem với tư cách Thầy-Admin hỗ trợ (không phải thành viên) */
+  can_send?: boolean | null; archived?: boolean | null; support?: boolean | null
 }
 export type BandMessageRow = {
   seq: number | string; sender_id: string | null; sender_name: string | null; sender_avatar_url: string | null
@@ -107,7 +111,8 @@ export function toBandConversations(rows: BandRoomRow[] | null | undefined): Con
     lastSender: (r.last_sender_name ?? '').trim(),
     lastAt: r.last_at ?? '',
     unread: Math.max(0, Number(r.unread) || 0),
-    canSend: true,   // còn trong danh sách = còn là thành viên Band (server chỉ trả nhóm của thành viên hiện hành)
+    canSend: r.can_send === true,   // server quyết (lưu trữ / hỗ trợ → chỉ đọc); không biết = KHÔNG gửi được
+    readOnly: r.support === true ? 'support' as const : r.archived === true ? 'archived' as const : null,
     memberCount: Math.max(0, Number(r.member_count) || 0),
   }))
 }
@@ -218,6 +223,7 @@ export function chatErrorText(err: { code?: string; message?: string; status?: n
   if (err?.code === '54000') return 'Bạn gửi quá nhanh. Hãy chờ một chút rồi gửi tiếp.'
   if (ctx === 'share' && err?.code === '22023') return 'Nội dung này không thể chia sẻ nữa.'
   if (err?.code === '22023') return err.message && /quá dài|trống/i.test(err.message) ? err.message : 'Tin nhắn chưa hợp lệ.'
+  if (err?.code === '42501' && /chỉ đọc/i.test(err.message ?? '')) return 'Nhóm này đang ở chế độ chỉ đọc.'
   if (err?.code === '42501') return 'Bạn chưa thể nhắn tin cho người này.'
   return 'Chưa thực hiện được. Hãy thử lại.'
 }

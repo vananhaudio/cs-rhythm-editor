@@ -35,9 +35,19 @@ export default function ConversationList({ state, selectedId, onSelect, onRetry,
         </EmptyState>
       )}
       {state.status === 'ready' && state.items.length > 0 && (
-        <ul className="cs-chat-items">
-          {state.items.map(c => <Item key={c.id} c={c} active={c.id === selectedId} onSelect={onSelect} />)}
-        </ul>
+        <>
+          <ul className="cs-chat-items">
+            {state.items.filter(c => c.readOnly !== 'support').map(c => <Item key={c.id} c={c} active={c.id === selectedId} onSelect={onSelect} />)}
+          </ul>
+          {state.items.some(c => c.readOnly === 'support') && (
+            <>
+              <div className="cs-chat-list-sub">Hỗ trợ · nhóm Band bạn không thuộc (chỉ xem)</div>
+              <ul className="cs-chat-items">
+                {state.items.filter(c => c.readOnly === 'support').map(c => <Item key={c.id} c={c} active={c.id === selectedId} onSelect={onSelect} />)}
+              </ul>
+            </>
+          )}
+        </>
       )}
     </div>
   )
@@ -54,7 +64,7 @@ function Item({ c, active, onSelect }: { c: ConversationItem; active: boolean; o
         <span className="cs-chat-item-text">
           <span className="cs-chat-item-top">
             <span className="cs-chat-item-name">{c.name}</span>
-            {c.kind === 'band' && <span className="cs-chat-item-tag"><Users size={12} aria-hidden="true" />Band</span>}
+            {c.kind === 'band' && <span className="cs-chat-item-tag"><Users size={12} aria-hidden="true" />{c.readOnly === 'archived' ? 'Band · lưu trữ' : c.readOnly === 'support' ? 'Band · xem' : 'Band'}</span>}
             <span className="cs-chat-item-time">{shortTime(c.lastAt)}</span>
           </span>
           <span className="cs-chat-item-bottom">

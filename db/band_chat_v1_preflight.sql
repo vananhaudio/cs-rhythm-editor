@@ -2,7 +2,7 @@
 select section, item from (
   select 1 o, 'CHECK' section, 'bảng bandchat_* đã có: ' || coalesce((select string_agg(c.relname, ', ' order by c.relname)
      from pg_class c join pg_namespace n on n.oid = c.relnamespace
-    where n.nspname = 'public' and c.relname in ('bandchat_rooms', 'bandchat_messages', 'bandchat_reads')), 'chưa') item
+    where n.nspname = 'public' and c.relname in ('bandchat_rooms', 'bandchat_messages', 'bandchat_reads', 'bandchat_frozen')), 'chưa') item
   union all select 2, 'CHECK', 'Band: ' || (select count(*) from public.teamlab_bands) || ' · thành viên Band: ' || (select count(*) from public.teamlab_band_members)
   union all select 3, 'CHECK', 'cột nền đủ (phải 10): ' || (select count(*) from information_schema.columns where table_schema = 'public' and (table_name, column_name) in
         (('teamlab_bands', 'id'), ('teamlab_bands', 'project_id'), ('teamlab_bands', 'name'), ('teamlab_bands', 'cover_path'),
@@ -18,11 +18,11 @@ select section, item from (
          ('projects', 'id'), ('projects', 'name'), ('projects', 'avatar_path'))) = 10
    and to_regprocedure('public.class_public_identity(uuid)') is not null
    and not exists (select 1 from pg_class c join pg_namespace n on n.oid = c.relnamespace
-         where n.nspname = 'public' and c.relname in ('bandchat_rooms', 'bandchat_messages', 'bandchat_reads')
+         where n.nspname = 'public' and c.relname in ('bandchat_rooms', 'bandchat_messages', 'bandchat_reads', 'bandchat_frozen')
            and coalesce(obj_description(c.oid, 'pg_class'), '') not like 'bandchat_v1:%')
    and not exists (select 1 from pg_proc p join pg_namespace s on s.oid = p.pronamespace
-         where s.nspname = 'public' and p.proname in ('bandchat_is_member', 'bandchat_append', 'bandchat_rooms', 'bandchat_messages',
-           'bandchat_send', 'bandchat_mark_read', 'bandchat_unread_count', 'bandchat_members')
+         where s.nspname = 'public' and p.proname in ('bandchat_access', 'bandchat_append', 'bandchat_rooms', 'bandchat_messages',
+           'bandchat_send', 'bandchat_mark_read', 'bandchat_unread_count', 'bandchat_members', 'bandchat_set_archived')
            and coalesce(obj_description(p.oid, 'pg_proc'), '') not like 'bandchat_v1:%')
   then 'PASS' else 'FAIL' end
 ) z order by o;

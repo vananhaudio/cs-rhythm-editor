@@ -13,6 +13,7 @@ export type Peer = {
   id: string; name: string; avatarUrl: string | null; isTeacher: boolean
   /** Nhóm Band: tên/ảnh là của Band; số thành viên cho dòng phụ ở header */
   kind?: 'dm' | 'band'; memberCount?: number
+  readOnly?: 'archived' | 'support' | null
 }
 
 export default function ConversationView({ id, peer, canSend, onBack, onOpenProfile, onActivity }: {
@@ -34,7 +35,7 @@ export default function ConversationView({ id, peer, canSend, onBack, onOpenProf
       <ChatHeader name={peer?.name ?? null} avatarUrl={peer?.avatarUrl ?? null} isTeacher={isBand ? false : peer?.isTeacher}
         onBack={onBack}
         onOpenProfile={peer ? (isBand ? () => setShowMembers(v => !v) : () => onOpenProfile(peer.id)) : undefined}
-        tag={isBand ? `Nhóm Band${peer?.memberCount ? ` · ${peer.memberCount} thành viên` : ''}` : undefined}
+        tag={isBand ? `Nhóm Band${peer?.readOnly === 'archived' ? ' · Lưu trữ' : peer?.readOnly === 'support' ? ' · Chế độ hỗ trợ' : ''}${peer?.memberCount ? ` · ${peer.memberCount} thành viên` : ''}` : undefined}
         actionLabel={isBand && peer ? `Thành viên nhóm ${peer.name}` : undefined} />
       {isBand && showMembers && <BandMembers id={id} onClose={() => setShowMembers(false)} onOpenProfile={onOpenProfile} />}
 
@@ -60,8 +61,12 @@ export default function ConversationView({ id, peer, canSend, onBack, onOpenProf
           {canSend === false
             ? (
               <div className="cs-chat-locked" role="status">
-                <p>Bạn chưa thể gửi tin mới cho {peer?.name ?? 'người này'}. Lịch sử trò chuyện vẫn được giữ.</p>
-                {peer && <button type="button" className="cs-btn cs-btn-soft cs-btn-sm" onClick={() => onOpenProfile(peer.id)}>Xem trang cá nhân</button>}
+                {isBand
+                  ? <p>{peer?.readOnly === 'support'
+                      ? 'Bạn đang xem nhóm này với tư cách Thầy/Admin để hỗ trợ — chỉ đọc, không gửi tin vào nhóm.'
+                      : 'Band đã được lưu trữ nên nhóm chỉ đọc. Lịch sử trò chuyện vẫn được giữ.'}</p>
+                  : <p>Bạn chưa thể gửi tin mới cho {peer?.name ?? 'người này'}. Lịch sử trò chuyện vẫn được giữ.</p>}
+                {peer && !isBand && <button type="button" className="cs-btn cs-btn-soft cs-btn-sm" onClick={() => onOpenProfile(peer.id)}>Xem trang cá nhân</button>}
               </div>
             )
             : <Composer onSend={body => { c.send(body); return true }} autoFocus />}
@@ -82,6 +87,7 @@ function BandMembers({ id, onClose, onOpenProfile }: { id: string; onClose: () =
   }, [id, rev])
   return (
     <section className="cs-chat-members" aria-label="Thành viên nhóm">
+      <p className="cs-chat-members-note">Thầy/Admin có thể xem nhóm Band để hỗ trợ và quản lý. Họ chỉ xem, không gửi tin thay thành viên.</p>
       <div className="cs-chat-members-head">
         <span>Thành viên</span>
         <button type="button" className="cs-icon-btn" onClick={onClose} aria-label="Đóng danh sách thành viên"><X size={18} aria-hidden="true" /></button>

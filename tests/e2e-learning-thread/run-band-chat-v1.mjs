@@ -15,7 +15,8 @@ const ME = `http://class.localhost:${V}/me`
 const BAND_X = '11111111-0000-4000-8000-0000000000a1'
 const BAND_Y = '11111111-0000-4000-8000-0000000000a2'
 const X_NAME = 'Lá Mùa Thu Acoustic Band Hà Nội 2026'
-const EMAIL = { A: 'a@test.local', B: 'b@test.local', C: 'c@test.local' }
+const EMAIL = { A: 'a@test.local', B: 'b@test.local', C: 'c@test.local', T: 't@test.local' }
+const TEACHER = 'dddddddd-0000-4000-8000-00000000000d'
 const SHOTS = process.env.SHOTS
 mkdirSync(SHOTS, { recursive: true })
 const sql = q => execFileSync(`${process.env.E2E_PG_BIN}/psql`, ['-X', '-q', '-tA', '-h', process.env.E2E_PG_SOCK, '-p', process.env.E2E_PG_PORT, '-U', 'postgres', '-d', 'e2e', '-v', 'ON_ERROR_STOP=1', '-c', q], { encoding: 'utf8' }).trim()
@@ -204,6 +205,43 @@ try {
   await waitFor(A, () => [...document.querySelectorAll('.cs-msg-bubble')].some(b => b.textContent === 'tin riêng mới' && !b.classList.contains('is-pending')))
   assert.ok(calls(A, 'dm_send').length >= 1)
   ok('9 chat cá nhân: tải + gửi qua dm_*, không dòng nhóm Band')
+
+  // ── 9b. Thầy/Admin: xem để hỗ trợ (chỉ đọc), có ghi chú quyền; lưu trữ Band → chỉ đọc; khôi phục → gửi lại ──
+  const T = await open('T', 1280, 900)
+  await chat(T)
+  await waitFor(T, () => [...document.querySelectorAll('.cs-chat-list-sub')].length === 1)
+  assert.match(await T.$eval('.cs-chat-list-sub', e => e.textContent), /Hỗ trợ/)
+  list = await items(T)
+  assert.ok(list.find(i => i.name === X_NAME && i.band), 'Thầy thấy nhóm Band X (đã có tin) ở mục hỗ trợ')
+  assert.equal(list.find(i => i.name === X_NAME).badge, null, 'xem không tạo chưa đọc')
+  await openBand(T)
+  await waitFor(T, () => document.querySelectorAll('.cs-msg-bubble').length === 2)
+  assert.match(await T.$eval('.cs-chat-peer-tag', e => e.textContent), /Chế độ hỗ trợ/)
+  assert.match(await T.$eval('.cs-chat-locked', e => e.textContent), /Thầy\/Admin để hỗ trợ — chỉ đọc/)
+  assert.equal(await T.$('.cs-chat-input'), null, 'Thầy không có ô gửi trong nhóm không thuộc')
+  await T.click('.cs-chat-peer')
+  await T.waitForSelector('.cs-chat-members-note')
+  assert.match(await T.$eval('.cs-chat-members-note', e => e.textContent), /Thầy\/Admin có thể xem nhóm Band để hỗ trợ và quản lý/)
+  assert.equal(sql(`select count(*) from public.bandchat_reads where user_id = '${TEACHER}'`), '0', 'xem không ghi trạng thái đọc')
+  assert.equal(calls(T, 'bandchat_send').length, 0)
+  await T.screenshot({ path: `${SHOTS}/band-chat-support-1280.png` })
+  ok('9b Thầy: nhóm Band ở mục "Hỗ trợ", đọc lịch sử, KHÔNG có ô gửi, ghi chú quyền hiển thị, không ghi trạng thái đọc')
+
+  sql(`select set_config('request.jwt.claims', '{"sub":"${TEACHER}","role":"authenticated"}', false); select public.bandchat_set_archived('${BAND_X}', true)`)
+  await chat(A)
+  await openBand(A)
+  await waitFor(A, () => document.querySelector('.cs-chat-locked'))
+  assert.match(await A.$eval('.cs-chat-peer-tag', e => e.textContent), /Lưu trữ/)
+  assert.match(await A.$eval('.cs-chat-locked', e => e.textContent), /Band đã được lưu trữ/)
+  assert.equal(await A.$('.cs-chat-input'), null)
+  assert.equal(await A.$$eval('.cs-msg-bubble', es => es.length), 2, 'lịch sử còn nguyên')
+  await A.screenshot({ path: `${SHOTS}/band-chat-archived-390.png` })
+  sql(`select set_config('request.jwt.claims', '{"sub":"${TEACHER}","role":"authenticated"}', false); select public.bandchat_set_archived('${BAND_X}', false)`)
+  await chat(A)
+  await openBand(A)
+  await A.waitForSelector('.cs-chat-input')
+  assert.equal(await A.$('.cs-chat-locked'), null)
+  ok('9b Band lưu trữ: thành viên vẫn đọc, ô gửi biến mất + giải thích; khôi phục → gửi lại được')
 
   // ── 10. Ma trận kích thước (nhóm Y của C: danh sách + nhóm) ──
   for (const [w, h] of [[320, 640], [360, 740], [390, 844], [430, 932], [1120, 800], [1280, 900], [1440, 900]]) {

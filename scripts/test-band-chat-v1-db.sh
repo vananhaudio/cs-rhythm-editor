@@ -102,7 +102,7 @@ case "$LOCKS" in
   *) fail "khoá không mong đợi: $LOCKS";;
 esac
 
-echo "── Test SQL theo identity (a–e, g, i, k, l)"
+echo "── Test SQL theo identity (a–e, g, i, l, m, k)"
 PGOPTIONS="-c client_min_messages=notice" "$PGBIN/psql" -X -q -h "$TMP" -p "$PORT" -U postgres -d tva_bc -v ON_ERROR_STOP=1 \
   -f "$ROOT/db/tests/band_chat_v1_test.sql" 2>&1 | sed -E 's/^psql:[^:]*:[0-9]*: (NOTICE|ERROR):  //' | tee "$TMP/test.out"
 [ "${PIPESTATUS[0]}" = "0" ] || fail "test SQL"
