@@ -181,8 +181,8 @@ function ClassDetail({ classKey, tab, navigate, goSection }: { classKey: string;
       <div className="ac-title-row">
         <h1 className="ac-title">{cls.name}</h1>
         <StatusBadge status={cls.status} />
+        <span className="ac-code">{cls.code ?? 'Chưa có mã'}</span>
       </div>
-      <div className="ac-sub">{cls.code ?? 'Chưa có mã'}</div>
       {/* Điện thoại: một nút chọn mục (HIG menu button) thay vì ép 5 tab vào một hàng; ≥768px: segmented */}
       <select className="ac-input ac-tabs-select" value={tab} aria-label="Mục của lớp"
         onChange={e => navigate(tabHref(e.target.value as ClassTab))}>
@@ -231,7 +231,7 @@ function ClassDetail({ classKey, tab, navigate, goSection }: { classKey: string;
     </section>}
 
     {tab === 'students' && <section className="ac-card"><ClassCurriculumAdminView client={supabase} classId={cls.id} part="students" /></section>}
-    {tab === 'curriculum' && <section className="ac-card"><ClassCurriculumAdminView client={supabase} classId={cls.id} part="curriculum" /></section>}
+    {tab === 'curriculum' && <section><ClassCurriculumAdminView client={supabase} classId={cls.id} part="curriculum" /></section>}
 
     {tab === 'settings' && <>
       <dl className="ac-card ac-facts">
