@@ -29,7 +29,7 @@ export function sanitizeReturnTo(raw: string | null | undefined, origin = 'https
   const s = raw.trim()
   if (!s || s.length > MAX_LEN) return null
   if (!s.startsWith('/') || s.startsWith('//')) return null          // chỉ đường dẫn tuyệt đối trong site
-  if (/[\\\u0000-\u001f\u007f]/.test(s)) return null                // \ và ký tự điều khiển (trình duyệt coi \ như /)
+  if (s.includes('\\') || [...s].some(c => c.charCodeAt(0) < 0x20 || c.charCodeAt(0) === 0x7f)) return null   // \ và ký tự điều khiển (trình duyệt coi \ như /)
   let u: URL
   try { u = new URL(s, origin) } catch { return null }
   if (u.origin !== origin) return null
