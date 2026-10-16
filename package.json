@@ -26,6 +26,7 @@
     "test:nhipphach-cloud": "tsc -p tests/nhipphach-cloud/tsconfig.json && node --experimental-strip-types --test tests/nhipphach-cloud/cloud.test.ts",
     "test:admin-nav": "tsc -p tests/admin-nav/tsconfig.json && node --experimental-strip-types --test tests/admin-nav/adminNav.test.ts",
     "test:e2e-students-guard": "node tests/e2e-students-guard/run.mjs",
+    "test:admin-ai-schedule": "tsc -p tests/admin-ai-schedule/tsconfig.json && TZ=Asia/Ho_Chi_Minh node --experimental-strip-types --test tests/admin-ai-schedule/schedule.test.ts",
     "test:route-guard": "tsc -p tests/route-guard/tsconfig.json && node --experimental-strip-types --test tests/route-guard/teacherRoute.test.ts tests/route-guard/authSession.test.ts tests/route-guard/authReturn.test.ts",
     "test:class-social": "tsc -p tests/class-social/tsconfig.json && tsx --tsconfig tsconfig.app.json --test tests/class-social/*.test.ts tests/class-social/*.test.tsx",
     "test:nhipphach-layout": "tsc -p tests/nhipphach-layout/tsconfig.json && node --experimental-strip-types --test tests/nhipphach-layout/layout.test.ts tests/nhipphach-layout/architecture.test.ts",
