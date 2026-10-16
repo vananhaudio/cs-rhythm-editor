@@ -105,3 +105,11 @@ test("chỉ bản DEV mới được trỏ Supabase đi nơi khác", () => {
   assert.match(sb, /devOverride\(import\.meta\.env\.VITE_SUPABASE_URL, PROD_URL\)/);
   assert.match(sb, /devOverride\(import\.meta\.env\.VITE_SUPABASE_ANON_KEY, PROD_ANON_KEY\)/);
 });
+
+test("/students có guard giáo viên như /student và /admin", () => {
+  const i = router.indexOf("if (path === '/students')")
+  assert.ok(i > 0, "route /students phải tồn tại")
+  const block = router.slice(i, router.indexOf("StudentList", i))
+  assert.match(block, /if \(loading\) return null/)
+  assert.match(block, /if \(!user \|\| !isTeacher\) \{ bounceToStart\(!!user\); return null \}/)
+})

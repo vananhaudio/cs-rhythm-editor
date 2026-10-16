@@ -515,7 +515,7 @@ if (path.startsWith('/student') && !path.startsWith('/students')) {
 // ── Route /students ──
 if (path === '/students') {
   if (loading) return null
-
+  if (!user || !isTeacher) { bounceToStart(!!user); return null }
   return <StudentList onSelect={id => { window.location.href = `/student?id=${id}` }} />
 }
   // ── Route /player — chỉ teacher ──
