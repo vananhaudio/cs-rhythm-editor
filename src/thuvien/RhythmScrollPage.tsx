@@ -32,7 +32,7 @@ const parseMeterKey = (key: string): TimelineMeter | null => {
 type Load = { state: 'loading' } | { state: 'error'; message: string } | { state: 'ready'; detail: ChordSheetDetail }
 
 /** Gắn `key={versionId}` ở nơi dùng: đổi phiên bản = dựng lại, nên chỉ cần nạp một lần. */
-export default function RhythmScrollPage({ library, versionId, onBack, embedded = false, initialDetail, autoStart = false, branded = false, videoExport }: {
+export default function RhythmScrollPage({ library, versionId, onBack, embedded = false, initialDetail, autoStart = false, branded = false, videoExport, videoRecheck }: {
   library: ChordLibrary; versionId: string; onBack: () => void
   /** Nhúng trong bài đăng (/me): khung có chiều cao riêng, nút "Thu gọn" + "Mở rộng"; không có Chia sẻ. */
   embedded?: boolean
@@ -44,6 +44,8 @@ export default function RhythmScrollPage({ library, versionId, onBack, embedded 
   branded?: boolean
   /** Quyền tạo video do TRANG quyết (hiện: chỉ Admin hệ thống). Không có = không hiện hành động. 'full' = thêm "Toàn bộ bài". */
   videoExport?: 'clip' | 'full'
+  /** Hỏi lại máy chủ lúc bấm Tạo video (quyền có thể đã đổi sau khi mở Player). */
+  videoRecheck?: () => Promise<'clip' | 'full' | undefined>
 }) {
   const [load, setLoad] = useState<Load>(initialDetail ? { state: 'ready', detail: initialDetail } : { state: 'loading' })
   useEffect(() => {
@@ -57,7 +59,7 @@ export default function RhythmScrollPage({ library, versionId, onBack, embedded 
 
   if (load.state === 'loading') return <Shell embedded={embedded} branded={branded} versionId={versionId} onBack={onBack} title="Rhythm Scroll"><p className="rs-note">Đang tải bài…</p></Shell>
   if (load.state === 'error') return <Shell embedded={embedded} branded={branded} versionId={versionId} onBack={onBack} title="Rhythm Scroll"><p role="alert" className="rs-bad">{load.message}</p></Shell>
-  return <Player detail={load.detail} onBack={onBack} embedded={embedded} autoStart={autoStart} branded={branded} videoExport={branded && !embedded ? videoExport : undefined} />
+  return <Player detail={load.detail} onBack={onBack} embedded={embedded} autoStart={autoStart} branded={branded} videoExport={branded && !embedded ? videoExport : undefined} videoRecheck={branded && !embedded ? videoRecheck : undefined} />
 }
 
 /** Ghi công (chỉ trang học viên): "Band X · Biên tập: Y". Chỉ phần có dữ liệu từ máy chủ; không có gì → không hiện. */
@@ -106,9 +108,11 @@ const Icon = ({ name }: { name: 'play' | 'pause' | 'restart' | 'gear' | 'share' 
   gear: <path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7zm8.2 5.5-.1-.9 1.9-1.5-2-3.4-2.3.9a7 7 0 0 0-1.5-.9L15.8 5h-4l-.4 2.4c-.5.2-1 .5-1.5.9l-2.3-.9-2 3.4 1.9 1.5a7 7 0 0 0 0 1.8L5.6 15.6l2 3.4 2.3-.9c.5.4 1 .7 1.5.9l.4 2.4h4l.4-2.4c.5-.2 1-.5 1.5-.9l2.3.9 2-3.4-1.9-1.5z" />,
 }[name]}</svg>
 
-function Player({ detail, onBack, embedded = false, autoStart = false, branded = false, videoExport }: { detail: ChordSheetDetail; onBack: () => void; embedded?: boolean; autoStart?: boolean; branded?: boolean; videoExport?: 'clip' | 'full' }) {
+function Player({ detail, onBack, embedded = false, autoStart = false, branded = false, videoExport, videoRecheck }: { detail: ChordSheetDetail; onBack: () => void; embedded?: boolean; autoStart?: boolean; branded?: boolean; videoExport?: 'clip' | 'full'; videoRecheck?: () => Promise<'clip' | 'full' | undefined> }) {
   const [sharing, setSharing] = useState(false)
   const [videoAt, setVideoAt] = useState<number | null>(null)
+  const [videoGrant, setVideoGrant] = useState<'clip' | 'full' | undefined>(undefined)
+  const [videoNote, setVideoNote] = useState('')
   // Chỉ bản đã duyệt (current/old) chia sẻ được; máy chủ kiểm lại approved khi đăng/gửi.
   const canShare = !embedded && (detail.status === 'current' || detail.status === 'old')
   const [meterChoice, setMeterChoice] = useState<string>(meterKey(detail.meter))
@@ -241,10 +245,15 @@ function Player({ detail, onBack, embedded = false, autoStart = false, branded =
   const [showOptions, setShowOptions] = useState(false)
   const measureCount = timeline.measures.length - (timeline.pickupBeats ? 1 : 0)
   // Mở hộp "Tạo video": dừng Play Scroll, bắt đầu từ đầu ô nhịp đang xem (hết bài → từ đầu).
-  const openVideo = () => {
+  const openVideo = async () => {
     if (playing) pause()
     setSharing(false)
-    setVideoAt(position.state === 'active' ? timeline.measures[position.measureIndex].startBeat : 0)
+    const start = position.state === 'active' ? timeline.measures[position.measureIndex].startBeat : 0
+    const grant = videoRecheck ? await videoRecheck().catch(() => undefined) : videoExport
+    if (!grant) { setVideoNote('Bạn chưa được phép tạo video cho bài này.'); return }
+    setVideoNote('')
+    setVideoGrant(grant)
+    setVideoAt(start)
   }
   const shareButton = canShare ? <button type="button" className="rs-back rs-share" onClick={() => setSharing(true)} aria-label="Chia sẻ"><Icon name="share" /><span>Chia sẻ</span></button> : null
   return <Shell embedded={embedded} branded={branded} composer={detail.composer} credit={creditLine(detail)} versionId={detail.versionId} onBack={onBack} title={detail.title} right={shareButton}>
@@ -253,8 +262,9 @@ function Player({ detail, onBack, embedded = false, autoStart = false, branded =
         ensureTarget={async () => ({ ok: true, target: chordSheetRef(detail.versionId) })} onClose={() => setSharing(false)}
         extra={videoExport ? [{ key: 'video', title: 'Tạo video 14 giây', hint: 'MP4 dọc 9:16 để lưu hoặc chia sẻ', onSelect: openVideo }] : []} />
     </Suspense>}
+    {videoNote && <div className="rs-meta rs-meta-warn" role="alert" data-testid="video-denied">{videoNote}</div>}
     {videoAt !== null && anchors && meter && <Suspense fallback={null}>
-      <VideoExportDialog canFull={videoExport === 'full'} startBeat={videoAt} onClose={() => setVideoAt(null)}
+      <VideoExportDialog canFull={videoGrant === 'full'} startBeat={videoAt} onClose={() => setVideoAt(null)}
         song={{ title: detail.title, composer: detail.composer, text: detail.text, anchors, meter, bpm, bandName: detail.bandName ?? null, editorName: detail.editorName ?? null }} />
     </Suspense>}
     {branded && !embedded ? <>

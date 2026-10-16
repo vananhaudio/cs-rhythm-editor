@@ -38,6 +38,7 @@ const { recordVideo, pickMp4Type, VideoExportError, clipSeconds } = await import
 const { default: VideoExportDialog } = await import('../../src/thuvien/video/VideoExportDialog')
 const { default: RhythmScrollPage } = await import('../../src/thuvien/RhythmScrollPage')
 const { createMockChordLibrary } = await import('../../src/thuvien/chordLibrary')
+const { fetchVideoGrant } = await import('../../src/thuvien/HopamViewPage')
 void React
 
 afterEach(() => { cleanup(); calls.length = 0 })
@@ -181,4 +182,42 @@ test('Play Scroll: "Tạo video" chỉ có trong Chia sẻ khi TRANG cấp quy�
   cleanup()
   v = await open({ branded: true, videoExport: 'clip' }, { ...detail, status: 'draft' as never })
   assert.equal(v.queryByText('Tạo video 14 giây'), null, 'bản chưa duyệt: không chia sẻ được')
+})
+
+// ── Cổng C: quyền do máy chủ quyết (RPC chord_video_export_ok); trình duyệt chỉ hỏi và hiện/ẩn ──
+const fakeRpc = (rule: (mode: string) => unknown) => {
+  const sent: { fn: string; args: Record<string, unknown> }[] = []
+  return { sent, client: { rpc: async (fn: string, args: Record<string, unknown>) => { sent.push({ fn, args }); const r = rule(String(args.p_mode)); if (r instanceof Error) throw r; return { data: r, error: null } } } }
+}
+const ok = (mode: string) => ({ ok: true, mode, max_seconds: mode === 'full' ? 360 : 14, reason: null })
+const no = (mode: string, reason: string) => ({ ok: false, mode, max_seconds: 0, reason })
+
+test('quyền xuất: Admin → full; thành viên Band → clip; khác Band/cựu thành viên/bài không Band/công tắc tắt → không; lỗi → không', async () => {
+  assert.equal(await fetchVideoGrant('v', fakeRpc(mode => ok(mode)).client), 'full', 'Admin')
+  assert.equal(await fetchVideoGrant('v', fakeRpc(mode => (mode === 'full' ? no(mode, 'full_admin_only') : ok(mode))).client), 'clip', 'thành viên đúng Band')
+  for (const reason of ['not_member', 'no_band', 'disabled', 'not_shareable', 'account', 'auth']) {
+    assert.equal(await fetchVideoGrant('v', fakeRpc(mode => no(mode, reason)).client), undefined, reason)
+  }
+  assert.equal(await fetchVideoGrant('v', fakeRpc(() => new Error('mạng')).client), undefined, 'lỗi mạng → không cấp')
+  assert.equal(await fetchVideoGrant('v', { rpc: async () => ({ data: null, error: { message: 'x' } }) }), undefined, 'RPC lỗi → không cấp')
+})
+
+test('quyền xuất: chỉ gửi version + mode tới RPC — không user, role, band hay thời lượng', async () => {
+  const rpc = fakeRpc(mode => (mode === 'full' ? no(mode, 'full_admin_only') : ok(mode)))
+  await fetchVideoGrant('11111111-1111-1111-1111-111111111111', rpc.client)
+  assert.deepEqual(rpc.sent.map(s => s.fn), ['chord_video_export_ok', 'chord_video_export_ok'])
+  for (const call of rpc.sent) assert.deepEqual(Object.keys(call.args).sort(), ['p_mode', 'p_version'])
+})
+
+test('quyền bị thu hồi sau khi mở Player: bấm Tạo video → hỏi lại máy chủ → báo không được phép, KHÔNG mở hộp xuất', async () => {
+  const lib = createMockChordLibrary()
+  const detail = { sheetId: 's', versionId: 'v', title: 'Bài thử', composer: null, hasAnchors: true, updatedAt: '2026-10-08T00:00:00.000Z', status: 'current' as const, draftVersionId: null,
+    versionNumber: 1, text: TEXT, meter: { beats: 4, beatType: 4 }, suggestedBpm: 90, hasSource: false, sources: [], anchors: ANCHORS, anchorsStatus: 'ready' as const, bandName: 'Lá Mùa Thu', editorName: 'A' }
+  const view = render(<RhythmScrollPage library={lib} versionId="v" initialDetail={detail as never} onBack={() => {}} branded videoExport="clip" videoRecheck={async () => undefined} />)
+  await settle()
+  fireEvent.click(view.getByRole('button', { name: 'Chia sẻ' })); await settle(80)
+  fireEvent.click(view.getByText('Tạo video 14 giây')); await settle(80)
+  assert.ok(view.getByTestId('video-denied'), 'có thông báo')
+  assert.equal(view.queryByText('Lưu MP4'), null)
+  assert.equal(view.queryByRole('dialog'), null, 'không mở hộp xuất')
 })
