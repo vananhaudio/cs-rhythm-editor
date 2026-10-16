@@ -34,7 +34,7 @@ export default function AnchoredChordViewer({ text, lines: givenLines, data, mea
   /** Soi: hiện vạch "|" nhỏ tại mỗi chữ neo. */
   showAnchors?: boolean
   /** Hợp âm đang vang trên timeline (dòng + chữ mang hợp âm đó) — chỉ để sáng lên, không ảnh hưởng ball. */
-  activeChord?: { line: number; token: number } | null
+  activeChord?: { line: number; token: number; soft?: boolean } | null
   /** Giao diện: 'dark' (trang thử, mặc định) hoặc 'light' (Rhythm Scroll trong Thư viện, kiểu iOS). Chỉ đổi màu/chữ. */
   theme?: 'dark' | 'light'
 }) {
@@ -101,6 +101,7 @@ export default function AnchoredChordViewer({ text, lines: givenLines, data, mea
           style={{ ...S.content, ...(theme === 'light' ? L.content : null), transform: `translate3d(0, ${(-shift).toFixed(2)}px, 0)` }}>
           <Lines theme={theme} lines={lines} labels={labels} anchorKeys={showAnchors ? anchorKeys : null}
             activeChord={activeChord ? `${activeChord.line}:${activeChord.token}` : null}
+            activeSoft={!!activeChord?.soft}
             activeFrom={position.state === 'ended' ? -1 : position.current.line ?? -1}
             activeTo={position.state === 'ended' ? -1 : position.next.line ?? position.current.line ?? -1} />
           {ball && (
@@ -114,7 +115,7 @@ export default function AnchoredChordViewer({ text, lines: givenLines, data, mea
 }
 
 /** Memo: mỗi khung hình chỉ đổi transform và vị trí ball; cây lời chỉ vẽ lại khi đổi dòng đang hát. */
-const Lines = memo(function Lines({ theme, lines, labels, anchorKeys, activeFrom, activeTo, activeChord }: {
+const Lines = memo(function Lines({ theme, lines, labels, anchorKeys, activeFrom, activeTo, activeChord, activeSoft }: {
   theme: 'dark' | 'light'
   lines: readonly ChordLine[]
   labels?: Record<number, string>
@@ -122,6 +123,7 @@ const Lines = memo(function Lines({ theme, lines, labels, anchorKeys, activeFrom
   activeFrom: number
   activeTo: number
   activeChord: string | null
+  activeSoft: boolean
 }) {
   const light = theme === 'light'
   return <>
@@ -135,8 +137,8 @@ const Lines = memo(function Lines({ theme, lines, labels, anchorKeys, activeFrom
             {line.words.map((word, token) => (
               <span key={token} data-word={`${line.index}:${token}`} style={S.word}>
                 {anchorKeys?.has(`${line.index}:${token}`) && <span data-anchor-mark="" aria-hidden="true" style={S.barMark} />}
-                <span data-chord={word.chord ?? undefined} data-active-chord={activeChord === `${line.index}:${token}` ? '' : undefined}
-                  style={activeChord === `${line.index}:${token}` ? { ...S.chordActive, ...(light ? L.chordActive : null) } : { ...S.chord, ...(light ? L.chord : null) }}>{word.chord ?? ' '}</span>
+                <span data-chord={word.chord ?? undefined} data-active-chord={activeChord === `${line.index}:${token}` ? (activeSoft ? 'soft' : '') : undefined}
+                  style={activeChord === `${line.index}:${token}` ? { ...S.chordActive, ...(light ? L.chordActive : null), ...(activeSoft ? SOFT : null) } : { ...S.chord, ...(light ? L.chord : null) }}>{word.chord ?? ' '}</span>
                 <span style={{ ...S.lyric, ...(light ? L.lyric : null) }}>{word.text}</span>
               </span>
             ))}
@@ -148,6 +150,8 @@ const Lines = memo(function Lines({ theme, lines, labels, anchorKeys, activeFrom
 })
 
 const ACCENT = '#EA580C'
+// Phách nhẹ: vị trí hợp âm là suy luận — xanh của TeamLab (#4ade80 / chữ #052e16), cùng màu thanh hợp âm.
+const SOFT: CSSProperties = { color: '#052E16', background: '#4ADE80' }
 /** Giao diện sáng kiểu iOS: chỉ ghi đè màu/chữ lên bảng `S`, bố cục + đo đạc giữ nguyên (engine không đổi). */
 const L: Record<string, CSSProperties> = {
   root: { background: 'transparent', color: '#1C1C1E', fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif' },

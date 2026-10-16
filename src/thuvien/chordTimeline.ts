@@ -10,7 +10,7 @@
 //     nên timeline không thể trôi tích luỹ: mỗi ô bắt đầu đúng ở bội số beats.
 //   • Hợp âm đứng ở chữ ĐẦU ô → đổi đúng vạch nhịp (phách 0 của ô) → CHẮC.
 //   • Ô không có hợp âm mới → hợp âm trước ngân tiếp qua ô → CHẮC (quy ước bản hợp âm).
-//   • Hợp âm đổi GIỮA ô: vị trí chữ trong ô cho biết xấp xỉ; ta làm tròn về phách gần nhất (hợp âm đổi theo phách)
+//   • Hợp âm đổi GIỮA ô: vị trí chữ trong ô cho biết xấp xỉ; ta hạ về phách nguyên phía trước (kích hoạt ngay phách đó, tô xanh)
 //     → SUY LUẬN, ô đó bị đánh dấu `verified: false` và có cảnh báo `mid_measure_inferred`.
 //   • Nhịp lấy đà: số phách suy từ số chữ hát nếu người gọi không cung cấp → `pickup_inferred`.
 import { anchorLines } from './chordAnchors.ts'
@@ -37,7 +37,7 @@ export type TimelineMeasure = {
   isPickup: boolean
   anchor: MeasureAnchor
   /** Hợp âm bắt đầu trong ô này, kèm phách trong ô (0-based). */
-  changes: { chord: string; beat: number; line: number; token: number; ordinal: number }[]
+  changes: { chord: string; beat: number; line: number; token: number; ordinal: number; light: boolean }[]
   /** Số chữ hát thuộc ô này (0 với ô ngân / ô không lời). */
   tokenCount: number
   /** true = vị trí mọi hợp âm trong ô có bằng chứng nhạc lý (không suy luận). */
@@ -55,6 +55,8 @@ export type ChordEvent = {
   line: number
   token: number
   verified: boolean
+  /** true = phách NHẸ: vị trí chữ rơi giữa hai phách, kích hoạt ở phách nguyên phía trước (Player/video tô xanh). */
+  light: boolean
 }
 
 export type ChordTimeline = {
@@ -110,23 +112,28 @@ function tokensOfMeasure(lines: ReturnType<typeof anchorLines>, timeline: Measur
 const isMeter = (meter: unknown): meter is TimelineMeter =>
   !!meter && typeof meter === 'object' && Number.isInteger((meter as TimelineMeter).beats) && (meter as TimelineMeter).beats >= 1
 
-/** Phách của từng hợp âm trong ô dài `beats` phách; tăng nghiêm ngặt, vừa trong [0, beats). */
-export function placeChords(slots: Slot[], total: number, beats: number): { beat: number; exact: boolean; crowded: boolean }[] {
+/**
+ * Phách của từng hợp âm trong ô dài `beats` phách; tăng nghiêm ngặt, vừa trong [0, beats).
+ * Vị trí chữ ở GIỮA hai phách (vd 2,5) kích hoạt ngay ở phách nguyên phía trước (2) và mang `light: true` — không đẩy sang
+ * phách sau. Phép chia dùng số nguyên (ordinal × beats chia total), không so sánh số thực.
+ */
+export function placeChords(slots: Slot[], total: number, beats: number): { beat: number; exact: boolean; crowded: boolean; light: boolean }[] {
   if (!slots.length) return []
-  // Hợp âm ĐẦU ô đổi đúng vạch nhịp — không suy luận.
-  const raw = slots.map(slot => (slot.ordinal / total) * beats)
   if (slots.length > beats) {
     // Nhiều hợp âm hơn số phách: chia đều ô theo số hợp âm (phần phách). Không có căn cứ chắc.
-    return slots.map((_, k) => ({ beat: (k * beats) / slots.length, exact: false, crowded: true }))
+    return slots.map((_, k) => ({ beat: (k * beats) / slots.length, exact: false, crowded: true, light: (k * beats) % slots.length !== 0 }))
   }
   const beat: number[] = []
-  raw.forEach((value, k) => {
-    const snapped = Math.min(beats - 1, Math.max(0, Math.round(value)))
+  const light: boolean[] = []
+  slots.forEach((slot, k) => {
+    const numerator = slot.ordinal * beats
+    const snapped = Math.min(beats - 1, Math.max(0, Math.floor(numerator / total)))
     beat.push(k === 0 ? snapped : Math.max(snapped, beat[k - 1] + 1))
+    light.push(numerator % total !== 0)
   })
   // Đẩy ngược nếu bị dồn quá cuối ô (đã đảm bảo slots.length ≤ beats nên luôn vừa).
   for (let k = beat.length - 1; k >= 0; k -= 1) beat[k] = Math.min(beat[k], beats - (beat.length - k))
-  return beat.map((value, k) => ({ beat: value, exact: slots[k].ordinal === 0 && value === 0, crowded: false }))
+  return beat.map((value, k) => ({ beat: value, exact: slots[k].ordinal === 0 && value === 0, crowded: false, light: light[k] }))
 }
 
 /**
@@ -172,7 +179,7 @@ export function buildChordTimeline(text: string, anchors: ChordAnchors, meter: T
     }
     measures.push({
       index, startBeat: cursor, beats, isPickup, anchor,
-      changes: slots.map((slot, k) => ({ chord: slot.chord, beat: placed[k].beat, line: slot.line, token: slot.token, ordinal: slot.ordinal })),
+      changes: slots.map((slot, k) => ({ chord: slot.chord, beat: placed[k].beat, line: slot.line, token: slot.token, ordinal: slot.ordinal, light: placed[k].light })),
       tokenCount: owned.length,
       verified,
     })
@@ -183,7 +190,7 @@ export function buildChordTimeline(text: string, anchors: ChordAnchors, meter: T
   const starts: Omit<ChordEvent, 'beats'>[] = []
   for (const measure of measures) {
     for (const change of measure.changes) {
-      starts.push({ chord: change.chord, startBeat: measure.startBeat + change.beat, measure: measure.index, line: change.line, token: change.token, verified: measure.verified })
+      starts.push({ chord: change.chord, startBeat: measure.startBeat + change.beat, measure: measure.index, line: change.line, token: change.token, verified: measure.verified, light: change.light })
     }
   }
   const events: ChordEvent[] = starts.map((event, k) => ({ ...event, beats: (k + 1 < starts.length ? starts[k + 1].startBeat : totalBeats) - event.startBeat }))

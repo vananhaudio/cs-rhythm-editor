@@ -137,3 +137,38 @@ test('locateBeat: MỘT phép đổi phách → vị trí cho ball + cuộn + h�
   let last = -Infinity
   for (let b = 0; b < t.totalBeats; b += 0.25) { const m = locateBeat(t, b).measurePosition; assert.ok(m >= last); last = m }
 })
+
+// ── Phách nhẹ: kích hoạt ở phách nguyên phía trước, cờ light = xanh (không đẩy sang phách sau, không đổi dữ liệu) ──
+const slot = (ordinal: number) => ({ chord: 'X', line: 0, token: ordinal, ordinal })
+
+test('phách nhẹ: 2,5 kích hoạt ở phách 2 (light); trúng phách → không light; 3,5 → phách 3 (light)', () => {
+  // 8 chữ trong ô 4 phách: chữ k ở phách k/2.
+  const at = (...ordinals: number[]) => placeChords(ordinals.map(slot), 8, 4).map(p => [p.beat, p.light])
+  assert.deepEqual(at(0), [[0, false]], 'phách 1 (đầu ô) → cam')
+  assert.deepEqual(at(0, 2), [[0, false], [1, false]], 'chữ 2 = đúng phách → cam')
+  assert.deepEqual(at(0, 5), [[0, false], [2, true]], '2,5 → phách 2, xanh (không làm tròn lên 3)')
+  assert.deepEqual(at(0, 7), [[0, false], [3, true]], '3,5 → phách 3, xanh')
+  assert.deepEqual(at(0, 6), [[0, false], [3, false]], 'phách 4 (trúng) → cam')
+})
+
+test('phách nhẹ: cam → xanh → cam khi chuyển hợp âm; dữ liệu hợp âm không đổi', () => {
+  const text = 'a b c d [G] e [Am] f g [F] h'
+  const t = buildChordTimeline('[C] a b c d [G] e f g [Am] h', { measures: [A(0, 0)] }, M44)
+  assert.deepEqual(t.events.map(e => [e.chord, e.startBeat, e.light]), [['C', 0, false], ['G', 2, false], ['Am', 3, true]])
+  assert.deepEqual(t.events.map(e => e.chord), ['C', 'G', 'Am'], 'chuỗi hợp âm giữ nguyên')
+  void text
+})
+
+test('phách nhẹ: hai hợp âm cùng phách sau khi quy đổi → giữ cả hai, cái sau sang phách kế (luật tăng nghiêm ngặt có sẵn)', () => {
+  // chữ 4 (2,0) và chữ 5 (2,5) cùng quy về phách 2: không bỏ, không ghi đè.
+  const p = placeChords([slot(0), slot(4), slot(5)], 8, 4)
+  assert.deepEqual(p.map(x => x.beat), [0, 2, 3])
+  assert.deepEqual(p.map(x => x.light), [false, false, true])
+})
+
+test('phách nhẹ: bài chỉ hợp âm ở phách nguyên → không có light; ô hợp âm cuối ô vẫn trong ô', () => {
+  const t = buildChordTimeline('[C] a b [G] c d [Am] e f [F] g h', { measures: [A(0, 0), A(0, 2), A(0, 4), A(0, 6)] }, M24)
+  assert.ok(t.events.every(e => !e.light))
+  const end = placeChords([slot(0), slot(7)], 8, 4)
+  assert.equal(end[1].beat, 3); assert.equal(end[1].light, true)
+})

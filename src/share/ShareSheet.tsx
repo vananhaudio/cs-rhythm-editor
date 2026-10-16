@@ -18,7 +18,9 @@ const S = {
 export type EnsureResult = { ok: true; target: ShareRef } | { ok: false; message: string }
 type Phase = 'menu' | 'busy' | 'friends' | 'published'
 
-export default function ShareSheet({ title, target, canPublish, ensureTarget, publish, onPublished, onClose }: {
+export type ShareExtra = { key: string; title: string; hint: string; onSelect: () => void }
+
+export default function ShareSheet({ title, target, canPublish, ensureTarget, publish, onPublished, onClose, extra = [] }: {
   title: string
   /** Có sẵn (trang xem object) hoặc null (bản nháp chưa lưu → tự lưu riêng khi cần) */
   target: ShareRef | null
@@ -29,9 +31,11 @@ export default function ShareSheet({ title, target, canPublish, ensureTarget, pu
   publish?: (target: ShareRef) => Promise<{ ok: true } | { ok: false; message: string }>
   onPublished?: (target: ShareRef) => void
   onClose: () => void
+  /** Hành động bổ sung của riêng loại object (vd. Play Scroll: Tạo video). Mặc định không có. */
+  extra?: ShareExtra[]
 }) {
   const canCommunity = canPublish && !!publish
-  const direct = !canCommunity && !!target
+  const direct = !canCommunity && !!target && extra.length === 0
   const [phase, setPhase] = useState<Phase>(direct ? 'friends' : 'menu')
   const [id, setId] = useState<ShareRef | null>(target)
   const [error, setError] = useState<string | null>(null)
@@ -90,6 +94,12 @@ export default function ShareSheet({ title, target, canPublish, ensureTarget, pu
                 <span style={{ fontSize: 13, color: '#5b5b66' }}>Chia sẻ để mọi người trong Class cùng xem</span>
               </button>
             )}
+            {extra.map(item => (
+              <button key={item.key} type="button" disabled={phase === 'busy'} onClick={item.onSelect} style={{ ...S.opt, opacity: phase === 'busy' ? 0.6 : 1 }}>
+                <span style={{ fontSize: 15.5, fontWeight: 800 }}>{item.title}</span>
+                <span style={{ fontSize: 13, color: '#5b5b66' }}>{item.hint}</span>
+              </button>
+            ))}
             {phase === 'busy' && <p role="status" style={{ margin: '4px 0 0', fontSize: 13.5, color: '#5b5b66' }}>Đang xử lý…</p>}
             {error && <p role="alert" style={{ margin: '4px 0 0', fontSize: 14, color: '#b42318' }}>{error}</p>}
           </div>

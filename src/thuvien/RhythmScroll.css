@@ -105,6 +105,7 @@
 .rs-branded .rs-meta-warn{padding:2px 6px}
 .rs-strip{display:flex;align-items:center;gap:10px;margin-top:6px;padding:8px 14px;min-height:48px;border-radius:14px 14px 0 0;background:var(--rs-card);border-bottom:.5px solid var(--rs-line)}
 .rs-strip-now{font-size:24px;font-weight:700;color:var(--rs-accent);letter-spacing:-.4px;line-height:1.1;min-width:2ch}
+.rs-strip-now[data-soft],.rs-now-chord[data-soft]{color:#15803D}
 .rs-strip-arrow{color:var(--rs-sub);font-size:16px}
 .rs-strip-next{font-size:20px;font-weight:600;color:var(--rs-sub);min-width:2ch}
 .rs-dots{margin-left:auto;display:inline-flex;align-items:center;gap:8px}
