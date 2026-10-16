@@ -4,7 +4,7 @@ import { thuVienAccess } from './masterLibrary.ts'
 import type { ThuVienAccess } from './masterLibrary.ts'
 
 /**
- * Cổng /thuvien cho tài khoản KHÔNG phải admin: chỉ người đang giữ vai Biên tập âm nhạc hoặc Trưởng Band
+ * Cổng /thuvien cho tài khoản KHÔNG phải admin: chỉ người đang giữ vai Biên tập âm nhạc, Trưởng Band hoặc Trưởng Team
  * (cùng quyền: đăng/sửa/gỡ bài của mình) vào được; người khác về /start như trước. Không thấy "Nâng cao" (/admin).
  * Quyền thật vẫn do máy chủ (RLS + RPC); cổng này chỉ quyết định có hiện trang và hiện những nút nào.
  */

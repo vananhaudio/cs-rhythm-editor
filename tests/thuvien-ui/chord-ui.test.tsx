@@ -2095,13 +2095,19 @@ test('Trưởng Band: thuVienAccess/canAddToLibrary/loadWritableBands tính từ
   assert.match(nav, /kind: 'restricted', id: 'thuvien'/, 'mặc định vẫn khoá với người không có vai')
 })
 
-// ── Rhythm Scroll cho Biên tập / Trưởng Band / Trưởng Team (15/10) ──
-test('Trưởng Team thuần → viewer (chỉ xem/chạy Rhythm Scroll); không có quyền thêm/sửa/gỡ', () => {
+// ── Trưởng Team đóng góp Thư viện (16/10) + Rhythm Scroll ──
+test('Trưởng Team → editor (đóng góp Thư viện như Biên tập, 16/10): không cần vai Band; canAddToLibrary gồm Trưởng Team', () => {
   const lib = readFileSync(new URL('../../src/thuvien/masterLibrary.ts', import.meta.url), 'utf8')
   assert.match(lib, /from\('teamlab_project_members'\)\.select\('project_id'\)\.eq\('user_id', userId\)\.eq\('role', 'leader'\)/)
-  assert.match(lib, /return 'viewer'/)
   const add = lib.slice(lib.indexOf('export async function canAddToLibrary'), lib.indexOf('export type ThuVienAccess'))
-  assert.ok(!/teamlab_project_members/.test(add), 'canAddToLibrary KHÔNG tính Trưởng Team')
+  assert.match(add, /isTeamLeader\(userId\)/, 'canAddToLibrary tính Trưởng Team')
+  const gate = lib.slice(lib.indexOf('export async function thuVienAccess'))
+  assert.match(gate, /\(await isTeamLeader\(userId\)\) \? 'editor' : null/, 'Trưởng Team → editor, người khác → null')
+  assert.ok(!/return 'viewer'/.test(gate), 'không còn hạ Trưởng Team xuống viewer')
+  assert.match(lib, /Trưởng Team/, 'thông báo từ chối nhắc Trưởng Team')
+  // Trưởng Team KHÔNG tự có Band để gán: libraryBands chỉ đọc vai Band (bài lưu không Band — đúng DB)
+  const bands = readFileSync(new URL('../../src/thuvien/libraryBands.ts', import.meta.url), 'utf8')
+  assert.ok(!/teamlab_project_members/.test(bands))
 })
 
 test('danh sách Hợp âm: bài có vạch nhịp có nút ▶ Rhythm Scroll mở thẳng; Quay lại về danh sách (cả Trưởng Team chỉ-xem)', async () => {

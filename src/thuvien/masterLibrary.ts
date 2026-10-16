@@ -51,10 +51,18 @@ async function sha256(xml: string): Promise<string> {
   return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('')
 }
 
+/** Đang là Trưởng Team (teamlab_project_members.role='leader') của ít nhất một Team. Chỉ để ẩn/hiện; máy chủ kiểm lại (teamlab_is_any_music_editor). */
+async function isTeamLeader(userId: string): Promise<boolean> {
+  const { supabase } = await import('../supabase.ts')
+  const { data, error } = await supabase.from('teamlab_project_members').select('project_id').eq('user_id', userId).eq('role', 'leader').limit(1)
+  return !error && (data?.length ?? 0) > 0
+}
+
 /**
  * Người dùng có được THÊM bài vào thư viện không (chỉ để ẩn/hiện mục "Nạp bản nhạc mới"; quyền thật do RLS):
- * admin/teacher (isTeacher) hoặc người đang giữ vai Biên tập âm nhạc / Trưởng Band ở ít nhất một Band (teamlab_band_roles;
- * Trưởng Band được hưởng đúng quyền Biên tập — máy chủ tính từ vai leader thật, không có bản ghi music_editor giả). Lỗi đọc → false.
+ * admin/teacher (isTeacher), người đang giữ vai Biên tập âm nhạc / Trưởng Band ở ít nhất một Band (teamlab_band_roles;
+ * Trưởng Band được hưởng đúng quyền Biên tập — máy chủ tính từ vai leader thật, không có bản ghi music_editor giả),
+ * hoặc Trưởng Team (không cần vai Band). Lỗi đọc → false.
  */
 export async function canAddToLibrary(userId: string, isTeacher: boolean): Promise<boolean> {
   if (isTeacher) return true
@@ -62,14 +70,15 @@ export async function canAddToLibrary(userId: string, isTeacher: boolean): Promi
     const { supabase } = await import('../supabase.ts')
     const { data, error } = await supabase.from('teamlab_band_roles').select('band_id')
       .eq('user_id', userId).in('role', ['music_editor', 'leader']).limit(1)
-    return !error && (data?.length ?? 0) > 0
+    if (!error && (data?.length ?? 0) > 0) return true
+    return await isTeamLeader(userId)
   } catch { return false }
 }
 
 /**
  * Cửa vào /thuvien cho tài khoản KHÔNG phải admin (chỉ để chọn giao diện; quyền thật do máy chủ):
- * 'editor' = đang giữ vai Biên tập âm nhạc HOẶC Trưởng Band ở ít nhất một Band (Trưởng Band = quyền Biên tập, không hơn) ·
- * 'viewer' = chỉ xem/tìm/chạy Rhythm Scroll (Trưởng Team thuần) · null = không vào.
+ * 'editor' = đang giữ vai Biên tập âm nhạc, Trưởng Band, hoặc Trưởng Team (cùng quyền: đăng/sửa/gỡ bài CỦA MÌNH, không duyệt/quản trị thư viện tổng) ·
+ * 'viewer' = chỉ xem/tìm/chạy Rhythm Scroll (hiện không còn ai nhận mức này; giữ cho giao diện) · null = không vào.
  */
 export type ThuVienAccess = 'editor' | 'viewer'
 export async function thuVienAccess(userId: string): Promise<ThuVienAccess | null> {
@@ -77,14 +86,11 @@ export async function thuVienAccess(userId: string): Promise<ThuVienAccess | nul
     const { supabase } = await import('../supabase.ts')
     const { data, error } = await supabase.from('teamlab_band_roles').select('role').eq('user_id', userId).in('role', ['music_editor', 'leader'])
     if (!error && data?.length) return 'editor'
-    // Trưởng Team thuần (không Biên tập/Trưởng Band): chỉ XEM/tìm/chạy Rhythm Scroll — không thêm/sửa/gỡ.
-    const team = await supabase.from('teamlab_project_members').select('project_id').eq('user_id', userId).eq('role', 'leader').limit(1)
-    if (!team.error && team.data?.length) return 'viewer'
-    return null
+    return (await isTeamLeader(userId)) ? 'editor' : null
   } catch { return null }
 }
 
-export const ADD_DENIED_MESSAGE = 'Tài khoản chưa có quyền thêm bản nhạc vào thư viện. Cần vai trò Biên tập âm nhạc hoặc Trưởng Band của một Band (hoặc Admin/Giáo viên).'
+export const ADD_DENIED_MESSAGE = 'Tài khoản chưa có quyền thêm bản nhạc vào thư viện. Cần vai trò Biên tập âm nhạc, Trưởng Band, Trưởng Team (hoặc Admin/Giáo viên).'
 
 export const EDITOR_UNKNOWN = 'Chưa xác định'
 
@@ -163,7 +169,7 @@ export function canManageItem(item: Pick<LibraryItem, 'created_by'> | null | und
   return isTeacher || (isEditor && item.created_by === userId)
 }
 
-export const MANAGE_DENIED_MESSAGE = 'Không thực hiện được: chỉ người tạo bài (đang giữ vai Biên tập âm nhạc), Admin hoặc Giáo viên được sửa/gỡ bài này.'
+export const MANAGE_DENIED_MESSAGE = 'Không thực hiện được: chỉ người tạo bài (Biên tập âm nhạc, Trưởng Band hoặc Trưởng Team), Admin hoặc Giáo viên được sửa/gỡ bài này.'
 export const ARCHIVED_DUPLICATE_MESSAGE = (title: string) => `Bản nhạc này đã từng có trong thư viện (“${title}”) nhưng đã được gỡ. Cần Admin khôi phục.`
 
 /** Dòng INSERT: band_id CHỈ có khi chọn Band (không chọn → payload y như bản cũ, chạy được cả khi máy chủ chưa có cột). */
