@@ -31,6 +31,12 @@ TeamLab là nguồn chuẩn; Trò chuyện chỉ phản ánh, không quản lý 
 
 **Migration V1.1** (`db/band_chat_v1_1_roles_{setup,rollback}.sql`): chỉ CREATE/DROP **hàm**; không bảng, policy, dữ liệu; chạy sau V1; idempotent. Rollback trả `bandchat_members` về dạng V1 và gỡ 2 hàm, **không xoá tin nhắn**. FE cũ vẫn chạy (cột thêm bị bỏ qua).
 
+## V1.2 — Thầy/Admin thấy mọi Band ở mục Hỗ trợ (16/10)
+- **Nguyên nhân Owner chỉ thấy 2 Band:** danh sách hỗ trợ chỉ lấy nhóm đã có tin (`bandchat_rooms.last_seq > 0`); Band chưa có phòng/tin bị bỏ. Không phải do quyền hay lọc theo tên.
+- **Sửa:** `bandchat_rooms()` cho Thầy/Admin liệt kê mọi `teamlab_bands` (+ nhóm còn tin của Band đã xoá). Band mình là thành viên nằm danh sách chính; còn lại `support = true`, chỉ đọc, không tính chưa đọc, không tạo phòng. Band chưa có tin hiện "Chưa có tin nhắn". Học viên không đổi (chỉ Band mình).
+- Tối đa 100 nhóm/lần gọi (nhóm có tin mới nhất trước); vượt thì cần phân trang.
+- Migration: `db/band_chat_v1_2_support_list_{setup,rollback}.sql` — chỉ thay hàm `bandchat_rooms`, không đụng dữ liệu; rollback về V1.
+
 ## Nguồn dữ liệu & quyền
 - Quyền = MỘT hàm nội bộ `bandchat_access(band)` → `send | read | null`, tính ở thời điểm gọi, từ `teamlab_band_members` (+ `bandchat_frozen` khi lưu trữ, + `is_teacher()`).
 - Tên + ảnh lấy lúc đọc từ `teamlab_bands.name` / `cover_path` (dự phòng `projects.avatar_path`) — không có bản sao.

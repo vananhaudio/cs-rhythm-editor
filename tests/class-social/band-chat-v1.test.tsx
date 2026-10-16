@@ -244,3 +244,8 @@ test("Nhóm Band mang projectId (đường dẫn Quản lý tại TeamLab) và p
   assert.match(src, /Quản trị viên/);
   assert.doesNotMatch(src, /Đổi tên nhóm|Thêm thành viên|Xoá thành viên/, "chat không có thao tác quản trị riêng");
 });
+
+test("previewText nhóm Band chưa có tin: chỉ đọc (hỗ trợ/lưu trữ) → 'Chưa có tin nhắn'; gửi được → kèm lời mời chào", () => {
+  assert.equal(previewText({ kind: "band", lastBody: "", lastMine: false, readOnly: "support" }), "Chưa có tin nhắn");
+  assert.equal(previewText({ kind: "band", lastBody: "", lastMine: false, readOnly: null }), "Chưa có tin nhắn — hãy chào cả nhóm");
+});
