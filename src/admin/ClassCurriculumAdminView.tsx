@@ -63,6 +63,8 @@ export default function ClassCurriculumAdminView({ client, classId, part }: Prop
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState('')
+  // Danh sách học sinh: chưa tải xong / tải lỗi KHÔNG được hiểu là lớp rỗng
+  const [roster, setRoster] = useState<'loading' | 'ready' | 'error'>('loading')
   const [notice, setNotice] = useState('')
   const classLoadId = useRef(0)
   const selected = classes.find(c => c.id === selectedId)
@@ -89,8 +91,8 @@ export default function ClassCurriculumAdminView({ client, classId, part }: Prop
 
   const loadClass = useCallback(async (cls: ClassRow) => {
     const loadId = ++classLoadId.current
-    setError('')
-    if (!cls.cohort_group_id) { setMembers([]); setStudents({}); setAccess({}); return }
+    setError(''); setRoster('loading')
+    if (!cls.cohort_group_id) { setMembers([]); setStudents({}); setAccess({}); setRoster('ready'); return }
     const [memberResult, accessResult] = await Promise.all([
       client.rpc('class_roster', { p_class: cls.id }),
       client.from('class_curriculum_access').select('user_id,status,granted_at,revoked_at').eq('class_id', cls.id),
@@ -98,6 +100,7 @@ export default function ClassCurriculumAdminView({ client, classId, part }: Prop
     if (loadId !== classLoadId.current) return
     if (memberResult.error || accessResult.error) {
       setError(memberResult.error?.message || accessResult.error?.message || 'Không tải được quyền lớp')
+      setMembers([]); setRoster('error')
       return
     }
     const roster = (memberResult.data ?? []) as RosterRow[]
@@ -106,6 +109,7 @@ export default function ClassCurriculumAdminView({ client, classId, part }: Prop
       id: r.student_id ?? '', user_id: r.user_id, display_name: r.name, full_name: r.name, email: r.email, is_active: r.student_active ?? false,
     } as StudentRow])))
     setAccess(Object.fromEntries(((accessResult.data ?? []) as AccessRow[]).map(row => [row.user_id, row])))
+    setRoster('ready')
   }, [client])
 
   useEffect(() => { void loadClasses() }, [loadClasses])
@@ -206,7 +210,11 @@ export default function ClassCurriculumAdminView({ client, classId, part }: Prop
             </div>)}
           </div>}
           <h2 style={{ fontSize: 16, margin: '22px 0 10px' }}>Học sinh trong lớp</h2>
-          {activeMembers.length === 0 ? <div style={{ color: C.muted, fontSize: 14 }}>Chưa có học sinh.</div> : activeMembers.map(member => {
+          {roster === 'loading' ? <div role="status" style={{ color: C.muted, fontSize: 14 }}>Đang tải danh sách học sinh…</div>
+            : roster === 'error' ? <div role="alert" style={{ color: C.red, fontSize: 14 }}>
+              Không tải được danh sách học sinh{error ? ` (${error})` : ''}. <button onClick={() => selected && void loadClass(selected)} style={button}>Tải lại</button>
+            </div>
+            : activeMembers.length === 0 ? <div style={{ color: C.muted, fontSize: 14 }}>Chưa có học sinh.</div> : activeMembers.map(member => {
             const row = access[member.user_id]
             const isOn = row?.status === 'active'
             return <div key={member.user_id} style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', borderTop: `1px solid ${C.border}`, padding: '12px 0' }}>
@@ -234,7 +242,7 @@ export default function ClassCurriculumAdminView({ client, classId, part }: Prop
         </>}
       </div>}
     </>}
-    {error && <div role="alert" style={{ color: C.red, marginTop: 14 }}>{error}</div>}
+    {error && roster !== 'error' && <div role="alert" style={{ color: C.red, marginTop: 14 }}>{error}</div>}
     {notice && <div role="status" style={{ color: C.green, marginTop: 14 }}>{notice}</div>}
   </div>
 }

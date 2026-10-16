@@ -52,6 +52,9 @@ const STAGES = [1, 2, 3, 4, 5].map(n => ({ id: n, class_id: CLS_D, stage_no: n, 
 const LONG = 'Hành trình 2027 — 40 buổi thực hành guitar đệm hát cùng nhóm nhỏ, chặng một đến chặng năm'
 CLASSES.push({ id: CLS_E, code: 'HT2027.TH01', name: LONG, status: 'upcoming', cohort_group_id: null, start_date: null, end_date: null, weekday: null, start_time: null, duration_minutes: 90, total_sessions: 40, zoom_url: null, program_code: null, ...FULL })
 const SUMMARY = [{ class_id: CLS_A, group_name: 'Nhóm Alpha', group_id: 'g-a', member_count: 7, curriculum_access_count: 3 }]
+// class_roster giống RPC thật: 7 thành viên active (khớp SUMMARY) hoặc lỗi/rỗng theo ROSTER_MODE
+let ROSTER_MODE = 'ok'
+const ROSTER = Array.from({ length: 7 }, (_, i) => ({ user_id: 'u' + i, status: 'active', source: 'admin', joined_at: '2026-09-01T00:00:00Z', updated_at: '2026-09-02T00:00:00Z', student_id: 'st' + i, name: 'Học viên số ' + (i + 1), email: `hv${i}@example.test`, student_active: true, is_staff: false, curriculum: 'not_granted' }))
 const COOKIE = 'base64-' + Buffer.from(JSON.stringify(session)).toString('base64url')
 const browser = await chromium.launch({ executablePath: process.env.CHROME || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' })
 let pass = 0
@@ -82,6 +85,12 @@ async function open(path, { width = 1440, height = 900, dark = false } = {}) {
       if (u.pathname === '/auth/v1/user') return json(session.user)
       if (u.pathname.startsWith('/auth/')) return json({})
       const t = u.pathname.split('/').pop()
+      if (t === 'class_roster') {
+        if (ROSTER_MODE === 'error') return route.fulfill({ status: 500, contentType: 'application/json', headers: cors, body: JSON.stringify({ message: 'roster boom' }) })
+        const body = JSON.parse(req.postData() || '{}')
+        if (ROSTER_MODE === 'slow') await new Promise(r => setTimeout(r, 1500))
+        return json((ROSTER_MODE === 'ok' || ROSTER_MODE === 'slow') && body.p_class === CLS_A ? ROSTER : [])
+      }
       if (u.pathname.startsWith('/rest/v1/rpc/')) return json((t === 'is_teacher' || t === 'my_tool_route_access') ? true : t === 'admin_class_member_summary' ? SUMMARY : [])
       if (u.pathname.startsWith('/rest/v1/')) {
         if (t === 'app_users') return json({ role: 'teacher', status: 'active', avatar_url: null })
@@ -386,5 +395,29 @@ for (const width of [1440, 768, 390, 360]) {
   ok('V2: bàn phím Tab/Enter mở lớp')
 }
 
+{ // Tổng quan 7 thành viên ⇔ tab Học viên liệt kê đúng 7; lỗi tải không bị coi là "Chưa có học sinh"
+  ROSTER_MODE = 'ok'
+  let { ctx, page } = await open(`/admin/lop/${CLS_A}/hoc-vien`)
+  await page.getByText('Học viên số 1', { exact: true }).waitFor({ timeout: 5000 })
+  assert.equal(await page.getByText(/^Học viên số \d$/).count(), 7, 'liệt kê đủ 7')
+  assert.equal(await page.getByText('Chưa có học sinh.').count(), 0)
+  await ctx.close()
+  ROSTER_MODE = 'error'
+  ;({ ctx, page } = await open(`/admin/lop/${CLS_A}/hoc-vien`))
+  assert.equal(await page.getByText('Chưa có học sinh.').count(), 0, 'lỗi tải không hiện "Chưa có học sinh"')
+  assert.ok((await page.locator('.ac-root').innerText()).includes('roster boom'), 'hiện lỗi tải')
+  await ctx.close()
+  ROSTER_MODE = 'slow'
+  ;({ ctx, page } = await open(`/admin/lop/${CLS_A}/hoc-vien`, { }))
+  await page.getByText('Học sinh trong lớp').waitFor()
+  assert.equal(await page.getByText('Chưa có học sinh.').count(), 0, 'đang tải roster không hiện "Chưa có học sinh"')
+  await page.getByText('Học viên số 1', { exact: true }).waitFor({ timeout: 6000 })
+  await ctx.close()
+  ROSTER_MODE = 'empty'
+  ;({ ctx, page } = await open(`/admin/lop/${CLS_C}/hoc-vien`))
+  await page.getByText('Chưa có học sinh.').waitFor({ timeout: 5000 })
+  await ctx.close(); ROSTER_MODE = 'ok'
+  ok('V2: Học viên ⇔ roster (7), lỗi tải ≠ rỗng, lớp rỗng thật')
+}
 await browser.close(); server.close()
 console.log(`\n${pass} nhóm kiểm PASS`)
