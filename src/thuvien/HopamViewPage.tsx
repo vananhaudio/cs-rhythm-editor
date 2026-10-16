@@ -2,7 +2,7 @@
 // Không có trình sửa, không có /thuvien, không quản trị. Quyền đọc do RPC chord_sheet_get quyết ở máy chủ (chỉ bản approved cho học viên);
 // URL đoán/đổi id → máy chủ trả NOT_FOUND → "không còn khả dụng". Không tự phát nhạc khi mở.
 import { useEffect, useMemo, useState } from 'react'
-import RhythmScrollPage from './RhythmScrollPage.tsx'
+import RhythmScrollPage, { PlayScrollBackContext } from './RhythmScrollPage.tsx'
 import { getChordLibrary } from './chordLibrary.ts'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -42,9 +42,15 @@ export function useVideoExportAccess(versionId: string): VideoGrant {
   return grant
 }
 
+/** Play Scroll giao diện V4.2 + quyền tạo video — dùng chung cho /hopam/<id> và Thư viện (?xem= / ?hopam=&chay=1). */
+export function BrandedPlayScroll({ library, versionId, onBack, showBack = false }: { library: ReturnType<typeof getChordLibrary>; versionId: string; onBack: () => void; showBack?: boolean }) {
+  const videoExport = useVideoExportAccess(versionId)
+  const page = <RhythmScrollPage key={versionId} library={library} versionId={versionId} onBack={onBack} branded videoExport={videoExport} videoRecheck={() => fetchVideoGrant(versionId)} />
+  return showBack ? <PlayScrollBackContext.Provider value={onBack}>{page}</PlayScrollBackContext.Provider> : page
+}
+
 export default function HopamViewPage({ versionId }: { versionId: string }) {
   const library = useMemo(() => getChordLibrary(), [])
-  const videoExport = useVideoExportAccess(versionId)
   const back = () => { if (window.history.length > 1) window.history.back(); else window.location.href = '/me' }
-  return <RhythmScrollPage key={versionId} library={library} versionId={versionId} onBack={back} branded videoExport={videoExport} videoRecheck={() => fetchVideoGrant(versionId)} />
+  return <BrandedPlayScroll library={library} versionId={versionId} onBack={back} />
 }
