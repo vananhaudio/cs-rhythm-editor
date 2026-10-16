@@ -39,16 +39,18 @@ interface AccessRow {
   revoked_at: string | null
 }
 
-const C = { bg: '#F4F4F5', card: '#FFFFFF', border: '#E4E4E7', text: '#18181B', muted: '#52525B',
+const C = { bg: '#F4F4F5', card: '#FFFFFF', border: '#E4E4E7', text: '#18181B', muted: '#3F3F46',
   green: '#2D6A4F', greenBg: '#E9F3EC', red: '#B91C1C', redBg: '#FEE2E2' }
 const button: CSSProperties = { border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px 12px',
   background: C.card, color: C.text, font: '600 13px Inter, system-ui, sans-serif', cursor: 'pointer' }
 const fmt = (value: string | null) => value ? new Date(value).toLocaleString('vi-VN') : '—'
 const nameOf = (student?: StudentRow) => student?.display_name?.trim() || student?.full_name?.trim() || student?.email || 'Học viên'
 
-interface Props { client: Pick<typeof supabase, 'from' | 'rpc'> }
+// classId + part: dùng trong không gian lớp (Admin V2) — ẩn bộ chọn lớp/tab riêng, chỉ hiện đúng một phần.
+interface Props { client: Pick<typeof supabase, 'from' | 'rpc'>; classId?: string; part?: 'students' | 'curriculum' }
 
-export default function ClassCurriculumAdminView({ client }: Props) {
+export default function ClassCurriculumAdminView({ client, classId, part }: Props) {
+  const embedded = !!classId
   const [classes, setClasses] = useState<ClassRow[]>([])
   const [selectedId, setSelectedId] = useState('')
   const [members, setMembers] = useState<MemberRow[]>([])
@@ -61,6 +63,8 @@ export default function ClassCurriculumAdminView({ client }: Props) {
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState('')
+  // Danh sách học sinh: chưa tải xong / tải lỗi KHÔNG được hiểu là lớp rỗng
+  const [roster, setRoster] = useState<'loading' | 'ready' | 'error'>('loading')
   const [notice, setNotice] = useState('')
   const classLoadId = useRef(0)
   const selected = classes.find(c => c.id === selectedId)
@@ -70,7 +74,9 @@ export default function ClassCurriculumAdminView({ client }: Props) {
   const loadClasses = useCallback(async () => {
     setLoading(true)
     const [{ data, error: loadError }, sum] = await Promise.all([
-      client.from('class_schedule').select('id,code,name,cohort_group_id,status').not('status', 'in', '(cancelled,merged,draft)').order('code'),
+      embedded
+        ? client.from('class_schedule').select('id,code,name,cohort_group_id,status').eq('id', classId)
+        : client.from('class_schedule').select('id,code,name,cohort_group_id,status').not('status', 'in', '(cancelled,merged,draft)').order('code'),
       client.rpc('admin_class_member_summary'),
     ])
     if (loadError || sum.error) setError(loadError?.message || sum.error?.message || 'Không tải được lớp')
@@ -79,13 +85,14 @@ export default function ClassCurriculumAdminView({ client }: Props) {
     const rows = ((data ?? []) as ClassRow[]).sort((a, b) => rank(a.status) - rank(b.status) || a.code.localeCompare(b.code))
     setClasses(rows)
     setSelectedId(current => rows.some(row => row.id === current) ? current : (rows[0]?.id ?? ''))
+    if (embedded && rows.length === 0 && !loadError) setError('Không tìm thấy lớp này.')
     setLoading(false)
-  }, [client])
+  }, [client, classId, embedded])
 
   const loadClass = useCallback(async (cls: ClassRow) => {
     const loadId = ++classLoadId.current
-    setError('')
-    if (!cls.cohort_group_id) { setMembers([]); setStudents({}); setAccess({}); return }
+    setError(''); setRoster('loading')
+    if (!cls.cohort_group_id) { setMembers([]); setStudents({}); setAccess({}); setRoster('ready'); return }
     const [memberResult, accessResult] = await Promise.all([
       client.rpc('class_roster', { p_class: cls.id }),
       client.from('class_curriculum_access').select('user_id,status,granted_at,revoked_at').eq('class_id', cls.id),
@@ -93,6 +100,7 @@ export default function ClassCurriculumAdminView({ client }: Props) {
     if (loadId !== classLoadId.current) return
     if (memberResult.error || accessResult.error) {
       setError(memberResult.error?.message || accessResult.error?.message || 'Không tải được quyền lớp')
+      setMembers([]); setRoster('error')
       return
     }
     const roster = (memberResult.data ?? []) as RosterRow[]
@@ -101,6 +109,7 @@ export default function ClassCurriculumAdminView({ client }: Props) {
       id: r.student_id ?? '', user_id: r.user_id, display_name: r.name, full_name: r.name, email: r.email, is_active: r.student_active ?? false,
     } as StudentRow])))
     setAccess(Object.fromEntries(((accessResult.data ?? []) as AccessRow[]).map(row => [row.user_id, row])))
+    setRoster('ready')
   }, [client])
 
   useEffect(() => { void loadClasses() }, [loadClasses])
@@ -165,31 +174,32 @@ export default function ClassCurriculumAdminView({ client }: Props) {
     setBusy(null)
   }
 
-  return <div style={{ flex: 1, overflowY: 'auto', padding: 24, background: C.bg, color: C.text, fontFamily: 'Inter, system-ui, sans-serif' }}>
-    <h1 style={{ fontSize: 22, margin: '0 0 6px' }}>Giáo trình lớp</h1>
-    <p style={{ color: C.muted, margin: '0 0 20px', fontSize: 14 }}>Quản lý học sinh và quyền xem Giáo trình của từng lớp.</p>
-    {loading ? <div>Đang tải lớp...</div> : classes.length === 0 ? <div>Chưa có lớp.</div> : <>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 18 }}>
+  const shownTab = part ?? tab
+  return <div className={embedded ? 'ac-embed' : undefined} style={embedded ? { color: C.text } : { flex: 1, overflowY: 'auto', padding: 24, background: C.bg, color: C.text, fontFamily: 'Inter, system-ui, sans-serif' }}>
+    {!embedded && <h1 style={{ fontSize: 22, margin: '0 0 6px' }}>Giáo trình lớp</h1>}
+    {!embedded && <p style={{ color: C.muted, margin: '0 0 20px', fontSize: 14 }}>Quản lý học sinh và quyền xem Giáo trình của từng lớp.</p>}
+    {loading ? <div>Đang tải lớp...</div> : classes.length === 0 ? (embedded ? null : <div>Chưa có lớp.</div>) : <>
+      {!embedded && <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 18 }}>
         {classes.map(cls => <button key={cls.id} onClick={() => { setSelectedId(cls.id); setSearch(''); setMatches([]); setNotice('') }}
           style={{ ...button, background: cls.id === selectedId ? C.green : C.card, color: cls.id === selectedId ? '#fff' : C.text }}>
           {cls.name} · {cls.code}
         </button>)}
-      </div>
-      {selected && <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: 18 }}>
-        <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 4 }}>{selected.name}</div>
-        <div style={{ fontSize: 13, color: C.muted, marginBottom: 12 }}>
+      </div>}
+      {selected && <div style={embedded ? undefined : { background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: 18 }}>
+        {!embedded && <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 4 }}>{selected.name}</div>}
+        {!embedded && <div style={{ fontSize: 13, color: C.muted, marginBottom: 12 }}>
           Trạng thái lớp: {selected.status} · Nhóm thành viên: <b style={{ color: C.text }}>{summary[selected.id]?.group_name ?? 'chưa có'}</b>
           {' '}· <b style={{ color: C.text }}>{summary[selected.id]?.member_count ?? activeMembers.length} học sinh</b>
           {' '}· Giáo trình bật: {activeMembers.filter(m => access[m.user_id]?.status === 'active').length}
-        </div>
-        {selected.cohort_group_id && !['completed', 'cancelled', 'merged'].includes(selected.status) &&
+        </div>}
+        {!embedded && selected.cohort_group_id && !['completed', 'cancelled', 'merged'].includes(selected.status) &&
           <div style={{ marginBottom: 12 }}><ClassJoinCode key={selected.id} client={client} classId={selected.id} /></div>}
-        <div role="tablist" style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+        {!embedded && <div role="tablist" style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
           {([['students', 'Học sinh'], ['curriculum', 'Chặng & Giáo trình']] as const).map(([id, label]) =>
             <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}
               style={{ ...button, background: tab === id ? C.text : C.card, color: tab === id ? '#fff' : C.text }}>{label}</button>)}
-        </div>
-        {tab === 'curriculum' ? <ClassCurriculumEditor key={selected.id} client={client} cls={selected} /> : !selected.cohort_group_id ? <div role="alert" style={{ color: C.red }}>Lớp chưa có nhóm thành viên. Chọn nhóm cho lớp ở Lịch lớp trước khi thêm học sinh.</div> : <>
+        </div>}
+        {shownTab === 'curriculum' ? <ClassCurriculumEditor key={selected.id} client={client} cls={selected} /> : !selected.cohort_group_id ? <div role="alert" style={{ color: C.red }}>Lớp chưa có nhóm thành viên. Chọn nhóm cho lớp ở Lịch lớp trước khi thêm học sinh.</div> : <>
           <label htmlFor="class-student-search" style={{ display: 'block', fontWeight: 700, fontSize: 13, marginBottom: 6 }}>Thêm học sinh</label>
           <input id="class-student-search" value={search} onChange={event => setSearch(event.target.value)}
             placeholder="Tìm theo tên hoặc email" style={{ width: '100%', boxSizing: 'border-box', border: `1px solid ${C.border}`, borderRadius: 8, padding: '10px 12px', fontSize: 14 }} />
@@ -200,7 +210,11 @@ export default function ClassCurriculumAdminView({ client }: Props) {
             </div>)}
           </div>}
           <h2 style={{ fontSize: 16, margin: '22px 0 10px' }}>Học sinh trong lớp</h2>
-          {activeMembers.length === 0 ? <div style={{ color: C.muted, fontSize: 14 }}>Chưa có học sinh.</div> : activeMembers.map(member => {
+          {roster === 'loading' ? <div role="status" style={{ color: C.muted, fontSize: 14 }}>Đang tải danh sách học sinh…</div>
+            : roster === 'error' ? <div role="alert" style={{ color: C.red, fontSize: 14 }}>
+              Không tải được danh sách học sinh{error ? ` (${error})` : ''}. <button onClick={() => selected && void loadClass(selected)} style={button}>Tải lại</button>
+            </div>
+            : activeMembers.length === 0 ? <div style={{ color: C.muted, fontSize: 14 }}>Chưa có học sinh.</div> : activeMembers.map(member => {
             const row = access[member.user_id]
             const isOn = row?.status === 'active'
             return <div key={member.user_id} style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', borderTop: `1px solid ${C.border}`, padding: '12px 0' }}>
@@ -228,7 +242,7 @@ export default function ClassCurriculumAdminView({ client }: Props) {
         </>}
       </div>}
     </>}
-    {error && <div role="alert" style={{ color: C.red, marginTop: 14 }}>{error}</div>}
+    {error && roster !== 'error' && <div role="alert" style={{ color: C.red, marginTop: 14 }}>{error}</div>}
     {notice && <div role="status" style={{ color: C.green, marginTop: 14 }}>{notice}</div>}
   </div>
 }

@@ -15,13 +15,15 @@ import {
   type OutlineLesson, type StageRow,
 } from '../classLearning/outline'
 import { PROGRAM_TEMPLATES } from '../classLearning/programTemplates'
+import { sessionStatusLabel } from './sessionStatus'
+import './adminClass.css'
 
-const C = { card: '#FFFFFF', border: '#E4E4E7', text: '#18181B', muted: '#52525B', green: '#2D6A4F',
+const C = { card: '#FFFFFF', border: '#E4E4E7', text: '#18181B', muted: '#3F3F46', green: '#2D6A4F',
   greenBg: '#E9F3EC', red: '#B91C1C', amber: '#B45309', amberBg: '#FEF3C7', grayBg: '#F4F4F5' }
 const btn: CSSProperties = { border: `1px solid ${C.border}`, borderRadius: 8, padding: '7px 11px', background: C.card,
   color: C.text, font: '600 13px Inter, system-ui, sans-serif', cursor: 'pointer' }
 const input: CSSProperties = { border: `1px solid ${C.border}`, borderRadius: 8, padding: '7px 9px', fontSize: 14,
-  boxSizing: 'border-box', fontFamily: 'inherit' }
+  boxSizing: 'border-box', fontFamily: 'inherit', background: C.card, color: C.text, colorScheme: 'light' }
 const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit' })
 
 interface Props { client: Db; cls: { id: string; code: string; name: string } }
@@ -122,17 +124,19 @@ function StageCard({ client, group, stages, sessions, busy, run, onEdit }: {
     await assignSessionsStage(client, ids, st.id)
   }, 'Đã gắn các buổi trong khoảng vào chặng.')
 
-  return <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: 14, marginBottom: 12, textAlign: 'left' }}>
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 800, fontSize: 16 }}>{st ? `Chặng ${st.stage_no} · ${st.public_title}` : 'Buổi chưa thuộc chặng nào'}</div>
+  return <div className="cu-stage" style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: 14, marginBottom: 12, textAlign: 'left' }}>
+    <div className="cu-stage-head" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+      <div style={{ flex: '1 1 240px', minWidth: 0 }}>
+        <div className="cu-stage-title" style={{ fontWeight: 800, fontSize: 17 }}>{st ? `Chặng ${st.stage_no} · ${st.public_title}` : 'Buổi chưa thuộc chặng nào'}</div>
         {st && <div style={{ color: C.muted, fontSize: 13 }}>Buổi {st.from_session}–{st.to_session}{st.starts_on ? ` · ${st.starts_on} → ${st.ends_on ?? '…'}` : ''}</div>}
       </div>
-      {st && <button style={btn} onClick={() => setOpen(o => !o)}>{open ? 'Đóng sửa chặng' : 'Sửa chặng'}</button>}
-      {st && <button style={btn} disabled={busy} onClick={() => void attachRange()}>Gắn buổi theo khoảng</button>}
+      <div className="cu-stage-actions">
+        {st && <button style={btn} onClick={() => setOpen(o => !o)}>{open ? 'Đóng sửa chặng' : 'Sửa chặng'}</button>}
+        {st && <button style={btn} disabled={busy} onClick={() => void attachRange()}>Gắn buổi theo khoảng</button>}
+      </div>
     </div>
 
-    {st && open && form && <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr 80px 80px', gap: 8, marginTop: 10 }}>
+    {st && open && form && <div className="cu-stage-form" style={{ display: 'grid', gridTemplateColumns: '80px 1fr 80px 80px', gap: 8, marginTop: 10 }}>
       <label style={{ fontSize: 12 }}>Thứ tự<input style={{ ...input, width: '100%' }} type="number" min={1} value={form.stage_no}
         onChange={e => setForm({ ...form, stage_no: Number(e.target.value) })} /></label>
       <label style={{ fontSize: 12 }}>Tên chặng<input style={{ ...input, width: '100%' }} value={form.public_title}
@@ -155,14 +159,14 @@ function StageCard({ client, group, stages, sessions, busy, run, onEdit }: {
 
     <div style={{ marginTop: 10 }}>
       {group.lessons.length === 0 && <div style={{ color: C.muted, fontSize: 13 }}>Chưa có buổi.</div>}
-      {group.lessons.map(l => <div key={l.session.id} style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
+      {group.lessons.map(l => <div key={l.session.id} className="cu-lesson" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
         borderTop: `1px solid ${C.border}`, padding: '8px 0' }}>
-        <div style={{ flex: '1 1 220px', minWidth: 0 }}>
-          <div style={{ fontWeight: 700 }}>Buổi {String(l.no).padStart(2, '0')} · {l.title}</div>
-          <div style={{ color: C.muted, fontSize: 12 }}>{fmtDate(l.session.start_at)} · {l.session.status}</div>
+        <div className="cu-lesson-main" style={{ flex: '1 1 220px', minWidth: 0 }}>
+          <div style={{ fontWeight: 700, fontSize: 15 }}>Buổi {String(l.no).padStart(2, '0')} · {l.title}</div>
+          <div style={{ color: C.muted, fontSize: 12 }}>{fmtDate(l.session.start_at)} · {sessionStatusLabel(l.session.status)}</div>
         </div>
         <StatusBadge status={l.content} />
-        <select aria-label={`Chặng của buổi ${l.no}`} style={{ ...input, padding: '6px 8px' }} disabled={busy}
+        <select aria-label={`Chặng của buổi ${l.no}`} className="cu-lesson-stage" style={{ ...input, padding: '6px 8px' }} disabled={busy}
           value={l.session.stage_id ?? ''} onChange={e => {
             const v = e.target.value === '' ? null : Number(e.target.value)
             void run(() => assignSessionStage(client, l.session.id, v), `Đã chuyển Buổi ${l.no}.`)
@@ -170,7 +174,7 @@ function StageCard({ client, group, stages, sessions, busy, run, onEdit }: {
           <option value="">— theo khoảng —</option>
           {stages.map(s => <option key={s.id} value={s.id}>Chặng {s.stage_no}</option>)}
         </select>
-        <button style={btn} onClick={() => onEdit(l.session.id)}>Soạn giáo trình</button>
+        <button className="cu-edit" style={{ ...btn, color: '#4F46E5', borderColor: '#C7D2FE' }} onClick={() => onEdit(l.session.id)}>Soạn giáo trình</button>
       </div>)}
     </div>
   </div>
