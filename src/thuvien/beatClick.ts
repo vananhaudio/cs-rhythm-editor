@@ -9,6 +9,20 @@ export interface BeatClicker {
   close(): void
 }
 
+/** Một tiếng click ngắn tại thời điểm `at` (giờ của `ctx`), đưa vào `destination`. Dùng chung cho Player (loa) và video (luồng ghi). */
+export function playClick(ctx: AudioContext, destination: AudioNode, at: number, accent: boolean): void {
+  const osc = ctx.createOscillator()
+  const gain = ctx.createGain()
+  osc.type = 'square'
+  osc.frequency.value = accent ? 1760 : 1175
+  gain.gain.setValueAtTime(0.0001, at)
+  gain.gain.exponentialRampToValueAtTime(accent ? 0.35 : 0.22, at + 0.002)
+  gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.045)
+  osc.connect(gain).connect(destination)
+  osc.start(at)
+  osc.stop(at + 0.06)
+}
+
 export function createBeatClicker(): BeatClicker {
   let ctx: AudioContext | null = null
   const ensure = (): AudioContext | null => {
@@ -26,17 +40,7 @@ export function createBeatClicker(): BeatClicker {
     click(delaySeconds, accent) {
       const c = ctx
       if (!c || c.state !== 'running') return
-      const at = c.currentTime + Math.max(0, delaySeconds)
-      const osc = c.createOscillator()
-      const gain = c.createGain()
-      osc.type = 'square'
-      osc.frequency.value = accent ? 1760 : 1175
-      gain.gain.setValueAtTime(0.0001, at)
-      gain.gain.exponentialRampToValueAtTime(accent ? 0.35 : 0.22, at + 0.002)
-      gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.045)
-      osc.connect(gain).connect(c.destination)
-      osc.start(at)
-      osc.stop(at + 0.06)
+      playClick(c, c.destination, c.currentTime + Math.max(0, delaySeconds), accent)
     },
     context: () => ctx,
     close() { if (ctx) { ctx.close().catch(() => {}); ctx = null } },

@@ -30,11 +30,11 @@ const ctxStub = new Proxy({} as Record<string, unknown>, {
 })
 ;(dom.window.HTMLCanvasElement.prototype as unknown as { getContext: unknown }).getContext = () => ctxStub
 let captured = 0
-;(dom.window.HTMLCanvasElement.prototype as unknown as { captureStream: unknown }).captureStream = () => { captured++; return {} }
+;(dom.window.HTMLCanvasElement.prototype as unknown as { captureStream: unknown }).captureStream = () => { captured++; return { getVideoTracks: () => [{}], getTracks: () => [{ stop() {} }] } }
 
 const { render, act, cleanup, fireEvent } = await import('@testing-library/react')
 const { createVideoRenderer, videoCreditLine, BRAND_FOOTER, VIDEO_SAFE, VIDEO_W, VIDEO_H } = await import('../../src/thuvien/video/videoRenderer')
-const { recordVideo, pickMp4Type, VideoExportError, clipSeconds } = await import('../../src/thuvien/video/recordVideo')
+const { recordVideo, pickMp4Type, pickMp4AudioType, clickPlan, VideoExportError, clipSeconds } = await import('../../src/thuvien/video/recordVideo')
 const { default: VideoExportDialog } = await import('../../src/thuvien/video/VideoExportDialog')
 const { default: RhythmScrollPage } = await import('../../src/thuvien/RhythmScrollPage')
 const { createMockChordLibrary } = await import('../../src/thuvien/chordLibrary')
@@ -110,13 +110,37 @@ test('thời lượng: tối đa 14 giây; còn ngắn hơn thì kết thúc ở
   assert.equal(clipSeconds(renderer, 16, 14), 0)
 })
 
-function installFakeRecorder() {
+// AudioContext/MediaStream giả: ghi lại click, kết nối, đóng tài nguyên.
+const audioLog = { created: 0, closed: 0, stoppedTracks: 0, clicks: [] as { at: number; freq: number; toDestination: boolean }[], state: 'running' as string }
+function installFakeAudio() {
+  audioLog.created = 0; audioLog.closed = 0; audioLog.stoppedTracks = 0; audioLog.clicks.length = 0; audioLog.state = 'running'
+  class FakeAudioContext {
+    state = audioLog.state; currentTime = 10
+    destination = { kind: 'speakers' }
+    constructor() { audioLog.created++ }
+    resume() { return Promise.resolve() }
+    close() { audioLog.closed++; return Promise.resolve() }
+    createMediaStreamDestination() { return { kind: 'sink', stream: { getAudioTracks: () => [{}], getTracks: () => [{ stop() { audioLog.stoppedTracks++ } }] } } }
+    createGain() { return { gain: { setValueAtTime() {}, exponentialRampToValueAtTime() {} }, connect: (n: unknown) => n } }
+    createOscillator() {
+      const rec = { at: 0, freq: 0, toDestination: false }
+      audioLog.clicks.push(rec)
+      const osc = { type: '', frequency: { set value(v: number) { rec.freq = v } }, connect: (g: { connect: (n: { kind: string }) => unknown }) => ({ connect: (n: { kind: string }) => { rec.toDestination = n.kind === 'speakers'; return n } }), start(at: number) { rec.at = at }, stop() {} }
+      return osc
+    }
+  }
+  class FakeMediaStream { constructor(public tracks: unknown[]) {} getTracks() { return this.tracks } }
+  Object.assign(globalThis, { AudioContext: FakeAudioContext, MediaStream: FakeMediaStream })
+}
+
+function installFakeRecorder(withAudio = true) {
+  installFakeAudio()
   class FakeRecorder {
-    static isTypeSupported(t: string) { return t.startsWith('video/mp4') }
+    static isTypeSupported(t: string) { return t.startsWith('video/mp4') && (withAudio || !t.includes('mp4a')) }
     state = 'inactive'; mimeType = 'video/mp4'
     ondataavailable: ((e: { data: Blob }) => void) | null = null; onstop: (() => void) | null = null
     start() { this.state = 'recording' }
-    stop() { this.state = 'inactive'; this.ondataavailable?.({ data: new dom.window.Blob([new Uint8Array(1000)]) as unknown as Blob }); this.onstop?.() }
+    stop() { this.state = 'inactive'; this.ondataavailable?.({ data: new dom.window.Blob([new Uint8Array(1000), 'mp4a']) as unknown as Blob }); this.onstop?.() }
   }
   Object.assign(globalThis, { MediaRecorder: FakeRecorder, Blob: dom.window.Blob, File: dom.window.File })
   let n = 0
@@ -220,4 +244,81 @@ test('quyền bị thu hồi sau khi mở Player: bấm Tạo video → hỏi l�
   assert.ok(view.getByTestId('video-denied'), 'có thông báo')
   assert.equal(view.queryByText('Lưu MP4'), null)
   assert.equal(view.queryByRole('dialog'), null, 'không mở hộp xuất')
+})
+
+// ── Metronome trong MP4 ──
+test('lịch click: đúng timeline — phách đầu ô nhấn, từ giữa bài (seek) tính lại từ 0, cuối bài không lặp', () => {
+  const renderer = createVideoRenderer({ ...SONG, bpm: 120 }, document.createElement('canvas'))   // 4/4, 4 ô, 120 BPM = 0,5 s/phách
+  const all = clickPlan(renderer.timeline, 120, 0, 16)
+  assert.equal(all.length, 16)
+  assert.deepEqual(all.slice(0, 5).map(c => [c.t, c.accent]), [[0, true], [0.5, false], [1, false], [1.5, false], [2, true]])
+  const mid = clickPlan(renderer.timeline, 120, 8, 16)   // bắt đầu ô 3
+  assert.equal(mid.length, 8); assert.deepEqual(mid[0], { t: 0, accent: true }); assert.equal(mid[4].accent, true, 'ô 4 nhấn lại ở 2 giây')
+  assert.equal(mid[4].t, 2)
+  assert.equal(clickPlan(renderer.timeline, 120, 16, 16).length, 0)
+})
+
+test('pickMp4AudioType: chỉ nhận MP4 có AAC', () => {
+  assert.equal(pickMp4AudioType({ isTypeSupported: t => t.includes('mp4a.40.2') }), 'video/mp4;codecs=avc1.42E01E,mp4a.40.2')
+  assert.equal(pickMp4AudioType({ isTypeSupported: t => t === 'video/mp4;codecs=avc1.42E01E' }), null)
+})
+
+test('ghi video + tiếng: click vào luồng ghi (KHÔNG ra loa), đúng tần số phách mạnh/nhẹ, đóng đủ tài nguyên', async () => {
+  installFakeRecorder()
+  const canvas = document.createElement('canvas')
+  const renderer = createVideoRenderer({ ...SONG, bpm: 600 }, canvas)   // 0,1 s/phách → 16 phách = 1,6 s
+  const out = await recordVideo(renderer, canvas, { startBeat: 0, maxSeconds: 14 })
+  assert.ok(out.blob.size > 0)
+  assert.equal(audioLog.created, 1)
+  const clicks = audioLog.clicks.filter(c => c.freq > 0)   // bỏ tín hiệu giữ luồng (không phải click)
+  assert.ok(clicks.length >= 14, `đủ click (${clicks.length})`)
+  assert.ok(audioLog.clicks.every(c => !c.toDestination), 'không nối ra loa')
+  assert.equal(clicks[0].freq, 1760, 'phách đầu ô = mạnh'); assert.equal(clicks[1].freq, 1175, 'phách còn lại = nhẹ'); assert.equal(clicks[4].freq, 1760)
+  const gaps = clicks.slice(1, 6).map((c, i) => Math.round((c.at - clicks[i].at) * 1000))
+  assert.ok(gaps.every(g => g === 100), `cách nhau 100 ms: ${gaps}`)
+  assert.equal(audioLog.closed, 1, 'AudioContext đã đóng'); assert.ok(audioLog.stoppedTracks >= 1)
+})
+
+test('xuất từ giữa bài: click đầu tiên là phách đầu ô tại thời điểm bắt đầu', async () => {
+  installFakeRecorder()
+  const canvas = document.createElement('canvas')
+  const renderer = createVideoRenderer({ ...SONG, bpm: 600 }, canvas)
+  await recordVideo(renderer, canvas, { startBeat: 8, maxSeconds: 14 })
+  const clicks = audioLog.clicks.filter(c => c.freq > 0)
+  assert.equal(clicks[0].freq, 1760)
+  assert.ok(clicks.length >= 6 && clicks.length <= 8, `chỉ 8 phách còn lại (${clicks.length})`)
+})
+
+test('không ghi được MP4 có tiếng → BÁO LỖI, không xuất video câm; không rò AudioContext', async () => {
+  installFakeRecorder(false)   // MP4 có, AAC không
+  const canvas = document.createElement('canvas')
+  const renderer = createVideoRenderer(SONG, canvas)
+  await assert.rejects(() => recordVideo(renderer, canvas, { startBeat: 0, maxSeconds: 14 }), (e: unknown) => e instanceof VideoExportError && e.code === 'unsupported_audio')
+  assert.equal(audioLog.created, 0, 'chưa tạo AudioContext khi đã biết không hỗ trợ')
+  installFakeRecorder()
+  Object.assign(globalThis, { AudioContext: undefined })
+  await assert.rejects(() => recordVideo(renderer, canvas, { startBeat: 0, maxSeconds: 14 }), (e: unknown) => e instanceof VideoExportError && e.code === 'unsupported_audio')
+})
+
+test('AudioContext không chạy (bị chặn) → báo lỗi và đóng tài nguyên', async () => {
+  installFakeRecorder()
+  audioLog.state = 'suspended'
+  const Base = (globalThis as unknown as { AudioContext: new () => { state: string } }).AudioContext
+  class Blocked extends Base { constructor() { super(); this.state = 'suspended' } }
+  Object.assign(globalThis, { AudioContext: Blocked })
+  const canvas = document.createElement('canvas')
+  const renderer = createVideoRenderer(SONG, canvas)
+  await assert.rejects(() => recordVideo(renderer, canvas, { startBeat: 0, maxSeconds: 14 }), (e: unknown) => e instanceof VideoExportError && e.code === 'unsupported_audio')
+  assert.equal(audioLog.closed, 1)
+})
+
+test('tệp ghi ra không có track audio (không có hộp mp4a) → báo lỗi thay vì lưu video câm', async () => {
+  installFakeRecorder()
+  const Rec = (globalThis as unknown as { MediaRecorder: { prototype: { stop(): void } } }).MediaRecorder
+  const keep = Rec.prototype.stop
+  Rec.prototype.stop = function (this: { state: string; ondataavailable: ((e: { data: Blob }) => void) | null; onstop: (() => void) | null }) { this.state = 'inactive'; this.ondataavailable?.({ data: new dom.window.Blob([new Uint8Array(1000)]) as unknown as Blob }); this.onstop?.() }
+  const canvas = document.createElement('canvas')
+  const renderer = createVideoRenderer({ ...SONG, bpm: 600 }, canvas)
+  await assert.rejects(() => recordVideo(renderer, canvas, { startBeat: 0, maxSeconds: 14 }), (e: unknown) => e instanceof VideoExportError && e.code === 'unsupported_audio')
+  Rec.prototype.stop = keep
 })
