@@ -188,6 +188,22 @@ const openMenu = async (page, w) => { if (w < 768) await page.getByLabel('Mở m
   ok('menu bỏ Giáo trình lớp; /admin/classes chuyển sang /admin/lop; tab Giáo trình trong lớp còn')
 }
 
+// 2c. Tạo lớp chỉ ở Lớp & lịch: màn Học viên không còn "Thêm lớp"; "Tạo lớp mới" ở Danh sách lớp → Lớp & lịch có form tạo
+{
+  const { ctx, page, log } = await open('/admin/students')
+  assert.equal(await page.getByRole('button', { name: /Thêm lớp/ }).count(), 0, 'Học viên không còn nút Thêm lớp')
+  assert.equal(await page.getByRole('button', { name: /Thêm học sinh/ }).count(), 1, 'Thêm học sinh còn nguyên')
+  await page.goto(BASE + '/students', { waitUntil: 'networkidle' })
+  assert.equal(await page.getByRole('button', { name: /Thêm lớp/ }).count(), 0, '/students cũng không còn Thêm lớp')
+  await page.goto(BASE + '/admin/lop', { waitUntil: 'networkidle' })
+  await page.getByRole('button', { name: /Tạo lớp mới/ }).click()
+  assert.equal(new URL(page.url()).pathname, '/admin/schedule', 'Tạo lớp mới → Lớp & lịch')
+  assert.equal(await page.getByRole('button', { name: /Thêm lớp/ }).count(), 1, 'Lớp & lịch còn nút Thêm lớp (form tạo lớp)')
+  assert.deepEqual(log.writes, [], 'không ghi dữ liệu')
+  await ctx.close()
+  ok('Học viên không còn Thêm lớp (cả /admin/students và /students); Tạo lớp mới → Lớp & lịch còn form tạo lớp')
+}
+
 // 3. Tổng quan: không số hardcode; lối tắt đổi URL; Ht2027 → Lớp & lịch đổi URL
 {
   const { ctx, page } = await open('/admin')
