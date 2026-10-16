@@ -29,7 +29,7 @@ import { applyProposal, buildProposal, hasSubstantialText } from './extractionPr
 import type { ExtractionProposal } from './extractionProposal.ts'
 
 // Rhythm Scroll (dựng timeline hợp âm theo phách) chỉ tải khi mở — không làm nặng trình sửa.
-const RhythmScrollPage = lazy(() => import('./RhythmScrollPage.tsx'))
+const BrandedPlayScroll = lazy(() => import('./HopamViewPage.tsx').then(m => ({ default: m.BrandedPlayScroll })))
 
 // Mục "Hợp âm chuẩn hóa" của /thuvien — bàn làm việc của thầy: tìm, thêm, sửa lời + hợp âm.
 // Mọi đọc/ghi đi qua `library` (src/thuvien/chordLibrary.ts); component không biết Supabase.
@@ -106,7 +106,7 @@ export default function ChordLibraryPage({ tabs, canEdit = true, access = 'admin
   if (rhythmTarget && rhythmTarget !== NEW_CHORD_SHEET && rhythm) {
     const fromView = !open && !!view
     return <Suspense fallback={<main className="tv-chords"><p className="cl-empty">Đang mở Rhythm Scroll…</p></main>}>
-      <RhythmScrollPage key={rhythmTarget} library={library} versionId={rhythmTarget}
+      <BrandedPlayScroll key={rhythmTarget} library={library} versionId={rhythmTarget} showBack
         onBack={() => (fromList ? go(null) : fromView ? (setRhythm(false), window.history.back()) : goRhythm(rhythmTarget, false))} />
     </Suspense>
   }
