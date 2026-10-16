@@ -2,7 +2,7 @@
 // id = khoá nội bộ; slug = đoạn sau /admin/ (giữ nguyên các URL đã chạy trước đây).
 
 export type AdminSection =
-  | 'dashboard' | 'lop' | 'schedule' | 'classes' | 'ht2027' | 'students' | 'leads' | 'community'
+  | 'dashboard' | 'lop' | 'schedule' | 'ht2027' | 'students' | 'leads' | 'community'
   | 'courses' | 'journey' | 'tools' | 'nhipphach'
   | 'newsfeed' | 'articles' | 'showcase' | 'dailymail' | 'chatmail'
   | 'aichat' | 'assistant'
@@ -17,7 +17,6 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
   { title: 'Lớp học', items: [
     { id: 'lop',       slug: 'lop',       icon: '🏫', label: 'Danh sách lớp' },
     { id: 'schedule',  slug: 'schedule',  icon: '🗓', label: 'Lớp & lịch' },
-    { id: 'classes',   slug: 'classes',   icon: '🎓', label: 'Giáo trình lớp' },
     { id: 'ht2027',    slug: 'ht2027',    icon: '🎸', label: 'Thực hành HT2027' },
     { id: 'students',  slug: 'students',  icon: '👥', label: 'Học viên' },
     { id: 'leads',     slug: 'leads',     icon: '📝', label: 'Đăng ký' },
@@ -45,7 +44,13 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
 export const ADMIN_NAV: AdminNavItem[] = ADMIN_NAV_GROUPS.flatMap(g => g.items)
 
 // Slug cũ vẫn mở được (trước đây slug = id nội bộ).
-const SLUG_ALIASES: Record<string, AdminSection> = { dailymail: 'dailymail', chatmail: 'chatmail' }
+// 'classes' (mục "Giáo trình lớp" cũ) đã gộp vào không gian lớp: tab Giáo trình của /admin/lop/<id>.
+const SLUG_ALIASES: Record<string, AdminSection> = { dailymail: 'dailymail', chatmail: 'chatmail', classes: 'lop' }
+
+/** Đường dẫn cũ cần đổi sang đường mới (giữ query/hash ở nơi gọi). null = không cần đổi. */
+export function adminLegacyRedirect(pathname: string): string | null {
+  return /^\/admin\/classes(?:\/.*)?$/.test(pathname) ? '/admin/lop' : null
+}
 
 const BY_SLUG = new Map<string, AdminSection>(ADMIN_NAV.filter(n => n.slug).map(n => [n.slug, n.id]))
 

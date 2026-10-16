@@ -16,9 +16,8 @@ import ChatMailPage from './admin/ChatMailPage'
 import NewsFeedAdmin from './admin/NewsFeedAdmin'
 import JourneyAdmin from './admin/JourneyAdmin'
 import NhipPhachAdmin from './admin/NhipPhachAdmin'
-import { ADMIN_NAV_GROUPS, adminSectionFromPath, adminPathForSection, adminLabel, adminQuickLinks, type AdminSection } from './admin/adminNav'
+import { ADMIN_NAV_GROUPS, adminSectionFromPath, adminLegacyRedirect, adminPathForSection, adminLabel, adminQuickLinks, type AdminSection } from './admin/adminNav'
 import { isSocialHost } from './class-social/resolveMeRoute'
-import ClassCurriculumAdmin from './admin/ClassCurriculumAdmin'
 import ClassAdminSpace from './admin/ClassAdminSpace'
 
 const S = {
@@ -35,13 +34,12 @@ const SHORTCUTS: { id: Section; icon: string; desc: string }[] = [
   { id: 'leads',    icon: '📝', desc: 'Duyệt đăng ký từ trang tuyển sinh' },
   { id: 'schedule', icon: '🗓', desc: 'Tạo lớp, lịch học, thành viên' },
   { id: 'students', icon: '👥', desc: 'Danh sách, tài khoản, ghi chú' },
-  { id: 'classes',  icon: '🎓', desc: 'Soạn và xem giáo trình từng lớp' },
 ]
 
 export default function TeacherAdminPage() {
   // Mục đang mở lấy từ URL (/admin/<slug>); bấm menu đẩy URL, Back/Forward đọc lại URL.
   const [section, setSection]       = useState<Section>(() => adminSectionFromPath(window.location.pathname) ?? 'dashboard')
-  const [pathname, setPathname]   = useState(() => window.location.pathname)
+  const [pathname, setPathname]   = useState(() => adminLegacyRedirect(window.location.pathname) ?? window.location.pathname)
   const [studentId, setStudentId]   = useState<string | null>(null)
   const [collapsed, setCollapsed]   = useState(false)
   const [isMobile, setIsMobile]     = useState(typeof window !== 'undefined' && window.innerWidth < 768)
@@ -63,15 +61,20 @@ export default function TeacherAdminPage() {
   const quickLinks = adminQuickLinks(meBase)
 
   // URL không hợp lệ (/admin/abc) → về Tổng quan và sửa URL, không thêm history.
+  // Đường cũ /admin/classes → /admin/lop (cũng không thêm history).
   useEffect(() => {
-    if (adminSectionFromPath(window.location.pathname) === null) window.history.replaceState(null, '', '/admin')
+    const legacy = adminLegacyRedirect(window.location.pathname)
+    if (legacy) window.history.replaceState(null, '', legacy)
+    else if (adminSectionFromPath(window.location.pathname) === null) window.history.replaceState(null, '', '/admin')
   }, [])
 
   useEffect(() => {
     const onPop = () => {
       const next = adminSectionFromPath(window.location.pathname)
       if (next === null) { window.location.reload(); return }   // Back ra ngoài Admin: để router chính quyết
-      setPathname(window.location.pathname); setSection(next); setStudentId(null); setMenuOpen(false)
+      const legacy = adminLegacyRedirect(window.location.pathname)
+      if (legacy) window.history.replaceState(null, '', legacy)
+      setPathname(legacy ?? window.location.pathname); setSection(next); setStudentId(null); setMenuOpen(false)
     }
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
@@ -190,7 +193,6 @@ export default function TeacherAdminPage() {
         )}
 
         {section === 'lop' && <ClassAdminSpace pathname={pathname} navigate={navigate} goSection={goSection} />}
-        {section === 'classes' && <ClassCurriculumAdmin />}
         {section === 'students' && studentId && (
           <div style={{ flex: 1, overflowY: 'auto' }}>
             <StudentProfile
