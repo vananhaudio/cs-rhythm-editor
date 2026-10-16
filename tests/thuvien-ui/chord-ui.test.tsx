@@ -2062,6 +2062,16 @@ test('Band (MusicXML): bandChoiceProblem/initialBandChoice/bandIdOfChoice', asyn
   assert.equal(bandLabel(' Alpha '), 'Alpha')
 })
 
+// Thư viện phải mở Play Scroll V4.2 (branded): header thương hiệu, dải hợp âm + chấm phách, nút loa — cùng component với /hopam/<id>.
+function assertBrandedPlayScroll(view: ReturnType<typeof render>, where: string) {
+  const page = view.getByTestId('rhythm-scroll-page')
+  assert.ok(page.classList.contains('rs-branded'), `${where}: phải là giao diện branded V4.2`)
+  assert.ok(view.queryByTestId('rs-chord-now'), `${where}: có dải hợp âm đang vang`)
+  assert.ok(view.queryByTestId('rs-beat'), `${where}: có chấm phách`)
+  assert.ok(view.getByRole('button', { name: /đập nhịp/ }), `${where}: có nút loa metronome`)
+  assert.ok(view.getByRole('button', { name: 'Quay lại' }), `${where}: có nút Quay lại về Thư viện`)
+}
+
 // HOTFIX: nút "▶ Rhythm Scroll" ở TRANG XEM (?xem=) từng không mở được (open = null nên không render RhythmScrollPage).
 test('trang xem → ▶ Rhythm Scroll mở được Rhythm Scroll; Quay lại về trang xem', async () => {
   const library = createMockChordLibrary({ storage: memoryStorage() })
@@ -2072,6 +2082,7 @@ test('trang xem → ▶ Rhythm Scroll mở được Rhythm Scroll; Quay lại v�
   fireEvent.click(view.getByRole('button', { name: /Rhythm Scroll/ }))
   await settle(80)
   assert.ok(view.queryByTestId('rhythm-scroll-page'), 'Rhythm Scroll phải mở')
+  assertBrandedPlayScroll(view, '?xem=')
   assert.match(dom.window.location.search, /chay=1/)
   fireEvent.click(view.getByRole('button', { name: /Quay lại/ }))
   await settle()
@@ -2115,10 +2126,23 @@ test('danh sách Hợp âm: bài có vạch nhịp có nút ▶ Rhythm Scroll m�
     fireEvent.click(buttons[0])
     await settle(80)
     assert.ok(view.queryByTestId('rhythm-scroll-page'), 'Rhythm Scroll phải mở')
+    assertBrandedPlayScroll(view, 'danh sách (?hopam=&chay=1)')
     fireEvent.click(view.getByRole('button', { name: /Quay lại/ }))
     await settle()
     assert.equal(view.queryByTestId('rhythm-scroll-page'), null)
     assert.ok(view.getByRole('list', { name: /Danh sách bài/ }), 'về danh sách, không vào trình sửa')
     cleanup()
   }
+})
+
+test('Thư viện dùng chung BrandedPlayScroll của /hopam (cùng quyền xuất MP4 do RPC), không gọi RhythmScrollPage trần', () => {
+  const lib = readFileSync(new URL('../../src/thuvien/ChordLibraryPage.tsx', import.meta.url), 'utf8')
+  assert.match(lib, /import\('\.\/HopamViewPage\.tsx'\)\.then\(m => \(\{ default: m\.BrandedPlayScroll \}\)\)/)
+  assert.ok(!/<RhythmScrollPage/.test(lib), 'không còn gọi RhythmScrollPage trần (giao diện cũ)')
+  const hop = readFileSync(new URL('../../src/thuvien/HopamViewPage.tsx', import.meta.url), 'utf8')
+  const comp = hop.slice(hop.indexOf('export function BrandedPlayScroll'), hop.indexOf('export default function HopamViewPage'))
+  assert.match(comp, /useVideoExportAccess\(versionId\)/)
+  assert.match(comp, /branded videoExport=\{videoExport\} videoRecheck=\{\(\) => fetchVideoGrant\(versionId\)\}/)
+  assert.match(lib, /<BrandedPlayScroll key=\{rhythmTarget\}[^>]*showBack/, 'Thư viện bật nút Quay lại')
+  assert.match(hop, /<BrandedPlayScroll library=\{library\} versionId=\{versionId\} onBack=\{back\} \/>/, '/hopam dùng cùng component')
 })

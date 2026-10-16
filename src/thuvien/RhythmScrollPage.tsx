@@ -1,7 +1,7 @@
 // Rhythm Scroll cho một phiên bản Hợp âm chuẩn hóa: lời + hợp âm cuộn theo nhịp, ball nảy mỗi ô.
 // MỘT đồng hồ duy nhất: giây → phách → locateBeat → { vị trí ô (ball + cuộn lời), hợp âm đang vang }.
 // Timeline hợp âm dựng từ chính dữ liệu đã lưu (lời + vạch nhịp + số chỉ nhịp) — không có nguồn thứ hai.
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { createContext, lazy, Suspense, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import AnchoredChordViewer from '../rhythm-scroll-viewer/AnchoredChordViewer.tsx'
 import { usePrefersReducedMotion } from '../rhythm-scroll-viewer/RhythmChordViewer.tsx'
 import type { RhythmScrollAnchoredData } from '../rhythm-scroll-viewer/anchored.ts'
@@ -70,10 +70,15 @@ export function creditLine(detail: { bandName?: string | null; editorName?: stri
   return parts.length ? parts.join(' · ') : null
 }
 
+/** Chỉ Thư viện cấp: giao diện branded (mặc định không có nút Quay lại — /hopam dùng nút Back của trình duyệt) hiện thêm nút này. */
+export const PlayScrollBackContext = createContext<(() => void) | null>(null)
+
 function Shell({ title, onBack, children, right, embedded = false, versionId, branded = false, composer, credit }: { title: string; onBack: () => void; children: React.ReactNode; right?: React.ReactNode; embedded?: boolean; versionId?: string; branded?: boolean; composer?: string | null; credit?: string | null }) {
+  const libraryBack = useContext(PlayScrollBackContext)
   if (branded && !embedded) {
     return <div className="rs-page rs-branded" data-testid="rhythm-scroll-page">
       <header className="rs-nav rs-brandbar">
+        {libraryBack ? <button type="button" className="rs-back rs-back-icon" aria-label="Quay lại" onClick={libraryBack}><span aria-hidden="true">‹</span></button> : null}
         <img className="rs-logo" src="/logo.png" alt="Thầy Văn Anh Guitar" width="32" height="32" />
         <span className="rs-brand">Play Scroll</span>
         <div className="rs-nav-right">{right}</div>
