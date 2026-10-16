@@ -61,7 +61,7 @@ let pass = 0
 const ok = m => { pass++; console.log('PASS', m) }
 
 const SECTIONS = [ // [đường dẫn, nhãn menu]
-  ['/admin', 'Tổng quan'], ['/admin/lop', 'Danh sách lớp'], ['/admin/schedule', 'Lớp & lịch'], ['/admin/classes', 'Giáo trình lớp'], ['/admin/ht2027', 'Thực hành HT2027'],
+  ['/admin', 'Tổng quan'], ['/admin/lop', 'Danh sách lớp'], ['/admin/schedule', 'Lớp & lịch'], ['/admin/ht2027', 'Thực hành HT2027'],
   ['/admin/students', 'Học viên'], ['/admin/leads', 'Đăng ký'], ['/admin/community', 'Nhóm cộng đồng'],
   ['/admin/courses', 'Khoá học'], ['/admin/journey', 'Hành trình'], ['/admin/tools', 'Công cụ'], ['/admin/nhipphach', 'Nhịp phách'],
   ['/admin/newsfeed', 'Bản tin trong app'], ['/admin/articles', 'Bài viết tuyển sinh'], ['/admin/showcase', 'Trang Showcase'],
@@ -171,12 +171,29 @@ const openMenu = async (page, w) => { if (w < 768) await page.getByLabel('Mở m
   ok('click → URL; click lại không thêm history; Back/Forward; reload giữ mục; URL sai → /admin')
 }
 
+// 2b. Mục "Giáo trình lớp" đã gỡ; đường cũ /admin/classes → /admin/lop (không thêm history); Giáo trình nằm trong lớp
+{
+  const { ctx, page } = await open('/admin')
+  assert.equal(await page.locator('nav[aria-label="Menu Admin"]').getByText('Giáo trình lớp').count(), 0, 'menu không còn Giáo trình lớp')
+  assert.equal(await page.locator('nav[aria-label="Menu Admin"]').getByText('Khoá học').count(), 1, 'Khoá học còn nguyên')
+  await page.goto(BASE + '/admin/schedule', { waitUntil: 'networkidle' })
+  await page.goto(BASE + '/admin/classes', { waitUntil: 'networkidle' })
+  assert.equal(new URL(page.url()).pathname, '/admin/lop', '/admin/classes → /admin/lop')
+  assert.equal(label((await cur(page))[0]), label('Danh sách lớp'), 'mục đang chọn sau chuyển hướng')
+  await page.goBack({ waitUntil: 'networkidle' })
+  assert.equal(new URL(page.url()).pathname, '/admin/schedule', 'Back không quay lại /admin/classes (không thêm history)')
+  await page.goto(BASE + '/admin/lop/' + CLS_A + '/giao-trinh', { waitUntil: 'networkidle' })
+  assert.equal(await page.locator('.ac-tab[aria-current="page"]').innerText(), 'Giáo trình', 'tab Giáo trình trong lớp mở được')
+  await ctx.close()
+  ok('menu bỏ Giáo trình lớp; /admin/classes chuyển sang /admin/lop; tab Giáo trình trong lớp còn')
+}
+
 // 3. Tổng quan: không số hardcode; lối tắt đổi URL; Ht2027 → Lớp & lịch đổi URL
 {
   const { ctx, page } = await open('/admin')
   const txt = await page.locator('body').innerText()
   assert.ok(!/577|\b13\b|đang hoạt động|đã tạo|đang cập nhật/.test(txt), 'không còn số liệu hardcode')
-  for (const [name, re] of [['Đăng ký', /leads$/], ['Lớp & lịch', /schedule$/], ['Học viên', /students$/], ['Giáo trình lớp', /classes$/]]) {
+  for (const [name, re] of [['Đăng ký', /leads$/], ['Lớp & lịch', /schedule$/], ['Học viên', /students$/]]) {
     await page.goto(BASE + '/admin', { waitUntil: 'networkidle' })
     await page.getByRole('main').or(page.locator('body')).getByRole('link', { name: new RegExp(name.replace('&', '&') + ' →') }).click()
     assert.match(page.url(), re, `lối tắt ${name}`)
@@ -185,7 +202,7 @@ const openMenu = async (page, w) => { if (w < 768) await page.getByLabel('Mở m
   const btnOpen = page.getByRole('button', { name: /Mở Lịch lớp/ })
   if (await btnOpen.count()) { await btnOpen.first().click(); assert.match(page.url(), /schedule$/, 'nút trong trang đồng bộ URL') }
   await ctx.close()
-  ok('Tổng quan không số cứng; 4 lối tắt cập nhật URL; nút nội bộ Ht2027 đồng bộ URL')
+  ok('Tổng quan không số cứng; 3 lối tắt cập nhật URL (không còn lối tắt Giáo trình lớp); nút nội bộ Ht2027 đồng bộ URL')
 }
 
 // 4. Mở nhanh: liên kết đúng, quyền để trang đích

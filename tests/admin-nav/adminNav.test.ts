@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import { strictEqual as eq, ok } from 'node:assert'
-import { ADMIN_NAV, ADMIN_NAV_GROUPS, adminSectionFromPath, adminPathForSection, adminQuickLinks, parseAdminClassPath, adminClassPath, CLASS_TABS } from '../../src/admin/adminNav.ts'
+import { ADMIN_NAV, ADMIN_NAV_GROUPS, adminSectionFromPath, adminLegacyRedirect, adminPathForSection, adminQuickLinks, parseAdminClassPath, adminClassPath, CLASS_TABS } from '../../src/admin/adminNav.ts'
 
 test('mọi mục có URL riêng và đọc ngược đúng', () => {
   for (const n of ADMIN_NAV) eq(adminSectionFromPath(adminPathForSection(n.id)), n.id)
@@ -8,7 +8,7 @@ test('mọi mục có URL riêng và đọc ngược đúng', () => {
 test('id/slug/nhãn không trùng', () => {
   for (const k of ['id', 'slug', 'label'] as const) eq(new Set(ADMIN_NAV.map(n => n[k])).size, ADMIN_NAV.length)
 })
-test('18 mục cũ + Danh sách lớp', () => eq(ADMIN_NAV.length, 19))
+test('17 mục cũ + Danh sách lớp (đã bỏ Giáo trình lớp)', () => eq(ADMIN_NAV.length, 18))
 test('URL cũ vẫn vào đúng mục', () => {
   eq(adminSectionFromPath('/admin'), 'dashboard')
   eq(adminSectionFromPath('/admin/'), 'dashboard')
@@ -28,7 +28,7 @@ test('URL không hợp lệ → null; không phải /admin → null', () => {
 })
 test('thứ tự nhóm theo quyết định', () => {
   eq(ADMIN_NAV_GROUPS.map(g => g.title).join('|'), '|Lớp học|Học liệu|Nội dung & truyền thông|Trợ lý AI')
-  eq(ADMIN_NAV_GROUPS[1].items.map(i => i.label).join('|'), 'Danh sách lớp|Lớp & lịch|Giáo trình lớp|Thực hành HT2027|Học viên|Đăng ký|Nhóm cộng đồng')
+  eq(ADMIN_NAV_GROUPS[1].items.map(i => i.label).join('|'), 'Danh sách lớp|Lớp & lịch|Thực hành HT2027|Học viên|Đăng ký|Nhóm cộng đồng')
 })
 test('Mở nhanh: có TeamLab tuyệt đối, /me theo meBase', () => {
   const l = adminQuickLinks('https://class.vananhaudio.com')
@@ -41,8 +41,16 @@ test('V2: /admin/lop[/id[/tab]] thuộc mục lop; đường cũ giữ nguyên',
   eq(adminSectionFromPath('/admin/lop'), 'lop')
   eq(adminSectionFromPath('/admin/lop/abc-123'), 'lop')
   eq(adminSectionFromPath('/admin/lop/abc-123/hoc-vien'), 'lop')
-  eq(adminSectionFromPath('/admin/classes'), 'classes')
+  eq(adminSectionFromPath('/admin/classes'), 'lop')   // đường cũ → mục Danh sách lớp
   eq(adminSectionFromPath('/admin/ht2027'), 'ht2027')
+})
+test('V2: /admin/classes là đường cũ → chuyển sang /admin/lop; menu không còn mục classes', () => {
+  eq(adminLegacyRedirect('/admin/classes'), '/admin/lop')
+  eq(adminLegacyRedirect('/admin/classes/x'), '/admin/lop')
+  eq(adminLegacyRedirect('/admin/lop'), null)
+  eq(adminLegacyRedirect('/admin/classesx'), null)
+  ok(!ADMIN_NAV.some(n => n.slug === 'classes' || n.label === 'Giáo trình lớp'))
+  ok(ADMIN_NAV.some(n => n.slug === 'courses' && n.label === 'Khoá học'))
 })
 test('V2: phân tích đường dẫn lớp', () => {
   eq(parseAdminClassPath('/admin/lop'), null)
