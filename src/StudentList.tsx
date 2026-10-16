@@ -155,64 +155,6 @@ function ResetPasswordModal({ student, onClose }: { student: Student; onClose: (
   )
 }
 
-// 🏫 Thêm lớp: ghép mã lớp từ mã năng lực + số khoá, tự tạo nhóm Zalo cùng mã, sinh buổi học nếu có ngày/giờ
-const DOW_OPTS = [['1', 'Thứ Hai'], ['2', 'Thứ Ba'], ['3', 'Thứ Tư'], ['4', 'Thứ Năm'], ['5', 'Thứ Sáu'], ['6', 'Thứ Bảy'], ['0', 'Chủ nhật']] as const
-function CreateClassModal({ courses, onClose, onDone }: { courses: { id: string; name: string; code: string | null }[]; onClose: () => void; onDone: () => void }) {
-  const coded = courses.filter(c => c.code)
-  const [nangLuc, setNangLuc] = useState('')
-  const [so, setSo] = useState('')
-  const [weekday, setWeekday] = useState('')
-  const [time, setTime] = useState('')
-  const [startDate, setStartDate] = useState('')
-  const [totalSessions, setTotalSessions] = useState('8')
-  const [durationMinutes, setDurationMinutes] = useState('90')
-  const [busy, setBusy] = useState(false)
-  const [results, setResults] = useState<any[] | null>(null)
-  const submit = async () => {
-    if (!nangLuc || !so.trim()) { alert('Cần chọn khoá (mã năng lực) và nhập số khoá.'); return }
-    setBusy(true); setResults(null)
-    const cls: any = { nangLuc, so: so.trim(), totalSessions: Number(totalSessions) || 8, durationMinutes: Number(durationMinutes) || 90 }
-    if (weekday !== '') cls.weekday = Number(weekday)
-    if (time) cls.time = time
-    if (startDate) cls.startDate = startDate
-    const { data, error } = await supabase.functions.invoke('admin-ai', { body: { action: 'create_schedule', classes: [cls] } })
-    const res = error ? [{ email: `${nangLuc}.${so}`, ok: false, error: error.message }] : (data?.results ?? [])
-    setResults(res); setBusy(false)
-    if (res[0]?.ok) onDone()
-  }
-  return (
-    <Overlay onClose={onClose} title="🏫 Thêm lớp học">
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <div>
-          <FieldLabel>Khoá học (mã năng lực)</FieldLabel>
-          <select style={{ ...inpS, cursor: 'pointer' }} value={nangLuc} onChange={e => setNangLuc(e.target.value)}>
-            <option value="">— Chọn khoá —</option>
-            {coded.map(c => <option key={c.id} value={c.code!}>[{c.code}] {c.name}</option>)}
-          </select>
-          {!coded.length && <div style={{ fontSize: 12.5, color: T.danger, marginTop: 4 }}>Chưa khoá nào có mã — gán mã ở tab Khoá học trước.</div>}
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <div><FieldLabel>Số khoá (VD: 17)</FieldLabel><input style={inpS} value={so} onChange={e => setSo(e.target.value)} placeholder="17" /></div>
-          <div><FieldLabel>Ngày khai giảng</FieldLabel><input style={inpS} type="date" value={startDate} onChange={e => setStartDate(e.target.value)} /></div>
-          <div>
-            <FieldLabel>Thứ trong tuần</FieldLabel>
-            <select style={{ ...inpS, cursor: 'pointer' }} value={weekday} onChange={e => setWeekday(e.target.value)}>
-              <option value="">— Chưa chốt —</option>
-              {DOW_OPTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-            </select>
-          </div>
-          <div><FieldLabel>Giờ học</FieldLabel><input style={inpS} type="time" value={time} onChange={e => setTime(e.target.value)} /></div>
-          <div><FieldLabel>Số buổi</FieldLabel><input style={inpS} value={totalSessions} onChange={e => setTotalSessions(e.target.value)} /></div>
-          <div><FieldLabel>Phút / buổi</FieldLabel><input style={inpS} value={durationMinutes} onChange={e => setDurationMinutes(e.target.value)} /></div>
-        </div>
-        <div style={{ fontSize: 12.5, color: T.textMuted }}>Mã lớp tự ghép từ mã khoá + số (VD DH1 + 17 → DH1.KD17). Nhóm Zalo cùng mã tự tạo kèm. Có đủ ngày + thứ + giờ thì sinh luôn lịch buổi học; thiếu thì bổ sung sau ở form Lịch lớp.</div>
-        <button onClick={submit} disabled={busy} style={{ ...btnPrimary, opacity: busy ? .6 : 1 }}>{busy ? 'Đang tạo...' : 'Tạo lớp'}</button>
-      </div>
-      {results && <ResultLines results={results} />}
-    </Overlay>
-  )
-}
-
 export default function StudentList({ onSelect }: Props) {
   const [packageRows, setPackageRows] = useState<StudentPackage[]>([])
   const [packageLoaded, setPackageLoaded] = useState(false)
@@ -235,7 +177,6 @@ export default function StudentList({ onSelect }: Props) {
   const [courses, setCourses] = useState<{ id: string; name: string; code: string | null }[]>([])
   // Thao tác bằng tay (thay AI): tạo tài khoản / reset mật khẩu / thêm lớp
   const [showCreate, setShowCreate] = useState(false)
-  const [showClass, setShowClass] = useState(false)
   const [resetTarget, setResetTarget] = useState<Student | null>(null)
   const [courseFilter, setCourseFilter] = useState('all')
   const [xpBy, setXpBy] = useState<Record<string, number>>({})
@@ -358,7 +299,6 @@ export default function StudentList({ onSelect }: Props) {
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button onClick={() => setShowCreate(true)} style={{ background: T.gold, color: '#fff', border: 'none', borderRadius: 8, padding: '9px 16px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>➕ Thêm học sinh</button>
-          <button onClick={() => setShowClass(true)} style={{ background: '#fff', color: T.header, border: `1px solid ${T.border}`, borderRadius: 8, padding: '9px 16px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>🏫 Thêm lớp</button>
           <button onClick={() => setShowReport(v => !v)} style={{ background: showReport ? '#fff' : T.header, color: showReport ? T.header : '#fff', border: `1px solid ${showReport ? T.border : T.header}`, borderRadius: 8, padding: '9px 16px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
             {showReport ? '📇 Danh sách' : '📊 Báo cáo'}
           </button>
@@ -556,7 +496,6 @@ export default function StudentList({ onSelect }: Props) {
 
       {/* Modal thao tác bằng tay */}
       {showCreate && <CreateStudentModal groups={groups} onClose={() => setShowCreate(false)} onDone={reloadStudents} />}
-      {showClass && <CreateClassModal courses={courses} onClose={() => setShowClass(false)} onDone={reloadStudents} />}
       {resetTarget && <ResetPasswordModal student={resetTarget} onClose={() => setResetTarget(null)} />}
     </div>
   )
