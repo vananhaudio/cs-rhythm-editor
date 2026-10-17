@@ -20,6 +20,7 @@ create function t.u(k text) returns uuid language sql immutable as $$
                 when 'D' then '0d0d0d0d-0000-4000-8000-0000000000d4'::uuid
                 when 'E' then '0e0e0e0e-0000-4000-8000-0000000000e5'::uuid
                 when 'T' then 'dddddddd-0000-4000-8000-00000000000d'::uuid
+                when 'S' then '5a5a5a5a-0000-4000-8000-0000000000a5'::uuid
                 when 'N' then 'eeeeeeee-0000-4000-8000-00000000000e'::uuid end
 $$;
 create function t.as_user(k text) returns void language plpgsql as $$ begin
