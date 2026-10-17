@@ -1,0 +1,4 @@
+{
+  "extends": "../musicxml-renderer/tsconfig.json",
+  "include": ["./*.ts", "../../supabase/functions/admin-ai/schedule.ts", "../../src/journey/sessions.ts"]
+}

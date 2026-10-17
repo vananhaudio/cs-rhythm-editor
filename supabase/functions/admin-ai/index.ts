@@ -3,6 +3,7 @@
 // Giữ khoá Claude + service_role ở server (không bao giờ lộ ra client).
 // Chỉ teacher/admin gọi được (verify JWT + role). AI không tự tạo — luôn qua bước thầy xác nhận.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createSchedule } from './schedule.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -10,13 +11,6 @@ const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY')!
 const MODEL = 'claude-haiku-4-5' // việc nhẹ + có bước thầy duyệt nên dùng model rẻ; đổi sang sonnet/opus nếu cần
 
-// Bộ luật Hành trình 2027 — mã năng lực → dạng lớp; ghép mã lớp. (đồng bộ với src/hanhtrinh.ts)
-const DANG_LOP: Record<string, string> = { DH1: 'KD', DH2: 'KD', DH3: 'BP', TN1: 'GL', TN2: 'GL', TN3: 'GL' }
-const buildClassCode = (nangLuc: string, so: string | number): string | null => {
-  const c = (nangLuc || '').trim().toUpperCase(); const dl = DANG_LOP[c]
-  const n = String(so ?? '').replace(/\D/g, '')
-  return (dl && n) ? `${c}.${dl}${n.padStart(2, '0')}` : null
-}
 
 // Bộ luật Hành trình 2027 (đầy đủ) — nạp vào ngữ cảnh AI để nó hiểu toàn hệ thống, không phải hỏi lắt nhắt.
 const HANHTRINH_RULES = `
@@ -369,81 +363,6 @@ async function resetPasswords(admin: ReturnType<typeof createClient>, resets: an
       results.push({ email, full_name: stu.full_name, password, ok: true })
     } catch (e) {
       results.push({ email, ok: false, error: String((e as Error)?.message || e) })
-    }
-  }
-  return results
-}
-
-// ── Sinh buổi học theo GIỜ VIỆT NAM (+07:00) — edge function chạy UTC nên phải ghim múi giờ ──
-// Cùng quy ước src/journey/sessions.ts: buổi 1 = ngày đầu >= startDate rơi đúng thứ; mỗi buổi cách 7 ngày.
-const DAY_MS = 86400000
-const ymdOfVN = (d: Date) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`
-function genSessionsVN(startYmd: string, weekday: number, hm: string, durMin: number, total: number) {
-  // mốc 12:00 VN của startYmd → getUTCDay() trả đúng thứ theo lịch VN
-  const base = new Date(`${startYmd}T12:00:00+07:00`)
-  if (isNaN(base.getTime())) return []
-  const diff = ((weekday - base.getUTCDay()) % 7 + 7) % 7
-  const out: { session_number: number; start_at: string; end_at: string; ymd: string }[] = []
-  for (let i = 0; i < total; i++) {
-    const day = new Date(base.getTime() + (diff + i * 7) * DAY_MS)   // 05:00Z = 12:00 VN cùng ngày → getUTC* ra đúng lịch VN
-    const ymd = ymdOfVN(day)
-    const s = new Date(`${ymd}T${hm}:00+07:00`)
-    out.push({ session_number: i + 1, start_at: s.toISOString(), end_at: new Date(s.getTime() + durMin * 60000).toISOString(), ymd })
-  }
-  return out
-}
-const dmyVN = (ymd: string) => { const [y, m, d] = ymd.split('-'); return `${d}/${m}/${y}` }
-
-// Tạo lịch lớp — từ MÃ NĂNG LỰC + SỐ KHOÁ: ghép mã lớp, gắn khoá chính, tự khớp/tạo nhóm Zalo ≡ mã lớp.
-// Có startDate + weekday + time → sinh LỊCH THẬT + BUỔI HỌC (class_sessions) như form trong /admin.
-async function createSchedule(admin: ReturnType<typeof createClient>, classes: any[]) {
-  const { data: allCourses } = await admin.from('edu_courses').select('id,name,code')
-  const byCode: Record<string, any> = {}
-  ;(allCourses ?? []).forEach((c: any) => { if (c.code) byCode[c.code.trim().toUpperCase()] = c })
-  const results: any[] = []
-  for (const c of classes) {
-    try {
-      const nl = (c.nangLuc || '').trim().toUpperCase()
-      const main = byCode[nl]
-      if (!main) throw new Error('không có khoá nào mang mã năng lực "' + nl + '" (gán mã ở Khoá học trước)')
-      const code = buildClassCode(nl, c.so)
-      if (!code) throw new Error('không ghép được mã lớp (thiếu số khoá hoặc mã không có dạng lớp)')
-      // Chặn trùng mã lớp (1 lớp = 1 mã)
-      const { data: dup } = await admin.from('class_schedule').select('id').ilike('code', code).limit(1)
-      if (dup?.length) throw new Error(`mã lớp ${code} đã có trong lịch — kiểm tra lại số khoá`)
-      // Nhóm Zalo ≡ mã lớp — tự khớp/tạo
-      const { data: g } = await admin.from('edu_groups')
-        .upsert({ code, name: code, group_type: 'zalo', is_active: true }, { onConflict: 'code' }).select('id').single()
-      // Lịch thật (nếu AI đưa đủ startDate + weekday + time)
-      const weekday = (typeof c.weekday === 'number' && c.weekday >= 0 && c.weekday <= 6) ? c.weekday : null
-      const time = /^\d{1,2}:\d{2}$/.test(c.time || '') ? c.time : null
-      const startDate = /^\d{4}-\d{2}-\d{2}$/.test(c.startDate || '') ? c.startDate : null
-      const total = Math.max(1, Number(c.totalSessions) || 8)
-      const durMin = Math.max(15, Number(c.durationMinutes) || 90)
-      const sessions = (startDate && weekday !== null && time) ? genSessionsVN(startDate, weekday, time, durMin, total) : []
-      const realStart = sessions[0]?.ymd ?? startDate
-      const realEnd = sessions[sessions.length - 1]?.ymd ?? null
-      const rec: any = {
-        code, name: main.name, section: c.section || 'upcoming',
-        schedule: (c.schedule || '').trim() || (weekday !== null && time ? `${weekday === 0 ? 'Chủ nhật' : 'Thứ ' + (weekday + 1)} · ${time.replace(':', 'h')}` : null),
-        start_text: (c.start || '').trim() || (realStart ? dmyVN(realStart) : null),
-        duration: `${total} buổi · mỗi buổi ${durMin} phút`,
-        price: nl === 'NM' ? 'Free' : '990k',
-        course_ids: [main.id], main_course_id: main.id, group_id: g?.id || null,
-        start_date: realStart, weekday, start_time: time,
-        duration_minutes: durMin, total_sessions: total, end_date: realEnd, status: 'upcoming',
-      }
-      const { data: ins, error } = await admin.from('class_schedule').insert(rec).select('id').single()
-      if (error) throw new Error(error.message)
-      if (ins?.id && sessions.length) {
-        const { error: sErr } = await admin.from('class_sessions').insert(
-          sessions.map(s => ({ class_id: ins.id, session_number: s.session_number, start_at: s.start_at, end_at: s.end_at, status: 'scheduled' })))
-        if (sErr) { results.push({ email: code, ok: true, group: `${main.name} · nhóm Zalo ${code}`, warn: 'lớp tạo OK nhưng sinh buổi lỗi: ' + sErr.message }); continue }
-      }
-      results.push({ email: code, ok: true, group: main.name + ' · nhóm Zalo ' + code
-        + (sessions.length ? ` · ${total} buổi, KG ${dmyVN(realStart!)} → KT ${dmyVN(realEnd!)}` : ' · (chưa có ngày/giờ — lớp chỉ có text, vào form Sửa để bổ sung)') })
-    } catch (e) {
-      results.push({ email: (c.nangLuc || '') + (c.so ? '.' + c.so : '') || '(lớp)', ok: false, error: String((e as Error)?.message || e) })
     }
   }
   return results
