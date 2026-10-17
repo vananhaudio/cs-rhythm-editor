@@ -118,13 +118,23 @@ test('chưa có nhóm: tạo nhóm mới ≡ mã lớp và gắn vào lớp', as
 for (const type of ['class', 'zalo', 'facebook']) {
   test(`nhóm có sẵn loại ${type} (có zalo_url, tên riêng, metadata, thành viên): giữ NGUYÊN, chỉ gắn id`, async () => {
     const db = seed(new FakeDb())
-    db.t.edu_groups.push({ id: 'g-old', code: 'DH1.KD17', name: 'Tên riêng', group_type: type, zalo_url: 'https://zalo.me/g/abc', is_active: false, metadata: { x: 1 }, member_count: 12 })
+    db.t.edu_groups.push({ id: 'g-old', code: 'DH1.KD17', name: 'Tên riêng', group_type: type, zalo_url: 'https://zalo.me/g/abc', is_active: true, metadata: { x: 1 }, member_count: 12 })
     const before = snap(db)
     const r = await createSchedule(db as any, [CLS()])
     assert.equal(r[0].ok, true, JSON.stringify(r))
     assert.equal(snap(db), before, 'dữ liệu nhóm không đổi')
     assert.equal(db.t.class_schedule[0].group_id, 'g-old')
     assert.ok(!db.writes.includes('edu_groups'))
+  })
+}
+for (const type of ['class', 'zalo']) {
+  test(`nhóm có sẵn loại ${type} đang TẮT: từ chối, không bật lại, không gắn, không ghi gì`, async () => {
+    const db = seed(new FakeDb())
+    db.t.edu_groups.push({ id: 'g-off', code: 'DH1.KD17', name: 'x', group_type: type, zalo_url: 'z', is_active: false })
+    const before = snap(db)
+    const r = await createSchedule(db as any, [CLS()])
+    assert.equal(r[0].ok, false); assert.match(r[0].error, /đang tắt/)
+    assert.equal(snap(db), before); assert.equal(db.t.class_schedule.length, 0); assert.equal(db.t.class_sessions.length, 0)
   })
 }
 test('nhóm trùng mã (khác hoa/thường) vẫn được nhận ra, không tạo nhóm thứ hai', async () => {

@@ -39,12 +39,14 @@ export const dmyVN = (ymd: string) => { const [y, m, d] = ymd.split('-'); return
 type Db = { from: (table: string) => any }
 export async function resolveClassGroup(admin: Db, code: string): Promise<{ id: string; reused: boolean } | { error: string }> {
   const find = async () => {
-    const { data, error } = await admin.from('edu_groups').select('id,group_type').ilike('code', code).limit(1)
+    const { data, error } = await admin.from('edu_groups').select('id,group_type,is_active').ilike('code', code).limit(1)
     if (error) throw new Error('không kiểm tra được nhóm của lớp: ' + error.message)
-    return (data ?? [])[0] as { id: string; group_type: string } | undefined
+    return (data ?? [])[0] as { id: string; group_type: string; is_active?: boolean | null } | undefined
   }
   let g = await find()
   if (g) {
+    // Nhóm đang tắt: không tự bật lại, không tự gắn lớp mới vào — Admin xem lại ở Lớp & lịch.
+    if (g.is_active === false) return { error: `nhóm mã ${code} đang tắt (không hoạt động) — không tự bật lại hay gắn lớp; kiểm tra ở Lớp & lịch` }
     // Nhóm đã gắn lớp khác thì không tự gắn thêm lớp mới vào (tránh trộn thành viên hai lớp).
     const { data: used, error } = await admin.from('class_schedule').select('id').or(`group_id.eq.${g.id},cohort_group_id.eq.${g.id}`).limit(1)
     if (error) throw new Error('không kiểm tra được nhóm đã gắn lớp: ' + error.message)
