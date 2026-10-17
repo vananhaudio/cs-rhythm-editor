@@ -8,7 +8,7 @@ import ConversationView, { type Peer } from '../chat/ConversationView'
 import NewConversationView from '../chat/NewConversationView'
 import SystemNoticeView from '../chat/SystemNoticeView'
 import { useConversationList, useNoticeSound } from '../chat/useChat'
-import { NOTICE_TARGET_SEARCH, type ChatSelection, type SystemSummary } from '../chat/chatModel'
+import { type ChatSelection, type SystemSummary } from '../chat/chatModel'
 
 /** Điện thoại: khi mở một hội thoại, khung phủ toàn màn hình → theo chiều cao THẬT khi bàn phím mở (iOS không co 100dvh) */
 function useOpenPaneViewport(open: boolean) {
@@ -105,7 +105,7 @@ export default function Chat({ meId, selection, onOpenConversation, onBackToList
           )}
           {selection.kind === 'system' && (
             <SystemNoticeView onBack={onBackToList} onActivity={onUnreadChanged}
-              onOpenThread={threadId => onOpenThread?.(threadId, NOTICE_TARGET_SEARCH)} />
+              onOpenThread={(threadId, search) => onOpenThread?.(threadId, search)} />
           )}
           {selection.kind === 'with' && (
             <NewConversationView key={selection.userId} userId={selection.userId} meId={meId} onBack={onBackToList}

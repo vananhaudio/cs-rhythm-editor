@@ -259,7 +259,7 @@ export type SystemNoticeRow = {
   created_at: string | null; unread: boolean | null
 }
 /** Một thông báo: chỉ nội dung ngắn + đích điều hướng (thread bài trả). Không giữ nhận xét/kết quả. */
-export type SystemNotice = { seq: number; body: string; threadId: string; at: string; unread: boolean }
+export type SystemNotice = { seq: number; kind: string; body: string; threadId: string; at: string; unread: boolean }
 
 export type SystemSummaryRow = { last_seq: number | string | null; last_body: string | null; last_at: string | null; unread: number | null }
 /** Tóm tắt cho hàng "Class 2.0" trong danh sách. lastSeq 0 = chưa có thông báo. */
@@ -268,7 +268,7 @@ export type SystemSummary = { lastSeq: number; lastBody: string; lastAt: string;
 export function toSystemNotices(rows: SystemNoticeRow[] | null | undefined): SystemNotice[] {
   return (rows ?? [])
     .filter(r => r?.seq != null && r.ref_type === 'thread' && !!r.ref_key && UUID_RE.test(r.ref_key) && !!(r.body ?? '').trim())
-    .map(r => ({ seq: Number(r.seq), body: (r.body ?? '').trim(), threadId: (r.ref_key as string).toLowerCase(), at: r.created_at ?? '', unread: r.unread === true }))
+    .map(r => ({ seq: Number(r.seq), kind: r.kind ?? '', body: (r.body ?? '').trim(), threadId: (r.ref_key as string).toLowerCase(), at: r.created_at ?? '', unread: r.unread === true }))
     .sort((a, b) => a.seq - b.seq)
 }
 
@@ -291,5 +291,16 @@ export function mergeNotices(prev: SystemNotice[], incoming: SystemNotice[]): Sy
   return [...m.values()].sort((a, b) => a.seq - b.seq)
 }
 
-/** Đích điều hướng của thông báo: trang cuộc trao đổi bài trả (quyền do chính trang đó quyết) + focus vào khu vực kết quả */
+/** Đích điều hướng + nhãn nút theo loại thông báo. Đích luôn là trang cuộc trao đổi (quyền do chính trang đó quyết):
+ *  chấm / trả lời → cuộn tới phản hồi mới nhất của Thầy; học viên nộp / hỏi → cuộn tới lượt mới nhất của học viên. */
 export const NOTICE_TARGET_SEARCH = '?focus=ket-qua'
+export const NOTICE_TARGET_SEARCH_STUDENT = '?focus=bai-moi'
+export function noticeAction(kind: string): { label: string; search: string } {
+  switch (kind) {
+    case 'submission_received': return { label: 'Xem bài', search: NOTICE_TARGET_SEARCH_STUDENT }
+    case 'question_received': return { label: 'Xem câu hỏi', search: NOTICE_TARGET_SEARCH_STUDENT }
+    case 'question_answered': return { label: 'Xem trả lời', search: NOTICE_TARGET_SEARCH }
+    case 'checkpoint_graded': return { label: 'Xem kết quả', search: NOTICE_TARGET_SEARCH }
+    default: return { label: 'Xem chi tiết', search: '' }   // loại mới hơn FE: vẫn mở được trang, không đoán focus
+  }
+}

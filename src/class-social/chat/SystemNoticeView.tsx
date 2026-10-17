@@ -2,13 +2,14 @@
 // Chat chỉ là cổng điều hướng: kết quả/nhận xét chi tiết nằm ở trang bài trả (hệ thống gốc), không sao chép vào đây.
 import { useLayoutEffect, useRef } from 'react'
 import { ArrowLeft, BellRing, RefreshCw } from 'lucide-react'
-import { SYSTEM_FOOTNOTE, SYSTEM_NAME, dividerLabel, type SystemNotice } from './chatModel'
+import { SYSTEM_FOOTNOTE, SYSTEM_NAME, noticeAction } from './chatModel'
+import { Notice } from './SystemNoticeItem'
 import { useSystemNotices } from './useChat'
 
 export default function SystemNoticeView({ onBack, onActivity, onOpenThread }: {
   onBack: () => void
   onActivity: () => void
-  onOpenThread: (threadId: string) => void
+  onOpenThread: (threadId: string, search: string) => void
 }) {
   const s = useSystemNotices(onActivity)
   const box = useRef<HTMLDivElement>(null)
@@ -42,26 +43,13 @@ export default function SystemNoticeView({ onBack, onActivity, onOpenThread }: {
             )}
             {s.notices.length === 0 && <p className="cs-sys-empty">Chưa có thông báo nào. Khi có việc cần bạn quan tâm, Class 2.0 sẽ báo tại đây.</p>}
             {s.notices.map((n, i) => (
-              <Notice key={n.seq} n={n} prev={s.notices[i - 1]} onOpen={() => onOpenThread(n.threadId)} />
+              <Notice key={n.seq} n={n} prev={s.notices[i - 1]} onOpen={() => onOpenThread(n.threadId, noticeAction(n.kind).search)} />
             ))}
           </div>
         </div>
       )}
       {s.status === 'ready' && s.error && <p className="cs-form-error cs-chat-error" role="alert">{s.error}</p>}
       <div className="cs-chat-locked" role="note"><p>{SYSTEM_FOOTNOTE}</p></div>
-    </>
-  )
-}
-
-function Notice({ n, prev, onOpen }: { n: SystemNotice; prev?: SystemNotice; onOpen: () => void }) {
-  const label = dividerLabel(prev?.at ?? null, n.at)
-  return (
-    <>
-      {label && <div className="cs-chat-divider">{label}</div>}
-      <article className={'cs-sys-notice' + (n.unread ? ' is-unread' : '')} aria-label={n.body}>
-        <p className="cs-sys-body">{n.body}</p>
-        <button type="button" className="cs-sys-action" onClick={onOpen}>Xem kết quả <span aria-hidden="true">→</span></button>
-      </article>
     </>
   )
 }
