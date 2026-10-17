@@ -192,6 +192,43 @@ mig tva_s "$ROOT/db/band_chat_v1_2_support_list_rollback.sql" >/dev/null || fail
 [ "$(q tva_s "select count(*) from public.bandchat_messages")" = "$MSG1" ] && ok "rollback V1.2 giữ nguyên tin nhắn ($MSG1)" || fail "rollback V1.2 đổi tin"
 [ "$(q tva_s "select count(*) from pg_proc where prosrc like '%tb.id%' and proname = 'bandchat_rooms'")" = "0" ] && ok "rollback V1.2: bandchat_rooms về V1" || fail "rollback V1.2 còn sót"
 
+echo "── V1.3: Thầy đồng hành (đọc + gửi mọi nhóm Band, không cần là thành viên)"
+baseline tva_c; teamlab tva_c; extra_users tva_c; mig tva_c "$ROOT/db/band_chat_v1_setup.sql" >/dev/null
+q tva_c "delete from public.teamlab_band_members where band_id = '11111111-0000-4000-8000-0000000000a2'" >/dev/null
+q tva_c "insert into public.teamlab_band_members (band_id, user_id) values ('11111111-0000-4000-8000-0000000000a2', 'cccccccc-0000-4000-8000-00000000000c')" >/dev/null
+q tva_c "insert into public.teamlab_bands values ('11111111-0000-4000-8000-0000000000a3', '11111111-0000-4000-8000-0000000000b2', 'Band Z', null) on conflict do nothing" >/dev/null
+psqld tva_c >/dev/null <<'SQL'
+insert into auth.users (id, email) values ('5a5a5a5a-0000-4000-8000-0000000000a5', 's@test.local');
+insert into public.app_users (id, role, name, email) values ('5a5a5a5a-0000-4000-8000-0000000000a5', 'admin', 'Thầy Văn Anh', 'vananhaudio@gmail.com');
+SQL
+psqld tva_c >/dev/null <<'SQL'
+create table public.teamlab_band_roles (band_id uuid not null references public.teamlab_bands(id), project_id uuid not null, user_id uuid not null,
+  role text not null check (role in ('leader','deputy','music_editor')), granted_by uuid, created_at timestamptz not null default now(),
+  primary key (band_id, user_id, role));
+SQL
+mig tva_c "$ROOT/db/band_chat_v1_1_roles_setup.sql" >/dev/null || fail "V1.1 trước V1.3"
+mig tva_c "$ROOT/db/band_chat_v1_2_support_list_setup.sql" >/dev/null || fail "V1.2 trước V1.3"
+ACC0="$(q tva_c "select md5(prosrc) from pg_proc where proname = 'bandchat_access'")"
+mig tva_c "$ROOT/db/band_chat_v1_3_companion_setup.sql" >/dev/null || fail "V1.3 lần 1"; ok "V1.3 lần 1"
+mig tva_c "$ROOT/db/band_chat_v1_3_companion_setup.sql" >/dev/null || fail "V1.3 lần 2"; ok "V1.3 lần 2 (idempotent)"
+grep -qiE '^\s*(begin|commit|rollback)\s*;' "$ROOT/db/band_chat_v1_3_companion_setup.sql" "$ROOT/db/band_chat_v1_3_companion_rollback.sql" && fail "V1.3 có begin/commit" || ok "V1.3 không có begin/commit"
+grep -v '^[[:space:]]*--' "$ROOT/db/band_chat_v1_3_companion_setup.sql" | grep -qi 'create policy\|create table\|insert into\|grant ' && fail "V1.3 có policy/bảng/dữ liệu/grant" || ok "V1.3 không policy/bảng/dữ liệu/grant"
+[ "$(postgate tva_c)" = "PASS" ] && ok "postflight V1 vẫn PASS sau V1.3" || fail "postflight sau V1.3"
+{ echo '\set ON_ERROR_STOP on'; echo 'create schema t;'; sed -n '/^grant usage on schema t/,/^grant execute on all functions in schema t/p' "$ROOT/db/tests/band_chat_v1_test.sql"; \
+  grep -v '^\\set ON_ERROR_STOP' "$ROOT/db/tests/band_chat_v1_3_test.sql"; } > "$TMP/v13_test.sql"
+PGOPTIONS="-c client_min_messages=notice" "$PGBIN/psql" -X -q -h "$TMP" -p "$PORT" -U postgres -d tva_c -v ON_ERROR_STOP=1 \
+  -f "$TMP/v13_test.sql" 2>&1 | sed -E 's/^psql:[^:]*:[0-9]*: (NOTICE|ERROR):  //' | tee "$TMP/v13.out"
+[ "${PIPESTATUS[0]}" = "0" ] || fail "test SQL V1.3"
+grep -q '^FAIL' "$TMP/v13.out" && fail "có FAIL trong test V1.3" || ok "test V1.3: $(grep -c '^PASS' "$TMP/v13.out") kiểm tra PASS, 0 FAIL"
+MSG3="$(q tva_c "select count(*) from public.bandchat_messages")"
+mig tva_c "$ROOT/db/band_chat_v1_3_companion_rollback.sql" >/dev/null || fail "rollback V1.3"; ok "rollback V1.3"
+mig tva_c "$ROOT/db/band_chat_v1_3_companion_rollback.sql" >/dev/null || fail "rollback V1.3 lần 2"; ok "rollback V1.3 lần 2 (idempotent)"
+[ "$(q tva_c "select md5(prosrc) from pg_proc where proname = 'bandchat_access'")" = "$ACC0" ] && ok "rollback V1.3: bandchat_access về ĐÚNG bản trước (md5 khớp)" || fail "rollback V1.3 không khớp bản cũ"
+[ "$(q tva_c "select count(*) from pg_proc where proname = 'bandchat_is_companion'")" = "0" ] && [ "$(q tva_c "select count(*) from public.bandchat_messages")" = "$MSG3" ] && ok "rollback V1.3: hết hàm mới, giữ nguyên $MSG3 tin nhắn" || fail "rollback V1.3 còn sót/đổi tin"
+q tva_c "set role authenticated; select set_config('request.jwt.claims','{\"sub\":\"5a5a5a5a-0000-4000-8000-0000000000a5\",\"role\":\"authenticated\"}',false); select public.bandchat_send('11111111-0000-4000-8000-0000000000a1','x')" >/dev/null 2>&1 \
+  && fail "sau rollback Thầy vẫn gửi được" || ok "sau rollback Thầy lại chỉ đọc"
+mig tva_c "$ROOT/db/band_chat_v1_3_companion_setup.sql" >/dev/null || fail "cài lại V1.3"; ok "cài lại V1.3 sau rollback"
+
 echo "── Hồi quy chat cá nhân: dm_v1_test trên DB có cả Band Chat"
 baseline tva_dm; teamlab tva_dm; mig tva_dm "$ROOT/db/band_chat_v1_setup.sql" >/dev/null
 PGOPTIONS="-c client_min_messages=notice" "$PGBIN/psql" -X -q -h "$TMP" -p "$PORT" -U postgres -d tva_dm -v ON_ERROR_STOP=1 \
