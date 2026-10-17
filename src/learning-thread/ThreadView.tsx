@@ -116,10 +116,14 @@ export function ThreadTimeline({ thread, now, canModerate = false, onModerate, o
 }) {
   const labels = eventLabels(thread.events)
   const list = useRef<HTMLOListElement>(null)
-  // Đến từ thông báo Class 2.0 (?focus=ket-qua): đưa phản hồi chấm bài MỚI NHẤT của Thầy vào tầm nhìn (chỉ điều hướng, không đổi dữ liệu)
+  // Đến từ thông báo Class 2.0 (chỉ điều hướng, không đổi dữ liệu):
+  //   ?focus=ket-qua → phản hồi MỚI NHẤT của Thầy (đã chấm / đã trả lời) · ?focus=bai-moi → lượt MỚI NHẤT của học viên (Thầy xem bài / câu hỏi)
   useEffect(() => {
-    if (typeof window === 'undefined' || new URLSearchParams(window.location.search).get('focus') !== 'ket-qua') return
-    const hits = list.current?.querySelectorAll<HTMLElement>('.lt-ev.is-teacher')
+    if (typeof window === 'undefined') return
+    const focus = new URLSearchParams(window.location.search).get('focus')
+    const sel = focus === 'ket-qua' ? '.lt-ev.is-teacher' : focus === 'bai-moi' ? '.lt-ev:not(.is-teacher)' : null
+    if (!sel) return
+    const hits = list.current?.querySelectorAll<HTMLElement>(sel)
     const el = hits && hits.length ? hits[hits.length - 1] : null
     if (el) { el.scrollIntoView({ block: 'center' }); el.classList.add('is-focus') }
   }, [thread.id])

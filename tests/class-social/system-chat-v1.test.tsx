@@ -42,8 +42,8 @@ test("toSystemSummary: rỗng → 0 chưa đọc; số/bigint → number", () =>
 });
 
 test("mergeNotices: khử trùng theo seq, tăng dần, giữ cờ chưa đọc của lần tải đầu", () => {
-  const a: SystemNotice = { seq: 1, body: "a", threadId: TID, at: "", unread: true };
-  const b: SystemNotice = { seq: 2, body: "b", threadId: TID, at: "", unread: false };
+  const a: SystemNotice = { seq: 1, kind: "checkpoint_graded", body: "a", threadId: TID, at: "", unread: true };
+  const b: SystemNotice = { seq: 2, kind: "checkpoint_graded", body: "b", threadId: TID, at: "", unread: false };
   const m = mergeNotices([a], [{ ...a, unread: false }, b]);
   assert.deepEqual(m.map(n => n.seq), [1, 2]);
   assert.equal(m[0].unread, true, "đã đọc ở server nhưng màn đang mở vẫn thấy chấm chưa đọc tới lần mở sau");
@@ -94,7 +94,7 @@ test("Rào chắn phạm vi: màn Class 2.0 chỉ đọc — không ô nhập/g�
   assert.equal(/<textarea|<input|Composer|sendMessage|onSend|contentEditable/i.test(view), false, "không có ô nhập");
   assert.match(view, /SYSTEM_FOOTNOTE/);
   assert.match(SYSTEM_FOOTNOTE, /thông báo chính thức từ Class 2\.0/);
-  assert.match(view, /Xem kết quả/);
+  assert.match(code("src/class-social/chat/chatModel.ts"), /Xem kết quả/, "nhãn V1 giữ nguyên (nay nằm ở noticeAction)");
   const api = code("src/class-social/chat/chatApi.ts");
   for (const rpc of ["class_system_notice_summary", "class_system_notices", "class_system_notice_mark_read"]) assert.match(api, new RegExp(`['"]${rpc}['"]`));
   assert.equal(/\.from\(\s*['"`]class_system_/.test(api + code("src/class-social/chat/useChat.ts")), false, "không đọc/ghi thẳng bảng thông báo");
