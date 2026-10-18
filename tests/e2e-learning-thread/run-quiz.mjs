@@ -86,6 +86,9 @@ try {
     modes[id] = radios ? 'single' : 'multiple'
     assert.ok((await page.$eval(cp(id), e => e.querySelector('.lsn-cp-q')?.textContent ?? '')).trim().length > 5, `${id}: có câu hỏi`)
     assert.equal(await page.$eval(`${cp(id)} .lt-actions button`, b => b.disabled), true, `${id}: chưa chọn → Kiểm tra khoá`)
+    // NHÌN THẤY được: nút phải có nền/viền riêng (biến --lt-p chỉ có trong .lt-panel; thiếu → nền trong suốt + chữ trắng = vô hình)
+    const look = await page.$eval(`${cp(id)} .lt-actions button`, b => { const s = getComputedStyle(b); return { bg: s.backgroundColor, fg: s.color, bw: s.borderTopWidth } })
+    assert.notEqual(look.bg, 'rgba(0, 0, 0, 0)', `${id}: nút Kiểm tra có nền (đang ${look.bg}, chữ ${look.fg}, viền ${look.bw})`)
   }
   if (SPEC.video) assert.match(await cpText(page, SPEC.video), /TRẢ BÀI/)
   const videoCps = await page.$$eval('.lsn-cp .lsn-cp-meta', ps => ps.filter(p => /link video/.test(p.textContent)).length)

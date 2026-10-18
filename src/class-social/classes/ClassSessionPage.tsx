@@ -130,9 +130,12 @@ function SessionContent({ state, s, onReload, onOpenThread }: {
     }
     const st = s.checkpoints.find(c => c.id === cp.id) ?? null
     if (quiz) {
+      // .lt-panel cấp biến màu --lt-p cho .lt-btn / .lt-chip (như nhánh Trả bài bên dưới); thiếu thì nút Kiểm tra trong suốt + chữ trắng = vô hình
       return (
-        <QuizCheckpoint cpId={`${s.no}-${cp.id}`} quiz={quiz} passedAt={st?.quizPassedAt ?? null} onPassed={onReload}
-          onAnswer={choices => answerCheckpoint({ classId: state.classId, sessionNo: s.no, checkpointId: cp.id, choices })} />
+        <div className="lt-panel is-compact">
+          <QuizCheckpoint cpId={`${s.no}-${cp.id}`} quiz={quiz} passedAt={st?.quizPassedAt ?? null} onPassed={onReload}
+            onAnswer={choices => answerCheckpoint({ classId: state.classId, sessionNo: s.no, checkpointId: cp.id, choices })} />
+        </div>
       )
     }
     const modes = submitModes(cp)
