@@ -4,6 +4,7 @@
 import { createRequire } from 'node:module'
 import { mkdirSync } from 'node:fs'
 import assert from 'node:assert/strict'
+import { assertControlsVisible } from './visibility.mjs'
 
 const require = createRequire(process.env.PUPPETEER_DIR + '/')
 const puppeteer = require('puppeteer-core')
@@ -122,6 +123,7 @@ try {
   const order = await page.evaluate(() => { const t = document.querySelector('.lsn-paper').textContent; return [t.indexOf('Bài trả 1.1'), t.indexOf('giữa'), t.indexOf('Bài trả 1.2')] })
   assert.ok(order[0] < order[1] && order[1] < order[2], 'checkpoint đúng vị trí')
   assert.equal(await page.$eval('.cs-session-nav', e => [...e.querySelectorAll('button')].map(b => b.textContent.trim() + ':' + b.disabled).join('|')), 'Buổi 02:true')
+  await assertControlsVisible(page, 'Trang Buổi học viên (TRẢ BÀI)')
   ok('Bấm Buổi 01 → /me/classes/<id>/sessions/1: chỉ giáo án (không bản đồ/feed) · bài trả 1.1, 1.2 đúng vị trí · "Buổi 02 →" bị khoá')
   await noHorizontalOverflow(page, 'Trang Buổi 390px')
 
@@ -130,12 +132,14 @@ try {
   await clickText(page, 'TRẢ BÀI', 'button', '#bai-tra-1\\.1')
   await page.waitForSelector('#bai-tra-1\\.1 .lt-compose')
   assert.match(await cpText(page, '1.1'), /Các bạn cùng lớp/); assert.doesNotMatch(await cpText(page, '1.1'), /Cộng đồng học tập/)
+  await assertControlsVisible(page, 'Form soạn Trả bài (Gửi bài / Hủy)')
   await page.type('#bai-tra-1\\.1 textarea', 'Em gửi âm giai C–Am, đoạn chuyển vùng còn vấp.')
   await clickText(page, 'Gửi bài', 'button', '#bai-tra-1\\.1')
   await page.waitForFunction(() => /Đã trả · Chờ chấm/.test(document.querySelector('#bai-tra-1\\.1')?.textContent ?? ''), { timeout: 15000 })
   assert.equal(await page.$$eval('#bai-tra-1\\.1 .lt-compose', e => e.length), 0)
   assert.equal(await page.evaluate(() => location.pathname), urlBefore, 'vẫn ở Trang Buổi')
   assert.match(await cpText(page, '1.1'), /Xem cuộc trao đổi/)
+  await assertControlsVisible(page, 'Sau khi trả: Đã trả · Chờ chấm')
   ok('B trả bài 1.1 tại chỗ trên Trang Buổi → "Đã trả · Chờ chấm" ngay tại checkpoint, không rời giáo án')
   await page.screenshot({ path: `${SHOTS}/cp-2-session-submitted-390.png`, fullPage: true })
 
@@ -227,6 +231,7 @@ try {
   assert.equal(await page.$$eval('.lsn-paper button', bs => bs.filter(b => /TRẢ BÀI/.test(b.textContent)).length), 0, 'Thầy không có nút TRẢ BÀI')
   await noHorizontalOverflow(page, 'Trang Buổi Thầy 1280px')
   await page.screenshot({ path: `${SHOTS}/cp-3-teacher-session-1280.png`, fullPage: true })
+  await assertControlsVisible(page, 'Trang Buổi Thầy')
   ok('Thầy: Trang Lớp mọi buổi mở · Trang Buổi 02 xem trước, không nút TRẢ BÀI')
   await ctx.close()
 

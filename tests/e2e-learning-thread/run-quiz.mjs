@@ -4,6 +4,7 @@
 import { createRequire } from 'node:module'
 import { mkdirSync, readFileSync } from 'node:fs'
 import assert from 'node:assert/strict'
+import { assertControlsVisible, assertScannerCatchesInvisible } from './visibility.mjs'
 
 const require = createRequire(process.env.PUPPETEER_DIR + '/')
 const puppeteer = require('puppeteer-core')
@@ -90,6 +91,8 @@ try {
     const look = await page.$eval(`${cp(id)} .lt-actions button`, b => { const s = getComputedStyle(b); return { bg: s.backgroundColor, fg: s.color, bw: s.borderTopWidth } })
     assert.notEqual(look.bg, 'rgba(0, 0, 0, 0)', `${id}: nút Kiểm tra có nền (đang ${look.bg}, chữ ${look.fg}, viền ${look.bw})`)
   }
+  await assertControlsVisible(page, `Buổi ${NN} mới mở (390)`)
+  ok(`Mọi nút/chip nhìn thấy được (đo màu thật) · đối chứng dương: gỡ --lt-p → bộ quét bắt ${await assertScannerCatchesInvisible(page)} nút`)
   if (SPEC.video) assert.match(await cpText(page, SPEC.video), /TRẢ BÀI/)
   const videoCps = await page.$$eval('.lsn-cp .lsn-cp-meta', ps => ps.filter(p => /link video/.test(p.textContent)).length)
   assert.equal(videoCps, SPEC.video ? 1 : 0, `Buổi ${NN} chỉ MỘT bài trả có video`)
@@ -119,6 +122,7 @@ try {
       await retry(page, id); ok(`${id} thừa một lựa chọn → sai (+ gợi ý)`)
     }
     await choose(page, id, right)
+    await assertControlsVisible(page, `${id} đã chọn đáp án (nút Kiểm tra bật)`)
     assert.equal(await check(page, id), 'right')
     assert.equal((await page.$$(`${cp(id)} .cs-quiz-opt input`)).length, 0, 'Đạt → không còn lựa chọn')
     await page.waitForFunction(re => new RegExp(re).test(document.querySelector('.cs-learn-status')?.textContent ?? ''), { timeout: 15000 }, `${qi + 1}/${TOTAL} bài trả bắt buộc đã Đạt`)
@@ -131,6 +135,7 @@ try {
   await page.reload({ waitUntil: 'networkidle0' })
   for (const id of QUIZ) await page.waitForSelector(`${cp(id)} .cs-quiz.is-passed`, { timeout: 15000 })
   ok(`Tải lại Trang Buổi ${NN}: ${QUIZ.join(' + ')} vẫn ✓ Đạt`)
+  await assertControlsVisible(page, `Buổi ${NN} sau khi Đạt (390)`)
   await page.screenshot({ path: `${SHOTS}/quiz-b${NN}-passed-390.png`, fullPage: true })
   await ctx.close()
 

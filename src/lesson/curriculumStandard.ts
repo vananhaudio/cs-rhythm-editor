@@ -3,7 +3,7 @@
 // Mục đích: buổi 06, 07… chỉ BỔ SUNG NỘI DUNG; không loại khối lạ, không đảo mạch, không trùng id bài trả.
 // Dùng ở: test (tests/class-social/curriculum-standard.test.ts) + Admin trước khi Xuất bản. Xem docs/GIAO-TRINH-CHUAN.md.
 import type { LessonDoc, LessonSection } from './lessonTypes'
-import { checkpointAccepts, checkpointProblems, isCheckpoint } from './checkpoint'
+import { checkpointAccepts, checkpointProblems, completionProblems, isCheckpoint } from './checkpoint'
 
 /** Loại khối LessonDocument hiểu. Thêm loại mới = thêm CAPABILITY (renderer + app mới), không phải nội dung. */
 export const KNOWN_SECTION_KINDS: LessonSection['kind'][] = [
@@ -29,6 +29,7 @@ export function solo01Problems(sections: LessonSection[], sessionNo: number): st
   const tail = body.slice(-SOLO01_TAIL.length)
   if (tail.join('>') !== SOLO01_TAIL.join('>')) out.push(`Đuôi buổi phải là ${SOLO01_TAIL.join(' → ')} (đang là ${tail.join(' → ') || 'trống'})`)
   out.push(...checkpointProblems(sections))
+  out.push(...completionProblems(sections, { checkpointMode: true, sessionNo }))   // SOLO01 luôn là lớp chế độ bài trả
   const lastBodyIdx = sections.findIndex(s => s.kind === 'checklist')
   sections.forEach((s, i) => {
     if (!isCheckpoint(s)) return

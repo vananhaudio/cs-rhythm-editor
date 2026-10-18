@@ -47,6 +47,19 @@ export async function fetchClassOutline(db: Db, classId: string): Promise<ClassO
   return { stages: (st.data ?? []) as StageRow[], sessions, contents }
 }
 
+/**
+ * Lớp đang ở CHẾ ĐỘ BÀI TRẢ? (cùng luật class_learning_state: có ≥ 1 khối checkpoint trong giáo án ĐÃ xuất bản của lớp).
+ * Chỉ đọc; Admin dùng để biết có áp luật "buổi phải có bài trả bắt buộc" không. Lỗi/không rõ → false (không chặn thêm).
+ */
+export async function fetchClassCheckpointMode(db: Db, classId: string): Promise<boolean> {
+  const se = await db.from('class_sessions').select('id').eq('class_id', classId).eq('event_type', 'lesson')
+  if (se.error || !se.data?.length) return false
+  const c = await db.from('class_lesson_content').select('session_id')
+    .in('session_id', (se.data as { id: string }[]).map(x => x.id)).eq('status', 'published')
+    .filter('blocks', 'cs', '[{"kind":"checkpoint"}]').limit(1)
+  return !c.error && (c.data?.length ?? 0) > 0
+}
+
 // ── Ghi (Admin / teacher). RLS: class_stages, class_sessions, class_lesson_content chỉ teacher ghi. ──
 
 export async function createStage(db: Db, classId: string, row: Omit<StageRow, 'id' | 'class_id'>): Promise<StageRow> {

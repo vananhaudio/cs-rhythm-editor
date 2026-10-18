@@ -52,6 +52,32 @@ export function checkpointProblems(sections: LessonSection[]): string[] {
   return out
 }
 
+/** Học viên LÀM ĐƯỢC bài trả này trên giao diện hiện tại: trắc nghiệm hợp lệ, hoặc nộp chữ/link video. */
+export const isActionableCheckpoint = (cp: Pick<CheckpointSection, 'accepts' | 'quiz'>): boolean => quizOf(cp) !== null || submitModes(cp).supported
+
+/** Bài trả BẮT BUỘC mà server tính vào điều kiện hoàn thành buổi (cl_session_checkpoints: id hợp lệ, required mặc định true). */
+export const requiredCheckpoints = (sections: LessonSection[]): CheckpointSection[] =>
+  sections.filter(isCheckpoint).filter(cp => typeof cp.id === 'string' && CHECKPOINT_ID_RE.test(cp.id) && cp.required !== false)
+
+/**
+ * ĐƯỜNG HOÀN THÀNH của MỘT buổi: bài tập bắt buộc phải làm được, và buổi trong lớp chế độ bài trả phải có ít nhất một bài bắt buộc
+ * (lsp_try_complete không bao giờ hoàn thành buổi không có bài bắt buộc → buổi kế không mở). Buổi 0 (nhập môn) tự hoàn thành → miễn.
+ * checkpointMode = lớp có ít nhất một bài trả đã xuất bản; lớp giáo trình chỉ đọc (vd HT2027, 0 bài trả) → false, không áp luật "phải có bài".
+ */
+export function completionProblems(sections: LessonSection[], opts: { checkpointMode: boolean; sessionNo: number }): string[] {
+  const out: string[] = []
+  const req = requiredCheckpoints(sections)
+  for (const cp of req) {
+    if (!isActionableCheckpoint(cp)) {
+      out.push(`Bài trả ${cp.id}: bắt buộc nhưng loại nộp (${checkpointAcceptsLabel(cp.accepts)}) chưa làm được trên giao diện — học viên không hoàn thành được buổi`)
+    }
+  }
+  if (opts.checkpointMode && opts.sessionNo >= 1 && req.length === 0) {
+    out.push('Buổi chưa có bài trả BẮT BUỘC nào trong lớp chế độ bài trả — học viên không hoàn thành được buổi này nên buổi kế sẽ không mở')
+  }
+  return out
+}
+
 /** Kiểm MỘT câu trắc nghiệm công khai: câu hỏi · ≥ 2 lựa chọn · id lựa chọn hợp lệ, không trùng · mode · KHÔNG chứa đáp án. */
 export function quizProblems(q: unknown): string[] {
   const out: string[] = []

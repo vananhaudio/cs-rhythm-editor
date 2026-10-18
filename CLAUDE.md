@@ -119,6 +119,14 @@ Màn đầu của Piano Journey là **hội thoại 2 chiều với Cô Piano** 
 - Thêm chord finger guide Em/C/G theo mẫu `ChordAmGuide`/Am.
 - Fix `guitarNotes.ts` dòng 51 (octave): `2 + octaveOffset + (semitone >= 8 ? 1 : 0)`.
 
+## Trả bài / Giáo trình — nguyên tắc phòng ngừa (Curriculum Guard V1, 18/10/2026)
+Rút từ sự cố nút "Kiểm tra" trắc nghiệm vô hình (SOLO01, 03→18/10). Áp dụng cho MỌI thay đổi chạm trả bài, trắc nghiệm, tiến độ/mở khóa buổi hoặc giáo án có bài trả.
+- **Có bài tập phải có đường hoàn thành:** bài bắt buộc phải làm được trên giao diện (`completionProblems` trong `src/lesson/checkpoint.ts`: chặn Xuất bản ở Admin); buổi trong lớp chế độ bài trả phải có ≥ 1 bài bắt buộc (trừ Buổi 0). Lớp giáo trình chỉ đọc (HT2027) không bị áp. Kiểm giáo án đã xuất bản + khoá đáp án: `scripts/audit-curriculum-guard.sql` (chỉ đọc, qua `prod-db.py query`; 0 dòng = đạt; không in đáp án).
+- **PASS = giao diện + nghiệp vụ, không chỉ DB/RPC/unit test.** Kiểm hành động thật của người dùng và NHÌN THẤY được: E2E dùng `tests/e2e-learning-thread/visibility.mjs` (`assertControlsVisible` đo màu thật của nút/chip; `assertScannerCatchesInvisible` là đối chứng dương). Biến `--lt-*` chỉ có trong `.lt-panel/.lt-sheet/.lt-page` → component dùng `.lt-btn/.lt-chip` phải nằm trong đó.
+- **E2E trên DB tạm KHÔNG thay nghiệm thu production.** Khi chưa kiểm bằng tài khoản thật (không giả danh học viên, không ghi tiến độ thử trên production) phải nói rõ giới hạn đó trong báo cáo.
+- **Thay đổi liên quan trả bài phải có kiểm thử hồi quy + xác minh bản production + Owner nghiệm thu trước khi đóng việc.** Không tự đóng.
+- Ưu tiên dùng lại component/test/quy trình sẵn có; không xây framework kiểm thử mới khi chưa chứng minh cần.
+
 ## Billing Foundation (BƯỚC 8A) — KHÔNG đụng khi chưa hiểu
 - **Billing ≠ Entitlement.** Billing Core (`db/billing_setup.sql`) KHÔNG gọi `activate_student_package`/`apply_package_permissions`, KHÔNG tạo `edu_students`/`edu_enrollments`/`edu_course_access`. Entitlement vẫn do `packages`/`student_packages` lo.
 - **Mọi write billing qua SECURITY DEFINER functions** (`billing_ingest_event`, `billing_record_manual_payment`...). Frontend/PostgREST KHÔNG được tự UPDATE `billing_subscriptions.status`/`billing_payments.status`. RLS: anon không policy nào; authenticated chỉ teacher SELECT.
