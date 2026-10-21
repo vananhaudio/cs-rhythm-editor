@@ -2,7 +2,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { resolveShare } from '../../netlify/og/registry.ts'
-import { renderShareMeta } from '../../netlify/og/render.ts'
+import { renderClassPage, renderShareMeta } from '../../netlify/og/render.ts'
 import { publicMeta, resolveOgImage, safeImage } from '../../netlify/og/contract.ts'
 import {
   BAND_COVER, CANCELLED_ID, CLASS_ID, DB, DH1_LOGO, INDEX, mockCtx, NOSESSION_ID, OPEN_ID, ORIGIN, SOLO_LOGO, STORY_PHOTO, tag, title,
@@ -16,8 +16,12 @@ const DEFAULT_DESC = tag(INDEX, 'og:description')
 async function share(path: string, ctx = mockCtx()) {
   const url = new URL(ORIGIN + path)
   const r = await resolveShare(url, ctx)
-  const html = renderShareMeta(INDEX, r.meta, r.canonicalUrl)
-  return { r, html, t: title(html), d: tag(html, 'og:description'), img: tag(html, 'og:image'), url: tag(html, 'og:url') }
+  const html = renderClassPage(INDEX, r.meta, r.canonicalUrl)
+  return { r, html, t: title(html), d: tag(html, 'og:description'), img: tag(html, 'og:image'), url: tag(html, 'og:url'), canon: canonical(html) }
+}
+const canonical = (html: string) => {
+  const all = [...html.matchAll(/<link rel="canonical" href="([^"]*)"/g)]
+  return all.length === 1 ? all[0][1] : `(${all.length} thẻ canonical)`
 }
 const isDefault = (o: { t?: string; d: string | null; img: string | null }) =>
   o.t === DEFAULT_TITLE && o.d === DEFAULT_DESC && o.img === DEFAULT_IMAGE
@@ -32,14 +36,16 @@ test('contract: resolveOgImage = ảnh https đầu tiên; safeImage chặn http
   assert.equal(m.visibility, 'not_found', 'không tiêu đề → không public')
 })
 
-test('renderer: escape; private/not_found chỉ sửa og:url, giữ toàn bộ thẻ mặc định', () => {
+test('renderer: escape; private/not_found chỉ sửa og:url + canonical, giữ toàn bộ thẻ mặc định', () => {
   const out = renderShareMeta(INDEX, { title: 'A "<b>" & C', description: 'D', image: null, canonicalUrl: ORIGIN + '/x', visibility: 'public' }, ORIGIN + '/x')
   assert.equal(title(out), 'A &quot;&lt;b&gt;&quot; &amp; C')
   for (const v of ['private', 'not_found'] as const) {
-    const h = renderShareMeta(INDEX, { title: 'BÍ MẬT', description: 'BÍ MẬT', image: 'https://a.com/x.png', canonicalUrl: ORIGIN + '/y', visibility: v }, ORIGIN + '/y')
+    const h = renderClassPage(INDEX, { title: 'BÍ MẬT', description: 'BÍ MẬT', image: 'https://a.com/x.png', canonicalUrl: ORIGIN + '/y', visibility: v }, ORIGIN + '/y')
     assert.ok(!h.includes('BÍ MẬT') && !h.includes('a.com/x.png'))
     assert.equal(tag(h, 'og:url'), ORIGIN + '/y')
-    assert.equal(h.replace(/og:url" content="[^"]*"/, ''), INDEX.replace(/og:url" content="[^"]*"/, ''))
+    assert.equal(canonical(h), ORIGIN + '/y')
+    const strip = (x: string) => x.replace(/og:url" content="[^"]*"/, '').replace(/\s*<link rel="canonical"[^>]*>/, '')
+    assert.equal(strip(h), strip(INDEX))
   }
 })
 
@@ -129,7 +135,20 @@ test('Route không phải resource → mặc định Class, og:url = đúng URL 
     const o = await share(p + '?fbclid=1')
     assert.ok(isDefault(o), p)
     assert.equal(o.url, ORIGIN + p.replace(/^\/$/, '/'))
+    assert.equal(o.canon, o.url, p)
   }
+})
+
+test('SEO: canonical đúng TỪNG URL (không cố định trang chủ), duy nhất, có sẵn thì thay, query được escape', async () => {
+  assert.ok(!/rel="canonical"/.test(INDEX), 'index.html dùng chung mọi route → không được đặt canonical cố định')
+  for (const p of ['/', '/solo01', '/hanhtrinh2027/', '/story/abc', `/me/classes/${CLASS_ID}`]) {
+    const o = await share(p + '?utm_source=zalo')
+    assert.equal(o.canon, o.url, p)
+    assert.equal(o.canon, ORIGIN + (p.replace(/\/+$/, '') || '/'), p)
+  }
+  const twice = renderClassPage(renderClassPage(INDEX, null, ORIGIN + '/a'), null, ORIGIN + '/b?id=1&x=2')
+  assert.equal(canonical(twice), ORIGIN + '/b?id=1&amp;x=2')
+  assert.ok(!/rel="canonical"/.test(renderShareMeta(INDEX, null, ORIGIN + '/a')), 'renderer chung (TeamLab dùng) không chèn canonical')
 })
 
 // ── PRIVACY: private / not_found / lỗi / quá giờ → fail closed ──

@@ -19,6 +19,15 @@ export function canonicalUrl(origin: string, path: string, search = ''): string 
   return `https://${host}${p}${search}`
 }
 
+/** <link rel="canonical"> = đúng URL của trang (SEO). Có sẵn thì thay href, chưa có thì chèn trước </head>.
+ *  Không đặt cố định trong index.html: file đó dùng chung mọi route của SPA. */
+export function setCanonical(html: string, canonical: string): string {
+  const tag = `<link rel="canonical" href="${esc(canonical)}" />`
+  const re = /<link\s+rel="canonical"[^>]*>/i
+  if (re.test(html)) return html.replace(re, () => tag)
+  return html.replace(/<\/head>/i, () => `    ${tag}\n  </head>`)
+}
+
 export function renderShareMeta(html: string, meta: ShareMeta | null, canonical: string): string {
   let out = setMeta(html, 'og:url', canonical)
   if (!meta || meta.visibility !== 'public') return out
@@ -32,4 +41,9 @@ export function renderShareMeta(html: string, meta: ShareMeta | null, canonical:
     out = out.replace(/<meta property="og:image:(width|height)"[^>]*>\s*/gi, '')
   }
   return out
+}
+
+/** Trang của Class (og.ts): thẻ chia sẻ + canonical đúng URL. TeamLab (og-teamlab.ts) chỉ dùng renderShareMeta. */
+export function renderClassPage(html: string, meta: ShareMeta | null, canonical: string): string {
+  return setCanonical(renderShareMeta(html, meta, canonical), canonical)
 }
