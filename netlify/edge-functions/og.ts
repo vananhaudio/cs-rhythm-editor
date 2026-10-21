@@ -49,7 +49,21 @@ type Render = (html: string, meta: ShareMeta | null, canonical: string) => strin
 type EdgeContext = { next: (request?: Request) => Promise<Response> }
 
 export default function handler(req: Request, context: EdgeContext) {
-  return shareHandler(req, context, renderClassPage)
+  return shareHandler(req, context, (html, meta, canonical) => renderClassPage(html, meta, preferClassHost(canonical)))
+}
+
+// class.vananhaudio.com là tên miền chính thức. timming.* (tên miền nháp, sắp ngừng) phục vụ CÙNG bundle: trang trùng
+// nội dung → canonical + og:url về class. Trừ '/' và /me* — hai chỗ nội dung đổi theo host (AppRouter onClass,
+// resolveMeRoute isSocialHost) nên không phải bản trùng. TeamLab không qua hàm này.
+const CLASS_HOST = 'class.vananhaudio.com'
+const DRAFT_HOSTS = ['timming.vananhaudio.com']
+
+export function preferClassHost(canonical: string): string {
+  const u = new URL(canonical)
+  const p = u.pathname
+  if (!DRAFT_HOSTS.includes(u.host) || p === '/' || p === '/me' || p.startsWith('/me/')) return canonical
+  u.host = CLASS_HOST
+  return u.toString()
 }
 
 /** Lõi chung Class + TeamLab; `render` do từng site chọn (Class: + canonical; TeamLab: chỉ thẻ chia sẻ). */

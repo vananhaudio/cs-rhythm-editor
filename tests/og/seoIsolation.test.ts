@@ -3,7 +3,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import og, { config as ogConfig } from '../../netlify/edge-functions/og.ts'
+import og, { config as ogConfig, preferClassHost } from '../../netlify/edge-functions/og.ts'
 import ogTeamlab, { config as teamlabConfig } from '../../netlify/edge-functions/og-teamlab.ts'
 import { resetShareMemo } from '../../netlify/og/adapter.ts'
 import { classifyRoute } from '../../netlify/og/routes.ts'
@@ -74,4 +74,30 @@ test('robots.txt + sitemap.xml: file tĩnh thật; sitemap chỉ gồm trang cô
     assert.ok(!disallow.some(d => u.pathname.startsWith(d)), `${loc} bị robots chặn`)
   }
   for (const priv of ['/admin', '/me/chat', '/students', '/course-editor']) assert.ok(disallow.some(d => priv.startsWith(d)), priv)
+})
+
+test('timming (tên miền nháp): trang trùng nội dung Class → canonical + og:url về class; "/" và /me* giữ nguyên', async () => {
+  const T = 'https://timming.vananhaudio.com', C = 'https://class.vananhaudio.com'
+  for (const [path, want] of [
+    ['/solo01', `${C}/solo01`], ['/hanhtrinh2027/', `${C}/hanhtrinh2027`], ['/showcase', `${C}/showcase`],
+    ['/story', `${C}/story`], ['/class', `${C}/class`], ['/metronome?utm_source=x', `${C}/metronome`],
+    ['/', `${T}/`], ['/me', `${T}/me`], ['/me/classes', `${T}/me/classes`],
+  ] as const) {
+    resetShareMemo()
+    const res = await withFetch([], () => og(new Request(T + path), ctxOf(INDEX)))
+    const html = await res.text()
+    assert.deepEqual(canonicals(html), [want], path)
+    assert.equal(tag(html, 'og:url'), want, path)
+  }
+  // class.* và host khác (deploy preview) không đổi; query của resource (?id=) giữ nguyên khi đổi host
+  assert.equal(preferClassHost(`${C}/solo01`), `${C}/solo01`)
+  assert.equal(preferClassHost('https://deploy-preview-1--x.netlify.app/solo01'), 'https://deploy-preview-1--x.netlify.app/solo01')
+  assert.equal(preferClassHost(`${T}/course?id=7`), `${C}/course?id=7`)
+  assert.equal(preferClassHost(`${T}/medium`), `${C}/medium`, '/me là ĐOẠN đường dẫn, không phải tiền tố chữ')
+})
+
+test('timming không ảnh hưởng TeamLab: og-teamlab trên host timming vẫn không có canonical', async () => {
+  resetShareMemo()
+  const res = await withFetch(null, () => ogTeamlab(new Request('https://timming.vananhaudio.com/teamlab/band/khong-co-abcde'), ctxOf(SHELL)))
+  assert.deepEqual(canonicals(await res.text()), [])
 })
