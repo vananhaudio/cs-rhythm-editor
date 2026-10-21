@@ -2,13 +2,16 @@
 // SPA: crawler Zalo/Facebook/iMessage chỉ đọc HTML thô. Hàm chạy ở CDN trên mọi trang HTML:
 //   URL → registry (netlify/og/registry.ts) → resource adapter → ShareMeta → renderer → index.html
 // Không resource / private / not_found / lỗi / quá giờ → thẻ mặc định Class, og:url vẫn đúng URL.
+// SEO: trang Class có <link rel="canonical"> = đúng URL đang phục vụ (renderClassPage). TeamLab dùng chung lõi
+// (shareHandler) nhưng truyền renderShareMeta → HTML TeamLab không có canonical.
 // Người và crawler nhận CÙNG HTML (không đoán User-Agent); SPA chạy như cũ. Không có danh sách URL ở đây:
 // thêm loại resource = thêm adapter; route mới phải được phân loại ở netlify/og/routes.ts (test bắt).
 // Header chẩn đoán: x-og-fn.
 
 import type { Ctx } from '../og/adapter.ts'
 import { resolveShare } from '../og/registry.ts'
-import { canonicalUrl, renderShareMeta } from '../og/render.ts'
+import type { ShareMeta } from '../og/contract.ts'
+import { canonicalUrl, renderClassPage } from '../og/render.ts'
 
 const SUPA = 'https://wojmdilyflffvdtpovmq.supabase.co'
 const ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indvam1kaWx5ZmxmZnZkdHBvdm1xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyNjk0OTYsImV4cCI6MjA5NDg0NTQ5Nn0.JxlY5iqBTK3q5BYnF1MgY8A5zS3R5okrD8uddsEFavY'
@@ -42,7 +45,15 @@ function nextRequest(req: Request): Request | undefined {
   return new Request(req, { headers })
 }
 
-export default async function handler(req: Request, context: { next: (request?: Request) => Promise<Response> }) {
+type Render = (html: string, meta: ShareMeta | null, canonical: string) => string
+type EdgeContext = { next: (request?: Request) => Promise<Response> }
+
+export default function handler(req: Request, context: EdgeContext) {
+  return shareHandler(req, context, renderClassPage)
+}
+
+/** Lõi chung Class + TeamLab; `render` do từng site chọn (Class: + canonical; TeamLab: chỉ thẻ chia sẻ). */
+export async function shareHandler(req: Request, context: EdgeContext, render: Render) {
   const forwarded = nextRequest(req)
   const res = forwarded ? await context.next(forwarded) : await context.next()
   const ct = res.headers.get('content-type') || ''
@@ -66,11 +77,11 @@ export default async function handler(req: Request, context: { next: (request?: 
       resolveShare(url, ctx),
       new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), TOTAL_TIMEOUT_MS)),
     ])
-    return withNote(res, r.note, renderShareMeta(html, r.meta, r.canonicalUrl))
+    return withNote(res, r.note, render(html, r.meta, r.canonicalUrl))
   } catch (e) {
     // fail closed: thẻ mặc định Class, chỉ sửa og:url về đúng URL được chia sẻ
     const fallback = canonicalUrl(url.origin, url.pathname)
-    return withNote(res, 'error:' + (e instanceof Error ? e.message.slice(0, 40) : 'unknown'), renderShareMeta(html, null, fallback))
+    return withNote(res, 'error:' + (e instanceof Error ? e.message.slice(0, 40) : 'unknown'), render(html, null, fallback))
   }
 }
 

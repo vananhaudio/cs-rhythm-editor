@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Chỉ trang CÔNG KHAI, có thật, có giá trị tìm kiếm (xem tests/og/seoIsolation.test.ts). Thêm URL khi có landing công khai mới. -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://class.vananhaudio.com/</loc></url>
+  <url><loc>https://class.vananhaudio.com/hanhtrinh2027</loc></url>
+  <url><loc>https://class.vananhaudio.com/solo01</loc></url>
+  <url><loc>https://class.vananhaudio.com/showcase</loc></url>
+</urlset>

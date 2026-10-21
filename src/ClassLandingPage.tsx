@@ -427,7 +427,7 @@ export default function ClassLandingPage() {
       <header className="hero">
         <div className="wrap hero-grid">
           <div>
-            <h1>Một Hành trình giúp bạn <span className="hl">chơi Guitar tốt hơn mỗi ngày.</span></h1>
+            <h1><span className="eyebrow">Học Guitar cùng Thầy Văn Anh</span>Một Hành trình giúp bạn <span className="hl">chơi Guitar tốt hơn mỗi ngày.</span></h1>
             <p>Học, luyện tập và tiến bộ cùng Thầy Văn Anh.</p>
             <a className="hero-scroll" onClick={() => goto('cuavao')}>Khám phá bên dưới ↓</a>
           </div>
@@ -919,6 +919,7 @@ const CSS = `
 .tva-class .hero-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:48px;align-items:center;}
 .tva-class .hero h1{font-size:40px;font-weight:800;line-height:1.12;letter-spacing:-1px;}
 .tva-class .hero h1 .hl{color:var(--indigo);}
+.tva-class .hero h1 .eyebrow{display:block;line-height:1.4;}
 .tva-class .hero p{margin-top:18px;color:var(--ink-soft);font-size:17px;max-width:460px;}
 .tva-class .hero-scroll{display:inline-block;margin-top:22px;font-size:14px;font-weight:600;color:var(--ink-faint);cursor:pointer;text-decoration:none;border-bottom:1px solid transparent;transition:color .15s ease,border-color .15s ease;}
 .tva-class .hero-scroll:hover{color:var(--indigo);border-color:var(--indigo);}

@@ -27,7 +27,7 @@
     <!-- Cache: để service worker tự quản lý, không block hoàn toàn -->
     <meta http-equiv="Cache-Control" content="no-cache" />
 
-    <title>Thầy Văn Anh Guitar</title>
+    <title>Thầy Văn Anh Guitar – Học Guitar Văn Anh | Lớp học chính thức</title>
     <meta name="description" content="Học guitar cùng Thầy Văn Anh — lộ trình rõ ràng, luyện tập mỗi ngày, và 1001 Câu chuyện cùng Guitar của cộng đồng." />
 
     <!-- Thẻ chia sẻ mạng xã hội (Zalo, Facebook, Messenger…) — MẶC ĐỊNH Class.
@@ -46,6 +46,35 @@
     <meta name="twitter:title" content="Thầy Văn Anh Guitar" />
     <meta name="twitter:description" content="Học guitar cùng Thầy Văn Anh — lộ trình rõ ràng, luyện tập mỗi ngày, và 1001 Câu chuyện cùng Guitar của cộng đồng." />
     <meta name="twitter:image" content="https://class.vananhaudio.com/og-default.png" />
+
+    <!-- SEO thương hiệu: tên site + tên gọi khác cho Google. Canonical KHÔNG đặt ở đây (file dùng chung mọi
+         route của SPA) — Edge Function og.ts chèn canonical đúng từng URL (netlify/og/render.ts).
+         sameAs chỉ ghi kênh chính thức đã xác minh; thêm Facebook/YouTube khi Owner cung cấp link. -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebSite",
+          "@id": "https://class.vananhaudio.com/#website",
+          "url": "https://class.vananhaudio.com/",
+          "name": "Thầy Văn Anh Guitar",
+          "alternateName": ["Học Guitar Văn Anh", "Thầy Văn Anh"],
+          "inLanguage": "vi",
+          "publisher": { "@id": "https://class.vananhaudio.com/#organization" }
+        },
+        {
+          "@type": "EducationalOrganization",
+          "@id": "https://class.vananhaudio.com/#organization",
+          "name": "Thầy Văn Anh Guitar",
+          "alternateName": ["Học Guitar Văn Anh", "Thầy Văn Anh"],
+          "url": "https://class.vananhaudio.com/",
+          "logo": "https://class.vananhaudio.com/tva-logo.png",
+          "sameAs": ["https://zalo.me/vananhguitarist"]
+        }
+      ]
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>

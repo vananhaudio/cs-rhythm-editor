@@ -1,0 +1,22 @@
+# class.vananhaudio.com — Thầy Văn Anh Guitar
+# Trang công khai mở cho mọi công cụ tìm kiếm; khu quản trị / cá nhân (cần đăng nhập) không cần thu thập.
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /editor
+Disallow: /course
+Disallow: /course-editor
+Disallow: /gp-editor
+Disallow: /import
+Disallow: /flow-migrate
+Disallow: /students
+Disallow: /student/
+Disallow: /delete-account
+Disallow: /me/chat
+Disallow: /me/t/
+Disallow: /me/friends
+Disallow: /me/queue
+Disallow: /me/tools
+Disallow: /me/bands
+
+Sitemap: https://class.vananhaudio.com/sitemap.xml
