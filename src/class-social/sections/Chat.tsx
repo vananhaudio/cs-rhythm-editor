@@ -35,7 +35,7 @@ function useOpenPaneViewport(open: boolean) {
   }, [open])
 }
 
-export default function Chat({ meId, selection, onOpenConversation, onBackToList, onOpenProfile, onOpenFriends, onUnreadChanged, system = null, onOpenSystem, onOpenThread }: {
+export default function Chat({ meId, selection, onOpenConversation, onBackToList, onOpenProfile, onOpenFriends, onUnreadChanged, system = null, onOpenSystem, onOpenThread, systemTitle }: {
   meId: string
   selection: ChatSelection
   onOpenConversation: (id: string, opts?: { replace?: boolean }) => void
@@ -49,6 +49,8 @@ export default function Chat({ meId, selection, onOpenConversation, onBackToList
   onOpenSystem?: () => void
   /** Bấm "Xem kết quả" → trang cuộc trao đổi bài trả (hệ thống gốc) */
   onOpenThread?: (threadId: string, search?: string) => void
+  /** Tên màn thông báo hệ thống (Class Mobile: "Thông báo"). Không truyền → như cũ. */
+  systemTitle?: string
 }) {
   const list = useConversationList()
   const sound = useNoticeSound()
@@ -104,7 +106,7 @@ export default function Chat({ meId, selection, onOpenConversation, onBackToList
               onBack={onBackToList} onOpenProfile={onOpenProfile} onActivity={activity} />
           )}
           {selection.kind === 'system' && (
-            <SystemNoticeView onBack={onBackToList} onActivity={onUnreadChanged}
+            <SystemNoticeView onBack={onBackToList} onActivity={onUnreadChanged} title={systemTitle}
               onOpenThread={(threadId, search) => onOpenThread?.(threadId, search)} />
           )}
           {selection.kind === 'with' && (

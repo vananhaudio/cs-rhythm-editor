@@ -127,7 +127,7 @@ export default function MobileShell({ base }: { base: ClassIdentity }) {
   const noticeCount = chatUnread.system?.unread ?? 0
 
   const chatPage = (selection: ChatSelection, system: typeof chatUnread.system) => (
-    <Chat key="chat" meId={me.userId} selection={selection} onOpenConversation={openConversation}
+    <Chat key="chat" systemTitle="Thông báo" meId={me.userId} selection={selection} onOpenConversation={openConversation}
       system={system} onOpenSystem={() => go({ kind: 'notices' })} onOpenThread={openThread}
       onBackToList={back} onOpenProfile={openProfile} onOpenFriends={() => go({ kind: 'section', section: 'friends' })}
       onUnreadChanged={() => void chatUnread.refresh()} />

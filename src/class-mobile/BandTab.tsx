@@ -8,6 +8,7 @@ import { bandHomeHref, type MyBand } from '../class-social/mybands/myBandsModel'
 import { IS_NATIVE_CAPACITOR } from '../supabase'
 import { proxiedHref } from './config'
 
+const LOAD_TIMEOUT_MS = 10000
 type Load = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; bands: MyBand[] }
 
 export default function BandTab({ userId, isTeacher, onOpenChat, onOpenBands }: {
@@ -19,7 +20,9 @@ export default function BandTab({ userId, isTeacher, onOpenChat, onOpenBands }: 
   const [load, setLoad] = useState<Load>({ status: 'loading' })
   const reload = useCallback(() => {
     setLoad({ status: 'loading' })
-    void fetchMyBands(userId).then(r => setLoad(r.ok ? { status: 'ready', bands: r.value } : { status: 'error', message: r.message }))
+    // Mạng treo (không lỗi hẳn, không trả về) → quá hạn thì báo lỗi + Thử lại, không quay tải mãi
+    const timeout = new Promise<{ ok: false; message: string }>(res => setTimeout(() => res({ ok: false, message: 'Chưa tải được Band của bạn. Kiểm tra mạng rồi thử lại.' }), LOAD_TIMEOUT_MS))
+    void Promise.race([fetchMyBands(userId), timeout]).then(r => setLoad(r.ok ? { status: 'ready', bands: r.value } : { status: 'error', message: r.message }))
   }, [userId])
   useEffect(() => { reload() }, [reload])
 

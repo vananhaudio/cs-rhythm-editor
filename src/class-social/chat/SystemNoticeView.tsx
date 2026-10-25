@@ -6,10 +6,12 @@ import { SYSTEM_FOOTNOTE, SYSTEM_NAME, noticeAction } from './chatModel'
 import { Notice } from './SystemNoticeItem'
 import { useSystemNotices } from './useChat'
 
-export default function SystemNoticeView({ onBack, onActivity, onOpenThread }: {
+export default function SystemNoticeView({ onBack, onActivity, onOpenThread, title = SYSTEM_NAME }: {
   onBack: () => void
   onActivity: () => void
   onOpenThread: (threadId: string, search: string) => void
+  /** Tên hiển thị ở đầu màn (Class Mobile: "Thông báo"). Mặc định như cũ. */
+  title?: string
 }) {
   const s = useSystemNotices(onActivity)
   const box = useRef<HTMLDivElement>(null)
@@ -23,7 +25,7 @@ export default function SystemNoticeView({ onBack, onActivity, onOpenThread }: {
           <ArrowLeft size={22} aria-hidden="true" />
         </button>
         <span className="cs-sys-avatar is-sm" aria-hidden="true"><BellRing size={20} /></span>
-        <span className="cs-chat-peer-name">{SYSTEM_NAME}</span>
+        <span className="cs-chat-peer-name">{title}</span>
       </header>
 
       {s.status === 'loading' && <div className="cs-chat-body-state"><div className="cs-spinner" role="status" aria-label="Đang tải" /></div>}
