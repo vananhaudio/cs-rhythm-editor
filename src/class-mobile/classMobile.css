@@ -31,9 +31,9 @@
 .cm-icon-btn:active { background: var(--cs-hover); }
 .cm-icon-btn svg { width: 24px; height: 24px; }
 .cm-badge {
-  position: absolute; top: 4px; right: 3px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
-  background: #e11d48; color: #fff; font-size: 0.6875rem; font-weight: 800; line-height: 18px; text-align: center;
-  border: 2px solid var(--cs-surface); box-sizing: content-box;
+  position: absolute; top: 5px; right: 4px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px;
+  background: #e11d48; color: #fff; font-size: 0.6875rem; font-weight: 800; line-height: 14px; text-align: center;
+  border: 2px solid var(--cs-surface); box-sizing: border-box; pointer-events: none;
 }
 
 /* ── Nội dung ── */
@@ -107,7 +107,7 @@
 .cm-tab span.cm-tab-l { font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.01em; white-space: nowrap; }
 .cm-tab[aria-current='page'] { color: var(--cs-p); }
 .cm-tab[aria-current='page'] span.cm-tab-l { font-weight: 800; }
-.cm-tab .cm-badge { top: -1px; right: calc(50% - 22px); }
+.cm-tab .cm-badge { top: 0; right: calc(50% - 24px); }
 
 /* ── Ngăn kéo chức năng khác ── */
 .cm-sheet-bg { position: fixed; inset: 0; z-index: 60; background: rgba(10, 10, 20, 0.45); }

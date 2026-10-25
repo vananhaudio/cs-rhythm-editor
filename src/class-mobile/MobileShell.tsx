@@ -48,7 +48,7 @@ function needsBackBar(v: MobileView): boolean {
 export default function MobileShell({ base }: { base: ClassIdentity }) {
   const [nav, setNav] = useState<NavState>(() => initialNav(readLastTab(safeStorage())))
   const navRef = useRef(nav)
-  navRef.current = nav
+  useEffect(() => { navRef.current = nav })   // chỉ đọc trong callback (không đọc khi render)
   const scrollMem = useRef<Record<string, number>>({})
   const [more, setMore] = useState(false)
   const [homeVisit, setHomeVisit] = useState(0)

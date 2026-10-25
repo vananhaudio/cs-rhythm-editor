@@ -18,13 +18,13 @@ export default function BandTab({ userId, isTeacher, onOpenChat, onOpenBands }: 
   onOpenBands: () => void
 }) {
   const [load, setLoad] = useState<Load>({ status: 'loading' })
-  const reload = useCallback(() => {
-    setLoad({ status: 'loading' })
+  const run = useCallback(() => {
     // Mạng treo (không lỗi hẳn, không trả về) → quá hạn thì báo lỗi + Thử lại, không quay tải mãi
     const timeout = new Promise<{ ok: false; message: string }>(res => setTimeout(() => res({ ok: false, message: 'Chưa tải được Band của bạn. Kiểm tra mạng rồi thử lại.' }), LOAD_TIMEOUT_MS))
     void Promise.race([fetchMyBands(userId), timeout]).then(r => setLoad(r.ok ? { status: 'ready', bands: r.value } : { status: 'error', message: r.message }))
   }, [userId])
-  useEffect(() => { reload() }, [reload])
+  useEffect(() => { run() }, [run])
+  const retry = () => { setLoad({ status: 'loading' }); run() }
 
   return (
     <div className="cm-page">
@@ -33,7 +33,7 @@ export default function BandTab({ userId, isTeacher, onOpenChat, onOpenBands }: 
       {load.status === 'loading' && <div role="status" aria-label="Đang tải Ban Nhạc"><div className="cm-skeleton" /><div className="cm-skeleton" /></div>}
 
       {load.status === 'error' && (
-        <div className="cm-error" role="alert"><span>{load.message}</span><button type="button" onClick={reload}>Thử lại</button></div>
+        <div className="cm-error" role="alert"><span>{load.message}</span><button type="button" onClick={retry}>Thử lại</button></div>
       )}
 
       {load.status === 'ready' && load.bands.length === 0 && (
