@@ -356,10 +356,12 @@ const TOOLS_MAP: Record<string, { label: string; icon: string; color: string; ro
   ear:           { label: 'Luyện tai',    icon: '👂', color: '#0891B2', route: '/tap'    },
 }
 
-interface Props { student: Student; onLogout: () => void; preview?: boolean; guest?: boolean; onLoginRequired?: () => void }
+/** embed (Class Mobile V1): nhúng MỘT tab của App học (Học / Tập) vào khung 5 tab mới — ẩn thanh tab cũ, theo chiều cao khung chứa. Không có → hành vi cũ nguyên vẹn. */
+interface Props { student: Student; onLogout: () => void; preview?: boolean; guest?: boolean; onLoginRequired?: () => void; embed?: 'hoc' | 'tap' }
 
-export default function MobileStudentPortal({ student, onLogout, preview = false, guest = false, onLoginRequired }: Props) {
+export default function MobileStudentPortal({ student, onLogout, preview = false, guest = false, onLoginRequired, embed }: Props) {
   const [tab, setTab]             = useState<Tab>(() => {
+    if (embed) return embed
     // Vào từ /me hoặc ?tab= → mở đúng tab (đường về sau story/route ngoài)
     try {
       if (window.location.pathname.startsWith('/me')) return 'me'
@@ -1948,12 +1950,12 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
       </div>
     )}
     <div style={{
-      maxWidth: 430, margin: '0 auto', height: '100dvh',
+      maxWidth: 430, margin: '0 auto', height: embed ? '100%' : '100dvh',
       display: 'flex', flexDirection: 'column',
       background: L.bg, fontFamily: '"SF Pro Display", "DM Sans", system-ui, sans-serif',
       color: L.t1, position: 'relative', overflow: 'hidden',
     }}>
-      <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 'calc(90px + env(safe-area-inset-bottom))' }}>
+      <div style={{ flex: 1, overflowY: 'auto', paddingBottom: embed ? 16 : 'calc(90px + env(safe-area-inset-bottom))' }}>
         {entitlementError && (
           <div style={{ margin: 'max(14px, env(safe-area-inset-top, 0px)) 16px 0', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 14, padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 10, color: '#991B1B', fontSize: 13, fontWeight: 700 }}>
             <span style={{ flex: 1 }}>Không tải được quyền truy cập.</span>
@@ -3440,7 +3442,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
       })()}
 
       {/* ══ BOTTOM NAV ════════════════════════════════════════════════════ */}
-      <div style={{
+      {!embed && <div style={{
         position: 'absolute', bottom: 0, left: 0, right: 0,
         background: 'rgba(255,255,255,0.92)',
         backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
@@ -3472,7 +3474,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
             </button>
           )
         })}
-      </div>
+      </div>}
     </div>
 
     {/* ── Modal Cài đặt hồ sơ ── */}
