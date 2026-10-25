@@ -64,7 +64,7 @@ export const NHIPPHACH_PATHS: readonly string[] = ['/nhipphach', '/musicxml-beat
 const NhipPhachGate = lazy(() => import('./nhipphach/NhipPhachGate'))
 // Class Social (cửa chính /me trên class.*) — chunk riêng, không nặng thêm bundle App học
 const ClassSocialPage = lazy(() => import('./class-social/ClassSocialPage'))
-// Class Mobile V1 — khung ứng dụng 5 tab (chunk riêng): /app trên web; app native (bản build mới) mở khung này khi bật cờ (class-mobile/config.ts)
+// Class Mobile V1 — khung ứng dụng 5 tab (chunk riêng): /classapp trên web; app native (bản build mới) mở khung này khi bật cờ (class-mobile/config.ts)
 const ClassMobilePage = lazy(() => import('./class-mobile/ClassMobilePage'))
 // Band — trang tuyển thành viên công khai /band/<slug> (một component cho mọi Band, dữ liệu từ server)
 const BandRecruitRoute = lazy(() => import('./band/BandRecruitRoute'))
@@ -285,7 +285,7 @@ function AppRouterContent() {
     if (bandSlug) return <Suspense fallback={null}><BandRecruitRoute slug={bandSlug} /></Suspense>
   }
 
-  // ── Class Mobile V1: khung 5 tab. /app (mọi nền tảng) · native: "/" và "/me…" khi bật cờ. App học cũ vẫn ở /learn. ──
+  // ── Class Mobile V1: khung 5 tab. /classapp (mọi nền tảng) · native: "/" và "/me…" khi bật cờ. App học cũ vẫn ở /learn. ──
   if (isClassMobilePath(path) || nativeOpensClassMobile(path, IS_NATIVE_CAPACITOR)) {
     return <Suspense fallback={null}><ClassMobilePage /></Suspense>
   }

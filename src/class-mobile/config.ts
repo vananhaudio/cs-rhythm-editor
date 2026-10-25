@@ -1,7 +1,8 @@
 // Class Mobile V1 — cấu hình khung ứng dụng.
 //
 // Khung 5 tab chạy ở hai chỗ:
-//  • /app  — mọi nền tảng (xem thử trên trình duyệt / simulator). Đây là đường vào DUY NHẤT trên web.
+//  • /classapp — mọi nền tảng (xem thử trên trình duyệt / simulator). Đây là đường vào DUY NHẤT trên web.
+//    (Không dùng /app: thư mục gốc có App.tsx, trên macOS không phân biệt hoa thường nên Vite dev hiểu /app là module App.tsx và trả 500.)
 //  • app native (Capacitor) — khung này là màn chính khi bật cờ dưới (bản build MỚI; app 1.4.2 đang ở store không bị ảnh hưởng).
 // App học cũ vẫn còn ở /learn (không xóa chức năng cũ khi chưa có phương án thay thế được duyệt).
 
@@ -11,7 +12,7 @@ export const CLASS_MOBILE_NATIVE_DEFAULT = true
 export const CLASS_WEB_ORIGIN = 'https://class.vananhaudio.com'
 
 /** Đường dẫn chạy khung 5 tab trên web. */
-export const CLASS_MOBILE_PATH = '/app'
+export const CLASS_MOBILE_PATH = '/classapp'
 
 export function isClassMobilePath(pathname: string): boolean {
   return pathname === CLASS_MOBILE_PATH || pathname.startsWith(CLASS_MOBILE_PATH + '/')

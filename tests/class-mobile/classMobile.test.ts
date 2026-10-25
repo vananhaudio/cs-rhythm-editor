@@ -85,9 +85,9 @@ test("lưu/khôi phục tab cuối: chỉ nhận id hợp lệ, lỗi bộ nhớ
   assert.equal(readLastTab({ getItem: () => { throw new Error("blocked"); } }), "home");
 });
 
-test("định tuyến: /app mọi nền tảng; native chỉ '/' và '/me…' khi bật cờ; web /me KHÔNG bị chiếm", () => {
-  assert.ok(isClassMobilePath("/app") && isClassMobilePath("/app/x"));
-  assert.ok(!isClassMobilePath("/apple") && !isClassMobilePath("/me"));
+test("định tuyến: /classapp mọi nền tảng; native chỉ '/' và '/me…' khi bật cờ; web /me KHÔNG bị chiếm", () => {
+  assert.ok(isClassMobilePath("/classapp") && isClassMobilePath("/classapp/x"));
+  assert.ok(!isClassMobilePath("/app") && !isClassMobilePath("/classapps") && !isClassMobilePath("/me"));
   assert.equal(CLASS_MOBILE_NATIVE_DEFAULT, true);
   assert.ok(nativeOpensClassMobile("/", true) && nativeOpensClassMobile("/me", true) && nativeOpensClassMobile("/me/chat", true));
   assert.ok(!nativeOpensClassMobile("/learn", true), "App học cũ vẫn ở /learn");
@@ -111,7 +111,7 @@ test("khung mới KHÔNG gọi ghi dữ liệu/RPC riêng: chỉ tái dùng tran
   assert.ok(!/Tìm kiếm|type=["']search["']/.test(src.replace(/KHÔNG[^\n]*|Không[^\n]*|ghi nhận[^\n]*/g, "")), "chưa có nút tìm kiếm giả");
 });
 
-test("AppRouter: /app và native chỉ thêm đường vào; App học cũ (/learn, /start) không bị chiếm", () => {
+test("AppRouter: /classapp và native chỉ thêm đường vào; App học cũ (/learn, /start) không bị chiếm", () => {
   const r = read("src/AppRouter.tsx");
   assert.match(r, /isClassMobilePath\(path\) \|\| nativeOpensClassMobile\(path, IS_NATIVE_CAPACITOR\)/);
   assert.match(r, /isLearnPath\(path\)/, "nhánh App học cũ vẫn còn");
