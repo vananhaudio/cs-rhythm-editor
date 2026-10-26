@@ -77,12 +77,12 @@ export function MeTab({ me, canEditAvatar, onEditMedia, requests, onOpenMyProfil
   return (
     <div className="cm-page" style={{ paddingTop: 0 }}>
       <div className="cs-col" style={{ padding: 0 }}>
-        <IdentityHeader me={me} canEditAvatar={canEditAvatar} onEdit={onEditMedia} onOpenProfile={onOpenMyProfile} onEditProfile={onEditProfile} />
+        <IdentityHeader me={me} canEditAvatar={canEditAvatar} onEdit={onEditMedia} onEditProfile={onEditProfile} />
       </div>
 
-      <h2 className="cm-h2">Cộng đồng</h2>
+      <h2 className="cm-h2">Hoạt động</h2>
       <ul className="cm-list">
-        <Row icon={<UserRound />} title="Trang cá nhân của tôi" hint="Tường, Hành trình, bài trả và bài Thầy sửa" onClick={onOpenMyProfile} />
+        <Row icon={<UserRound />} title="Trang cá nhân" hint="Tường, Hành trình, bài trả, bài Thầy sửa" onClick={onOpenMyProfile} />
         <Row icon={<Users />} title="Bạn bè" hint={requests.count > 0 ? `${requests.count} lời mời kết bạn` : 'Bạn bè và lời mời'} count={requests.count} onClick={onOpenFriends} />
       </ul>
 

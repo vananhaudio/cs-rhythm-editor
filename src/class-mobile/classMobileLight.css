@@ -1,0 +1,101 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Class Mobile V1.1 — lớp giao diện SÁNG (ưu tiên số một) cho các trang Class Social được tái dùng.
+   Chỉ nằm dưới .cm-root nên Class Web (/me) và App học cũ KHÔNG đổi. Chỉ dùng token --cs-* → chế độ tối vẫn theo token tối.
+   Nguyên tắc: nền xám nhóm iOS, thẻ trắng phẳng không viền, chữ rõ cấp bậc, vùng chạm ≥ 44px, ít hộp lồng hộp.
+   ───────────────────────────────────────────────────────────────────────────── */
+.cm-root { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif; line-height: 1.4; -webkit-font-smoothing: antialiased; }
+.cm-root .cs-main { padding: 8px 16px 28px; }
+.cm-root .cs-col, .cm-root .cs-col-wide { max-width: 640px; }
+
+/* Thẻ: phẳng, không viền, bóng mảnh */
+.cm-root .cs-card { border: 0; border-radius: 16px; box-shadow: var(--cs-shadow); }
+.cm-root .cs-home { gap: 12px; }
+
+/* Nút: chạm ≥ 44px, phản hồi khi chạm */
+.cm-root .cs-btn { min-height: 44px; border-radius: 12px; font-size: 0.9375rem; -webkit-tap-highlight-color: transparent; transition: transform 0.1s ease, background-color 0.15s ease; }
+.cm-root .cs-btn:active:not(:disabled) { transform: scale(0.97); }
+.cm-root .cs-btn-sm { min-height: 40px; height: auto; font-size: 0.875rem; }
+.cm-root .cs-btn-soft { background: var(--cs-neutral-soft); }
+.cm-root .cs-btn-soft:hover:not(:disabled) { background: var(--cs-neutral-soft); }
+.cm-root .cs-btn-primary { box-shadow: none; }
+
+/* ── Trang chủ: ô chia sẻ ── */
+.cm-root .cs-share { padding: 14px 14px 6px; }
+.cm-root .cs-share-input { font-size: 1rem; background: var(--cs-neutral-soft); border-radius: 22px; padding: 11px 16px; min-height: 44px; }
+.cm-root .cs-share-input:focus { background: var(--cs-surface); border-color: var(--cs-p); }
+.cm-root .cs-share-chip { font-size: 0.8125rem; font-weight: 600; min-height: 40px; }
+.cm-root .cs-share-legacy { font-size: 0.8125rem; min-height: 36px; }
+
+/* ── Lời mời kết bạn: gọn một hàng ── */
+.cm-root .cs-friends-card { padding: 14px 16px; }
+.cm-root .cs-friends-title { font-size: 1.0625rem; margin-bottom: 4px; }
+.cm-root .cs-person { padding: 10px 0; }
+.cm-root .cs-person + .cs-person { border-top: 0.5px solid var(--cs-border); }
+.cm-root .cs-person-name { font-weight: 600; }
+
+/* ── Bảng tin ── */
+.cm-root .cs-feed { margin-top: 0; }
+.cm-root .cs-post-list { gap: 10px; }
+.cm-root .cs-feed-tabs { margin: 0 0 2px; }
+.cm-root .cs-post { padding: 14px 16px 12px; }
+.cm-root .cs-post-head { gap: 10px; align-items: flex-start; }
+.cm-root .cs-post-author { font-size: 0.9375rem; font-weight: 700; }
+.cm-root .cs-post-sub, .cm-root .cs-post-time { font-size: 0.8125rem; }
+.cm-root .cs-post-body { font-size: 1rem; line-height: 1.5; margin-top: 10px; color: var(--cs-text); }
+.cm-root .cs-post-media { margin: 12px -16px 0; }
+.cm-root .cs-post-media img, .cm-root .cs-post-media video { width: 100%; display: block; border-radius: 0; }
+.cm-root .cs-more-btn { width: 44px; height: 44px; margin: -6px -8px 0 0; }
+.cm-root .cs-cmts { border-top: 0.5px solid var(--cs-border); margin-top: 12px; padding-top: 10px; }
+.cm-root .cs-cmt-bubble { background: var(--cs-neutral-soft); border-radius: 18px; }
+.cm-root .cs-cmt-inputwrap { background: var(--cs-neutral-soft); border: 0; border-radius: 22px; min-height: 44px; }
+.cm-root .cs-cmt-input { font-size: 1rem; }
+.cm-root .cs-cmt-send { width: 36px; height: 36px; }
+.cm-root .cs-empty.is-quiet { padding: 32px 20px; }
+.cm-root .cs-empty.is-quiet h3 { font-size: 1.0625rem; }
+.cm-root .cs-loading { padding: 24px 4px; }
+.cm-root .cs-skeleton { border-radius: 16px; }
+
+/* ── Lớp học ── */
+.cm-root .cs-class-grid { grid-template-columns: 1fr; gap: 10px; }
+.cm-root .cs-class-tile { padding: 16px; min-height: 76px; border: 0; }
+.cm-root .cs-class-tile:active { background: var(--cs-neutral-soft); }
+.cm-root .cs-class-tile-name { font-size: 1.0625rem; font-weight: 700; }
+.cm-root .cs-class-tile-meta { font-size: 0.875rem; }
+.cm-root .cs-class-tile-facts { font-size: 0.8125rem; }
+.cm-root .cs-feed-title { font-size: 0.9375rem; }
+.cm-root .cs-classes-mine .cs-feed-title, .cm-root .cs-classes-discover .cs-feed-title { font-size: 1.1875rem; margin-bottom: 10px; }
+.cm-root .cs-page-title { font-size: 1.75rem; }
+
+/* ── Trò chuyện: danh sách kiểu Tin nhắn iOS ── */
+.cm-root .cs-chat-list-head { padding: 6px 16px 10px; font-size: 2rem; letter-spacing: -0.025em; }
+.cm-root .cs-chat-items { padding: 0 0 12px; background: var(--cs-surface); }
+.cm-root .cs-chat-item { border-radius: 0; padding: 10px 16px; min-height: 68px; position: relative; }
+.cm-root .cs-chat-item + .cs-chat-item::before { content: ''; position: absolute; top: 0; left: 72px; right: 0; height: 0.5px; background: var(--cs-border); }
+.cm-root .cs-chat-item:active { background: var(--cs-neutral-soft); }
+.cm-root .cs-chat-item-name { font-size: 1rem; font-weight: 600; }
+.cm-root .cs-chat-item-preview { font-size: 0.875rem; }
+.cm-root .cs-chat-item-time { font-size: 0.75rem; }
+.cm-root .cs-chat-head { padding-top: calc(8px + env(safe-area-inset-top, 0px)); border-bottom: 0.5px solid var(--cs-border); }
+.cm-root .cs-chat-pane { background: var(--cs-bg); }
+.cm-root .cs-chat-scroll { padding: 12px 14px; }
+.cm-root .cs-msg-bubble { font-size: 1rem; line-height: 1.38; padding: 8px 14px; max-width: min(80%, 520px); }
+.cm-root .cs-msg-row.is-theirs .cs-msg-bubble { background: var(--cs-surface); box-shadow: var(--cs-shadow); }
+.cm-root .cs-chat-composer { border-top: 0.5px solid var(--cs-border); padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px)); }
+.cm-root .cs-chat-input { background: var(--cs-surface); border: 0.5px solid var(--cs-neutral-line); border-radius: 20px; min-height: 40px; }
+.cm-root .cs-chat-input:focus { border-color: var(--cs-p); }
+.cm-root .cs-chat-send { width: 40px; height: 40px; }
+
+/* ── Tôi: hồ sơ cá nhân hiện đại (ảnh đại diện ở giữa) ── */
+.cm-root .cs-identity { border-radius: 16px; }
+.cm-root .cs-cover { height: 112px; }
+.cm-root .cs-identity-body { flex-direction: column; align-items: center; gap: 0; margin-top: -48px; padding: 0 18px 18px; text-align: center; }
+.cm-root .cs-identity-avatar { width: 96px !important; height: 96px !important; font-size: 2.25rem; border-width: 4px; }
+.cm-root .cs-identity-avatar-wrap .cs-avatar-edit { right: -2px; bottom: 2px; width: 32px; height: 32px; }
+.cm-root .cs-identity-text { padding-top: 10px; display: flex; flex-direction: column; align-items: center; }
+.cm-root .cs-identity-name { font-size: 1.5rem; }
+.cm-root .cs-identity-facts { justify-content: center; font-size: 0.875rem; }
+.cm-root .cs-identity-profile { margin-top: 12px; }
+.cm-root .cs-cover-edit { height: 40px; }
+
+/* ── Danh sách nhóm kiểu iOS dùng chung cho Học / Tập được nhúng ── */
+.cm-root .cm-embed { box-shadow: none; background: transparent; border-radius: 0; }
