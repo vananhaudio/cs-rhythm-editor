@@ -7,6 +7,7 @@ import { readFileSync, existsSync, readdirSync } from "node:fs";
 import {
   MOBILE_TABS, initialNav, selectTab, push, pop, replace, backOr, canPop, currentView, tabOwning, readLastTab, LAST_TAB_KEY, ROOT, type MobileView,
 } from "../../src/class-mobile/mobileNav.ts";
+import { isTextEntry } from "../../src/class-mobile/useKeyboardOpen.ts";
 import { isClassMobilePath, nativeOpensClassMobile, proxiedHref, CLASS_MOBILE_NATIVE_DEFAULT, CLASS_WEB_ORIGIN } from "../../src/class-mobile/config.ts";
 
 const profile = (userId: string): MobileView => ({ kind: "profile", userId });
@@ -139,4 +140,19 @@ test("khung 5 tab: thanh tab dưới có Safe Area, vùng chạm ≥ 44, hỗ tr
 test("file bàn giao tồn tại", () => {
   for (const f of ["config.ts", "mobileNav.ts", "MobileShell.tsx", "ClassMobilePage.tsx", "chrome.tsx", "MoreSheet.tsx", "BandTab.tsx", "LearnMeTabs.tsx", "AccountPage.tsx", "classMobile.css"])
     assert.ok(existsSync(new URL("../../src/class-mobile/" + f, import.meta.url)), f);
+});
+
+test("V1.2 bàn phím: chỉ ô nhập chữ mới ẩn thanh tab", () => {
+  assert.equal(isTextEntry("TEXTAREA"), true);
+  assert.equal(isTextEntry("input", "text"), true);
+  assert.equal(isTextEntry("INPUT", null), true);
+  assert.equal(isTextEntry("input", "email"), true);
+  assert.equal(isTextEntry("input", "checkbox"), false);
+  assert.equal(isTextEntry("input", "submit"), false);
+  assert.equal(isTextEntry("button"), false);
+  assert.equal(isTextEntry("div", null, true), true, "contenteditable");
+  assert.equal(isTextEntry("div"), false);
+  const css = read("src/class-mobile/classMobile.css");
+  assert.match(css, /\.cm-root\.is-keyboard \.cm-tabbar \{ display: none; \}/);
+  assert.match(read("src/class-mobile/MobileShell.tsx"), /useKeyboardOpen\(\)/);
 });

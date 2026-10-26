@@ -2,6 +2,7 @@
 // KHÔNG viết lại chức năng: mọi màn con là trang Class Social hiện có (Trang chủ/feed, Lớp, Buổi, Bài trả, Trò chuyện, Hồ sơ, Bạn bè…)
 // gắn vào cùng dữ liệu/API (RPC, RLS) — chỉ đổi khung điều hướng sang kiểu ứng dụng điện thoại. Không đụng backend/phân quyền.
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useKeyboardOpen } from './useKeyboardOpen'
 import type { ClassIdentity } from '../class-social/useClassSession'
 import { useProfileMediaEditor, type IdentityPatch } from '../class-social/profile/useProfileMediaEditor'
 import { signOut } from '../class-social/profile/profileApi'
@@ -50,6 +51,7 @@ export default function MobileShell({ base }: { base: ClassIdentity }) {
   const navRef = useRef(nav)
   useEffect(() => { navRef.current = nav })   // chỉ đọc trong callback (không đọc khi render)
   const scrollMem = useRef<Record<string, number>>({})
+  const keyboardOpen = useKeyboardOpen()
   const [more, setMore] = useState(false)
   const [homeVisit, setHomeVisit] = useState(0)
 
@@ -209,7 +211,7 @@ export default function MobileShell({ base }: { base: ClassIdentity }) {
   }
 
   return (
-    <div className="cs-root cm-root">
+    <div className={'cs-root cm-root' + (keyboardOpen ? ' is-keyboard' : '')}>
       <TopBar noticeCount={noticeCount} onHome={() => selectTabAndScroll('home')}
         onNotices={() => go({ kind: 'notices' })} onMore={() => setMore(true)} />
       <main className="cm-content cs-main">
