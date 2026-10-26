@@ -388,7 +388,10 @@ test("UI-shell: màn có tên NỘI DUNG (hồ sơ, buổi, trao đổi…) gi�
   for (const v of [{ kind: "account" }, { kind: "notices" }, { kind: "blocked" }, { kind: "password" }] as MobileView[]) {
     assert.equal(barFor(v, "me").hidePageTitle, true, v.kind + " nhường tên cho thanh");
   }
-  assert.deepEqual(barFor({ kind: "class", classId: "c" } as MobileView, "class"), { title: null, back: false, hidePageTitle: false }, "màn lớp giữ như cũ");
+  for (const v of [{ kind: "class", classId: "c" }, { kind: "classSpace", classId: "c" }, { kind: "classMembers", classId: "c" }] as MobileView[]) {
+    assert.deepEqual(barFor(v, "class"), { title: "Lớp học", back: true, hidePageTitle: false }, v.kind + ": có \"‹\" (nút cũ của ClassHead bị ẩn ở S1)");
+  }
+  assert.equal(barFor({ kind: "classes" } as MobileView, "class").back, true);
 });
 
 test("UI-shell: một hệ lề — main không lề, trang tự có 16px; Studio tràn mép; không khung desktop", () => {

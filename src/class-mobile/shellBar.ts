@@ -32,6 +32,9 @@ export function barFor(view: MobileView, tab: MobileTab): BarSpec {
     case 'thread': return { title: 'Trao đổi bài', back: true, hidePageTitle: false }
     case 'queue': return { title: 'Hàng đợi', back: true, hidePageTitle: false }
     case 'session': return { title: 'Buổi học', back: true, hidePageTitle: false }
+    // Màn lớp: ClassHead tự có nút "‹ Lớp của tôi" nhưng bị ẩn trong khung (S1) ⇒ trước đây KHÔNG còn nút quay lại nào; nay thanh khung lo.
+    case 'class': case 'classSpace': case 'classMembers': return { title: 'Lớp học', back: true, hidePageTitle: false }
+    case 'classes': return { title: 'Lớp Học', back: true, hidePageTitle: true }
     case 'studio': return { title: 'Studio', back: false, hidePageTitle: false }   // nút "‹" của Studio do StudioPage báo (Studio có thể tự có nút riêng)
     default: return BRAND   // lớp, không gian lớp, hội thoại: giữ như cũ
   }
