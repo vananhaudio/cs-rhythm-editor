@@ -156,3 +156,59 @@ test("V1.2 bàn phím: chỉ ô nhập chữ mới ẩn thanh tab", () => {
   assert.match(css, /\.cm-root\.is-keyboard \.cm-tabbar \{ display: none; \}/);
   assert.match(read("src/class-mobile/MobileShell.tsx"), /useKeyboardOpen\(\)/);
 });
+
+// ── 1.6.0 S1: một khung — một tiêu đề — một nút Quay lại; không còn lối vào App học cũ toàn màn hình ──
+test("S1-A: Đổi mật khẩu và Người đã chặn là màn của khung, Quay lại về đúng Tài khoản & cài đặt", () => {
+  let s = selectTab(initialNav(), "me");
+  s = push(s, { kind: "account" });
+  s = push(s, { kind: "password" });
+  assert.equal(currentView(s).kind, "password");
+  s = pop(s);
+  assert.equal(currentView(s).kind, "account", "Quay lại về Tài khoản & cài đặt, không về tab gốc");
+  s = push(s, { kind: "blocked" });
+  s = pop(s);
+  assert.equal(currentView(s).kind, "account");
+});
+
+test("S1-A: khung không dẫn sang App học cũ (/learn) từ ▦ và Tài khoản", () => {
+  for (const f of ["src/class-mobile/MoreSheet.tsx", "src/class-mobile/AccountPage.tsx"]) {
+    assert.doesNotMatch(read(f), /["'`]\/learn[?"'`]/, f + " không còn liên kết /learn");
+  }
+  assert.match(read("src/class-mobile/ChangePasswordPage.tsx"), /supabase\.auth\.updateUser\(\{ password/);
+});
+
+test("S1-B: vào màn con của Khoá tự học → khung ẩn tiêu đề 'Lớp Học' + phân đoạn (một header duy nhất)", () => {
+  const learn = read("src/class-mobile/LearnMeTabs.tsx");
+  assert.match(learn, /embedDeep = deep && seg === 'courses'/);
+  assert.match(learn, /!embedDeep && <h1 className="cm-title">Lớp Học<\/h1>/);
+  assert.match(read("src/MobileStudentPortal.tsx"), /onDeepChange\?\.\(!!embed && tab === 'hoc' && screen !== 'home'\)/);
+});
+
+test("S1-C: 'Lớp của tôi' không lặp trong Class Mobile; web /me giữ tiêu đề", () => {
+  const page = read("src/class-social/classes/ClassesPage.tsx");
+  assert.match(page, /hideTitle = false/);
+  assert.match(page, /!hideTitle && <h1 className="cs-page-title">Lớp của tôi<\/h1>/);
+  assert.match(read("src/class-mobile/LearnMeTabs.tsx"), /<ClassesPage [^>]*hideTitle/);
+  assert.doesNotMatch(read("src/class-social/ClassSocialPage.tsx"), /ClassesPage[^\n]*hideTitle/);
+});
+
+test("S1-D: Thông báo là màn riêng trong khung, không nhắc 'Class 2.0'", () => {
+  const shell = read("src/class-mobile/MobileShell.tsx");
+  assert.match(shell, /case 'notices':\n\s+return <NoticesPage/);
+  const notices = read("src/class-mobile/NoticesPage.tsx");
+  assert.match(notices, /<h1 className="cm-title">Thông báo<\/h1>/);
+  assert.match(notices, /SystemNoticeView bare/);
+  const view = read("src/class-social/chat/SystemNoticeView.tsx");
+  assert.match(view, /!bare && <header/);
+  assert.match(view, /!bare && <div className="cs-chat-locked"/);
+});
+
+test("S1-E: một nút Quay lại của khung cho mọi màn sâu; nút riêng của màn con ẩn trong .cm-root", () => {
+  const shell = read("src/class-mobile/MobileShell.tsx");
+  for (const k of ["account", "notices", "blocked", "password", "bands", "bandAdmin", "profile", "thread", "queue", "session"]) {
+    assert.match(shell, new RegExp(`BACKBAR_KINDS[^\\n]*'${k}'`), k + " có BackBar của khung");
+  }
+  const css = read("src/class-mobile/classMobile.css");
+  assert.match(css, /\.cm-root \.cs-profile-back, \.cm-root \.cs-band-back, \.cm-root \.cs-back-btn \{ display: none; \}/);
+  assert.doesNotMatch(read("src/class-social/classSocial.css"), /cm-root/, "không đổi CSS web /me");
+});

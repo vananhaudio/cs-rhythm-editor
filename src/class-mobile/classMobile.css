@@ -81,6 +81,7 @@
 .cm-seg button { flex: 1; min-height: 36px; border: 0; border-radius: 8px; background: transparent; font: inherit; font-size: 0.875rem; font-weight: 600; color: var(--cs-muted); cursor: pointer; }
 .cm-seg button[aria-pressed='true'] { background: var(--cs-surface); color: var(--cs-text); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 0 0 0.5px rgba(0, 0, 0, 0.04); }
 .cm-embed { height: calc(100dvh - var(--cm-top-h) - var(--cm-tab-h) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 64px); min-height: 360px; border-radius: 14px; overflow: hidden; background: var(--cs-surface); box-shadow: var(--cs-shadow); }
+.cm-embed.is-deep { height: calc(100dvh - var(--cm-top-h) - var(--cm-tab-h) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 24px); }
 
 /* ── Thẻ Band ── */
 .cm-card { background: var(--cs-surface); border-radius: 16px; padding: 16px 16px 6px; margin: 0 0 14px; box-shadow: var(--cs-shadow); }
@@ -166,3 +167,9 @@
 
 /* Màn đăng nhập trong khung Class Mobile: hiện tên thương hiệu cạnh logo (CSS web ẩn chữ ở ≤440px — chỉ ghi đè trong phạm vi Class Mobile) */
 @media (max-width: 440px) { .cs-topbar .cs-brand .cs-brand-text { display: inline; font-size: clamp(0.875rem, 4vw, 1rem); } }
+
+/* Thông báo: khung đứng riêng, cuộn trong hộp có chiều cao theo màn hình */
+.cm-notices { display: flex; flex-direction: column; height: calc(100dvh - var(--cm-top-h) - var(--cm-tab-h) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 150px); min-height: 320px; border-radius: 14px; overflow: hidden; background: var(--cs-surface); box-shadow: var(--cs-shadow); }
+
+/* Một nút Quay lại duy nhất: BackBar của khung. Nút tự vẽ của màn con (kiểu cs-btn / pill) ẩn trong Class Mobile; web /me giữ nguyên. */
+.cm-root .cs-profile-back, .cm-root .cs-band-back, .cm-root .cs-back-btn { display: none; }

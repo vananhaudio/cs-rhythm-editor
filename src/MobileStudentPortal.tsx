@@ -357,9 +357,9 @@ const TOOLS_MAP: Record<string, { label: string; icon: string; color: string; ro
 }
 
 /** embed (Class Mobile V1): nhúng MỘT tab của App học (Học / Tập) vào khung 5 tab mới — ẩn thanh tab cũ, theo chiều cao khung chứa. Không có → hành vi cũ nguyên vẹn. */
-interface Props { student: Student; onLogout: () => void; preview?: boolean; guest?: boolean; onLoginRequired?: () => void; embed?: 'hoc' | 'tap' }
+interface Props { student: Student; onLogout: () => void; preview?: boolean; guest?: boolean; onLoginRequired?: () => void; embed?: 'hoc' | 'tap'; onDeepChange?: (deep: boolean) => void }
 
-export default function MobileStudentPortal({ student, onLogout, preview = false, guest = false, onLoginRequired, embed }: Props) {
+export default function MobileStudentPortal({ student, onLogout, preview = false, guest = false, onLoginRequired, embed, onDeepChange }: Props) {
   const [tab, setTab]             = useState<Tab>(() => {
     if (embed) return embed
     // Vào từ /me hoặc ?tab= → mở đúng tab (đường về sau story/route ngoài)
@@ -402,6 +402,9 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   const [deleteError, setDeleteError] = useState('')
   const avatarFileRef = useRef<HTMLInputElement>(null)
   const [screen, setScreen]       = useState<Screen>('home')
+  // embed (Class Mobile 1.6): đang ở màn con của Học (hành trình/bài) → khung ẩn tiêu đề "Lớp Học" + phân đoạn, chỉ còn header của màn con.
+  useEffect(() => { onDeepChange?.(!!embed && tab === 'hoc' && screen !== 'home') }, [embed, tab, screen, onDeepChange])
+  useEffect(() => () => onDeepChange?.(false), [onDeepChange])
   const [enrollments, setEnrollments] = useState<Enrollment[]>([])
   const [modules, setModules]     = useState<Module[]>([])
   const [lessons, setLessons]     = useState<Lesson[]>([])
@@ -3369,9 +3372,9 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
           }, 90)
         }
         return (
-          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 'calc(62px + env(safe-area-inset-bottom))', background: L.bg, display: 'flex', flexDirection: 'column', zIndex: 8 }}>
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: embed ? 0 : 'calc(62px + env(safe-area-inset-bottom))', background: L.bg, display: 'flex', flexDirection: 'column', zIndex: 8 }}>
             {/* Header — gọn, ngữ cảnh, KHÔNG nhấn tổng bài */}
-            <div style={{ background: L.surface, padding: 'max(46px, calc(env(safe-area-inset-top, 0px) + 10px)) 16px 10px', boxShadow: '0 1px 0 ' + L.border, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ background: L.surface, padding: embed ? '10px 16px' : 'max(46px, calc(env(safe-area-inset-top, 0px) + 10px)) 16px 10px', boxShadow: '0 1px 0 ' + L.border, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 12 }}>
               <button onClick={() => { setScreen('home'); setActiveSubject(null); setActiveLevel(null) }} style={{ background: L.p2, border: 'none', borderRadius: 10, width: 34, height: 34, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: L.p1, flexShrink: 0 }}>‹</button>
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontWeight: 900, fontSize: 19, color: L.t1, lineHeight: 1.1, ...clamp1 }}>{subject?.title ?? 'Hành trình'}</div>

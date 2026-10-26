@@ -34,6 +34,9 @@ import MoreSheet from './MoreSheet'
 import BandTab from './BandTab'
 import AccountPage from './AccountPage'
 import { LearnTab, MeTab } from './LearnMeTabs'
+import BlockedUsersPage from '../class-safety/BlockedUsersPage'
+import ChangePasswordPage from './ChangePasswordPage'
+import NoticesPage from './NoticesPage'
 
 const HOME_VIEW: MobileView = { kind: 'tabRoot' }
 const IN_APP_STATE = { cm: 1 }
@@ -41,9 +44,10 @@ const IN_APP_STATE = { cm: 1 }
 const safeStorage = (): Storage | null => { try { return window.localStorage } catch { return null } }
 const navKey = (s: NavState) => `${s.tab}:${s.stacks[s.tab].length}`
 
-/** Màn không tự có nút Quay lại → khung thêm một thanh "‹ Quay lại" khi đã đi sâu vào tab. */
+/** Khung sở hữu MỘT nút Quay lại cho mọi màn đã đi sâu vào tab; nút tự vẽ của từng màn con bị ẩn bằng CSS (.cm-root). Hội thoại và màn Lớp có header riêng nên giữ nguyên. */
+const BACKBAR_KINDS: ReadonlySet<MobileView['kind']> = new Set(['account', 'notices', 'blocked', 'password', 'bands', 'bandAdmin', 'profile', 'thread', 'queue', 'session'])
 function needsBackBar(v: MobileView): boolean {
-  return (v.kind === 'section' && (v.section === 'friends' || v.section === 'tools')) || v.kind === 'account' || v.kind === 'bands'
+  return (v.kind === 'section' && (v.section === 'friends' || v.section === 'tools')) || BACKBAR_KINDS.has(v.kind)
 }
 
 export default function MobileShell({ base }: { base: ClassIdentity }) {
@@ -202,11 +206,18 @@ export default function MobileShell({ base }: { base: ClassIdentity }) {
         return chatPage({ kind: 'conversation', id: view.conversationId }, null)
       case 'chatWith':
         return chatPage({ kind: 'with', userId: view.userId }, null)
-      case 'chatSystem': case 'notices':
+      case 'chatSystem':
         return chatPage({ kind: 'system' }, chatUnread.system)
+      case 'notices':
+        return <NoticesPage onActivity={() => void chatUnread.refresh()} onOpenThread={id => openThread(id)} />
       case 'account':
         return <AccountPage me={me} canEditAvatar={editor.canEditAvatar} onEditMedia={editor.pick}
-          onEditProfile={me.studentId ? () => setEditingProfile(true) : undefined} onSignOut={onSignOut} />
+          onEditProfile={me.studentId ? () => setEditingProfile(true) : undefined} onSignOut={onSignOut}
+          onOpenBlocked={() => go({ kind: 'blocked' })} onOpenPassword={() => go({ kind: 'password' })} />
+      case 'blocked':
+        return <BlockedUsersPage />
+      case 'password':
+        return <ChangePasswordPage />
     }
   }
 

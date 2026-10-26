@@ -83,7 +83,8 @@ test("điểm đặt Báo cáo/Chặn: mỗi file dùng class-safety", () => {
     assert.match(read(p.file), /class-safety\//, p.file);
   }
   assert.match(read("src/class-social/chat/ConversationView.tsx"), /SafetyMenu/);   // DM: menu ở header
-  assert.match(read("src/class-mobile/AccountPage.tsx"), /BlockedUsersPage/);
+  assert.match(read("src/class-mobile/AccountPage.tsx"), /onOpenBlocked/, "Tài khoản & cài đặt có lối vào Người đã chặn");
+  assert.match(read("src/class-mobile/MobileShell.tsx"), /case 'blocked':\s+return <BlockedUsersPage \/>/, "khung mở BlockedUsersPage (1.6 S1: là màn của khung)");
   assert.match(read("src/class-mobile/AccountPage.tsx"), /SupportRow/);
   assert.match(read("src/class-mobile/ClassMobilePage.tsx"), /CommunityRulesGate/);
   assert.match(read("src/class-mobile/MoreSheet.tsx"), /story\/reports\?tab=class/);

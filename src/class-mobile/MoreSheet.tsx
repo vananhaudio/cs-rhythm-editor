@@ -2,7 +2,7 @@
 // công cụ âm nhạc, thư viện, kho bài giảng, TeamLab, Story, App học cũ… Không bỏ sót chức năng nào chỉ vì không ở tab.
 // Nguồn: danh mục Class Social (tools.ts, nav.ts) — cùng quyền: ToolRouteGate / my_tool_route_access quyết, ở đây CHỈ điều hướng.
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { BookMarked, BookOpen, Library, GraduationCap, Inbox, MessageCircle, ShieldCheck, Users, X, BookText, Mic } from 'lucide-react'
+import { BookMarked, BookOpen, Library, Inbox, MessageCircle, ShieldCheck, Users, X, BookText, Mic } from 'lucide-react'
 import { TOOLS } from '../class-social/tools'
 import { HT_ONLY_NOTE } from '../class-social/nav'
 import { thuVienAccess } from '../thuvien/masterLibrary'
@@ -93,7 +93,6 @@ export default function MoreSheet({ userId, isTeacher, onClose, onOpenQueue, onO
           <ul className="cm-list">
             <Row icon={<Mic />} title="Studio thu âm (TeamLab)" hint="Công cụ thu âm — không phải Ban Nhạc" href={teamlab.href} external={teamlab.external} />
             <Row icon={<BookText />} title="1001 Câu chuyện cùng Guitar" href="/story" />
-            <Row icon={<GraduationCap />} title="App học (giao diện cũ)" hint="Khoá học, luyện tập, buổi thực hành cùng Thầy" href="/learn" />
           </ul>
 
           {(zaloUrl || isTeacher) && <h2 className="cm-h2">{isTeacher ? 'Dành cho Thầy' : 'Hỗ trợ'}</h2>}

@@ -24,6 +24,8 @@ export type MobileView =
   | { kind: 'tabRoot' }        // màn gốc của tab (mỗi tab tự vẽ)
   | { kind: 'notices' }        // Thông báo (chuông phía trên)
   | { kind: 'account' }        // Tài khoản & cài đặt (trong tab Tôi)
+  | { kind: 'blocked' }        // Người đã chặn (từ Tài khoản & cài đặt)
+  | { kind: 'password' }       // Đổi mật khẩu (từ Tài khoản & cài đặt)
 
 export const ROOT: MobileView = { kind: 'tabRoot' }
 

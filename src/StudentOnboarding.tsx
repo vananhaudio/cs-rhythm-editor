@@ -86,7 +86,7 @@ const GUEST_STUDENT: Student = {
 type Step = 'welcome' | 'login' | 'portal'
 
 /** embed (Class Mobile V1): chỉ nhúng tab Học / Tập của App học vào khung 5 tab mới (không màn đăng nhập riêng, theo chiều cao khung chứa). */
-export default function StudentOnboarding({ embed }: { embed?: 'hoc' | 'tap' } = {}) {
+export default function StudentOnboarding({ embed, onDeepChange }: { embed?: 'hoc' | 'tap'; onDeepChange?: (deep: boolean) => void } = {}) {
   // Web /start = MÀN ĐĂNG NHẬP của Class: khách thấy form ngay; đã đăng nhập → về ?return= hoặc /me.
   // App native và /learn, /me (App học) giữ nguyên như cũ.
   const loginScreen = !embed && !IS_NATIVE_CAPACITOR && window.location.pathname.startsWith('/start')
@@ -465,6 +465,7 @@ export default function StudentOnboarding({ embed }: { embed?: 'hoc' | 'tap' } =
             guest={student.id === GUEST_STUDENT.id}
             onLoginRequired={() => setStep('login')}
             embed={embed}
+            onDeepChange={onDeepChange}
           />
         </div>
       )}

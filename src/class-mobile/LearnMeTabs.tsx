@@ -30,18 +30,20 @@ export function LearnTab({ classes, onOpenClass, onJoined }: {
   onJoined: (id: string) => void
 }) {
   const [seg, setSeg] = useState<LearnSeg>(readSeg)
+  const [deep, setDeep] = useState(false)   // "Khoá tự học" đang ở màn con (hành trình/bài): màn con tự có tiêu đề + nút quay lại → khung nhường chỗ
+  const embedDeep = deep && seg === 'courses'
   useEffect(() => { try { sessionStorage.setItem(SEG_KEY, seg) } catch { /* bỏ qua */ } }, [seg])
   return (
     <div className="cm-page">
-      <h1 className="cm-title">Lớp Học</h1>
-      <div className="cm-seg" role="group" aria-label="Học tập">
+      {!embedDeep && <h1 className="cm-title">Lớp Học</h1>}
+      {!embedDeep && <div className="cm-seg" role="group" aria-label="Học tập">
         {SEGS.map(s => <button key={s.id} type="button" aria-pressed={seg === s.id} onClick={() => setSeg(s.id)}>{s.label}</button>)}
-      </div>
-      {seg === 'mine' && <ClassesPage classes={classes} onOpenClass={onOpenClass} onJoined={onJoined} />}
+      </div>}
+      {seg === 'mine' && <ClassesPage classes={classes} onOpenClass={onOpenClass} onJoined={onJoined} hideTitle />}
       {seg !== 'mine' && (
-        <div className="cm-embed">
+        <div className={'cm-embed' + (embedDeep ? ' is-deep' : '')}>
           <Suspense fallback={<div className="cm-skeleton" role="status" aria-label="Đang tải" />}>
-            <StudentOnboarding key={seg} embed={seg === 'courses' ? 'hoc' : 'tap'} />
+            <StudentOnboarding key={seg} embed={seg === 'courses' ? 'hoc' : 'tap'} onDeepChange={setDeep} />
           </Suspense>
         </div>
       )}

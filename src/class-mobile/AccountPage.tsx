@@ -2,8 +2,7 @@
 // Dùng lại: ProfileEditDialog (tên + ảnh đại diện), useProfileMediaEditor (ảnh bìa), signOut (Supabase Auth hiện có),
 // /subscribe (gói — không viết lại thanh toán), /delete-account (xóa tài khoản — hàm delete_my_account hiện có).
 import { ChevronRight, CreditCard, ImagePlus, KeyRound, LogOut, Pencil, Trash2, UserX } from 'lucide-react'
-import { useState, type ReactNode } from 'react'
-import BlockedUsersPage from '../class-safety/BlockedUsersPage'
+import type { ReactNode } from 'react'
 import SupportRow from '../class-safety/SupportRow'
 import type { ClassIdentity } from '../class-social/useClassSession'
 import type { ImageKind } from '../class-social/profile/imageFile'
@@ -23,15 +22,15 @@ function Row({ icon, title, hint, onClick, href, danger, disabled }: {
   return <li>{href ? <a className={cls} href={href}>{body}</a> : <button type="button" className={cls} onClick={onClick}>{body}</button>}</li>
 }
 
-export default function AccountPage({ me, canEditAvatar, onEditMedia, onEditProfile, onSignOut }: {
+export default function AccountPage({ me, canEditAvatar, onEditMedia, onEditProfile, onSignOut, onOpenBlocked, onOpenPassword }: {
   me: ClassIdentity
   canEditAvatar: boolean
   onEditMedia: (kind: ImageKind) => void
   onEditProfile?: () => void
   onSignOut: () => void
+  onOpenBlocked: () => void
+  onOpenPassword: () => void
 }) {
-  const [sub, setSub] = useState<'blocked' | null>(null)
-  if (sub === 'blocked') return <BlockedUsersPage />
   return (
     <div className="cm-page">
       <h1 className="cm-title">Tài khoản & cài đặt</h1>
@@ -47,12 +46,12 @@ export default function AccountPage({ me, canEditAvatar, onEditMedia, onEditProf
       <h2 className="cm-h2">Gói và bảo mật</h2>
       <ul className="cm-list">
         <Row icon={<CreditCard />} title="Gói của tôi" hint="Gói học đang dùng" href="/subscribe" />
-        <Row icon={<KeyRound />} title="Đổi mật khẩu" hint="Trong App học → Tôi → Hồ sơ" href="/learn?tab=me" />
+        <Row icon={<KeyRound />} title="Đổi mật khẩu" hint="Đặt mật khẩu mới cho tài khoản" onClick={onOpenPassword} />
       </ul>
 
       <h2 className="cm-h2">An toàn cộng đồng</h2>
       <ul className="cm-list">
-        <Row icon={<UserX />} title="Người đã chặn" hint="Xem và bỏ chặn" onClick={() => setSub('blocked')} />
+        <Row icon={<UserX />} title="Người đã chặn" hint="Xem và bỏ chặn" onClick={onOpenBlocked} />
       </ul>
 
       <SupportRow />
