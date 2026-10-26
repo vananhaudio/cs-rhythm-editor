@@ -25,6 +25,7 @@ import type { PostSocial } from './PostCard'
 import FeedEntryCard from './FeedEntryCard'
 import JourneyView from '../../learning-thread/JourneyView'
 import { LearningIdentitySection } from '../identity/IdentityBadges'
+import SafetyMenu from '../../class-safety/SafetyMenu'
 
 const PROFILE_TABS = ['wall', 'journey'] as const
 
@@ -197,6 +198,9 @@ function OtherHeader({ profile, busy, onAct, onMessage }: {
               <button type="button" className="cs-btn cs-btn-soft cs-rel-btn" onClick={() => onMessage(profile.userId)}>
                 <MessageCircle size={18} aria-hidden="true" />Nhắn tin
               </button>
+            )}
+            {profile.relationship !== 'self' && (
+              <SafetyMenu label={`Tuỳ chọn về ${profile.name}`} kind="profile" targetId={profile.userId} userId={profile.userId} userName={profile.name} />
             )}
           </div>
         </div>

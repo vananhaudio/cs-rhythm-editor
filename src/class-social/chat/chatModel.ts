@@ -1,6 +1,7 @@
 // Trò chuyện V1a — domain THUẦN (không mạng/DOM) để test được.
 // Quyền nhắn tin do DB quyết (dm_* RPC); ở đây chỉ dựng giao diện từ dữ liệu server trả.
 import { safeImageUrl } from '../media/safeImageUrl'
+import { mapUgcError } from '../../class-safety/model'
 import { toShareRef, type ShareRef } from '../../share/shareRef'
 import { teamAssetUrl } from '../posts/postModel'
 
@@ -220,6 +221,8 @@ export const unreadLabel = (n: number) => `${n} cuộc trò chuyện chưa đọ
 
 /** Lỗi RPC → câu tiếng Việt, KHÔNG lộ chi tiết (mọi "không thuộc về mình" đều là "không tìm thấy") */
 export function chatErrorText(err: { code?: string; message?: string; status?: number } | null | undefined, offline: boolean, ctx?: 'share'): string {
+  const ugc = mapUgcError(err)
+  if (ugc) return ugc
   const msg = (err?.message ?? '').toLowerCase()
   if (offline || msg.includes('failed to fetch') || msg.includes('networkerror') || msg.includes('network request failed') || msg.includes('load failed')) {
     return 'Không có kết nối mạng. Kiểm tra mạng rồi thử lại.'

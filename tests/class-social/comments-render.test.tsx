@@ -63,7 +63,8 @@ test("Menu ⋯: tác giả thấy Xoá; người khác (học sinh) không có m
   const mine = renderToStaticMarkup(<CommentItem c={toComment(crow({ is_mine: true }))!} canModerate={false} now={NOW} onDelete={() => {}} onModerate={() => {}} />);
   assert.match(mine, /aria-label="Tuỳ chọn bình luận"/);
   const other = renderToStaticMarkup(<CommentItem c={toComment(crow({}))!} canModerate={false} now={NOW} onDelete={() => {}} onModerate={() => {}} />);
-  assert.ok(!other.includes("Tuỳ chọn bình luận"), "học sinh không thấy quyền kiểm duyệt");
+  // UGC Safety V1: người khác có menu Báo cáo/Chặn nhưng KHÔNG có quyền kiểm duyệt (Ẩn bình luận)
+  assert.ok(!other.includes("Ẩn bình luận") && !other.includes("Xoá bình luận"), "học sinh không thấy quyền kiểm duyệt");
   const mod = renderToStaticMarkup(<CommentItem c={toComment(crow({}))!} canModerate={true} now={NOW} onDelete={() => {}} onModerate={() => {}} />);
   assert.match(mod, /aria-label="Tuỳ chọn bình luận"/);
   const hidden = renderToStaticMarkup(<CommentItem c={toComment(crow({ is_hidden: true }))!} canModerate={true} now={NOW} onDelete={() => {}} onModerate={() => {}} />);
@@ -102,7 +103,8 @@ test("Thẻ bài: Thầy có menu ⋯ (Ẩn bài), học sinh không; bài đã 
   const [p] = toFeedPosts([row]);
   const st = renderToStaticMarkup(<PostCard post={p} now={NOW} social={social(false)} />);
   const th = renderToStaticMarkup(<PostCard post={p} now={NOW} social={social(true)} />);
-  assert.ok(!st.includes("Tuỳ chọn bài")); assert.match(th, /aria-label="Tuỳ chọn bài"/);
+  // UGC Safety V1: học sinh có menu Báo cáo/Chặn (menu chỉ mở khi bấm — mục "Ẩn bài" của Thầy không có trong HTML tĩnh của cả hai)
+  assert.match(st, /aria-label="Tuỳ chọn bài"/); assert.match(th, /aria-label="Tuỳ chọn bài"/);
   assert.match(st, /Ghi chú cho Thầy/); assert.ok(!st.includes("Nội dung"));
   assert.ok(st.indexOf("cs-post-media") < st.indexOf("cs-post-note"), "video trước, ghi chú sau");
   const [h] = toFeedPosts([{ ...row, is_hidden: true }]);

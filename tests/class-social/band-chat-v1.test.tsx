@@ -142,7 +142,7 @@ test("API: id band:<uuid> đi qua bandchat_*; id cá nhân đi qua dm_* (không 
   await fetchMessages(DM);
   await sendMessage(DM, "hi");
   await markRead(DM, 2);
-  assert.deepEqual(calls.map(c => c.fn), ["bandchat_messages", "bandchat_send", "bandchat_mark_read", "dm_messages", "dm_send", "dm_mark_read"]);
+  assert.deepEqual(calls.map(c => c.fn), ["bandchat_messages_safe", "bandchat_send", "bandchat_mark_read", "dm_messages_safe", "dm_send", "dm_mark_read"]);
   assert.deepEqual(calls[0].args, { p_band: BAND, p_after_seq: 3, p_before_seq: null, p_limit: 100 });
   assert.deepEqual(calls[1].args, { p_band: BAND, p_body: "chào" });
   assert.deepEqual(calls[3].args, { p_conversation: DM, p_after_seq: null, p_before_seq: null, p_limit: 30 });

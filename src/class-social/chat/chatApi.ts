@@ -51,7 +51,7 @@ export async function fetchBandMembers(conversationId: string): Promise<Result<B
 /** Tin của một hội thoại. afterSeq → chỉ tin mới (polling); beforeSeq → trang cũ hơn; không có → trang mới nhất */
 export async function fetchMessages(conversationId: string, opts: { afterSeq?: number; beforeSeq?: number; limit?: number } = {}): Promise<Result<ChatMessage[]>> {
   if (isBandConversation(conversationId)) {
-    const b = await rpc<BandMessageRow[]>('bandchat_messages', {
+    const b = await rpc<BandMessageRow[]>('bandchat_messages_safe', {
       p_band: bandIdOf(conversationId),
       p_after_seq: opts.afterSeq ?? null,
       p_before_seq: opts.beforeSeq ?? null,
@@ -59,7 +59,7 @@ export async function fetchMessages(conversationId: string, opts: { afterSeq?: n
     })
     return b.ok ? { ok: true, value: toBandMessages(b.value) } : b
   }
-  const r = await rpc<MessageRow[]>('dm_messages', {
+  const r = await rpc<MessageRow[]>('dm_messages_safe', {
     p_conversation: conversationId,
     p_after_seq: opts.afterSeq ?? null,
     p_before_seq: opts.beforeSeq ?? null,

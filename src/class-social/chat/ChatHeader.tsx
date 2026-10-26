@@ -1,8 +1,9 @@
+import type { ReactNode } from 'react'
 import { ArrowLeft } from 'lucide-react'
 import { Avatar } from '../ui'
 
 /** Đầu khung hội thoại: ← (chỉ hiện trên điện thoại) + avatar + tên (bấm → trang cá nhân) */
-export default function ChatHeader({ name, avatarUrl, isTeacher, onBack, onOpenProfile, tag, actionLabel }: {
+export default function ChatHeader({ name, avatarUrl, isTeacher, onBack, onOpenProfile, tag, actionLabel, menu }: {
   name: string | null
   avatarUrl: string | null
   isTeacher?: boolean
@@ -12,6 +13,8 @@ export default function ChatHeader({ name, avatarUrl, isTeacher, onBack, onOpenP
   tag?: string
   /** Nhãn đọc cho nút bấm ở tên (mặc định: trang cá nhân) */
   actionLabel?: string
+  /** Menu "⋯" bên phải (Báo cáo / Chặn người đối thoại) */
+  menu?: ReactNode
 }) {
   return (
     <header className="cs-chat-head">
@@ -29,6 +32,7 @@ export default function ChatHeader({ name, avatarUrl, isTeacher, onBack, onOpenP
             </span>
           </button>
         )}
+      {menu && <div style={{ marginLeft: 'auto' }}>{menu}</div>}
     </header>
   )
 }

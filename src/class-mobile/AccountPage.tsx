@@ -1,8 +1,10 @@
 // Tài khoản & cài đặt (trong tab Tôi) — QUẢN LÝ TÀI KHOẢN, tách khỏi hồ sơ cộng đồng (ProfilePage).
 // Dùng lại: ProfileEditDialog (tên + ảnh đại diện), useProfileMediaEditor (ảnh bìa), signOut (Supabase Auth hiện có),
 // /subscribe (gói — không viết lại thanh toán), /delete-account (xóa tài khoản — hàm delete_my_account hiện có).
-import { ChevronRight, CreditCard, ImagePlus, KeyRound, LogOut, Pencil, Trash2 } from 'lucide-react'
-import type { ReactNode } from 'react'
+import { ChevronRight, CreditCard, ImagePlus, KeyRound, LogOut, Pencil, Trash2, UserX } from 'lucide-react'
+import { useState, type ReactNode } from 'react'
+import BlockedUsersPage from '../class-safety/BlockedUsersPage'
+import SupportRow from '../class-safety/SupportRow'
 import type { ClassIdentity } from '../class-social/useClassSession'
 import type { ImageKind } from '../class-social/profile/imageFile'
 
@@ -28,6 +30,8 @@ export default function AccountPage({ me, canEditAvatar, onEditMedia, onEditProf
   onEditProfile?: () => void
   onSignOut: () => void
 }) {
+  const [sub, setSub] = useState<'blocked' | null>(null)
+  if (sub === 'blocked') return <BlockedUsersPage onBack={() => setSub(null)} />
   return (
     <div className="cm-page">
       <h1 className="cm-title">Tài khoản & cài đặt</h1>
@@ -45,6 +49,13 @@ export default function AccountPage({ me, canEditAvatar, onEditMedia, onEditProf
         <Row icon={<CreditCard />} title="Gói của tôi" hint="Gói học đang dùng" href="/subscribe" />
         <Row icon={<KeyRound />} title="Đổi mật khẩu" hint="Trong App học → Tôi → Hồ sơ" href="/learn?tab=me" />
       </ul>
+
+      <h2 className="cm-h2">An toàn cộng đồng</h2>
+      <ul className="cm-list">
+        <Row icon={<UserX />} title="Người đã chặn" hint="Xem và bỏ chặn" onClick={() => setSub('blocked')} />
+      </ul>
+
+      <SupportRow />
 
       <h2 className="cm-h2">Thông báo</h2>
       <ul className="cm-list">

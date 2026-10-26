@@ -4,6 +4,8 @@
 // Chỉ thầy/admin xem được (RLS cũng chặn ở tầng DB).
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../supabase'
+import { listClassReports, resolveClassReport, type ClassReport } from '../class-safety/api'
+import { REASON_LABEL as CLASS_REASON, REPORT_KIND_LABEL, isReportKind, type ResolveAction } from '../class-safety/model'
 
 const REASON_LABELS: Record<string, string> = {
   'khong-phu-hop': 'Nội dung không phù hợp',
@@ -30,6 +32,9 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<'new' | 'done'>('new')
   const [msg, setMsg] = useState('')
+  // Tab nguồn: Câu chuyện (story_reports, giữ nguyên) | Class (class_reports — UGC Safety V1)
+  const [source, setSource] = useState<'story' | 'class'>(() =>
+    typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('tab') === 'class' ? 'class' : 'story')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -91,12 +96,18 @@ export default function ReportsPage() {
       </header>
 
       <div className="rpg-tabs">
+        <button className={source === 'story' ? 'on' : ''} onClick={() => setSource('story')}>Câu chuyện</button>
+        <button className={source === 'class' ? 'on' : ''} onClick={() => setSource('class')}>Class</button>
+      </div>
+      {source === 'class' && <ClassReports />}
+      {source === 'story' && <div className="rpg-tabs">
         <button className={tab === 'new' ? 'on' : ''} onClick={() => setTab('new')}>
           Chờ xử lý{newCount > 0 && <span className="rpg-badge">{newCount}</span>}
         </button>
         <button className={tab === 'done' ? 'on' : ''} onClick={() => setTab('done')}>Đã xử lý</button>
-      </div>
+      </div>}
 
+      {source === 'story' && <>
       {msg && <div className="rpg-msg" onClick={() => setMsg('')}>{msg}</div>}
 
       {loading ? <div className="rpg-note">Đang tải…</div>
@@ -132,7 +143,79 @@ export default function ReportsPage() {
             </div>
           </article>
         ))}
+      </>}
     </div>
+  )
+}
+
+/** Tab "Class": báo cáo UGC của Class (class_reports) — chỉ Thầy; cùng cam kết 24 giờ. */
+function ClassReports() {
+  const [tab, setTab] = useState<'new' | 'done'>('new')
+  const [rows, setRows] = useState<ClassReport[]>([])
+  const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading')
+  const [err, setErr] = useState('')
+  const [msg, setMsg] = useState('')
+  const [busyId, setBusyId] = useState<number | null>(null)
+
+  const [rev, setRev] = useState(0)
+  const reload = () => { setState('loading'); setRev(x => x + 1) }
+  useEffect(() => {
+    let alive = true
+    void listClassReports(tab === 'new' ? 'new' : 'all').then(r => {
+      if (!alive) return
+      if (r.ok) { setRows(tab === 'new' ? r.value : r.value.filter(x => x.status !== 'new')); setState('ready') }
+      else { setErr(r.message); setState('error') }
+    })
+    return () => { alive = false }
+  }, [tab, rev])
+
+  const act = async (r: ClassReport, action: ResolveAction, ask?: string) => {
+    if (busyId !== null) return
+    if (ask && !confirm(ask)) return
+    setBusyId(r.id); setMsg('')
+    const res = await resolveClassReport(r.id, action)
+    setBusyId(null)
+    setMsg(res.ok ? 'Đã xử lý báo cáo.' : res.message)
+    if (res.ok) reload()
+  }
+
+  return (
+    <>
+      <div className="rpg-tabs">
+        <button className={tab === 'new' ? 'on' : ''} onClick={() => { setState('loading'); setTab('new') }}>Chờ xử lý</button>
+        <button className={tab === 'done' ? 'on' : ''} onClick={() => { setState('loading'); setTab('done') }}>Đã xử lý</button>
+      </div>
+      <p className="rpg-meta" style={{ marginBottom: 12 }}>Cam kết: xem lại báo cáo Class <b>trong vòng 24 giờ</b>.</p>
+      {msg && <div className="rpg-msg" onClick={() => setMsg('')}>{msg}</div>}
+      {state === 'loading' && <div className="rpg-note">Đang tải…</div>}
+      {state === 'error' && <div className="rpg-note">{err} <button className="rpg-btn" onClick={reload}>Thử lại</button></div>}
+      {state === 'ready' && rows.length === 0 && (
+        <div className="rpg-empty">{tab === 'new' ? '🌿 Không có báo cáo Class nào đang chờ.' : 'Chưa có báo cáo Class nào được xử lý.'}</div>
+      )}
+      {state === 'ready' && rows.map(r => (
+        <article key={r.id} className="rpg-card">
+          <div className="rpg-reason">{CLASS_REASON[r.reason] ?? r.reason}</div>
+          <h2>{isReportKind(r.kind) ? REPORT_KIND_LABEL[r.kind] : r.kind}{r.targetUserName ? ` · ${r.targetUserName}` : ''}</h2>
+          <div className="rpg-meta">
+            {new Date(r.createdAt).toLocaleString('vi-VN')}{r.reporterName ? ` · người báo: ${r.reporterName}` : ''}
+            {r.status !== 'new' && <> · {r.status === 'dismissed' ? 'đã bỏ qua' : 'đã xử lý'}{r.handledAction ? ` (${r.handledAction})` : ''}</>}
+          </div>
+          {r.excerpt && <p className="rpg-note-text">“{r.excerpt}”</p>}
+          {r.note && <p className="rpg-note-text">Ghi chú: {r.note}</p>}
+          {r.status === 'new' && (
+            <div className="rpg-actions">
+              <button className="rpg-btn rpg-btn-danger" disabled={busyId === r.id} onClick={() => void act(r, 'hide', 'Ẩn nội dung này?')}>Ẩn nội dung</button>
+              {r.targetUserId && (
+                <button className="rpg-btn rpg-btn-danger" disabled={busyId === r.id}
+                  onClick={() => void act(r, 'hide_and_block', 'Ẩn nội dung và hạn chế tài khoản người đăng? Họ sẽ không đăng được nội dung mới.')}>Ẩn và chặn người đăng</button>
+              )}
+              <button className="rpg-btn" disabled={busyId === r.id} onClick={() => void act(r, 'handled')}>Đã xử lý</button>
+              <button className="rpg-btn" disabled={busyId === r.id} onClick={() => void act(r, 'dismiss')}>Bỏ qua</button>
+            </div>
+          )}
+        </article>
+      ))}
+    </>
   )
 }
 
