@@ -6,7 +6,7 @@ import BlockConfirm from './BlockConfirm'
 
 type St = { s: 'loading' } | { s: 'error'; msg: string } | { s: 'ready'; items: BlockedUser[] }
 
-export default function BlockedUsersPage({ onBack }: { onBack: () => void }) {
+export default function BlockedUsersPage() {
   const [st, setSt] = useState<St>({ s: 'loading' })
   const [target, setTarget] = useState<BlockedUser | null>(null)
   const [rev, setRev] = useState(0)
@@ -19,7 +19,6 @@ export default function BlockedUsersPage({ onBack }: { onBack: () => void }) {
 
   return (
     <div className="cm-page">
-      <button type="button" className="csafe-mini" onClick={onBack}>‹ Quay lại</button>
       <h1 className="cm-title">Người đã chặn</h1>
       <p className="cm-note" style={{ marginTop: 0 }}>Bạn không thấy nội dung của những người này (và họ không thấy của bạn). Bỏ chặn để thấy lại.</p>
       {st.s === 'loading' && <p className="cm-note" role="status">Đang tải…</p>}

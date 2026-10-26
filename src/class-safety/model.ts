@@ -104,13 +104,12 @@ export function gateState(r: { ok: true; status: UgcStatus } | { ok: false }): G
 export const SUPPORT_ZALO_URL = 'https://zalo.me/vananhguitarist'
 export const SUPPORT_EMAIL = 'vananhaudio@gmail.com'
 export const PRIVACY_URL = 'https://timming.vananhaudio.com/tvaprivacy'
-export const REPORT_RESPONSE_HOURS = 24
 
 export const COMMUNITY_RULES: { title: string; body: string }[] = [
   { title: 'Tôn trọng nhau', body: 'Không đăng nội dung phản cảm, khiêu dâm, bạo lực, kích động thù ghét. Không quấy rối, công kích hay xúc phạm người khác.' },
   { title: 'Không spam', body: 'Không quảng cáo, gửi tin rác, lặp nội dung hoặc đính kèm liên kết lừa đảo.' },
   { title: 'Báo cáo và chặn', body: 'Thấy nội dung không phù hợp, bấm nút ⋯ để Báo cáo hoặc Chặn người dùng. Người bị chặn không còn xuất hiện với bạn.' },
-  { title: 'Thầy xử lý trong 24 giờ', body: `Thầy xem lại mọi báo cáo trong vòng ${REPORT_RESPONSE_HOURS} giờ và gỡ nội dung, hạn chế tài khoản nếu vi phạm.` },
+  { title: 'Thầy xem xét báo cáo', body: 'Thầy xem lại các báo cáo và gỡ nội dung, hạn chế tài khoản nếu vi phạm.' },
 ]
 
 // ── Điểm đặt "⋯ Báo cáo / Chặn" (chốt chặn cấu trúc trong test: file phải import từ class-safety) ──

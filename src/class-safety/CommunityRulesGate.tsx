@@ -2,7 +2,7 @@
 // Chỉ hỏi 1 lần (server nhớ accepted_version). Lỗi mạng / RPC chưa có → hiện lỗi + Thử lại (+ Đăng xuất), KHÔNG khoá vĩnh viễn.
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { acceptUgc, fetchUgcStatus } from './api'
-import { COMMUNITY_RULES, PRIVACY_URL, REPORT_RESPONSE_HOURS, SUPPORT_EMAIL, SUPPORT_ZALO_URL, gateState, type UgcStatus } from './model'
+import { COMMUNITY_RULES, PRIVACY_URL, SUPPORT_EMAIL, SUPPORT_ZALO_URL, gateState, type UgcStatus } from './model'
 
 type St = { s: 'loading' } | { s: 'error'; msg: string } | { s: 'needs'; status: UgcStatus } | { s: 'ok' }
 
@@ -55,7 +55,7 @@ export default function CommunityRulesGate({ children, onSignOut }: { children: 
             {COMMUNITY_RULES.map(r => <div key={r.title} className="csafe-rule"><b>{r.title}</b><span>{r.body}</span></div>)}
             <p className="csafe-sub" style={{ marginTop: 12 }}>
               Cần hỗ trợ? Nhắn <a href={SUPPORT_ZALO_URL} target="_blank" rel="noopener noreferrer">Zalo của Thầy</a> hoặc email{' '}
-              <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>. Báo cáo được xử lý trong {REPORT_RESPONSE_HOURS} giờ.{' '}
+              <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.{' '}
               <a href={PRIVACY_URL} target="_blank" rel="noopener noreferrer">Chính sách bảo mật</a>.
             </p>
             {err && <div className="csafe-err" role="alert">{err}</div>}

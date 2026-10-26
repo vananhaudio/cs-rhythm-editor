@@ -61,7 +61,9 @@ test("quy tắc cộng đồng + liên hệ chính thức", () => {
   assert.equal(SUPPORT_ZALO_URL, "https://zalo.me/vananhguitarist");
   assert.equal(SUPPORT_EMAIL, "vananhaudio@gmail.com");
   assert.equal(PRIVACY_URL, "https://timming.vananhaudio.com/tvaprivacy");
-  assert.ok(COMMUNITY_RULES.some(r => /24 giờ/.test(r.title)));
+  assert.ok(COMMUNITY_RULES.some(r => /xem xét báo cáo/.test(r.title)));
+  // Không cam kết thời hạn xử lý báo cáo (Owner 2026-10-26)
+  assert.ok(!COMMUNITY_RULES.some(r => /24 giờ/.test(r.title + r.body)));
   assert.ok(isResolveAction("hide_and_block") && !isResolveAction("delete"));
 });
 

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { submitReport } from './api'
-import { NOTE_MAX, REPORT_KIND_LABEL, REPORT_REASONS, REPORT_RESPONSE_HOURS, type ReportKind, type ReportReason } from './model'
+import { NOTE_MAX, REPORT_KIND_LABEL, REPORT_REASONS, type ReportKind, type ReportReason } from './model'
 
 export default function ReportSheet({ kind, targetId, onClose }: { kind: ReportKind; targetId: string; onClose: () => void }) {
   const [reason, setReason] = useState<ReportReason | ''>('')
@@ -35,13 +35,13 @@ export default function ReportSheet({ kind, targetId, onClose }: { kind: ReportK
           <>
             <div className="csafe-ok" aria-hidden="true">✓</div>
             <h2>Cảm ơn bạn đã báo cáo</h2>
-            <p className="csafe-sub">Thầy sẽ xem lại <b>trong vòng {REPORT_RESPONSE_HOURS} giờ</b> và xử lý nếu nội dung vi phạm quy tắc cộng đồng.</p>
+            <p className="csafe-sub">Thầy sẽ xem lại và xử lý nếu nội dung vi phạm quy tắc cộng đồng.</p>
             <button type="button" className="csafe-btn primary" onClick={onClose}>Đóng</button>
           </>
         ) : (
           <>
             <h2>Báo cáo {REPORT_KIND_LABEL[kind]}</h2>
-            <p className="csafe-sub">Chọn lý do. Thầy sẽ xem lại trong vòng {REPORT_RESPONSE_HOURS} giờ.</p>
+            <p className="csafe-sub">Chọn lý do. Thầy sẽ xem lại báo cáo của bạn.</p>
             <div className="csafe-reasons" role="radiogroup" aria-label="Lý do báo cáo">
               {REPORT_REASONS.map(r => (
                 <label key={r.key} className={'csafe-reason' + (reason === r.key ? ' on' : '')}>

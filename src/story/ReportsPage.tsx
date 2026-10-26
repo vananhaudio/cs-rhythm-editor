@@ -92,7 +92,7 @@ export default function ReportsPage() {
       <header className="rpg-head">
         <a href="/story" className="rpg-back">← Tạp chí</a>
         <h1>Báo cáo nội dung</h1>
-        <p>Cam kết với người đọc: xem lại <b>trong vòng 24 giờ</b>.</p>
+        <p>Cam kết với người đọc: xem lại và xử lý báo cáo nghiêm túc.</p>
       </header>
 
       <div className="rpg-tabs">
@@ -148,7 +148,7 @@ export default function ReportsPage() {
   )
 }
 
-/** Tab "Class": báo cáo UGC của Class (class_reports) — chỉ Thầy; cùng cam kết 24 giờ. */
+/** Tab "Class": báo cáo UGC của Class (class_reports) — chỉ Thầy. */
 function ClassReports() {
   const [tab, setTab] = useState<'new' | 'done'>('new')
   const [rows, setRows] = useState<ClassReport[]>([])
@@ -185,7 +185,7 @@ function ClassReports() {
         <button className={tab === 'new' ? 'on' : ''} onClick={() => { setState('loading'); setTab('new') }}>Chờ xử lý</button>
         <button className={tab === 'done' ? 'on' : ''} onClick={() => { setState('loading'); setTab('done') }}>Đã xử lý</button>
       </div>
-      <p className="rpg-meta" style={{ marginBottom: 12 }}>Cam kết: xem lại báo cáo Class <b>trong vòng 24 giờ</b>.</p>
+      <p className="rpg-meta" style={{ marginBottom: 12 }}>Cam kết: xem lại và xử lý báo cáo Class nghiêm túc.</p>
       {msg && <div className="rpg-msg" onClick={() => setMsg('')}>{msg}</div>}
       {state === 'loading' && <div className="rpg-note">Đang tải…</div>}
       {state === 'error' && <div className="rpg-note">{err} <button className="rpg-btn" onClick={reload}>Thử lại</button></div>}

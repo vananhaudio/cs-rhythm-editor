@@ -101,7 +101,7 @@ export default function MoreSheet({ userId, isTeacher, onClose, onOpenQueue, onO
             {zaloUrl && <Row icon={<MessageCircle />} title="Nhắn Thầy qua Zalo" hint="Trò chuyện Thầy ↔ học viên trong Class chưa mở" href={zaloUrl} external />}
             {isTeacher && <Row icon={<Inbox />} title="Hàng đợi Trả bài / Hỏi bài" onClick={() => { onClose(); onOpenQueue() }} />}
             {isTeacher && <Row icon={<Users />} title="Quản lý Band (tuyển thành viên)" onClick={() => { onClose(); onOpenBands() }} />}
-            {isTeacher && <Row icon={<ShieldCheck />} title="Báo cáo Class" hint="Báo cáo nội dung cần xử lý trong 24 giờ" href="/story/reports?tab=class" />}
+            {isTeacher && <Row icon={<ShieldCheck />} title="Báo cáo Class" hint="Báo cáo nội dung cần xem xét" href="/story/reports?tab=class" />}
             {isTeacher && <Row icon={<ShieldCheck />} title="Trang quản trị" hint="Mở trên giao diện máy tính" href="/admin" />}
           </ul>
         </div>

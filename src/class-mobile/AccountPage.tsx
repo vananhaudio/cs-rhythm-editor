@@ -31,7 +31,7 @@ export default function AccountPage({ me, canEditAvatar, onEditMedia, onEditProf
   onSignOut: () => void
 }) {
   const [sub, setSub] = useState<'blocked' | null>(null)
-  if (sub === 'blocked') return <BlockedUsersPage onBack={() => setSub(null)} />
+  if (sub === 'blocked') return <BlockedUsersPage />
   return (
     <div className="cm-page">
       <h1 className="cm-title">Tài khoản & cài đặt</h1>
