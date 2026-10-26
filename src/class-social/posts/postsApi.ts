@@ -31,7 +31,7 @@ export async function fetchFeedPage(cursor?: { createdAt: string; id: string }):
 /** Feed /me (P2): bài Social (đúng luật class_feed) + thread community — một thread = một mục, theo hoạt động mới nhất. */
 export async function fetchSocialFeedPage(cursor?: { createdAt: string; key: string }): Promise<Result<{ posts: FeedEntry[]; hasMore: boolean }>> {
   try {
-    const { data, error, status } = await supabase.rpc('social_feed', {
+    const { data, error, status } = await supabase.rpc('social_feed_safe', {
       p_before: cursor?.createdAt ?? null,
       p_before_key: cursor?.key ?? null,
       p_limit: FEED_PAGE,
@@ -54,7 +54,7 @@ export async function fetchSocialFeedPage(cursor?: { createdAt: string; key: str
 export async function fetchScopedFeedPage(scope: FeedScope, cursor?: { createdAt: string; key: string }): Promise<Result<{ posts: FeedEntry[]; hasMore: boolean }>> {
   if (scope === 'for_you') return fetchSocialFeedPage(cursor)
   try {
-    const { data, error, status } = await supabase.rpc('social_feed_scoped', {
+    const { data, error, status } = await supabase.rpc('social_feed_scoped_safe', {
       p_scope: scope,
       p_before: cursor?.createdAt ?? null,
       p_before_key: cursor?.key ?? null,

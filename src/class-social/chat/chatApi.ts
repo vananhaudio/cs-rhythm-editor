@@ -29,7 +29,7 @@ async function rpc<T>(fn: string, args: Record<string, unknown>, ctx?: 'share'):
 /** Hội thoại cá nhân (dm_*) + nhóm Band (bandchat_*). Nhóm Band là phần BỔ SUNG: lỗi/chưa có tính năng ở server → danh sách cá nhân vẫn hiện bình thường. */
 export async function fetchConversations(limit = 50): Promise<Result<ConversationItem[]>> {
   const [r, b] = await Promise.all([
-    rpc<ConversationRow[]>('dm_conversations', { p_limit: limit }),
+    rpc<ConversationRow[]>('dm_conversations_safe', { p_limit: limit }),
     rpc<BandRoomRow[]>('bandchat_rooms', { p_limit: limit }),
   ])
   if (!r.ok) return r

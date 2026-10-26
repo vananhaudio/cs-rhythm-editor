@@ -152,11 +152,11 @@ test("API: danh sách = cá nhân + nhóm Band; bandchat_* lỗi/chưa có → c
   const { fetchConversations, fetchUnreadCount } = await loadApi();
   const dmRow = { conversation_id: DM, peer_id: USER, peer_name: "Bình", last_seq: 1, last_body: "hi", last_at: "2026-10-15T01:00:00Z", can_send: true, unread: 1 };
 
-  use(fn => fn === "dm_conversations" ? { data: [dmRow] } : fn === "bandchat_rooms" ? { data: [room()] } : { data: 0 });
+  use(fn => fn === "dm_conversations_safe" ? { data: [dmRow] } : fn === "bandchat_rooms" ? { data: [room()] } : { data: 0 });
   let r = await fetchConversations();
   assert.ok(r.ok && r.value.map(c => c.kind).sort().join() === "band,dm");
 
-  use(fn => fn === "dm_conversations" ? { data: [dmRow] } : { error: { code: "PGRST202", message: "Could not find the function public.bandchat_rooms" } });
+  use(fn => fn === "dm_conversations_safe" ? { data: [dmRow] } : { error: { code: "PGRST202", message: "Could not find the function public.bandchat_rooms" } });
   r = await fetchConversations();
   assert.ok(r.ok && r.value.length === 1 && r.value[0].kind === "dm", "chưa migrate Band Chat → chat cá nhân không bị ảnh hưởng");
 
@@ -168,7 +168,7 @@ test("API: danh sách = cá nhân + nhóm Band; bandchat_* lỗi/chưa có → c
   u = await fetchUnreadCount();
   assert.ok(u.ok && u.value === 5, "badge = hội thoại cá nhân + nhóm Band chưa đọc");
 
-  use(fn => fn === "dm_conversations" ? { error: { code: "XX000", message: "boom" } } : { data: [room()] });
+  use(fn => fn === "dm_conversations_safe" ? { error: { code: "XX000", message: "boom" } } : { data: [room()] });
   r = await fetchConversations();
   assert.equal(r.ok, false, "lỗi phần cá nhân vẫn là lỗi (không giả danh sách)");
 });

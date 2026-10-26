@@ -128,6 +128,9 @@ export const SAFE_READ_REPLACEMENTS: Record<string, string> = {
   class_comments_for_posts: 'class_comments_for_posts_safe',
   dm_messages: 'dm_messages_safe',
   bandchat_messages: 'bandchat_messages_safe',
+  dm_conversations: 'dm_conversations_safe',
+  social_feed: 'social_feed_safe',
+  social_feed_scoped: 'social_feed_scoped_safe',
 }
 
 /** Kind báo cáo cho tin nhắn chat: Band hay DM */
