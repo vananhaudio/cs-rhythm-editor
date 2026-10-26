@@ -111,3 +111,17 @@
 
 /* Phân đoạn "Lớp của tôi" đã nêu tên nhóm → bỏ tiêu đề lặp */
 .cm-root .cs-classes-mine .cs-feed-title { display: none; }
+
+/* Nền trang + #root toàn cục của app (viền 2 bên, nền kem) không lọt vào khung Class Mobile */
+html:has(.cm-root), body:has(.cm-root) { background: #f2f2f7; }
+body:has(.cm-root) #root { border: 0; width: 100%; max-width: none; }
+@media (prefers-color-scheme: dark) { html:has(.cm-root), body:has(.cm-root) { background: #0e0e12; } }
+
+/* Màn hẹp (iPhone SE): gợi ý chia sẻ không xuống dòng giữa chữ */
+.cm-root .cs-share-chip { white-space: nowrap; }
+@media (max-width: 360px) { .cm-root .cs-share-chip { padding: 6px 4px; font-size: 0.75rem; gap: 3px; } }
+
+/* Chế độ tối: Học/Tập nhúng dùng màu cố định của App học cũ → đặt trên nền sáng để chữ luôn đọc được */
+@media (prefers-color-scheme: dark) {
+  .cm-root .cm-embed { margin: 0; background: #f2f2f7; border-radius: 14px; padding: 8px 0 12px; overflow: hidden; }
+}

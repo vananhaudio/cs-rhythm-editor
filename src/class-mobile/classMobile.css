@@ -22,8 +22,7 @@
 .cm-top {
   position: sticky; top: 0; z-index: 30;
   padding-top: env(safe-area-inset-top, 0px);
-  background: color-mix(in srgb, var(--cs-surface) 86%, transparent);
-  -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px);
+  background: var(--cs-surface);
   border-bottom: 0.5px solid var(--cs-border);
 }
 .cm-top-row { height: var(--cm-top-h); display: flex; align-items: center; gap: 2px; padding: 0 6px 0 16px; }
