@@ -23,9 +23,9 @@ export function TopBar({ noticeCount, onHome, onNotices, onMore }: {
   return (
     <header className="cm-top">
       <div className="cm-top-row">
-        <button type="button" className="cm-brand" onClick={onHome} aria-label="Class — về Trang chủ">
+        <button type="button" className="cm-brand" onClick={onHome} aria-label="Thầy Văn Anh Guitar — về Trang chủ">
           <img src="/logo-green.svg" alt="" width={28} height={27} />
-          <span>Class</span>
+          <span>Thầy Văn Anh Guitar</span>
         </button>
         <div className="cm-top-spacer" />
         <button type="button" className="cm-icon-btn" onClick={onNotices}

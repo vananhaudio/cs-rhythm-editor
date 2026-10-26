@@ -26,8 +26,9 @@
   border-bottom: 0.5px solid var(--cs-border);
 }
 .cm-top-row { height: var(--cm-top-h); display: flex; align-items: center; gap: 2px; padding: 0 6px 0 16px; }
-.cm-brand { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 1.1875rem; letter-spacing: -0.02em; color: var(--cs-text); background: none; border: 0; padding: 0; min-height: 44px; cursor: pointer; }
-.cm-brand img { width: 24px; height: 23px; display: block; }
+.cm-brand { display: flex; align-items: center; gap: 8px; min-width: 0; font-weight: 800; font-size: clamp(0.9375rem, 4.6vw, 1.1875rem); letter-spacing: -0.02em; color: var(--cs-text); background: none; border: 0; padding: 0; min-height: 44px; cursor: pointer; }
+.cm-brand img { width: 24px; height: 23px; display: block; flex-shrink: 0; }
+.cm-brand span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cm-top-spacer { flex: 1; }
 .cm-icon-btn {
   position: relative; width: 44px; height: 44px; border: 0; background: transparent; border-radius: 50%;
@@ -162,3 +163,6 @@
 /* ── V1.2: bàn phím mở → ẩn thanh tab, trả chỗ cho ô nhập ── */
 .cm-root.is-keyboard .cm-tabbar { display: none; }
 .cm-root.is-keyboard { padding-bottom: 0; }
+
+/* Màn đăng nhập trong khung Class Mobile: hiện tên thương hiệu cạnh logo (CSS web ẩn chữ ở ≤440px — chỉ ghi đè trong phạm vi Class Mobile) */
+@media (max-width: 440px) { .cs-topbar .cs-brand .cs-brand-text { display: inline; font-size: clamp(0.875rem, 4vw, 1rem); } }
