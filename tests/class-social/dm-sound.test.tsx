@@ -98,7 +98,7 @@ test("Phạm vi: một request gộp, fallback khi bị cắt trần, không DB/
   assert.match(hook, /live\.watchUnread\(setDm\)/, "live không có hộp thư vẫn chạy badge cũ");
   assert.equal(/setInterval|setTimeout/.test(hook), false);
   const api = code("src/class-social/chat/chatApi.ts");
-  assert.equal([...api.matchAll(/rpc<[^>]*>\('([a-z_]+)'/g)].map(m => m[1]).filter(n => n.startsWith("dm_") && !["dm_conversations", "dm_unread_count", "dm_messages", "dm_send", "dm_mark_read", "dm_start", "dm_can_message", "dm_find", "dm_share"].includes(n)).length, 0, "không RPC DM mới");
+  assert.equal([...api.matchAll(/rpc<[^>]*>\('([a-z_]+)'/g)].map(m => m[1]).filter(n => n.startsWith("dm_") && !["dm_conversations", "dm_unread_count", "dm_messages_safe", "dm_send", "dm_mark_read", "dm_start", "dm_can_message", "dm_find", "dm_share"].includes(n)).length, 0, "không RPC DM mới");
 });
 
 test("Tích hợp cổng: DM + System Chat cùng chờ → MỘT tiếng; Tắt tiếng → cả hai im, bật lại không kêu bù", () => {

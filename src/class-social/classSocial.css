@@ -1,3 +1,4 @@
+@import '../class-safety/safety.css';
 /* ─────────────────────────────────────────────────────────────────────────────
    Class Social — style RIÊNG, mọi class có tiền tố cs-, token đặt trên .cs-root.
    Không dùng token của MobileStudentPortal. Nhận diện: TÍM + TRẮNG.

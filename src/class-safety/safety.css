@@ -1,0 +1,46 @@
+/* Class UGC Safety V1 — tiền tố csafe-. Tự khai biến (hộp thoại render qua portal, ngoài .cs-root). */
+.csafe-layer {
+  --sf-p: #6d28d9; --sf-surface: #fff; --sf-text: #18181b; --sf-muted: #52525b; --sf-border: #e4e4e7; --sf-soft: #f4f4f5; --sf-danger: #dc2626;
+  position: fixed; inset: 0; z-index: 200; display: flex; align-items: flex-end; justify-content: center;
+  background: rgba(28, 24, 48, 0.45); color: var(--sf-text); font-family: inherit; text-align: left;
+}
+.csafe-layer *, .csafe-layer *::before, .csafe-layer *::after { box-sizing: border-box; }
+.csafe-sheet {
+  width: 100%; max-width: 480px; max-height: 88dvh; overflow-y: auto; background: var(--sf-surface);
+  border-radius: 18px 18px 0 0; padding: 16px 16px calc(16px + env(safe-area-inset-bottom)); -webkit-overflow-scrolling: touch;
+}
+@media (min-width: 640px) { .csafe-layer { align-items: center; } .csafe-sheet { border-radius: 18px; } }
+.csafe-sheet h2 { font-size: 1.125rem; font-weight: 800; margin: 0 0 4px; }
+.csafe-sub { font-size: 0.875rem; color: var(--sf-muted); line-height: 1.5; margin: 0 0 12px; }
+.csafe-reasons { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.csafe-reason { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 8px 12px; border: 1.5px solid var(--sf-border); border-radius: 12px; font-size: 0.9375rem; cursor: pointer; }
+.csafe-reason.on { border-color: var(--sf-p); background: #f8f5ff; }
+.csafe-reason input { accent-color: var(--sf-p); width: 18px; height: 18px; flex: none; }
+.csafe-note { width: 100%; padding: 10px 12px; border: 1.5px solid var(--sf-border); border-radius: 12px; font: inherit; font-size: 16px; resize: none; color: var(--sf-text); background: var(--sf-surface); }
+.csafe-err { background: #fef2f2; color: #b91c1c; border-radius: 10px; padding: 10px 12px; font-size: 0.875rem; margin-top: 10px; line-height: 1.45; }
+.csafe-ok { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 99px; background: #ecfdf3; color: #15803d; font-size: 22px; margin-bottom: 8px; }
+.csafe-btn { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 46px; margin-top: 8px; border: 0; border-radius: 12px; background: var(--sf-soft); color: var(--sf-text); font: inherit; font-weight: 600; cursor: pointer; text-decoration: none; }
+.csafe-btn.primary { background: var(--sf-p); color: #fff; }
+.csafe-btn.danger { background: var(--sf-danger); color: #fff; }
+.csafe-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Cổng quy tắc: phủ kín khung ứng dụng */
+.csafe-gate { position: fixed; inset: 0; z-index: 300; background: #f4f4f5; color: #18181b; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  padding: calc(20px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom)); text-align: left; font-family: inherit; }
+.csafe-gate-in { max-width: 520px; margin: 0 auto; }
+.csafe-gate h1 { font-size: 1.5rem; font-weight: 800; margin: 0 0 8px; }
+.csafe-rule { background: #fff; border: 1px solid #e4e4e7; border-radius: 14px; padding: 12px 14px; margin-bottom: 8px; }
+.csafe-rule b { display: block; margin-bottom: 2px; }
+.csafe-rule span { font-size: 0.875rem; color: #52525b; line-height: 1.5; }
+.csafe-gate a { color: #5b21b6; font-weight: 600; }
+.csafe-gate .csafe-btn.primary { background: #6d28d9; }
+
+/* Danh sách chặn */
+.csafe-blocked { list-style: none; margin: 0; padding: 0; }
+.csafe-blocked li { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--cs-surface, #fff); border-bottom: 0.5px solid var(--cs-border, #e4e4e7); }
+.csafe-blocked .nm { flex: 1; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.csafe-mini { border: 1.5px solid var(--cs-border, #e4e4e7); background: transparent; border-radius: 10px; min-height: 36px; padding: 0 12px; font: inherit; font-size: 0.875rem; cursor: pointer; }
+
+/* Menu ⋯ cạnh tin nhắn của người khác */
+.csafe-msg-menu { align-self: flex-start; opacity: 0.7; }
+.csafe-msg-menu .cs-more-btn { min-width: 32px; min-height: 28px; }

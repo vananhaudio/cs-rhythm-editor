@@ -11,6 +11,7 @@ import { useClassSession } from '../class-social/useClassSession'
 import { signInWithPassword, signOut } from '../class-social/profile/profileApi'
 import { MeGuestGate, MeNoProfile } from '../class-social/MeGuest'
 import MobileShell from './MobileShell'
+import CommunityRulesGate from '../class-safety/CommunityRulesGate'
 
 export default function ClassMobilePage() {
   const session = useClassSession()
@@ -21,5 +22,5 @@ export default function ClassMobilePage() {
   if (session.status !== 'ready') {
     return <div className="cs-root"><div className="cm-splash" role="status"><div><div className="cs-spinner" />Đang mở Class…</div></div></div>
   }
-  return <MobileShell base={session.me} />
+  return <CommunityRulesGate onSignOut={() => void signOut()}><MobileShell base={session.me} /></CommunityRulesGate>
 }

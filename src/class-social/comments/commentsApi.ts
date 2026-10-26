@@ -16,7 +16,7 @@ export type CommentsPage = { byPost: Map<string, Comment[]>; totals: Map<string,
 export async function fetchComments(postIds: string[], perPost: number): Promise<Result<CommentsPage>> {
   if (postIds.length === 0) return { ok: true, value: { byPost: new Map(), totals: new Map() } }
   try {
-    const { data, error, status } = await supabase.rpc('class_comments_for_posts', { p_post_ids: postIds.slice(0, 50), p_per_post: perPost })
+    const { data, error, status } = await supabase.rpc('class_comments_for_posts_safe', { p_post_ids: postIds.slice(0, 50), p_per_post: perPost })
     if (error) { devWarn('comments', error); return { ok: false, message: 'Chưa tải được bình luận.' + (status === 401 ? ' Hãy tải lại trang.' : '') } }
     const rows = (data ?? []) as CommentRow[]
     return { ok: true, value: { byPost: groupByPost(rows), totals: totalsByPost(rows) } }

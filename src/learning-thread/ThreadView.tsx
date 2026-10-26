@@ -9,6 +9,8 @@ import { parseExternalMedia } from '../class-social/media/parseExternalMedia'
 import ResourceCard from '../class-social/sections/comments/ResourceCard'
 import { relativeTime } from '../class-social/posts/postModel'
 import { Avatar, PersonLink } from '../class-social/ui'
+import SafetyMenu from '../class-safety/SafetyMenu'
+import { useIsBlocked } from '../class-safety/blockedStore'
 import { IdentityBadges } from '../class-social/identity/IdentityBadges'
 import {
   SOCIAL_STATUS_LABEL, STATUS_UI, VISIBILITY_LABEL, eventLabels, identityLine, moduleLabel,
@@ -59,14 +61,18 @@ export function ThreadHeader({ thread, onOpenProfile, showIdentity = false }: { 
   )
 }
 
-function EventItem({ e, label, now, canModerate, onModerate, onOpenProfile }: {
+function EventItem({ e, label, now, canModerate, canReport, onModerate, onOpenProfile }: {
   e: ThreadEvent
   label: string
   now?: Date
   canModerate: boolean
+  /** Lượt của học viên khác (không phải của mình, không phải Thầy) → có Báo cáo / Chặn */
+  canReport: boolean
   onModerate?: (e: ThreadEvent, hidden: boolean) => void
   onOpenProfile?: (userId: string) => void
 }) {
+  const blocked = useIsBlocked(e.author.userId)
+  if (canReport && blocked) return null
   const teacher = e.authorRole === 'teacher'
   const parsed = e.mediaUrl ? parseExternalMedia(e.mediaUrl) : null
   const cls = 'lt-ev' + (teacher ? ' is-teacher' : '') + (e.verdict ? ' is-' + e.verdict : '') + (e.isHidden ? ' is-hidden' : '')
@@ -97,6 +103,11 @@ function EventItem({ e, label, now, canModerate, onModerate, onOpenProfile }: {
           )}
           {e.isHidden && <span className="lt-note">Đã ẩn · chỉ Thầy thấy</span>}
         </div>
+        {canReport && (
+          <div className="lt-ev-tools">
+            <SafetyMenu label="Tuỳ chọn lượt trao đổi" kind="thread" targetId={e.id} userId={e.author.userId || null} userName={e.author.name} noBlock={!e.author.userId} />
+          </div>
+        )}
         {canModerate && onModerate && (
           <div className="lt-ev-tools">
             <button type="button" className="lt-link-btn" onClick={() => onModerate(e, !e.isHidden)}>{e.isHidden ? 'Bỏ ẩn' : 'Ẩn lượt này'}</button>
@@ -131,7 +142,7 @@ export function ThreadTimeline({ thread, now, canModerate = false, onModerate, o
   return (
     <ol className="lt-timeline" aria-label="Dòng thời gian trao đổi" ref={list}>
       {thread.events.map((e, i) => (
-        <EventItem key={e.id} e={e} label={labels[i]} now={now} canModerate={canModerate} onModerate={onModerate} onOpenProfile={onOpenProfile} />
+        <EventItem key={e.id} e={e} label={labels[i]} now={now} canModerate={canModerate} canReport={!thread.isMine && !canModerate && e.authorRole === 'student'} onModerate={onModerate} onOpenProfile={onOpenProfile} />
       ))}
     </ol>
   )
