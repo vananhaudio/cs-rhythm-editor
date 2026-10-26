@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:native": "tsc -b && vite build --mode native",
     "lint": "eslint .",
     "preview": "vite preview",
     "mira:content": "node scripts/mira-content.mjs",
