@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from './supabase'
 import { SOLO01, SOLO01_STAGES, SOLO01_PROGRESSION, SOLO01_PRICES, SOLO01_METHOD, SOLO01_NOTATION, soloLessonOpen, soloUnlockLabel } from './data/solo01Program'
 import { generateSessions, fmtDMY, type SessionRow } from './journey/sessions'
+import { isIosNativeStorefront } from './iosPaymentPolicy'
 
 const P = {
   bg: '#F7F5FC', surface: '#FFFFFF', ink: '#1D1930', inkSoft: '#3E3952', inkFaint: '#6A6580',
@@ -114,6 +115,8 @@ function useSeo() {
 }
 
 export default function Solo01Page() {
+  // iOS native (Guideline 3.1.1): không giá VND / "Đăng ký qua Zalo" / số Zalo tuyển sinh — chỉ nội dung chương trình.
+  const iosStore = isIosNativeStorefront()
   const [openStage, setOpenStage] = useState(1)      // chặng đang mở (phần giáo trình)
   const [openSched, setOpenSched] = useState(1)      // chặng đang mở (phần lịch)
   const [cls, setCls] = useState<ProgClass | null>(null)
@@ -214,7 +217,7 @@ export default function Solo01Page() {
               <span className="solo01-timechip-sub">tối <b>{SOLO01.weekdayLabel}</b> hằng tuần · <b>24 buổi · 3 chặng · 6 tháng</b><br />Khai giảng <b>{startDateLabel}</b></span>
             </div>
             <div className="solo01-cta-btns left">
-              <a className="solo01-btn primary" href={ZALO_LINK} target="_blank" rel="noreferrer">ĐĂNG KÝ HỌC →</a>
+              {!iosStore && <a className="solo01-btn primary" href={ZALO_LINK} target="_blank" rel="noreferrer">ĐĂNG KÝ HỌC →</a>}
               <a className="solo01-btn outline" href="#lotrinh">XEM LỘ TRÌNH 24 BUỔI</a>
             </div>
           </div>
@@ -296,7 +299,7 @@ export default function Solo01Page() {
             <a key={s.no} href={`#chang-${s.no}`} style={{ borderColor: STAGE_COLORS[s.no - 1], color: STAGE_COLORS[s.no - 1] }}>Chặng {s.no}</a>
           ))}
           <a href="#lich" className="solo01-toc-schedule">Lịch học dự kiến</a>
-          <a href="#hocphi" className="solo01-toc-schedule">Học phí</a>
+          {!iosStore && <a href="#hocphi" className="solo01-toc-schedule">Học phí</a>}
         </nav>
 
         {/* ── LỘ TRÌNH 3 CHẶNG (accordion) ── */}
@@ -509,7 +512,7 @@ export default function Solo01Page() {
         </section>
 
         {/* ── HỌC PHÍ ── */}
-        <section id="hocphi" className="solo01-wrap solo01-pricing">
+        {!iosStore && <section id="hocphi" className="solo01-wrap solo01-pricing">
           <div className="solo01-eyebrow">Học phí &amp; cách tham gia</div>
           <h2>CHỌN CÁCH HỌC PHÙ HỢP VỚI BẠN</h2>
           <p className="solo01-pricing-intro">
@@ -529,18 +532,18 @@ export default function Solo01Page() {
           <div className="solo01-pricing-foot">
             Chưa chắc trình độ của mình phù hợp chưa? Cứ nhắn Thầy — Thầy sẽ tư vấn lớp phù hợp nhất.
           </div>
-        </section>
+        </section>}
 
         {/* ── CTA CUỐI TRANG ── */}
         <section className="solo01-wrap solo01-cta">
           <div className="solo01-cta-card">
             <div className="solo01-cta-title">BÀI SOLO ĐẦU TIÊN BẠN TỰ DỰNG SẼ LÀ BÀI NÀO?</div>
-            <p>Nhắn Thầy qua Zalo để giữ chỗ cho khoá SOLO-01 — Thầy sẽ hướng dẫn bạn từng bước.</p>
+            {!iosStore && <p>Nhắn Thầy qua Zalo để giữ chỗ cho khoá SOLO-01 — Thầy sẽ hướng dẫn bạn từng bước.</p>}
             <div className="solo01-cta-facts">
-              {['24 buổi', '3 chặng', `${SOLO01.startTime} ${SOLO01.weekdayLabel}`, '499k / tháng', 'Gói 6 tháng: 396k / tháng'].map(f => <span key={f}>{f}</span>)}
+              {(iosStore ? ['24 buổi', '3 chặng', `${SOLO01.startTime} ${SOLO01.weekdayLabel}`] : ['24 buổi', '3 chặng', `${SOLO01.startTime} ${SOLO01.weekdayLabel}`, '499k / tháng', 'Gói 6 tháng: 396k / tháng']).map(f => <span key={f}>{f}</span>)}
             </div>
             <div className="solo01-cta-btns">
-              <a className="solo01-btn primary" href={ZALO_LINK} target="_blank" rel="noreferrer">ĐĂNG KÝ SOLO-01 →</a>
+              {!iosStore && <a className="solo01-btn primary" href={ZALO_LINK} target="_blank" rel="noreferrer">ĐĂNG KÝ SOLO-01 →</a>}
               <a className="solo01-btn ghost" href="#lotrinh">Xem lộ trình 24 buổi</a>
             </div>
           </div>
@@ -552,7 +555,7 @@ export default function Solo01Page() {
             <div className="solo01-foot-row">
               <img src="/logo.png" alt="" />
               <span>Thầy Văn Anh · Guitar</span>
-              <span className="solo01-foot-right">Zalo 0983 259 893</span>
+              {!iosStore && <span className="solo01-foot-right">Zalo 0983 259 893</span>}
             </div>
           </div>
         </footer>

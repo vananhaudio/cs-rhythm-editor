@@ -10,6 +10,7 @@ import { supabase } from './supabase'
 import { HT2027, HT2027_STAGES, HT2027_PROGRESSION, HT2027_ELIGIBLE_CODES, ht2027LessonOpen } from './data/ht2027Program'
 import { soloUnlockLabel } from './data/solo01Program'
 import { generateSessions, fmtDMY, type SessionRow } from './journey/sessions'
+import { isIosNativeStorefront } from './iosPaymentPolicy'
 
 const P = {
   bg: '#F7F5FC', surface: '#FFFFFF', ink: '#1D1930', inkSoft: '#3E3952', inkFaint: '#6A6580',
@@ -102,6 +103,8 @@ function devFixture(): { cls: ProgClass; sessions: SessionRow[]; offDays: OffDay
 }
 
 export default function Hanhtrinh2027Page() {
+  // iOS native (Guideline 3.1.1): không bảng giá VND / "Đăng ký qua Zalo" / số Zalo tuyển sinh — chỉ nội dung chương trình.
+  const iosStore = isIosNativeStorefront()
   const [cls, setCls] = useState<ProgClass | null>(null)
   const [sessions, setSessions] = useState<SessionRow[]>([])
   const [offDays, setOffDays] = useState<OffDay[]>([])
@@ -425,7 +428,7 @@ export default function Hanhtrinh2027Page() {
         </section>
 
         {/* ── HỌC PHÍ / CÁCH THAM GIA — đọc từ bảng packages (ẩn với học viên HT đã có quyền) ── */}
-        {cta !== 'member' && (
+        {cta !== 'member' && !iosStore && (
           <section id="pricing" className="ht2027-wrap ht2027-pricing">
             <div className="ht2027-eyebrow">Học phí &amp; cách tham gia</div>
             <h2>CHỌN CÁCH HỌC PHÙ HỢP VỚI BẠN</h2>
@@ -464,7 +467,7 @@ export default function Hanhtrinh2027Page() {
 
         {/* ── CTA theo quyền tham gia thật ── */}
         <section className="ht2027-wrap ht2027-cta">
-          {cta === 'anon' && (
+          {cta === 'anon' && !iosStore && (
             <div className="ht2027-cta-card">
               <div className="ht2027-cta-title">Đăng ký tham gia</div>
               <p>Nhắn Thầy qua Zalo để chọn cách học phù hợp — Thầy sẽ hướng dẫn bạn từng bước. Nếu bạn đã là học viên của Thầy, hãy đăng nhập để xem quyền lợi của mình.</p>
@@ -484,7 +487,7 @@ export default function Hanhtrinh2027Page() {
               </div>
             </div>
           )}
-          {cta === 'eligible' && (
+          {cta === 'eligible' && !iosStore && (
             <div className="ht2027-cta-card">
               <div className="ht2027-cta-title">✓ Bạn đã đủ điều kiện tham gia</div>
               <p>Bạn đã có quyền học <b>{eligibleName}</b> — thuộc nhóm nền tảng phù hợp với chương trình thực hành này. Chọn cách học ở phía trên và nhắn Thầy để được ghi danh.</p>
@@ -494,7 +497,7 @@ export default function Hanhtrinh2027Page() {
               </div>
             </div>
           )}
-          {cta === 'other' && (
+          {cta === 'other' && !iosStore && (
             <div className="ht2027-cta-card">
               <div className="ht2027-cta-title">Đăng ký tham gia</div>
               <p>40 buổi thực hành dành cho học viên đã có nền tảng (Hành trình 2027, Đệm hát 2 hoặc Tỉa nốt 2 trở lên). Nếu bạn chưa thuộc nhóm này, nhắn Thầy để được tư vấn lộ trình phù hợp.</p>
@@ -512,7 +515,7 @@ export default function Hanhtrinh2027Page() {
             <div className="ht2027-foot-row">
               <img src="/logo.png" alt="" />
               <span>Thầy Văn Anh · Guitar</span>
-              <span className="ht2027-foot-right">Zalo 0983 259 893</span>
+              {!iosStore && <span className="ht2027-foot-right">Zalo 0983 259 893</span>}
             </div>
           </div>
         </footer>
