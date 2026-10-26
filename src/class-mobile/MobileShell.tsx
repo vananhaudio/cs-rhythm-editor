@@ -29,7 +29,8 @@ import {
   backOr, canPop, currentView, initialNav, LAST_TAB_KEY, pop, push, readLastTab, replace, selectTab,
   type MobileTab, type MobileView, type NavState,
 } from './mobileNav'
-import { BackBar, TabBar, TopBar } from './chrome'
+import { TabBar, TopBar } from './chrome'
+import { barFor } from './shellBar'
 import MoreSheet from './MoreSheet'
 import BandTab from './BandTab'
 import AccountPage from './AccountPage'
@@ -45,12 +46,6 @@ const IN_APP_STATE = { cm: 1 }
 const safeStorage = (): Storage | null => { try { return window.localStorage } catch { return null } }
 const navKey = (s: NavState) => `${s.tab}:${s.stacks[s.tab].length}`
 
-/** Khung sở hữu MỘT nút Quay lại cho mọi màn đã đi sâu vào tab; nút tự vẽ của từng màn con bị ẩn bằng CSS (.cm-root). Hội thoại và màn Lớp có header riêng nên giữ nguyên. */
-const BACKBAR_KINDS: ReadonlySet<MobileView['kind']> = new Set(['account', 'notices', 'blocked', 'password', 'bands', 'bandAdmin', 'profile', 'thread', 'queue', 'session'])
-function needsBackBar(v: MobileView): boolean {
-  return (v.kind === 'section' && (v.section === 'friends' || v.section === 'tools')) || BACKBAR_KINDS.has(v.kind)
-}
-
 export default function MobileShell({ base }: { base: ClassIdentity }) {
   const [nav, setNav] = useState<NavState>(() => initialNav(readLastTab(safeStorage())))
   const navRef = useRef(nav)
@@ -58,6 +53,8 @@ export default function MobileShell({ base }: { base: ClassIdentity }) {
   const scrollMem = useRef<Record<string, number>>({})
   const keyboardOpen = useKeyboardOpen()
   const [more, setMore] = useState(false)
+  // Studio (TeamLab) báo cho khung biết có cần nút "‹" trên thanh không (Studio có thể tự có nút riêng) — bọc object vì state hàm bị React gọi như updater
+  const [studioBack, setStudioBack] = useState<{ fn: () => void } | null>(null)
   const [homeVisit, setHomeVisit] = useState(0)
 
   // Danh tính giữ ở MỘT chỗ (như Class Social): đổi ảnh/tên xong feed + header cập nhật ngay
@@ -212,7 +209,7 @@ export default function MobileShell({ base }: { base: ClassIdentity }) {
       case 'chatSystem':
         return chatPage({ kind: 'system' }, chatUnread.system)
       case 'studio':
-        return <StudioPage key={view.projectId ?? 'home'} projectId={view.projectId} onExit={back} />
+        return <StudioPage key={view.projectId ?? 'home'} projectId={view.projectId} onExit={back} onBackChange={fn => setStudioBack(fn ? { fn } : null)} />
       case 'notices':
         return <NoticesPage onActivity={() => void chatUnread.refresh()} onOpenThread={id => openThread(id)} />
       case 'account':
@@ -226,12 +223,12 @@ export default function MobileShell({ base }: { base: ClassIdentity }) {
     }
   }
 
+  const bar = barFor(view, tab)
   return (
-    <div className={'cs-root cm-root' + (keyboardOpen ? ' is-keyboard' : '')}>
-      <TopBar noticeCount={noticeCount} onHome={() => selectTabAndScroll('home')}
-        onNotices={() => go({ kind: 'notices' })} onMore={() => setMore(true)} />
+    <div className={'cs-root cm-root' + (keyboardOpen ? ' is-keyboard' : '')} data-bar-title={bar.hidePageTitle ? '1' : undefined}>
+      <TopBar noticeCount={noticeCount} title={bar.title} onBack={bar.back ? (canPop(nav) ? back : null) : view.kind === 'studio' ? studioBack?.fn ?? null : null}
+        onHome={() => selectTabAndScroll('home')} onNotices={() => go({ kind: 'notices' })} onMore={() => setMore(true)} />
       <main className="cm-content cs-main">
-        {needsBackBar(view) && canPop(nav) && <BackBar onBack={back} />}
         {body()}
       </main>
       <TabBar tab={tab} badges={{ chat: dmUnread, me: requests.count }} onSelect={selectTabAndScroll} />

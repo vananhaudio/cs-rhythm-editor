@@ -8,6 +8,7 @@ import {
   MOBILE_TABS, initialNav, selectTab, push, pop, replace, backOr, canPop, currentView, tabOwning, readLastTab, LAST_TAB_KEY, ROOT, type MobileView,
 } from "../../src/class-mobile/mobileNav.ts";
 import { isTextEntry } from "../../src/class-mobile/useKeyboardOpen.ts";
+import { barFor } from "../../src/class-mobile/shellBar.ts";
 import { isClassMobilePath, nativeOpensClassMobile, proxiedHref, CLASS_MOBILE_NATIVE_DEFAULT, CLASS_WEB_ORIGIN } from "../../src/class-mobile/config.ts";
 
 const profile = (userId: string): MobileView => ({ kind: "profile", userId });
@@ -203,14 +204,13 @@ test("S1-D: Thông báo là màn riêng trong khung, không nhắc 'Class 2.0'",
   assert.match(view, /!bare && <div className="cs-chat-locked"/);
 });
 
-test("S1-E: một nút Quay lại của khung cho mọi màn sâu; nút riêng của màn con ẩn trong .cm-root", () => {
-  const shell = read("src/class-mobile/MobileShell.tsx");
-  for (const k of ["account", "notices", "blocked", "password", "bands", "bandAdmin", "profile", "thread", "queue", "session"]) {
-    assert.match(shell, new RegExp(`BACKBAR_KINDS[^\\n]*'${k}'`), k + " có BackBar của khung");
-  }
+test("S1-E (UI-shell): một thanh điều hướng duy nhất; nút riêng của màn con vẫn ẩn trong .cm-root", () => {
+  const deep: MobileView[] = [{ kind: "account" }, { kind: "notices" }, { kind: "blocked" }, { kind: "password" }, { kind: "bands" }, { kind: "bandAdmin", slug: "x" }, { kind: "profile", userId: "u" }, { kind: "thread", threadId: "t" }, { kind: "queue" }, { kind: "session", classId: "c", sessionNo: 1 }, { kind: "section", section: "friends" }, { kind: "section", section: "tools" }];
+  for (const v of deep) assert.equal(barFor(v, "me").back, true, v.kind + " có \"‹\" trên thanh của khung");
   const css = read("src/class-mobile/classMobile.css");
   assert.match(css, /\.cm-root \.cs-profile-back, \.cm-root \.cs-band-back, \.cm-root \.cs-back-btn \{ display: none; \}/);
   assert.doesNotMatch(read("src/class-social/classSocial.css"), /cm-root/, "không đổi CSS web /me");
+  assert.doesNotMatch(read("src/class-mobile/MobileShell.tsx"), /<BackBar|BACKBAR_KINDS/, "không còn hàng Quay lại riêng dưới thanh trên");
 });
 
 // ── 1.6.0 S3: Ban Nhạc — Chat Band đúng phòng, một lối vào Quản lý Band, bỏ ghi chú "chưa nhúng" ──
@@ -369,4 +369,54 @@ test("S4: native mở Studio trong app (không target=_blank/Safari); web giữ 
   assert.doesNotMatch(pkg.scripts.build, /teamlab/i, "build web KHÔNG đóng gói TeamLab (web vẫn proxy /teamlab)");
   assert.match(read("ios-embed/teamlab.ref"), /^[0-9a-f]{40}\s*$/);
   assert.match(read("scripts/build-teamlab-embed.mjs"), /classapp/);
+});
+
+// ── UI-shell: một ứng dụng — một thanh điều hướng — một vùng nội dung ──
+test("UI-shell: tab gốc ghi tên màn trên thanh (Trang chủ giữ thương hiệu); tiêu đề lớn của trang không hiện lặp", () => {
+  assert.deepEqual(barFor(ROOT, "home"), { title: null, back: false, hidePageTitle: false });
+  for (const [tab, title] of [["class", "Lớp Học"], ["band", "Ban Nhạc"], ["chat", "Trò chuyện"], ["me", "Tôi"]] as const) {
+    assert.equal(barFor(ROOT, tab).title, title);
+    assert.equal(barFor(ROOT, tab).back, false);
+  }
+  assert.equal(barFor(ROOT, "class").hidePageTitle, true);
+});
+
+test("UI-shell: màn có tên NỘI DUNG (hồ sơ, buổi, trao đổi…) giữ tên nội dung trong trang; màn tĩnh nhường tên cho thanh", () => {
+  for (const v of [{ kind: "profile", userId: "u" }, { kind: "thread", threadId: "t" }, { kind: "session", classId: "c", sessionNo: 1 }, { kind: "bandAdmin", slug: "s" }] as MobileView[]) {
+    assert.equal(barFor(v, "me").hidePageTitle, false, v.kind + " giữ tên nội dung");
+  }
+  for (const v of [{ kind: "account" }, { kind: "notices" }, { kind: "blocked" }, { kind: "password" }] as MobileView[]) {
+    assert.equal(barFor(v, "me").hidePageTitle, true, v.kind + " nhường tên cho thanh");
+  }
+  assert.deepEqual(barFor({ kind: "class", classId: "c" } as MobileView, "class"), { title: null, back: false, hidePageTitle: false }, "màn lớp giữ như cũ");
+});
+
+test("UI-shell: một hệ lề — main không lề, trang tự có 16px; Studio tràn mép; không khung desktop", () => {
+  const css = read("src/class-mobile/classMobile.css");
+  assert.match(css, /\.cm-root \.cs-main \{ padding: 8px 0 16px; \}/);
+  assert.match(css, /\.cm-root \.cs-main > \.cs-col, \.cm-root \.cs-main > \.cs-col-wide \{ max-width: none; padding-left: 16px; padding-right: 16px; \}/);
+  assert.match(css, /\.cm-studio-wrap \{[^}]*margin-top: -8px; margin-bottom: -16px;/);
+  assert.match(css, /\.cm-root\[data-bar-title\] \.cm-content h1\.cm-title/);
+  const shell = read("src/class-mobile/MobileShell.tsx");
+  assert.match(shell, /data-bar-title=\{bar\.hidePageTitle \? '1' : undefined\}/);
+  assert.match(shell, /view\.kind === 'studio' \? studioBack\?\.fn \?\? null/, "Studio báo nút \"‹\" lên thanh của khung");
+  assert.doesNotMatch(read("src/class-mobile/StudioPage.tsx"), /BackBar/, "Studio không tự dựng thêm hàng Quay lại");
+});
+
+import { TopBar } from "../../src/class-mobile/chrome.tsx";
+
+test("UI-shell: TopBar render — thương hiệu / tên tab / '‹' + tên màn; mỗi màn chỉ một nút quay lại", () => {
+  const html = (title: string | null, onBack: (() => void) | null) => renderToStaticMarkup(h(TopBar, { noticeCount: 0, title, onBack, onHome: () => undefined, onNotices: () => undefined, onMore: () => undefined }));
+  const home = html(null, null);
+  assert.match(home, /Thầy Văn Anh Guitar/);
+  assert.doesNotMatch(home, /Quay lại/);
+  const root = html("Lớp Học", null);
+  assert.match(root, /class="cm-brand"[\s\S]*Lớp Học/, "tab gốc: logo + tên tab trên thanh");
+  assert.doesNotMatch(root, /Thầy Văn Anh Guitar<\/span>/);
+  const deep = html("Đổi mật khẩu", () => undefined);
+  assert.equal((deep.match(/aria-label="Quay lại"/g) ?? []).length, 1);
+  assert.match(deep, /<h1 class="cm-top-title">Đổi mật khẩu<\/h1>/);
+  assert.doesNotMatch(deep, /class="cm-brand"/, "màn sâu: không lặp thương hiệu");
+  assert.match(deep, /aria-label="Thông báo"/);
+  assert.match(deep, /Chức năng khác/);
 });

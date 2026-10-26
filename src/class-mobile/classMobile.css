@@ -30,6 +30,12 @@
 .cm-brand img { width: 24px; height: 23px; display: block; flex-shrink: 0; }
 .cm-brand span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cm-top-spacer { flex: 1; }
+.cm-top-back { width: 44px; height: 44px; margin-left: -10px; border: 0; background: none; color: var(--cs-p); display: grid; place-items: center; cursor: pointer; flex-shrink: 0; }
+.cm-top-back svg { width: 28px; height: 28px; stroke-width: 2.2; }
+.cm-top-title { margin: 0; font-size: clamp(1rem, 4.6vw, 1.1875rem); font-weight: 800; letter-spacing: -0.02em; line-height: 1.2; color: var(--cs-text); min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Thanh đã mang tên màn → tiêu đề lớn của trang không hiện lặp (ẩn hẳn, trình đọc màn hình nghe tên màn một lần ở thanh) */
+.cm-root[data-bar-title] .cm-content h1.cm-title, .cm-root[data-bar-title] .cm-content h1.cs-page-title { display: none; }
+.cm-root[data-bar-title] .cm-page { padding-top: 12px; }
 .cm-icon-btn {
   position: relative; width: 44px; height: 44px; border: 0; background: transparent; border-radius: 50%;
   display: grid; place-items: center; color: var(--cs-text); cursor: pointer;
@@ -44,7 +50,9 @@
 
 /* ── Nội dung ── */
 .cm-content { min-height: 50vh; }
-.cm-content .cs-main { padding-top: 12px; }
+/* MỘT hệ lề cho cả khung: main KHÔNG có lề (lề desktop của .cs-main bị bỏ), mỗi trang tự có lề 16px đều — trước đây 12px (main) + 16px (.cm-page) cộng dồn thành 28px, Home 12px, Studio bị bó trong khung. */
+.cm-root .cs-main { padding: 8px 0 16px; }
+.cm-root .cs-main > .cs-col, .cm-root .cs-main > .cs-col-wide { max-width: none; padding-left: 16px; padding-right: 16px; }
 .cm-backbar { display: flex; align-items: center; padding: 6px 6px 0; }
 .cm-back {
   display: inline-flex; align-items: center; gap: 2px; min-height: 44px; padding: 0 10px 0 4px; border: 0; background: none;
@@ -179,6 +187,6 @@
 .cm-root .cs-band-admin .cs-band-admin-title .cs-page-title { margin-bottom: 10px; }
 
 /* Studio TeamLab nhúng: khung lấp vùng giữa thanh trên và thanh tab; iframe chiếm phần còn lại (sau nút Quay lại nếu có); cuộn bên trong iframe */
-.cm-studio-wrap { display: flex; flex-direction: column; height: calc(100dvh - var(--cm-top-h) - var(--cm-tab-h) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 8px); min-height: 360px; }
+.cm-studio-wrap { display: flex; flex-direction: column; margin-top: -8px; margin-bottom: -16px; height: calc(100dvh - var(--cm-top-h) - var(--cm-tab-h) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); min-height: 360px; }   /* tràn mép: bù lại padding của main */
 .cm-studio { display: block; flex: 1 1 auto; min-height: 0; width: 100%; border: 0; background: #030712; visibility: hidden; }
 .cm-studio.is-ready { visibility: visible; }

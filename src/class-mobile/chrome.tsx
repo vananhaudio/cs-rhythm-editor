@@ -14,8 +14,12 @@ const TAB_ICON: Record<MobileTab, ReactNode> = {
 
 const badgeText = (n: number) => (n > 99 ? '99+' : String(n))
 
-export function TopBar({ noticeCount, onHome, onNotices, onMore }: {
+export function TopBar({ noticeCount, title, onBack, onHome, onNotices, onMore }: {
   noticeCount: number
+  /** null = thương hiệu; chữ = tên màn (thanh điều hướng duy nhất) */
+  title: string | null
+  /** Có = hiện "‹" quay lại ngay trên thanh */
+  onBack?: (() => void) | null
   onHome: () => void
   onNotices: () => void
   onMore: () => void
@@ -23,10 +27,17 @@ export function TopBar({ noticeCount, onHome, onNotices, onMore }: {
   return (
     <header className="cm-top">
       <div className="cm-top-row">
-        <button type="button" className="cm-brand" onClick={onHome} aria-label="Thầy Văn Anh Guitar — về Trang chủ">
-          <img src="/logo-green.svg" alt="" width={28} height={27} />
-          <span>Thầy Văn Anh Guitar</span>
-        </button>
+        {onBack && (
+          <button type="button" className="cm-top-back" onClick={onBack} aria-label="Quay lại"><ChevronLeft aria-hidden="true" /></button>
+        )}
+        {title === null || !onBack ? (
+          <button type="button" className="cm-brand" onClick={onHome} aria-label={title === null ? 'Thầy Văn Anh Guitar — về Trang chủ' : `${title} — về Trang chủ`}>
+            <img src="/logo-green.svg" alt="" width={28} height={27} />
+            <span>{title === null ? 'Thầy Văn Anh Guitar' : title}</span>
+          </button>
+        ) : (
+          <h1 className="cm-top-title">{title}</h1>
+        )}
         <div className="cm-top-spacer" />
         <button type="button" className="cm-icon-btn" onClick={onNotices}
           aria-label={noticeCount > 0 ? `Thông báo, ${noticeCount} chưa đọc` : 'Thông báo'}>
