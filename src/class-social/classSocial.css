@@ -50,9 +50,9 @@
 /* ── Top bar (tối giản) ──────────────────────────────────────────────────── */
 .cs-topbar {
   position: sticky; top: 0; z-index: 30;
-  height: var(--cs-topbar-h);
+  height: calc(var(--cs-topbar-h) + env(safe-area-inset-top, 0px));
   display: flex; align-items: center; gap: 6px;
-  padding: 0 14px;
+  padding: env(safe-area-inset-top, 0px) 14px 0;
   background: var(--cs-surface);
   border-bottom: 1px solid var(--cs-border);
 }
