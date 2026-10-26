@@ -456,7 +456,7 @@ export default function StudentOnboarding({ embed }: { embed?: 'hoc' | 'tap' } =
         </div>
       )}
       {step === 'portal' && student && authChecked && (
-        <div style={{ minHeight: embed ? undefined : '100dvh', height: embed ? '100%' : undefined, background: 'radial-gradient(120% 80% at 50% 0%, #EDEAFB 0%, #F0F2F5 55%)' }}>
+        <div style={{ minHeight: embed ? undefined : '100dvh', height: embed ? '100%' : undefined, background: embed ? 'transparent' : 'radial-gradient(120% 80% at 50% 0%, #EDEAFB 0%, #F0F2F5 55%)' }}>
           <MobileStudentPortal
             key={`${student.id}:${preview ? 'preview' : 'normal'}`}
             student={student}

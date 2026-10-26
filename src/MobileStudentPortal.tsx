@@ -1952,7 +1952,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
     <div style={{
       maxWidth: 430, margin: '0 auto', height: embed ? '100%' : '100dvh',
       display: 'flex', flexDirection: 'column',
-      background: L.bg, fontFamily: '"SF Pro Display", "DM Sans", system-ui, sans-serif',
+      background: embed ? 'transparent' : L.bg, fontFamily: '"SF Pro Display", "DM Sans", system-ui, sans-serif',
       color: L.t1, position: 'relative', overflow: 'hidden',
     }}>
       <div style={{ flex: 1, overflowY: 'auto', paddingBottom: embed ? 16 : 'calc(90px + env(safe-area-inset-bottom))' }}>
@@ -2132,8 +2132,9 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
         {/* ── HOME (tab Học) ──────────────────────────────────────────── */}
         {tab === 'hoc' && screen === 'home' && (
           <>
-            <div style={{ padding: 'max(26px, calc(env(safe-area-inset-top, 0px) + 12px)) 18px 8px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ padding: embed ? '2px 16px 6px' : 'max(26px, calc(env(safe-area-inset-top, 0px) + 12px)) 18px 8px' }}>
+              {/* embed (Class Mobile V1.1): tiêu đề Học đã có ở phân đoạn "Khoá tự học" — chỉ giữ dòng hướng dẫn */}
+              {!embed && <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <div style={{ width: 40, height: 40, borderRadius: 14, background: L.p1, color: '#fff', display: 'grid', placeItems: 'center', boxShadow: L.shadow }}>
                   <NavIcon name="hoc" color="#fff" size={22} />
                 </div>
@@ -2141,8 +2142,8 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                   <div style={{ fontSize: 12, color: L.t3, fontWeight: 800, letterSpacing: '.04em' }}>THẦY VĂN ANH GUITAR</div>
                   <div style={{ fontSize: 28, lineHeight: 1.1, fontWeight: 900, color: L.t1, letterSpacing: 0 }}>Học</div>
                 </div>
-              </div>
-              <div style={{ marginTop: 7, color: L.t2, fontSize: 13.5, lineHeight: 1.45 }}>Chọn một môn để vào hành trình học — vuốt ngang, học từng bài.</div>
+              </div>}
+              <div style={{ marginTop: embed ? 0 : 7, color: L.t2, fontSize: 13.5, lineHeight: 1.45 }}>Chọn một môn để vào hành trình học — vuốt ngang, học từng bài.</div>
             </div>
 
             {/* Lớp đang học (lớp trực tiếp) — tách khỏi Khóa học số; chỉ hiện khi có lớp */}
@@ -2708,8 +2709,8 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
 
         {/* ── TẬP ─────────────────────────────────────────────────────── */}
         {tab === 'tap' && (
-          <div style={{ padding: 'max(52px, calc(env(safe-area-inset-top, 0px) + 12px)) 16px 16px' }}>
-            <div style={{ fontWeight: 800, fontSize: 22, marginBottom: 4 }}>Luyện tập</div>
+          <div style={{ padding: embed ? '2px 16px 16px' : 'max(52px, calc(env(safe-area-inset-top, 0px) + 12px)) 16px 16px' }}>
+            {!embed && <div style={{ fontWeight: 800, fontSize: 22, marginBottom: 4 }}>Luyện tập</div>}
 
             {/* ══ HÔM NAY LUYỆN GÌ ══ */}
             <div style={{ marginBottom: 20 }}>

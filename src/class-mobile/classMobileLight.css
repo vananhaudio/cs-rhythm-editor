@@ -67,7 +67,6 @@
 .cm-root .cs-page-title { font-size: 1.75rem; }
 
 /* ── Trò chuyện: danh sách kiểu Tin nhắn iOS ── */
-.cm-root .cs-chat-list-head { padding: 6px 16px 10px; font-size: 2rem; letter-spacing: -0.025em; }
 .cm-root .cs-chat-items { padding: 0 0 12px; background: var(--cs-surface); }
 .cm-root .cs-chat-item { border-radius: 0; padding: 10px 16px; min-height: 68px; position: relative; }
 .cm-root .cs-chat-item + .cs-chat-item::before { content: ''; position: absolute; top: 0; left: 72px; right: 0; height: 0.5px; background: var(--cs-border); }
@@ -99,3 +98,16 @@
 
 /* ── Danh sách nhóm kiểu iOS dùng chung cho Học / Tập được nhúng ── */
 .cm-root .cm-embed { box-shadow: none; background: transparent; border-radius: 0; }
+
+/* Học/Tập nhúng: bỏ khung lồng — nội dung chạy full-bleed trên nền Class, cuộn cùng trang */
+.cm-root .cm-embed { margin: 0 -16px; height: auto; min-height: 0; overflow: visible; }
+.cm-root .cm-embed > div, .cm-root .cm-embed > div > div { height: auto !important; min-height: 0 !important; overflow: visible !important; }
+.cm-root .cm-embed > div > div > div:first-child { overflow: visible !important; }
+
+/* Trò chuyện: danh sách nằm trực tiếp trên nền, không thẻ + tiêu đề thứ hai ("Đoạn chat") */
+.cm-root .cs-chat-list-head { display: none; }
+.cm-root .cs-chat { border-radius: 12px; overflow: hidden; }
+.cm-root .cs-chat-list { border-right: 0; }
+
+/* Phân đoạn "Lớp của tôi" đã nêu tên nhóm → bỏ tiêu đề lặp */
+.cm-root .cs-classes-mine .cs-feed-title { display: none; }
