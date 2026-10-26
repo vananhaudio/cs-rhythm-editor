@@ -37,6 +37,7 @@ import { LearnTab, MeTab } from './LearnMeTabs'
 import BlockedUsersPage from '../class-safety/BlockedUsersPage'
 import ChangePasswordPage from './ChangePasswordPage'
 import NoticesPage from './NoticesPage'
+import StudioPage from './StudioPage'
 
 const HOME_VIEW: MobileView = { kind: 'tabRoot' }
 const IN_APP_STATE = { cm: 1 }
@@ -152,7 +153,8 @@ export default function MobileShell({ base }: { base: ClassIdentity }) {
             return <LearnTab classes={classes} onOpenClass={openClass} onJoined={id => { joinedClass(); openClass(id) }} />
           case 'band':
             return <BandTab userId={me.userId} isTeacher={me.isTeacher} onOpenChat={() => selectTabAndScroll('chat')}
-              onOpenBandChat={id => go({ kind: 'chatConversation', conversationId: id }, 'band')} onOpenBands={openBands} />
+              onOpenBandChat={id => go({ kind: 'chatConversation', conversationId: id }, 'band')}
+              onOpenStudio={projectId => go({ kind: 'studio', projectId }, 'band')} onOpenBands={openBands} />
           case 'chat':
             return chatPage({ kind: 'none' }, null)   // thông báo hệ thống đã chuyển lên chuông (không lặp trong danh sách chat)
           case 'me':
@@ -209,6 +211,8 @@ export default function MobileShell({ base }: { base: ClassIdentity }) {
         return chatPage({ kind: 'with', userId: view.userId }, null)
       case 'chatSystem':
         return chatPage({ kind: 'system' }, chatUnread.system)
+      case 'studio':
+        return <StudioPage key={view.projectId ?? 'home'} projectId={view.projectId} onExit={back} />
       case 'notices':
         return <NoticesPage onActivity={() => void chatUnread.refresh()} onOpenThread={id => openThread(id)} />
       case 'account':
@@ -232,7 +236,7 @@ export default function MobileShell({ base }: { base: ClassIdentity }) {
       </main>
       <TabBar tab={tab} badges={{ chat: dmUnread, me: requests.count }} onSelect={selectTabAndScroll} />
       {more && <MoreSheet userId={me.userId} isTeacher={me.isTeacher} onClose={() => setMore(false)}
-        onOpenQueue={openQueue} />}
+        onOpenQueue={openQueue} onOpenStudio={() => go({ kind: 'studio' }, 'band')} />}
       {editor.element}
       {editingProfile && <ProfileEditDialog me={me} onClose={() => setEditingProfile(false)} onSaved={onChanged} />}
     </div>

@@ -289,3 +289,84 @@ test("S3: hàng Chat Band — dự phòng / khoá / một phòng / nhiều phòn
   assert.match(two, /Chat Cùng Team/);
   assert.match(two, /2 tin chưa đọc/);
 });
+
+// ── 1.6.0 S4: Studio TeamLab ngay trong app (iframe cùng origin), không Safari ──
+import {
+  studioSrc, parseStudioMessage, reduceStudio, showShellBack, backAction, INITIAL_STUDIO, FROM_STUDIO, STUDIO_READY_TIMEOUT_MS, type StudioState,
+} from "../../src/class-mobile/studioBridge.ts";
+
+const PID = "11111111-2222-4333-8444-555555555555";
+const FRAME = { id: "iframe-window" };
+const msg = (data: unknown, over: Record<string, unknown> = {}) => ({ origin: "https://localhost", source: FRAME, data, ...over });
+
+test("S4: địa chỉ Studio cùng origin, id Team hợp lệ mới ghép vào hash", () => {
+  assert.equal(studioSrc(PID), `/teamlab/index.html?classapp=1#/project/${PID}`);
+  assert.equal(studioSrc(), "/teamlab/index.html?classapp=1");
+  assert.equal(studioSrc("../../x?y=1#z"), "/teamlab/index.html?classapp=1", "id lạ không chui vào URL");
+  assert.doesNotMatch(studioSrc(PID), /^https?:/, "không URL tuyệt đối → không ra ngoài app");
+});
+
+test("S4: chỉ nhận tin nhắn từ đúng iframe, cùng origin, đúng dạng", () => {
+  assert.deepEqual(parseStudioMessage(msg({ source: FROM_STUDIO, type: "ready" }), FRAME, "https://localhost"), { type: "ready" });
+  assert.deepEqual(parseStudioMessage(msg({ source: FROM_STUDIO, type: "state", ownBack: true }), FRAME, "https://localhost"), { type: "state", ownBack: true });
+  assert.deepEqual(parseStudioMessage(msg({ source: FROM_STUDIO, type: "state" }), FRAME, "https://localhost"), { type: "state", ownBack: false });
+  for (const bad of [
+    msg({ source: FROM_STUDIO, type: "ready" }, { origin: "https://evil.example" }),
+    msg({ source: FROM_STUDIO, type: "ready" }, { source: {} }),
+    msg({ source: "other", type: "ready" }),
+    msg({ source: FROM_STUDIO, type: "rm-rf" }),
+    msg(null),
+  ]) assert.equal(parseStudioMessage(bad, FRAME, "https://localhost"), null);
+  assert.equal(parseStudioMessage(msg({ source: FROM_STUDIO, type: "ready" }), null, "https://localhost"), null, "chưa có iframe → bỏ");
+});
+
+test("S4: vòng đời Studio — tải → sẵn sàng; lỗi/hết hạn/mất mạng; Thử lại", () => {
+  let s: StudioState = INITIAL_STUDIO;
+  assert.equal(s.status, "loading");
+  s = reduceStudio(s, { type: "ready" });
+  assert.equal(s.status, "ready");
+  assert.equal(reduceStudio(s, { type: "timeout" }).status, "ready", "đã sẵn sàng thì timeout muộn không phá");
+  assert.equal(reduceStudio(INITIAL_STUDIO, { type: "timeout" }).status, "error");
+  assert.equal(reduceStudio(INITIAL_STUDIO, { type: "offline" }).status, "offline");
+  assert.equal(reduceStudio(INITIAL_STUDIO, { type: "auth-required" }).status, "auth", "không đủ quyền/phiên → báo, không chuyển trang");
+  assert.deepEqual(reduceStudio({ status: "error", ownBack: false }, { type: "retry" }), INITIAL_STUDIO);
+  assert.ok(STUDIO_READY_TIMEOUT_MS >= 10000 && STUDIO_READY_TIMEOUT_MS <= 60000);
+});
+
+test("S4: MỘT nút Quay lại — khung chỉ hiện khi Studio chưa có nút riêng; bấm: sẵn sàng → nhờ Studio lùi, còn lại → thoát", () => {
+  const ready = (ownBack: boolean): StudioState => ({ status: "ready", ownBack });
+  assert.equal(showShellBack(ready(false)), true);
+  assert.equal(showShellBack(ready(true)), false, "Studio có nút riêng → khung ẩn, không hai nút");
+  assert.equal(showShellBack(INITIAL_STUDIO), true, "đang tải vẫn thoát được");
+  assert.equal(showShellBack({ status: "error", ownBack: true }), true);
+  assert.equal(backAction(ready(false)), "ask-studio");
+  assert.equal(backAction(INITIAL_STUDIO), "exit");
+  assert.equal(backAction({ status: "error", ownBack: false }), "exit");
+});
+
+test("S4: Band → Studio → Band giữ trong tab Ban Nhạc; Quay lại về Ban Nhạc", () => {
+  let s = selectTab(initialNav(), "band");
+  s = push(s, { kind: "studio", projectId: PID }, "band");
+  assert.equal(s.tab, "band");
+  assert.equal(currentView(s).kind, "studio");
+  s = pop(s);
+  assert.equal(s.tab, "band");
+  assert.equal(currentView(s).kind, "tabRoot");
+});
+
+test("S4: native mở Studio trong app (không target=_blank/Safari); web giữ liên kết; build đóng gói TeamLab", () => {
+  const tab = read("src/class-mobile/BandTab.tsx");
+  assert.match(tab, /IS_NATIVE_CAPACITOR \? \(\s+<button[\s\S]*?onClick=\{\(\) => onOpenStudio\(b\.id\)\}/);
+  assert.match(tab, /studio\.external \? \{ target: '_blank'/, "web giữ liên kết như cũ");
+  const more = read("src/class-mobile/MoreSheet.tsx");
+  assert.match(more, /IS_NATIVE_CAPACITOR\s+\? <Row[\s\S]*?onClick=\{\(\) => \{ onClose\(\); onOpenStudio\(\) \}\}/);
+  const page = read("src/class-mobile/StudioPage.tsx");
+  assert.match(page, /allow="microphone; autoplay; fullscreen"/);
+  assert.doesNotMatch(page, /window\.open|target=|https?:\/\//, "Studio không mở ngoài app");
+  assert.match(read("src/class-mobile/MobileShell.tsx"), /case 'studio':\s+return <StudioPage/);
+  const pkg = JSON.parse(read("package.json"));
+  assert.match(pkg.scripts["build:native"], /build-teamlab-embed\.mjs/);
+  assert.doesNotMatch(pkg.scripts.build, /teamlab/i, "build web KHÔNG đóng gói TeamLab (web vẫn proxy /teamlab)");
+  assert.match(read("ios-embed/teamlab.ref"), /^[0-9a-f]{40}\s*$/);
+  assert.match(read("scripts/build-teamlab-embed.mjs"), /classapp/);
+});

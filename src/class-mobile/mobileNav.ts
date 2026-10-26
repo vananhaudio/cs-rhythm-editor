@@ -26,6 +26,7 @@ export type MobileView =
   | { kind: 'account' }        // Tài khoản & cài đặt (trong tab Tôi)
   | { kind: 'blocked' }        // Người đã chặn (từ Tài khoản & cài đặt)
   | { kind: 'password' }       // Đổi mật khẩu (từ Tài khoản & cài đặt)
+  | { kind: 'studio'; projectId?: string }   // Studio TeamLab nhúng (từ Ban Nhạc); projectId = Team của Band
 
 export const ROOT: MobileView = { kind: 'tabRoot' }
 

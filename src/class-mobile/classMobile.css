@@ -177,3 +177,8 @@
 /* Quản lý Band (Thầy): tiêu đề cùng cỡ với tiêu đề tab (S1) — chỉ trong Class Mobile */
 .cm-root .cs-band-admin .cs-page-title { font-size: 2rem; letter-spacing: -0.025em; line-height: 1.15; margin: 4px 2px 16px; }
 .cm-root .cs-band-admin .cs-band-admin-title .cs-page-title { margin-bottom: 10px; }
+
+/* Studio TeamLab nhúng: khung lấp vùng giữa thanh trên và thanh tab; iframe chiếm phần còn lại (sau nút Quay lại nếu có); cuộn bên trong iframe */
+.cm-studio-wrap { display: flex; flex-direction: column; height: calc(100dvh - var(--cm-top-h) - var(--cm-tab-h) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 8px); min-height: 360px; }
+.cm-studio { display: block; flex: 1 1 auto; min-height: 0; width: 100%; border: 0; background: #030712; visibility: hidden; }
+.cm-studio.is-ready { visibility: visible; }

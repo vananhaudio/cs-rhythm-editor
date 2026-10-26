@@ -15,13 +15,15 @@ import { proxiedHref } from './config'
 const LOAD_TIMEOUT_MS = 10000
 type Load = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; bands: MyBand[] }
 
-export default function BandTab({ userId, isTeacher, onOpenChat, onOpenBandChat, onOpenBands }: {
+export default function BandTab({ userId, isTeacher, onOpenChat, onOpenBandChat, onOpenStudio, onOpenBands }: {
   userId: string
   isTeacher: boolean
   /** Dự phòng khi chưa/không đọc được danh sách phòng: về danh sách Trò chuyện */
   onOpenChat: () => void
   /** Mở thẳng phòng chat của Band (id dạng `band:<id>`) */
   onOpenBandChat: (conversationId: string) => void
+  /** App native: mở Studio TeamLab NGAY TRONG app (iframe cùng origin) cho Team này. Web giữ liên kết /teamlab như cũ. */
+  onOpenStudio: (projectId: string) => void
   onOpenBands: () => void
 }) {
   const [rooms, setRooms] = useState<ConversationItem[] | null>(null)   // null = đang tải / không đọc được
@@ -66,11 +68,19 @@ export default function BandTab({ userId, isTeacher, onOpenChat, onOpenBandChat,
             <ul className="cm-list" style={{ boxShadow: 'none', background: 'transparent', marginBottom: 0 }}>
               {chatRows(b, rooms, onOpenBandChat, onOpenChat)}
               <li>
-                <a className="cm-row" href={studio.href} {...(studio.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}>
-                  <span className="cm-row-ic" aria-hidden="true"><Mic /></span>
-                  <span className="cm-row-body"><div className="cm-row-t">Mở Studio (TeamLab)</div><div className="cm-row-s">Công cụ thu âm: Take, Track, bài hát của Band</div></span>
-                  <ChevronRight className="cm-row-chev" aria-hidden="true" />
-                </a>
+                {IS_NATIVE_CAPACITOR ? (
+                  <button type="button" className="cm-row" onClick={() => onOpenStudio(b.id)}>
+                    <span className="cm-row-ic" aria-hidden="true"><Mic /></span>
+                    <span className="cm-row-body"><div className="cm-row-t">Mở Studio (TeamLab)</div><div className="cm-row-s">Công cụ thu âm: Take, Track, bài hát của Band</div></span>
+                    <ChevronRight className="cm-row-chev" aria-hidden="true" />
+                  </button>
+                ) : (
+                  <a className="cm-row" href={studio.href} {...(studio.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}>
+                    <span className="cm-row-ic" aria-hidden="true"><Mic /></span>
+                    <span className="cm-row-body"><div className="cm-row-t">Mở Studio (TeamLab)</div><div className="cm-row-s">Công cụ thu âm: Take, Track, bài hát của Band</div></span>
+                    <ChevronRight className="cm-row-chev" aria-hidden="true" />
+                  </a>
+                )}
               </li>
             </ul>
           </section>

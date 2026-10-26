@@ -14,6 +14,8 @@ type Props = {
   isTeacher: boolean
   onClose: () => void
   onOpenQueue: () => void
+  /** App native: Studio TeamLab mở trong app */
+  onOpenStudio: () => void
 }
 
 function Row({ icon, title, hint, href, external, onClick, locked }: {
@@ -30,7 +32,7 @@ function Row({ icon, title, hint, href, external, onClick, locked }: {
   return <li><button type="button" className="cm-row" onClick={onClick}>{body}</button></li>
 }
 
-export default function MoreSheet({ userId, isTeacher, onClose, onOpenQueue }: Props) {
+export default function MoreSheet({ userId, isTeacher, onClose, onOpenQueue, onOpenStudio }: Props) {
   const [libraryOpen, setLibraryOpen] = useState(false)
   const [zaloUrl, setZaloUrl] = useState<string | null>(null)
   const closeRef = useRef<HTMLButtonElement>(null)
@@ -90,7 +92,9 @@ export default function MoreSheet({ userId, isTeacher, onClose, onOpenQueue }: P
 
           <h2 className="cm-h2">Khám phá</h2>
           <ul className="cm-list">
-            <Row icon={<Mic />} title="Studio thu âm (TeamLab)" hint="Công cụ thu âm — không phải Ban Nhạc" href={teamlab.href} external={teamlab.external} />
+            {IS_NATIVE_CAPACITOR
+              ? <Row icon={<Mic />} title="Studio thu âm (TeamLab)" hint="Công cụ thu âm — không phải Ban Nhạc" onClick={() => { onClose(); onOpenStudio() }} />
+              : <Row icon={<Mic />} title="Studio thu âm (TeamLab)" hint="Công cụ thu âm — không phải Ban Nhạc" href={teamlab.href} external={teamlab.external} />}
             <Row icon={<BookText />} title="1001 Câu chuyện cùng Guitar" href="/story" />
           </ul>
 

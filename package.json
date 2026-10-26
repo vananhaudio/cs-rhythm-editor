@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "build:native": "tsc -b && vite build --mode native",
+    "build:native": "tsc -b && vite build --mode native && node scripts/build-teamlab-embed.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
     "mira:content": "node scripts/mira-content.mjs",
