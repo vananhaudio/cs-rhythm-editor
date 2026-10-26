@@ -14,6 +14,8 @@ import ClassPublicTracks, { type OpenClass, type PublicPlan, type PlanKey } from
 
 import { DOORS, MODALS, PRODUCTS, PUBLIC_ORDER, type PublicProductKey } from './class-content'
 import { buildClassLead, saveClassLead } from './lib/classLead'
+import { isIosNativeStorefront } from './iosPaymentPolicy'
+import IosProgramInfoPage from './components/IosProgramInfoPage'
 
 
 const ZALO = '0983 259 893'
@@ -22,7 +24,14 @@ const SHOP_URL = 'https://shop.vananhaudio.com'
 
 type Msg = { who: 'ai' | 'me'; html: string }
 
+// iOS native (Guideline 3.1.1): KHÔNG render trang tuyển sinh (bảng giá, thanh toán ngoài app, đăng ký ngoài app, iframe Mira shop).
+// Web/Android giữ nguyên. Vỏ mỏng để không vi phạm quy tắc hooks của thân trang.
 export default function ClassLandingPage() {
+  if (isIosNativeStorefront()) return <IosProgramInfoPage />
+  return <ClassLandingPageWeb />
+}
+
+function ClassLandingPageWeb() {
   // ── ĐĂNG KÝ (Phase 1, 09/2026): chọn 1 trong 4 sản phẩm public → tên+email → thanh toán ──
   const [selCode, setSelCode] = useState<string | null>(null)   // mã lớp đang mở khung đăng ký
   const [regDone, setRegDone] = useState<{ name: string; className: string } | null>(null)  // tên/lớp vừa submit → text thanh toán/chờ duyệt
