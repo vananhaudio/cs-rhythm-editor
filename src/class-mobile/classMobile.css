@@ -173,3 +173,7 @@
 
 /* Một nút Quay lại duy nhất: BackBar của khung. Nút tự vẽ của màn con (kiểu cs-btn / pill) ẩn trong Class Mobile; web /me giữ nguyên. */
 .cm-root .cs-profile-back, .cm-root .cs-band-back, .cm-root .cs-back-btn { display: none; }
+
+/* Quản lý Band (Thầy): tiêu đề cùng cỡ với tiêu đề tab (S1) — chỉ trong Class Mobile */
+.cm-root .cs-band-admin .cs-page-title { font-size: 2rem; letter-spacing: -0.025em; line-height: 1.15; margin: 4px 2px 16px; }
+.cm-root .cs-band-admin .cs-band-admin-title .cs-page-title { margin-bottom: 10px; }

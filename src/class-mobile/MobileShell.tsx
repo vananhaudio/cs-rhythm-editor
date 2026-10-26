@@ -147,11 +147,12 @@ export default function MobileShell({ base }: { base: ClassIdentity }) {
             return <MeHome key={homeVisit} me={me} identityRev={identityRev} canEditAvatar={editor.canEditAvatar} onEditMedia={editor.pick}
               onOpenProfile={openProfile} requests={requests} onSeeAllRequests={() => go({ kind: 'section', section: 'friends' })}
               onOpenThread={openThread} onOpenQueue={openQueue} classes={classes} onOpenClass={openClass}
-              onJoinedClass={joinedClass} onOpenBands={openBands} />
+              onJoinedClass={joinedClass} />
           case 'class':
             return <LearnTab classes={classes} onOpenClass={openClass} onJoined={id => { joinedClass(); openClass(id) }} />
           case 'band':
-            return <BandTab userId={me.userId} isTeacher={me.isTeacher} onOpenChat={() => selectTabAndScroll('chat')} onOpenBands={openBands} />
+            return <BandTab userId={me.userId} isTeacher={me.isTeacher} onOpenChat={() => selectTabAndScroll('chat')}
+              onOpenBandChat={id => go({ kind: 'chatConversation', conversationId: id }, 'band')} onOpenBands={openBands} />
           case 'chat':
             return chatPage({ kind: 'none' }, null)   // thông báo hệ thống đã chuyển lên chuông (không lặp trong danh sách chat)
           case 'me':
@@ -231,7 +232,7 @@ export default function MobileShell({ base }: { base: ClassIdentity }) {
       </main>
       <TabBar tab={tab} badges={{ chat: dmUnread, me: requests.count }} onSelect={selectTabAndScroll} />
       {more && <MoreSheet userId={me.userId} isTeacher={me.isTeacher} onClose={() => setMore(false)}
-        onOpenQueue={openQueue} onOpenBands={openBands} />}
+        onOpenQueue={openQueue} />}
       {editor.element}
       {editingProfile && <ProfileEditDialog me={me} onClose={() => setEditingProfile(false)} onSaved={onChanged} />}
     </div>

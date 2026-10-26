@@ -1,9 +1,13 @@
 // Tab Ban Nhạc. Ban Nhạc = NHÓM NGƯỜI chơi nhạc cùng nhau. TeamLab = CÔNG CỤ THU ÂM (Studio) — hai thứ khác nhau, giao diện tách rõ.
 // Dữ liệu: "Band của tôi" của Class Social (fetchMyBands: teamlab_project_members ⨝ projects, chỉ đọc, RLS hiện có). Không viết lại nghiệp vụ Band.
-// Chat Band đã có sẵn trong Trò chuyện (bandchat_*): nút "Chat Band" chỉ chuyển sang tab Trò chuyện.
+// Chat Band: mở THẲNG phòng chat của Band (bandchat_rooms, quyền do server quyết; không tạo phòng). Không khớp được phòng → hàng bị khoá / về danh sách Trò chuyện.
+// Quản lý Band & tuyển thành viên (Thầy): MỘT lối vào duy nhất ở đây.
 import { useCallback, useEffect, useState } from 'react'
-import { ChevronRight, Drum, MessageCircle, Mic, Users } from 'lucide-react'
+import { ChevronRight, Drum, Mic, Users } from 'lucide-react'
 import { fetchMyBands } from '../class-social/mybands/myBandsApi'
+import { fetchBandRooms } from '../class-social/chat/chatApi'
+import type { ConversationItem } from '../class-social/chat/chatModel'
+import { chatRows } from './BandChatRows'
 import { bandHomeHref, type MyBand } from '../class-social/mybands/myBandsModel'
 import { IS_NATIVE_CAPACITOR } from '../supabase'
 import { proxiedHref } from './config'
@@ -11,12 +15,21 @@ import { proxiedHref } from './config'
 const LOAD_TIMEOUT_MS = 10000
 type Load = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; bands: MyBand[] }
 
-export default function BandTab({ userId, isTeacher, onOpenChat, onOpenBands }: {
+export default function BandTab({ userId, isTeacher, onOpenChat, onOpenBandChat, onOpenBands }: {
   userId: string
   isTeacher: boolean
+  /** Dự phòng khi chưa/không đọc được danh sách phòng: về danh sách Trò chuyện */
   onOpenChat: () => void
+  /** Mở thẳng phòng chat của Band (id dạng `band:<id>`) */
+  onOpenBandChat: (conversationId: string) => void
   onOpenBands: () => void
 }) {
+  const [rooms, setRooms] = useState<ConversationItem[] | null>(null)   // null = đang tải / không đọc được
+  useEffect(() => {
+    let alive = true
+    void fetchBandRooms().then(r => { if (alive) setRooms(r.ok ? r.value : null) })
+    return () => { alive = false }
+  }, [userId])
   const [load, setLoad] = useState<Load>({ status: 'loading' })
   const run = useCallback(() => {
     // Mạng treo (không lỗi hẳn, không trả về) → quá hạn thì báo lỗi + Thử lại, không quay tải mãi
@@ -51,13 +64,7 @@ export default function BandTab({ userId, isTeacher, onOpenChat, onOpenBands }: 
             <h2 className="cm-band-name">{b.name}</h2>
             <p className="cm-band-meta">Nhóm người chơi nhạc của bạn</p>
             <ul className="cm-list" style={{ boxShadow: 'none', background: 'transparent', marginBottom: 0 }}>
-              <li>
-                <button type="button" className="cm-row" onClick={onOpenChat}>
-                  <span className="cm-row-ic" aria-hidden="true"><MessageCircle /></span>
-                  <span className="cm-row-body"><div className="cm-row-t">Chat Band</div><div className="cm-row-s">Nhóm chat của Ban Nhạc trong Trò chuyện</div></span>
-                  <ChevronRight className="cm-row-chev" aria-hidden="true" />
-                </button>
-              </li>
+              {chatRows(b, rooms, onOpenBandChat, onOpenChat)}
               <li>
                 <a className="cm-row" href={studio.href} {...(studio.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}>
                   <span className="cm-row-ic" aria-hidden="true"><Mic /></span>
@@ -70,10 +77,6 @@ export default function BandTab({ userId, isTeacher, onOpenChat, onOpenBands }: 
         )
       })}
 
-      {load.status === 'ready' && load.bands.length > 0 && (
-        <p className="cm-note">Thành viên, chức danh, kho bài và bản thu của Ban Nhạc nằm trong TeamLab. Bản này chưa nhúng các màn đó vào ứng dụng.</p>
-      )}
-
       {isTeacher && (
         <>
           <h2 className="cm-h2">Dành cho Thầy</h2>
@@ -81,7 +84,7 @@ export default function BandTab({ userId, isTeacher, onOpenChat, onOpenBands }: 
             <li>
               <button type="button" className="cm-row" onClick={onOpenBands}>
                 <span className="cm-row-ic" aria-hidden="true"><Users /></span>
-                <span className="cm-row-body"><div className="cm-row-t">Quản lý Band & tuyển thành viên</div></span>
+                <span className="cm-row-body"><div className="cm-row-t">Quản lý Band & đơn ứng tuyển</div><div className="cm-row-s">Tuyển thành viên cho các Band</div></span>
                 <ChevronRight className="cm-row-chev" aria-hidden="true" />
               </button>
             </li>

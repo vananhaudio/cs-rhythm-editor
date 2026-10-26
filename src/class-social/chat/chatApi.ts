@@ -36,6 +36,12 @@ export async function fetchConversations(limit = 50): Promise<Result<Conversatio
   return { ok: true, value: mergeConversationLists(toConversations(r.value), b.ok ? toBandConversations(b.value) : []) }
 }
 
+/** Chỉ các nhóm Band mình thấy được (bandchat_rooms: thành viên, hoặc Thầy/Admin xem hỗ trợ). Không tạo phòng, chỉ đọc. */
+export async function fetchBandRooms(limit = 50): Promise<Result<ConversationItem[]>> {
+  const b = await rpc<BandRoomRow[]>('bandchat_rooms', { p_limit: limit })
+  return b.ok ? { ok: true, value: toBandConversations(b.value) } : b
+}
+
 export async function fetchUnreadCount(): Promise<Result<number>> {
   const [r, b] = await Promise.all([rpc<number>('dm_unread_count', {}), rpc<number>('bandchat_unread_count', {})])
   if (!r.ok) return r

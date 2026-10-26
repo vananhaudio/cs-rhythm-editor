@@ -139,6 +139,13 @@ export function toBandMembers(rows: BandMemberRow[] | null | undefined): BandMem
 }
 
 /** Danh sách gộp: nhóm có tin mới nhất trước, nhóm chưa có tin xếp cuối (theo tên) — ổn định, không nhảy khi poll */
+/** Nhóm chat của một Team (projects.id): "Band của tôi" liệt kê Team, nhóm chat gắn với Band (teamlab_bands) của Team đó qua project_id. Không đoán: không khớp → rỗng. */
+export function bandRoomsOfTeam(rooms: ConversationItem[] | null | undefined, teamId: string): ConversationItem[] {
+  const t = String(teamId ?? '').toLowerCase()
+  if (!t) return []
+  return (rooms ?? []).filter(r => r.kind === 'band' && !!r.projectId && r.projectId.toLowerCase() === t)
+}
+
 export function mergeConversationLists(dm: ConversationItem[], bands: ConversationItem[]): ConversationItem[] {
   const t = (c: ConversationItem) => { const n = Date.parse(c.lastAt); return Number.isNaN(n) ? -Infinity : n }
   return [...dm, ...bands].sort((a, b) => (t(b) - t(a)) || a.name.localeCompare(b.name, 'vi') || a.id.localeCompare(b.id))

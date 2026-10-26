@@ -212,3 +212,80 @@ test("S1-E: một nút Quay lại của khung cho mọi màn sâu; nút riêng c
   assert.match(css, /\.cm-root \.cs-profile-back, \.cm-root \.cs-band-back, \.cm-root \.cs-back-btn \{ display: none; \}/);
   assert.doesNotMatch(read("src/class-social/classSocial.css"), /cm-root/, "không đổi CSS web /me");
 });
+
+// ── 1.6.0 S3: Ban Nhạc — Chat Band đúng phòng, một lối vào Quản lý Band, bỏ ghi chú "chưa nhúng" ──
+import { bandRoomsOfTeam, toBandConversations, type ConversationItem } from "../../src/class-social/chat/chatModel.ts";
+
+const rooms = toBandConversations([
+  { band_id: "B1", band_name: "Lá Mùa Thu", cover_path: null, project_id: "AAAA-1", project_avatar_path: null, last_seq: 3, last_body: "hi", last_sender_name: "An", last_mine: false, last_at: "2026-10-01T00:00:00Z", unread: 2, member_count: 4, can_send: true },
+  { band_id: "B2", band_name: "Infinity", cover_path: null, project_id: "bbbb-2", project_avatar_path: null, last_seq: 0, last_body: null, last_sender_name: null, last_mine: null, last_at: null, unread: 0, member_count: 3, can_send: false, support: true },
+  { band_id: "B3", band_name: "Cùng Team", cover_path: null, project_id: "aaaa-1", project_avatar_path: null, last_seq: 0, last_body: null, last_sender_name: null, last_mine: null, last_at: null, unread: 0, member_count: 2, can_send: true },
+]);
+
+test("S3: phòng chat khớp Team qua project_id (không phân biệt hoa/thường), không đoán khi không khớp", () => {
+  assert.deepEqual(bandRoomsOfTeam(rooms, "aaaa-1").map(r => r.id).sort(), ["band:b1", "band:b3"]);
+  assert.deepEqual(bandRoomsOfTeam(rooms, "BBBB-2").map(r => r.id), ["band:b2"]);
+  assert.deepEqual(bandRoomsOfTeam(rooms, "zzz"), []);
+  assert.deepEqual(bandRoomsOfTeam(null, "aaaa-1"), []);
+  assert.deepEqual(bandRoomsOfTeam(rooms, ""), []);
+  const dm: ConversationItem = { ...rooms[0], kind: "dm", projectId: "aaaa-1" };
+  assert.deepEqual(bandRoomsOfTeam([dm], "aaaa-1"), [], "hội thoại cá nhân không bao giờ là phòng Band");
+});
+
+test("S3: mở phòng Band giữ trong tab Ban Nhạc, Quay lại về đúng tab Ban Nhạc", () => {
+  let s = selectTab(initialNav(), "band");
+  s = push(s, { kind: "chatConversation", conversationId: "band:b1" }, "band");
+  assert.equal(s.tab, "band", "không nhảy sang tab Trò chuyện");
+  assert.equal(currentView(s).kind, "chatConversation");
+  s = pop(s);
+  assert.equal(s.tab, "band");
+  assert.equal(currentView(s).kind, "tabRoot");
+  const jumped = push(selectTab(initialNav(), "band"), { kind: "chatConversation", conversationId: "x" });
+  assert.equal(jumped.tab, "chat", "đường cũ (không chỉ định tab) vẫn thuộc Trò chuyện");
+});
+
+test("S3: BandTab — Chat Band mở thẳng phòng, không còn ghi chú 'chưa nhúng', không tạo phòng", () => {
+  const tab = read("src/class-mobile/BandTab.tsx");
+  assert.doesNotMatch(tab, /chưa nhúng/);
+  assert.match(tab, /chatRows\(b, rooms, onOpenBandChat, onOpenChat\)/);
+  const rows = read("src/class-mobile/BandChatRows.tsx");
+  assert.match(rows, /bandRoomsOfTeam\(rooms, b\.id\)/);
+  assert.match(rows, /Band này chưa có nhóm chat/);
+  assert.match(rows, /onOpenBandChat\(r\.id\)/);
+  assert.match(read("src/class-mobile/MobileShell.tsx"), /onOpenBandChat=\{id => go\(\{ kind: 'chatConversation', conversationId: id \}, 'band'\)\}/);
+  const api = read("src/class-social/chat/chatApi.ts");
+  assert.match(api, /fetchBandRooms[\s\S]{0,200}bandchat_rooms/);
+  assert.doesNotMatch(api.slice(api.indexOf("export async function fetchBandRooms"), api.indexOf("export async function fetchUnreadCount")), /bandchat_send|insert|upsert/);
+});
+
+test("S3: Quản lý Band chỉ còn MỘT lối vào (tab Ban Nhạc, chỉ Thầy); Trang chủ và ▦ không lặp", () => {
+  const shell = read("src/class-mobile/MobileShell.tsx");
+  assert.equal((shell.match(/onOpenBands=/g) ?? []).length, 1, "chỉ BandTab nhận onOpenBands");
+  assert.doesNotMatch(read("src/class-mobile/MoreSheet.tsx"), /onOpenBands|Quản lý Band/);
+  assert.match(read("src/class-mobile/BandTab.tsx"), /\{isTeacher && \(/);
+  assert.match(read("src/class-social/sections/MeHome.tsx"), /me\.isTeacher && onOpenBands/, "web /me giữ nguyên");
+  assert.match(read("src/class-mobile/classMobile.css"), /\.cm-root \.cs-band-admin \.cs-page-title/);
+});
+
+import { createElement as h } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { chatRows } from "../../src/class-mobile/BandChatRows.tsx";
+
+test("S3: hàng Chat Band — dự phòng / khoá / một phòng / nhiều phòng", () => {
+  const render = (r: ConversationItem[] | null, id: string) => renderToStaticMarkup(h("ul", null, chatRows({ id, name: "T" }, r, () => undefined, () => undefined)));
+  const fallback = render(null, "aaaa-1");
+  assert.match(fallback, /<button[^>]*>.*Chat Band.*Mở Trò chuyện/s, "chưa đọc được phòng → về danh sách Trò chuyện");
+  const none = render(rooms, "zzz");
+  assert.match(none, /aria-disabled="true"/);
+  assert.doesNotMatch(none, /<button/);
+  assert.match(none, /Band này chưa có nhóm chat/);
+  const one = render(rooms, "bbbb-2");
+  assert.match(one, /<button/);
+  assert.match(one, /Chat Band/);
+  assert.match(one, /Chỉ xem/, "Thầy/Admin xem hỗ trợ (support) → chỉ xem");
+  const two = render(rooms, "aaaa-1");
+  assert.equal((two.match(/<button/g) ?? []).length, 2);
+  assert.match(two, /Chat Lá Mùa Thu/);
+  assert.match(two, /Chat Cùng Team/);
+  assert.match(two, /2 tin chưa đọc/);
+});

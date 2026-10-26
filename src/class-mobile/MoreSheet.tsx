@@ -2,7 +2,7 @@
 // công cụ âm nhạc, thư viện, kho bài giảng, TeamLab, Story, App học cũ… Không bỏ sót chức năng nào chỉ vì không ở tab.
 // Nguồn: danh mục Class Social (tools.ts, nav.ts) — cùng quyền: ToolRouteGate / my_tool_route_access quyết, ở đây CHỈ điều hướng.
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { BookMarked, BookOpen, Library, Inbox, MessageCircle, ShieldCheck, Users, X, BookText, Mic } from 'lucide-react'
+import { BookMarked, BookOpen, Library, Inbox, MessageCircle, ShieldCheck, X, BookText, Mic } from 'lucide-react'
 import { TOOLS } from '../class-social/tools'
 import { HT_ONLY_NOTE } from '../class-social/nav'
 import { thuVienAccess } from '../thuvien/masterLibrary'
@@ -14,7 +14,6 @@ type Props = {
   isTeacher: boolean
   onClose: () => void
   onOpenQueue: () => void
-  onOpenBands: () => void
 }
 
 function Row({ icon, title, hint, href, external, onClick, locked }: {
@@ -31,7 +30,7 @@ function Row({ icon, title, hint, href, external, onClick, locked }: {
   return <li><button type="button" className="cm-row" onClick={onClick}>{body}</button></li>
 }
 
-export default function MoreSheet({ userId, isTeacher, onClose, onOpenQueue, onOpenBands }: Props) {
+export default function MoreSheet({ userId, isTeacher, onClose, onOpenQueue }: Props) {
   const [libraryOpen, setLibraryOpen] = useState(false)
   const [zaloUrl, setZaloUrl] = useState<string | null>(null)
   const closeRef = useRef<HTMLButtonElement>(null)
@@ -99,7 +98,6 @@ export default function MoreSheet({ userId, isTeacher, onClose, onOpenQueue, onO
           <ul className="cm-list">
             {zaloUrl && <Row icon={<MessageCircle />} title="Nhắn Thầy qua Zalo" hint="Trò chuyện Thầy ↔ học viên trong Class chưa mở" href={zaloUrl} external />}
             {isTeacher && <Row icon={<Inbox />} title="Hàng đợi Trả bài / Hỏi bài" onClick={() => { onClose(); onOpenQueue() }} />}
-            {isTeacher && <Row icon={<Users />} title="Quản lý Band (tuyển thành viên)" onClick={() => { onClose(); onOpenBands() }} />}
             {isTeacher && <Row icon={<ShieldCheck />} title="Báo cáo Class" hint="Báo cáo nội dung cần xem xét" href="/story/reports?tab=class" />}
             {isTeacher && <Row icon={<ShieldCheck />} title="Trang quản trị" hint="Mở trên giao diện máy tính" href="/admin" />}
           </ul>
