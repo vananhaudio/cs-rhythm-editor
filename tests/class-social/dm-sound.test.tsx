@@ -91,11 +91,11 @@ test("Badge: inboxUnread = số HỘI THOẠI chưa đọc, giống dm_unread_co
 test("Phạm vi: một request gộp, fallback khi bị cắt trần, không DB/RPC mới, hook không tự dựng timer", () => {
   const live = code("src/class-social/chat/chatLive.ts");
   assert.match(live, /watchInbox\(onInbox\)[\s\S]*fetchConversations\(INBOX_LIMIT\)/);
-  assert.match(live, /length >= INBOX_LIMIT\)[\s\S]*fetchUnreadCount\(\)/, "bị cắt trần → lấy số đếm chính xác từ RPC cũ");
+  assert.match(live, /length >= INBOX_LIMIT\)[\s\S]*fetchUnreadBreakdown\(\)/, "bị cắt trần → lấy số đếm chính xác từ RPC cũ");
   assert.equal(INBOX_LIMIT, 100, "bằng trần least(p_limit,100) của dm_conversations");
   const hook = code("src/class-social/chat/useChat.ts");
   assert.match(hook, /live\.watchInbox/);
-  assert.match(hook, /live\.watchUnread\(setDm\)/, "live không có hộp thư vẫn chạy badge cũ");
+  assert.match(hook, /live\.watchUnread\(n => setChat\(\{ dm: n, band: 0 \}\)\)/, "live không có hộp thư vẫn chạy badge cũ (tổng Trò chuyện)");
   assert.equal(/setInterval|setTimeout/.test(hook), false);
   const api = code("src/class-social/chat/chatApi.ts");
   assert.equal([...api.matchAll(/rpc<[^>]*>\('([a-z_]+)'/g)].map(m => m[1]).filter(n => n.startsWith("dm_") && !["dm_conversations_safe", "dm_unread_count", "dm_messages_safe", "dm_send", "dm_mark_read", "dm_start", "dm_can_message", "dm_find", "dm_share"].includes(n)).length, 0, "không RPC DM mới");

@@ -195,7 +195,7 @@ test("S1-C: 'Lớp của tôi' không lặp trong Class Mobile; web /me giữ ti
 
 test("S1-D: Thông báo là màn riêng trong khung, không nhắc 'Class 2.0'", () => {
   const shell = read("src/class-mobile/MobileShell.tsx");
-  assert.match(shell, /case 'notices':\n\s+return <NoticesPage/);
+  assert.match(shell, /case 'notices':\n\s+case 'chatSystem':[^\n]*\n\s+return <NoticesPage/);   // đường cũ /me/chat/system cùng màn
   const notices = read("src/class-mobile/NoticesPage.tsx");
   assert.match(notices, /<h1 className="cm-title">Thông báo<\/h1>/);
   assert.match(notices, /SystemNoticeView bare/);

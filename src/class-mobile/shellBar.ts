@@ -25,7 +25,8 @@ export function barFor(view: MobileView, tab: MobileTab): BarSpec {
     case 'account': return { title: 'Tài khoản & cài đặt', back: true, hidePageTitle: true }
     case 'blocked': return { title: 'Người đã chặn', back: true, hidePageTitle: true }
     case 'password': return { title: 'Đổi mật khẩu', back: true, hidePageTitle: true }
-    case 'notices': return { title: 'Thông báo', back: true, hidePageTitle: true }
+    case 'notices':
+    case 'chatSystem': return { title: 'Thông báo', back: true, hidePageTitle: true }
     case 'bands': return { title: 'Quản lý Band', back: true, hidePageTitle: true }
     case 'bandAdmin': return { title: 'Quản lý Band', back: true, hidePageTitle: false }
     case 'profile': return { title: 'Trang cá nhân', back: true, hidePageTitle: false }

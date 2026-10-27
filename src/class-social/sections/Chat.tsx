@@ -6,9 +6,8 @@ import { EmptyState } from '../ui'
 import ConversationList from '../chat/ConversationList'
 import ConversationView, { type Peer } from '../chat/ConversationView'
 import NewConversationView from '../chat/NewConversationView'
-import SystemNoticeView from '../chat/SystemNoticeView'
 import { useConversationList, useNoticeSound } from '../chat/useChat'
-import { type ChatSelection, type SystemSummary } from '../chat/chatModel'
+import { type ChatSelection } from '../chat/chatModel'
 
 /** Điện thoại: khi mở một hội thoại, khung phủ toàn màn hình → theo chiều cao THẬT khi bàn phím mở (iOS không co 100dvh) */
 function useOpenPaneViewport(open: boolean) {
@@ -35,7 +34,7 @@ function useOpenPaneViewport(open: boolean) {
   }, [open])
 }
 
-export default function Chat({ meId, selection, onOpenConversation, onBackToList, onOpenProfile, onOpenFriends, onUnreadChanged, system = null, onOpenSystem, onOpenThread, systemTitle }: {
+export default function Chat({ meId, selection, onOpenConversation, onBackToList, onOpenProfile, onOpenFriends, onUnreadChanged, soundToggle = false }: {
   meId: string
   selection: ChatSelection
   onOpenConversation: (id: string, opts?: { replace?: boolean }) => void
@@ -44,13 +43,8 @@ export default function Chat({ meId, selection, onOpenConversation, onBackToList
   onOpenFriends: () => void
   /** Đã đọc / có tin mới → cập nhật badge menu ngay */
   onUnreadChanged: () => void
-  /** Class 2.0: tóm tắt thông báo hệ thống (null = chưa dùng được → ẩn mục) */
-  system?: SystemSummary | null
-  onOpenSystem?: () => void
-  /** Bấm "Xem kết quả" → trang cuộc trao đổi bài trả (hệ thống gốc) */
-  onOpenThread?: (threadId: string, search?: string) => void
-  /** Tên màn thông báo hệ thống (Class Mobile: "Thông báo"). Không truyền → như cũ. */
-  systemTitle?: string
+  /** Hiện công tắc "Âm thanh thông báo" (tiếng ting cho tin nhắn mới và thông báo hệ thống). Thông báo KHÔNG nằm trong danh sách Trò chuyện. */
+  soundToggle?: boolean
 }) {
   const list = useConversationList()
   const sound = useNoticeSound()
@@ -81,7 +75,7 @@ export default function Chat({ meId, selection, onOpenConversation, onBackToList
   return (
     <div className={'cs-col-wide cs-chat-wrap' + (open ? ' has-open' : '')}>
       <h1 className="cs-page-title">Trò chuyện</h1>
-      {system != null && (
+      {soundToggle && (
         <div className="cs-chat-sound">
           <span id="cs-chat-sound-label">Âm thanh thông báo</span>
           <button type="button" role="switch" aria-checked={sound.enabled} aria-labelledby="cs-chat-sound-label"
@@ -93,8 +87,7 @@ export default function Chat({ meId, selection, onOpenConversation, onBackToList
       )}
       <section className="cs-card cs-chat">
         <ConversationList state={list.state} selectedId={selectedId} onSelect={id => onOpenConversation(id)}
-          onRetry={list.retry} onOpenFriends={onOpenFriends}
-          system={system} systemActive={selection.kind === 'system'} onSelectSystem={onOpenSystem} />
+          onRetry={list.retry} onOpenFriends={onOpenFriends} />
         <div className={'cs-chat-pane' + (open ? ' is-open' : '')}>
           {selection.kind === 'none' && (
             <div className="cs-chat-pane-empty">
@@ -104,10 +97,6 @@ export default function Chat({ meId, selection, onOpenConversation, onBackToList
           {selection.kind === 'conversation' && (
             <ConversationView key={selection.id} id={selection.id} peer={peer} canSend={canSend}
               onBack={onBackToList} onOpenProfile={onOpenProfile} onActivity={activity} />
-          )}
-          {selection.kind === 'system' && (
-            <SystemNoticeView onBack={onBackToList} onActivity={onUnreadChanged} title={systemTitle}
-              onOpenThread={(threadId, search) => onOpenThread?.(threadId, search)} />
           )}
           {selection.kind === 'with' && (
             <NewConversationView key={selection.userId} userId={selection.userId} meId={meId} onBack={onBackToList}

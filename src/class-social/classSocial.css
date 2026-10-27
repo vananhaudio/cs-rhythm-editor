@@ -510,6 +510,9 @@
 .cs-dialog p { color: var(--cs-muted); margin: 0 0 20px; }
 .cs-dialog .cs-btn { width: 100%; }
 
+/* ── Thông báo (khu vực riêng, tách khỏi Trò chuyện) ── */
+.cs-notices { display: flex; flex-direction: column; height: clamp(480px, calc(100dvh - var(--cs-topbar-h) - 128px), 760px); overflow: hidden; padding: 0; }
+
 /* ── Trò chuyện ──────────────────────────────────────────────────────────── */
 .cs-chat { display: grid; grid-template-columns: 340px minmax(0, 1fr); height: clamp(480px, calc(100dvh - var(--cs-topbar-h) - 128px), 760px); overflow: hidden; padding: 0; }
 .cs-chat-list { border-right: 1px solid var(--cs-border); display: flex; flex-direction: column; min-height: 0; min-width: 0; }
@@ -685,7 +688,8 @@ a.cs-share-card:focus-visible { outline: 2px solid var(--cs-p); outline-offset: 
 .cs-sidebar.is-collapsed .cs-nav-item { position: relative; }
 .cs-nav-badge.is-dot { position: absolute; top: 4px; right: 12px; min-width: 18px; height: 18px; padding: 0 5px; font-size: 11px; }
 .cs-sidebar.is-collapsed .cs-nav-badge.is-dot { display: inline-grid; }
-.cs-menu-btn { position: relative; }
+.cs-menu-btn, .cs-bell-btn { position: relative; }
+.cs-bell-btn.is-active { color: var(--cs-primary, currentColor); }
 .cs-nav-badge.is-corner {
   position: absolute; top: 1px; right: -2px; margin: 0;
   min-width: 18px; height: 18px; padding: 0 5px; font-size: 11px; box-shadow: 0 0 0 2px var(--cs-surface);

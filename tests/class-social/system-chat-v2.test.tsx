@@ -40,8 +40,9 @@ test("Màn Class 2.0: nhãn lấy từ noticeAction theo kind, mở đúng threa
   assert.match(view, /onOpenThread\(n\.threadId, noticeAction\(n\.kind\)\.search\)/);
   assert.equal(/<textarea|<input|Composer|sendMessage|onSend|contentEditable/i.test(view), false, "không có ô nhập");
   assert.equal(/Xem kết quả/.test(view), false, "không còn nhãn cố định");
-  const chat = code("src/class-social/sections/Chat.tsx");
-  assert.match(chat, /onOpenThread\?\.\(threadId, search\)/);
+  const notices = code("src/class-social/sections/Notices.tsx");
+  assert.match(notices, /onOpenThread=\{\(id, search\) => onOpenThread\(id, search\)\}/, "Web: Thông báo mở đúng thread kèm focus");
+  assert.equal(/SystemNoticeView/.test(code("src/class-social/sections/Chat.tsx")), false, "Trò chuyện không còn chứa màn thông báo");
 });
 
 test("ThreadView: focus=bai-moi cuộn tới lượt học viên mới nhất; focus=ket-qua giữ nguyên (V1)", () => {

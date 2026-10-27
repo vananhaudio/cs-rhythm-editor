@@ -40,7 +40,7 @@ export type ConversationItem = {
 }
 
 /** Màn đang chọn trong /me/chat: chưa chọn · một hội thoại có sẵn · bắt đầu với một người (hội thoại tạo khi gửi tin đầu) */
-export type ChatSelection = { kind: 'none' } | { kind: 'conversation'; id: string } | { kind: 'with'; userId: string } | { kind: 'system' }
+export type ChatSelection = { kind: 'none' } | { kind: 'conversation'; id: string } | { kind: 'with'; userId: string }
 
 /** Chia sẻ nội bộ: CHỈ tham chiếu tới object gốc — Chat không giữ bản sao nội dung (loại/validate ở src/share/shareRef.ts) */
 export type ChatShareRef = ShareRef
@@ -157,6 +157,23 @@ export const INBOX_LIMIT = 100
 /** Số hội thoại chưa đọc — CÙNG ngữ nghĩa dm_unread_count (đếm hội thoại có last_seq > last_read_seq, không đếm số tin) */
 export function inboxUnread(rows: ConversationItem[]): number {
   return rows.reduce((n, c) => n + (c.unread > 0 ? 1 : 0), 0)
+}
+
+/** Chưa đọc theo TỪNG nguồn độc lập — Trò chuyện (dm + band) và Thông báo hệ thống không bao giờ cộng vào nhau. */
+export type UnreadCounts = { dm: number; band: number; notice: number; chatTotal: number; noticeTotal: number }
+
+const safeCount = (n: unknown): number => { const v = Math.floor(Number(n)); return Number.isFinite(v) && v > 0 ? v : 0 }
+
+export function buildUnread(dm: unknown, band: unknown, notice: unknown): UnreadCounts {
+  const d = safeCount(dm), b = safeCount(band), n = safeCount(notice)
+  return { dm: d, band: b, notice: n, chatTotal: d + b, noticeTotal: n }
+}
+
+/** Tách hộp thư gộp (dm + nhóm Band) thành hai nguồn — cùng ngữ nghĩa đếm hội thoại có tin chưa đọc */
+export function inboxUnreadSplit(rows: ConversationItem[]): { dm: number; band: number } {
+  let dm = 0, band = 0
+  for (const c of rows) if (c.unread > 0) { if (c.kind === 'band') band++; else dm++ }
+  return { dm, band }
 }
 
 export function toMessages(rows: MessageRow[] | null | undefined): ChatMessage[] {

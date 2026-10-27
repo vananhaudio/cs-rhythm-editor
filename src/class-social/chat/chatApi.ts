@@ -42,10 +42,18 @@ export async function fetchBandRooms(limit = 50): Promise<Result<ConversationIte
   return b.ok ? { ok: true, value: toBandConversations(b.value) } : b
 }
 
-export async function fetchUnreadCount(): Promise<Result<number>> {
+/** Chưa đọc tách theo nguồn: dm_unread_count (lỗi → lỗi) và bandchat_unread_count (lỗi/chưa có → 0, như trước). */
+export async function fetchUnreadBreakdown(): Promise<Result<{ dm: number; band: number }>> {
   const [r, b] = await Promise.all([rpc<number>('dm_unread_count', {}), rpc<number>('bandchat_unread_count', {})])
   if (!r.ok) return r
-  return { ok: true, value: Math.max(0, Number(r.value) || 0) + (b.ok ? Math.max(0, Number(b.value) || 0) : 0) }
+  const n = (v: unknown) => Math.max(0, Number(v) || 0)
+  return { ok: true, value: { dm: n(r.value), band: b.ok ? n(b.value) : 0 } }
+}
+
+/** Tổng Trò chuyện (dm + band) — không gồm thông báo hệ thống */
+export async function fetchUnreadCount(): Promise<Result<number>> {
+  const r = await fetchUnreadBreakdown()
+  return r.ok ? { ok: true, value: r.value.dm + r.value.band } : r
 }
 
 /** Thành viên hiện hành của một nhóm Band (id hội thoại dạng `band:<id>`) */

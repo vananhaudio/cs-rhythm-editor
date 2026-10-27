@@ -127,12 +127,13 @@ export default function MobileShell({ base }: { base: ClassIdentity }) {
 
   const view = currentView(nav)
   const tab = nav.tab
-  const dmUnread = Math.max(0, chatUnread.count - (chatUnread.system?.unread ?? 0))
-  const noticeCount = chatUnread.system?.unread ?? 0
+  // Hai nguồn độc lập từ useChatUnread: Trò chuyện = dm + band · chuông = thông báo hệ thống (không còn phép trừ)
+  const chatBadge = chatUnread.unread.chatTotal
+  const noticeCount = chatUnread.unread.noticeTotal
 
-  const chatPage = (selection: ChatSelection, system: typeof chatUnread.system) => (
-    <Chat key="chat" systemTitle="Thông báo" meId={me.userId} selection={selection} onOpenConversation={openConversation}
-      system={system} onOpenSystem={() => go({ kind: 'notices' })} onOpenThread={openThread}
+  const chatPage = (selection: ChatSelection) => (
+    <Chat key="chat" meId={me.userId} selection={selection} onOpenConversation={openConversation}
+      soundToggle={chatUnread.system != null}
       onBackToList={back} onOpenProfile={openProfile} onOpenFriends={() => go({ kind: 'section', section: 'friends' })}
       onUnreadChanged={() => void chatUnread.refresh()} />
   )
@@ -153,7 +154,7 @@ export default function MobileShell({ base }: { base: ClassIdentity }) {
               onOpenBandChat={id => go({ kind: 'chatConversation', conversationId: id }, 'band')}
               onOpenStudio={projectId => go({ kind: 'studio', projectId }, 'band')} onOpenBands={openBands} />
           case 'chat':
-            return chatPage({ kind: 'none' }, null)   // thông báo hệ thống đã chuyển lên chuông (không lặp trong danh sách chat)
+            return chatPage({ kind: 'none' })   // thông báo hệ thống đã chuyển lên chuông (không lặp trong danh sách chat)
           case 'me':
             return <MeTab me={me} canEditAvatar={editor.canEditAvatar} onEditMedia={editor.pick} requests={requests}
               onOpenMyProfile={() => openProfile(me.userId)} onEditProfile={me.studentId ? () => setEditingProfile(true) : undefined}
@@ -164,7 +165,7 @@ export default function MobileShell({ base }: { base: ClassIdentity }) {
         const s: SocialSection = view.section
         if (s === 'friends') return <Friends requests={requests} onOpenProfile={openProfile} onMessage={openChatWith} />
         if (s === 'tools') return <ToolsPage />
-        if (s === 'chat') return chatPage({ kind: 'none' }, null)
+        if (s === 'chat') return chatPage({ kind: 'none' })
         return null
       }
       case 'profile':
@@ -203,14 +204,13 @@ export default function MobileShell({ base }: { base: ClassIdentity }) {
       case 'bandAdmin':
         return <BandManagePage key={view.slug} slug={view.slug} onBack={() => backToOr({ kind: 'bands' })} />
       case 'chatConversation':
-        return chatPage({ kind: 'conversation', id: view.conversationId }, null)
+        return chatPage({ kind: 'conversation', id: view.conversationId })
       case 'chatWith':
-        return chatPage({ kind: 'with', userId: view.userId }, null)
-      case 'chatSystem':
-        return chatPage({ kind: 'system' }, chatUnread.system)
+        return chatPage({ kind: 'with', userId: view.userId })
       case 'studio':
         return <StudioPage key={view.projectId ?? 'home'} projectId={view.projectId} onExit={back} onBackChange={fn => setStudioBack(fn ? { fn } : null)} />
       case 'notices':
+      case 'chatSystem':   // đường cũ /me/chat/system → cùng màn Thông báo riêng
         return <NoticesPage onActivity={() => void chatUnread.refresh()} onOpenThread={id => openThread(id)} />
       case 'account':
         return <AccountPage me={me} canEditAvatar={editor.canEditAvatar} onEditMedia={editor.pick}
@@ -231,7 +231,7 @@ export default function MobileShell({ base }: { base: ClassIdentity }) {
       <main className="cm-content cs-main">
         {body()}
       </main>
-      <TabBar tab={tab} badges={{ chat: dmUnread, me: requests.count }} onSelect={selectTabAndScroll} />
+      <TabBar tab={tab} badges={{ chat: chatBadge, me: requests.count }} onSelect={selectTabAndScroll} />
       {more && <MoreSheet userId={me.userId} isTeacher={me.isTeacher} onClose={() => setMore(false)}
         onOpenQueue={openQueue} onOpenStudio={() => go({ kind: 'studio' }, 'band')} />}
       {editor.element}

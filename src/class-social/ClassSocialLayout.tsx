@@ -1,7 +1,7 @@
 // Khung (shell) của Class Social: top bar tối giản + sidebar (desktop) / menu sheet (mobile).
 // Logo = Trang chủ (/me); "Trang chủ" cũng là mục đầu tiên của menu. Nhóm LỚP HỌC (động) chèn ngay sau CỘNG ĐỒNG.
 import { useEffect, useState, type ReactNode } from 'react'
-import { Lock, Menu, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react'
+import { Bell, Lock, Menu, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react'
 import { NAV_GROUPS, type NavItem } from './nav'
 import { SECTION_PATHS, type SocialSection } from './resolveMeRoute'
 import type { ClassIdentity } from './useClassSession'
@@ -133,7 +133,7 @@ function MobileMenu({ section, onClose, onSection, badges, classNav, libraryOpen
   )
 }
 
-export default function ClassSocialLayout({ me, section, onSection, children, canEditAvatar, onEditMedia, onSignOut, onOpenMyProfile, badges, classNav }: {
+export default function ClassSocialLayout({ me, section, onSection, children, canEditAvatar, onEditMedia, onSignOut, onOpenMyProfile, badges, notices, classNav }: {
   me: ClassIdentity
   /** null = đang ở trang cá nhân (không mục nào trong menu sáng) */
   section: SocialSection | null
@@ -144,6 +144,8 @@ export default function ClassSocialLayout({ me, section, onSection, children, ca
   onSignOut?: () => void
   onOpenMyProfile?: () => void
   badges?: NavBadges
+  /** Chuông Thông báo — badge RIÊNG (không cộng vào badge Trò chuyện / menu) */
+  notices?: { count: number; active: boolean; onOpen: () => void }
   classNav?: ClassNavSlot
 }) {
   const totalBadge = Object.values(badges ?? {}).reduce((a, n) => a + (n ?? 0), 0)
@@ -189,6 +191,13 @@ export default function ClassSocialLayout({ me, section, onSection, children, ca
           <span className="cs-brand-text">Thầy Văn Anh Guitar</span>
         </a>
         <div className="cs-topbar-spacer" />
+        {notices && (
+          <button type="button" className={'cs-icon-btn cs-bell-btn' + (notices.active ? ' is-active' : '')} onClick={notices.onOpen}
+            aria-label={notices.count > 0 ? `Thông báo, ${notices.count} chưa đọc` : 'Thông báo'} aria-current={notices.active ? 'page' : undefined}>
+            <Bell size={22} aria-hidden="true" />
+            {notices.count > 0 && <span className="cs-nav-badge is-corner" aria-hidden="true">{notices.count > 99 ? '99+' : notices.count}</span>}
+          </button>
+        )}
         <ClassHomeLink label="Class" quiet />
         <MoreMenu className="cs-account" label={`Tài khoản: ${me.name}`}
           trigger={<Avatar name={me.name} url={safeImageUrl(me.avatarUrl)} size={32} />}
