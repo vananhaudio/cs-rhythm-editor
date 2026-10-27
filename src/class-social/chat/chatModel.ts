@@ -322,12 +322,19 @@ export function mergeNotices(prev: SystemNotice[], incoming: SystemNotice[]): Sy
  *  chấm / trả lời → cuộn tới phản hồi mới nhất của Thầy; học viên nộp / hỏi → cuộn tới lượt mới nhất của học viên. */
 export const NOTICE_TARGET_SEARCH = '?focus=ket-qua'
 export const NOTICE_TARGET_SEARCH_STUDENT = '?focus=bai-moi'
+/** `?focus=…` → giá trị focus hợp lệ (Mobile không có URL thật để ThreadView tự đọc) */
+export type ThreadFocus = 'ket-qua' | 'bai-moi'
+export function focusFromSearch(search: string | null | undefined): ThreadFocus | undefined {
+  const f = new URLSearchParams(search ?? '').get('focus')
+  return f === 'ket-qua' || f === 'bai-moi' ? f : undefined
+}
 export function noticeAction(kind: string): { label: string; search: string } {
   switch (kind) {
     case 'submission_received': return { label: 'Xem bài', search: NOTICE_TARGET_SEARCH_STUDENT }
     case 'question_received': return { label: 'Xem câu hỏi', search: NOTICE_TARGET_SEARCH_STUDENT }
     case 'question_answered': return { label: 'Xem trả lời', search: NOTICE_TARGET_SEARCH }
-    case 'checkpoint_graded': return { label: 'Xem kết quả', search: NOTICE_TARGET_SEARCH }
+    case 'checkpoint_graded': return { label: 'Xem kết quả', search: NOTICE_TARGET_SEARCH }   // ĐẠT hoặc NỘP LẠI: nội dung thông báo nói rõ; đích = phản hồi mới nhất của Thầy
+    case 'teacher_commented': return { label: 'Xem nhận xét', search: NOTICE_TARGET_SEARCH }
     default: return { label: 'Xem chi tiết', search: '' }   // loại mới hơn FE: vẫn mở được trang, không đoán focus
   }
 }

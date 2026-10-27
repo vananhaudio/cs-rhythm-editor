@@ -21,7 +21,7 @@ import { BandsAdminPage } from '../band/BandAdmin'
 import BandManagePage from '../band/BandManage'
 import { useFriendRequests } from '../class-social/friends/useFriendRequests'
 import { useChatUnread } from '../class-social/chat/useChat'
-import type { ChatSelection } from '../class-social/chat/chatModel'
+import { focusFromSearch, type ChatSelection } from '../class-social/chat/chatModel'
 import { useSocialClasses } from '../class-social/classes/useSocialClasses'
 import { refreshLearningIdentity } from '../class-social/identity/identityStore'
 import type { SocialSection } from '../class-social/resolveMeRoute'
@@ -110,7 +110,7 @@ export default function MobileShell({ base }: { base: ClassIdentity }) {
   useLayoutEffect(() => { window.scrollTo({ top: scrollMem.current[key] ?? 0 }) }, [key])
 
   const openProfile = (userId: string) => go({ kind: 'profile', userId })
-  const openThread = (threadId: string) => go({ kind: 'thread', threadId })
+  const openThread = (threadId: string, search?: string) => go({ kind: 'thread', threadId, focus: focusFromSearch(search) })
   const openQueue = () => go({ kind: 'queue' })
   const openClass = (classId: string) => go({ kind: 'class', classId })
   const openBands = () => go({ kind: 'bands' })
@@ -174,7 +174,7 @@ export default function MobileShell({ base }: { base: ClassIdentity }) {
           onEditProfile={me.studentId ? () => setEditingProfile(true) : undefined} onFriendsChanged={() => void requests.refresh()}
           onMessage={openChatWith} />
       case 'thread':
-        return <ThreadPage key={view.threadId} threadId={view.threadId} isTeacher={me.isTeacher} onBack={() => backToOr(HOME_VIEW)}
+        return <ThreadPage key={view.threadId} threadId={view.threadId} focus={view.focus} isTeacher={me.isTeacher} onBack={() => backToOr(HOME_VIEW)}
           onOpenQueue={openQueue} onOpenProfile={openProfile} onOpenClass={openClass}
           onOpenSession={(classId, no) => go({ kind: 'session', classId, sessionNo: no })} />
       case 'queue':
@@ -211,7 +211,7 @@ export default function MobileShell({ base }: { base: ClassIdentity }) {
         return <StudioPage key={view.projectId ?? 'home'} projectId={view.projectId} onExit={back} onBackChange={fn => setStudioBack(fn ? { fn } : null)} />
       case 'notices':
       case 'chatSystem':   // đường cũ /me/chat/system → cùng màn Thông báo riêng
-        return <NoticesPage onActivity={() => void chatUnread.refresh()} onOpenThread={id => openThread(id)} />
+        return <NoticesPage onActivity={() => void chatUnread.refresh()} onOpenThread={openThread} />
       case 'account':
         return <AccountPage me={me} canEditAvatar={editor.canEditAvatar} onEditMedia={editor.pick}
           onEditProfile={me.studentId ? () => setEditingProfile(true) : undefined} onSignOut={onSignOut}

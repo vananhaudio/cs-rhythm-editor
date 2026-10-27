@@ -89,4 +89,41 @@ psqld $DB2 -1 -f "$ROOT/db/class_system_chat_v2_rollback.sql" >/dev/null && psql
 [ "$(q $DB2 "select count(*) from public.class_system_notices where kind = 'checkpoint_graded'")" = "$KEEP" ] && ok "thông báo chấm bài V1 được GIỮ NGUYÊN ($KEEP)" || fail "mất thông báo V1"
 [ "$(q $DB2 "select pg_get_constraintdef(oid) from pg_constraint where conname='class_system_notices_kind_check'")" = "CHECK ((kind = 'checkpoint_graded'::text))" ] && ok "CHECK kind trở về V1" || fail "CHECK kind"
 mig $DB2 "$ROOT/db/class_system_chat_v2_setup.sql" >/dev/null && ok "cài lại V2 sau rollback"
+
+echo "══ Class System Chat V3 (nhận xét / ĐẠT / NỘP LẠI) — cùng DB, sau V2"
+V2MD5="$(fnmd5)"
+echo "── Cổng V3: thiếu V2 → DỪNG (kiểm bằng DB riêng không có V2)"
+DB3=tva_sc3
+"$PGBIN/createdb" -h "$TMP" -p "$PORT" -U postgres "$DB3"
+grep -vE '^(create role|grant anon, authenticated to authenticator)' "$ROOT/db/tests/local/social_fixture.sql" > "$TMP/social_fixture_db3.sql"
+psqld $DB3 -f "$TMP/social_fixture_db3.sql" >/dev/null
+for f in package_student_identity_guard community_setup group_code_setup class_social_posts_setup \
+         class_social_learning_loop_setup profile_media_setup class_social_friends_wall_setup; do
+  psqld $DB3 -f "$ROOT/db/$f.sql" >/dev/null
+done
+psqld $DB3 -f "$ROOT/db/tests/local/learning_threads_fixture.sql" >/dev/null
+psqld $DB3 -f "$ROOT/db/learning_threads_p1_setup.sql" >/dev/null
+mig $DB3 "$ROOT/db/class_system_chat_v1_setup.sql" >/dev/null
+psqld $DB3 -1 -f "$ROOT/db/class_system_chat_v3_setup.sql" >/dev/null 2>&1 && fail "V3 chạy được khi chưa có V2" || ok "thiếu V2 → V3 DỪNG"
+mig $DB2 "$ROOT/db/class_system_chat_v3_setup.sql" >/dev/null && ok "V3 lần 1"
+mig $DB2 "$ROOT/db/class_system_chat_v3_setup.sql" >/dev/null && ok "V3 lần 2 (idempotent)"
+psqld $DB2 -f "$ROOT/db/rls_setup.sql" >/dev/null && ok "rls_setup.sql chạy lại"
+[ "$(q $DB2 "select count(*) from pg_policies where tablename like 'class\_system\_%'")" = "0" ] && ok "V3: vẫn không có policy trên bảng hệ thống" || fail "có policy"
+[ "$(q $DB2 "select count(*) from information_schema.role_table_grants where table_name like 'class\_system\_%' and grantee in ('anon','authenticated','PUBLIC')")" = "0" ] \
+  && ok "V3: anon/authenticated vẫn không có quyền bảng" || fail "còn quyền bảng"
+[ "$(q $DB2 "select count(*) from pg_class where relname like 'class\_system\_%' and relkind='r'")" = "2" ] && ok "V3: không thêm bảng (vẫn 2 bảng)" || fail "số bảng đổi"
+[ "$(q $DB2 "select has_function_privilege('authenticated','public.class_system_notice_on_event()','execute') or has_function_privilege('anon','public.class_system_notice_on_event()','execute')")" = "f" ] \
+  && ok "V3: hàm trigger không ai gọi được" || fail "hàm trigger lộ quyền"
+echo "── Test SQL V3 theo identity"
+PGOPTIONS="-c client_min_messages=notice" "$PGBIN/psql" -X -q -h "$TMP" -p "$PORT" -U postgres -d $DB2 -v ON_ERROR_STOP=1 \
+  -f "$ROOT/db/tests/class_system_chat_v3_test.sql" 2>&1 | sed -E 's/^psql:[^:]*:[0-9]*: (NOTICE|ERROR):  //'
+[ "${PIPESTATUS[0]}" = "0" ] || fail "test SQL V3"
+echo "── Rollback V3 ×2 → trở về đúng V2"
+KEEP3="$(q $DB2 "select count(*) from public.class_system_notices where kind <> 'teacher_commented'")"
+psqld $DB2 -1 -f "$ROOT/db/class_system_chat_v3_rollback.sql" >/dev/null && psqld $DB2 -1 -f "$ROOT/db/class_system_chat_v3_rollback.sql" >/dev/null && ok "rollback V3 ×2"
+[ "$(fnmd5)" = "$V2MD5" ] && ok "hàm trigger trở về ĐÚNG V2 (md5 khớp)" || fail "hàm trigger khác V2 sau rollback"
+[ "$(q $DB2 "select count(*) from public.class_system_notices where kind = 'teacher_commented'")" = "0" ] && ok "thông báo V3 (nhận xét) đã gỡ" || fail "còn thông báo V3"
+[ "$(q $DB2 "select count(*) from public.class_system_notices")" = "$KEEP3" ] && ok "thông báo V1/V2 + chấm bằng V3 được GIỮ NGUYÊN ($KEEP3)" || fail "mất thông báo cũ"
+[ "$(q $DB2 "select pg_get_constraintdef(oid) from pg_constraint where conname='class_system_notices_kind_check'" | grep -c teacher_commented)" = "0" ] && ok "CHECK kind trở về V2" || fail "CHECK kind"
+mig $DB2 "$ROOT/db/class_system_chat_v3_setup.sql" >/dev/null && ok "cài lại V3 sau rollback"
 echo "ALL DB PASS"

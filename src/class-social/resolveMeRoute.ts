@@ -187,7 +187,7 @@ export function chatWithUserIdFromPath(pathname: string): string | null {
 export type MeView =
   | { kind: 'section'; section: SocialSection }
   | { kind: 'profile'; userId: string }
-  | { kind: 'thread'; threadId: string }
+  | { kind: 'thread'; threadId: string; focus?: 'ket-qua' | 'bai-moi' }   // focus: chỉ Mobile (không có URL); Web đọc ?focus= từ URL
   | { kind: 'queue' }
   | { kind: 'classes' }
   | { kind: 'class'; classId: string }

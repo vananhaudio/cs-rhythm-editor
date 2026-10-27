@@ -118,12 +118,14 @@ function EventItem({ e, label, now, canModerate, canReport, onModerate, onOpenPr
   )
 }
 
-export function ThreadTimeline({ thread, now, canModerate = false, onModerate, onOpenProfile }: {
+export function ThreadTimeline({ thread, now, canModerate = false, onModerate, onOpenProfile, focus: focusProp }: {
   thread: ThreadDetail
   now?: Date
   canModerate?: boolean
   onModerate?: (e: ThreadEvent, hidden: boolean) => void
   onOpenProfile?: (userId: string) => void
+  /** Điểm cuộn tới khi mở từ thông báo; không truyền → đọc ?focus= trên URL (Web) */
+  focus?: 'ket-qua' | 'bai-moi'
 }) {
   const labels = eventLabels(thread.events)
   const list = useRef<HTMLOListElement>(null)
@@ -131,13 +133,13 @@ export function ThreadTimeline({ thread, now, canModerate = false, onModerate, o
   //   ?focus=ket-qua → phản hồi MỚI NHẤT của Thầy (đã chấm / đã trả lời) · ?focus=bai-moi → lượt MỚI NHẤT của học viên (Thầy xem bài / câu hỏi)
   useEffect(() => {
     if (typeof window === 'undefined') return
-    const focus = new URLSearchParams(window.location.search).get('focus')
+    const focus = focusProp ?? new URLSearchParams(window.location.search).get('focus')
     const sel = focus === 'ket-qua' ? '.lt-ev.is-teacher' : focus === 'bai-moi' ? '.lt-ev:not(.is-teacher)' : null
     if (!sel) return
     const hits = list.current?.querySelectorAll<HTMLElement>(sel)
     const el = hits && hits.length ? hits[hits.length - 1] : null
     if (el) { el.scrollIntoView({ block: 'center' }); el.classList.add('is-focus') }
-  }, [thread.id])
+  }, [thread.id, focusProp])
   if (thread.events.length === 0) return <p className="lt-empty">Chưa có lượt trao đổi nào.</p>
   return (
     <ol className="lt-timeline" aria-label="Dòng thời gian trao đổi" ref={list}>
@@ -156,6 +158,7 @@ export default function ThreadView(props: {
   onOpenProfile?: (userId: string) => void
   /** Social (/me/t/<id>): nhãn danh tính HIỆN TẠI của người học cạnh tên — tách khỏi danh tính lịch sử của bài */
   showIdentity?: boolean
+  focus?: 'ket-qua' | 'bai-moi'
 }) {
   return (
     <div className="lt-page">
