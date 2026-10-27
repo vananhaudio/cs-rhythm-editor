@@ -1,9 +1,11 @@
 import StudentPackagePanel from './StudentPackagePanel'
+import Student360Panel from './student360/Student360Panel'
+import { student360Api } from './student360/client'
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
 
 interface Student {
-  id: string; full_name: string; email: string | null; phone: string | null; age: number | null
+  id: string; user_id?: string | null; full_name: string; email: string | null; phone: string | null; age: number | null
   level: 'beginner' | 'elementary' | 'intermediate' | 'advanced' | null
   goals: string | null; learning_style: string | null; instruments: string | null
   enrolled_at: string | null; is_active: boolean; honor?: string | null
@@ -149,7 +151,7 @@ export default function StudentProfile({ studentId, onBack }: Props) {
   const [notes, setNotes] = useState<TeacherNote[]>([])
   const [loading, setLoading] = useState(true)
   const [savingHonor, setSavingHonor] = useState(false)
-  const [activeTab, setActiveTab] = useState<'overview' | 'lessons' | 'assignments' | 'timeline' | 'courses' | 'app'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'understand' | 'lessons' | 'assignments' | 'timeline' | 'courses' | 'app'>('overview')
   const [enrollments, setEnrollments] = useState<EnrollmentItem[]>([])
   const [allCourses, setAllCourses] = useState<CourseItem[]>([])
   const [enrolling, setEnrolling] = useState<string | null>(null)
@@ -405,8 +407,8 @@ export default function StudentProfile({ studentId, onBack }: Props) {
         </Card>
 
         <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: T.bgCard, borderRadius: 10, padding: 4, border: `1px solid ${T.border}` }}>
-          {(['overview', 'app', 'lessons', 'assignments', 'timeline', 'courses'] as const).map(tab => {
-            const labels: Record<'overview'|'app'|'lessons'|'assignments'|'timeline'|'courses', string> = { overview: '📊 Tổng quan', app: '📱 Hoạt động app', lessons: '📚 Buổi học', assignments: '📝 Bài tập', timeline: '⚡ Timeline AI', courses: '📚 Khoá học' }
+          {(['overview', 'understand', 'app', 'lessons', 'assignments', 'timeline', 'courses'] as const).map(tab => {
+            const labels: Record<'overview'|'understand'|'app'|'lessons'|'assignments'|'timeline'|'courses', string> = { overview: '📊 Tổng quan', understand: '🧭 Thấu hiểu', app: '📱 Hoạt động app', lessons: '📚 Buổi học', assignments: '📝 Bài tập', timeline: '⚡ Timeline AI', courses: '📚 Khoá học' }
             return <button key={tab} onClick={() => setActiveTab(tab)} style={{ flex: 1, border: 'none', borderRadius: 7, cursor: 'pointer', padding: '8px 4px', fontSize: 13, fontWeight: 600, background: activeTab === tab ? T.header : 'none', color: activeTab === tab ? '#fff' : T.textMuted }}>{labels[tab]}</button>
           })}
         </div>
@@ -445,6 +447,16 @@ export default function StudentProfile({ studentId, onBack }: Props) {
               ) : <div style={{ color: T.textMuted, fontSize: 14 }}>Chưa có buổi học nào.</div>}
             </Card>
           </div>
+        )}
+
+        {activeTab === 'understand' && (
+          <Student360Panel
+            key={student.id}
+            userId={student.user_id}
+            api={student360Api}
+            overview={{ fullName: student.full_name, level: student.level ? LEVEL_LABEL[student.level] ?? student.level : null, goals: student.goals,
+              instruments: student.instruments, learningStyle: student.learning_style, enrolledAt: student.enrolled_at }}
+          />
         )}
 
         {activeTab === 'lessons' && (

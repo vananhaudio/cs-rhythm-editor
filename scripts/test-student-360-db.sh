@@ -40,6 +40,22 @@ PGOPTIONS="-c client_min_messages=notice" "$PGBIN/psql" -X -q -h "$TMP" -p "$POR
   -f "$ROOT/db/tests/student_360_p1_test.sql" 2>&1 | sed -E 's/^psql:[^:]*:[0-9]*: (NOTICE|ERROR):  //'
 [ "${PIPESTATUS[0]}" = "0" ] || fail "test SQL"
 
+echo "── P2: preflight + migration ×2 + test set_visibility + rollback"
+gate2() { q "select item from ($(sed 's/;[[:space:]]*$//' "$ROOT/db/student_360_p2_preflight.sql")) z where section = 'GATE'"; }
+[ "$(gate2)" = "PASS" ] && ok "preflight P2: GATE = PASS" || fail "preflight P2: $(gate2)"
+psqld -1 -f "$ROOT/db/student_360_p2_setup.sql" >/dev/null && ok "migration P2 lần 1"
+psqld -1 -f "$ROOT/db/student_360_p2_setup.sql" >/dev/null && ok "migration P2 lần 2 (idempotent)"
+[ "$(gate2)" = "STOP" ] && ok "preflight P2 sau migration: STOP (chặn chạy lại nhầm)" || fail "preflight P2 sau migration"
+[ "$(q "select count(*) from information_schema.routine_privileges where routine_name = 'student_360_set_visibility' and grantee in ('anon','PUBLIC')")" = "0" ] \
+  && ok "anon/PUBLIC không EXECUTE set_visibility" || fail "set_visibility lộ cho anon"
+PGOPTIONS="-c client_min_messages=notice" "$PGBIN/psql" -X -q -h "$TMP" -p "$PORT" -U postgres -d s360 -v ON_ERROR_STOP=1 \
+  -f "$ROOT/db/tests/student_360_p2_test.sql" 2>&1 | sed -E 's/^psql:[^:]*:[0-9]*: (NOTICE|ERROR):  //'
+[ "${PIPESTATUS[0]}" = "0" ] || fail "test SQL P2"
+psqld -1 -f "$ROOT/db/student_360_p2_rollback.sql" >/dev/null && psqld -1 -f "$ROOT/db/student_360_p2_rollback.sql" >/dev/null \
+  && [ "$(q "select count(*) from pg_proc where proname = 'student_360_set_visibility'")" = "0" ] \
+  && [ "$(q "select count(*) from pg_proc where proname = 'student_360_get'")" = "1" ] \
+  && ok "rollback P2 ×2 sạch, P1 nguyên vẹn" || fail "rollback P2"
+
 echo "── Rollback ×2 + cài lại"
 psqld -1 -f "$ROOT/db/student_360_p1_rollback.sql" >/dev/null && ok "rollback lần 1"
 psqld -1 -f "$ROOT/db/student_360_p1_rollback.sql" >/dev/null && ok "rollback lần 2 (idempotent)"
