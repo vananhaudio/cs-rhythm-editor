@@ -135,6 +135,9 @@ DECLARE
     -- Learning Thread P1 (db/learning_threads_p1_setup.sql): KHÔNG policy nào, REVOKE hết — mọi đọc/ghi
     -- qua RPC lt_* (SECURITY DEFINER). Áp policy rộng = học sinh đọc/sửa bài Trả/Hỏi + phản hồi của nhau.
     'learning_lesson_settings', 'learning_threads', 'learning_thread_events',
+    -- Student 360 P1 (db/student_360_p1_setup.sql): KHÔNG policy, REVOKE hết — chỉ qua RPC student_360_*.
+    -- Áp policy rộng = học viên đọc/sửa hồ sơ chắt lọc (kể cả mục chỉ-cho-Thầy) của nhau.
+    'student_360_facts', 'student_360_fact_log',
     -- Lớp của tôi V1 (db/class_checkpoints_v1_setup.sql): tiến độ buổi — KHÔNG policy, chỉ qua RPC.
     -- Áp policy rộng = học sinh tự ghi opened_at/completed_at (tự mở buổi, sửa lịch sử).
     'learning_session_progress',
