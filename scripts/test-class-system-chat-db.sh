@@ -118,12 +118,36 @@ echo "── Test SQL V3 theo identity"
 PGOPTIONS="-c client_min_messages=notice" "$PGBIN/psql" -X -q -h "$TMP" -p "$PORT" -U postgres -d $DB2 -v ON_ERROR_STOP=1 \
   -f "$ROOT/db/tests/class_system_chat_v3_test.sql" 2>&1 | sed -E 's/^psql:[^:]*:[0-9]*: (NOTICE|ERROR):  //'
 [ "${PIPESTATUS[0]}" = "0" ] || fail "test SQL V3"
-echo "── Rollback V3 ×2 → trở về đúng V2"
-KEEP3="$(q $DB2 "select count(*) from public.class_system_notices where kind <> 'teacher_commented'")"
-psqld $DB2 -1 -f "$ROOT/db/class_system_chat_v3_rollback.sql" >/dev/null && psqld $DB2 -1 -f "$ROOT/db/class_system_chat_v3_rollback.sql" >/dev/null && ok "rollback V3 ×2"
+echo "── Rollback V3 ×2 → hành vi V2, BẢO TOÀN dữ liệu (không xoá, không đổi quyền/RLS)"
+snapshot() {
+  q $DB2 "select 'rows='||coalesce(md5(string_agg(concat_ws('|',seq,user_id,kind,body,ref_type,ref_key,dedupe_key,created_at),E'\\n' order by seq)),'')||' reads='||(select coalesce(md5(string_agg(concat_ws('|',user_id,last_read_seq),',' order by user_id)),'') from public.class_system_notice_reads) from public.class_system_notices"
+}
+secsnap() {
+  q $DB2 "select md5(concat_ws('#',
+    (select string_agg(relname||':'||relrowsecurity||':'||relforcerowsecurity||':'||coalesce(relacl::text,''),',' order by relname) from pg_class where relname like 'class\\_system\\_%' and relkind='r'),
+    (select count(*) from pg_policies where tablename like 'class\\_system\\_%'),
+    (select string_agg(p.oid::regprocedure::text||':'||coalesce(p.proacl::text,''),',' order by p.oid::regprocedure::text) from pg_proc p where proname like 'class\\_system\\_notice%'),
+    (select string_agg(tgname||':'||tgenabled::text,',' order by tgname) from pg_trigger where tgrelid='public.learning_thread_events'::regclass and not tgisinternal)))"
+}
+TC_BEFORE="$(q $DB2 "select count(*) from public.class_system_notices where kind = 'teacher_commented'")"
+[ "$TC_BEFORE" -ge 2 ] && ok "trước rollback có $TC_BEFORE thông báo teacher_commented" || fail "thiếu dữ liệu teacher_commented để thử rollback"
+SNAP0="$(snapshot)"; SEC0="$(secsnap)"
+psqld $DB2 -1 -f "$ROOT/db/class_system_chat_v3_rollback.sql" >/dev/null && ok "rollback V3 lần 1"
 [ "$(fnmd5)" = "$V2MD5" ] && ok "hàm trigger trở về ĐÚNG V2 (md5 khớp)" || fail "hàm trigger khác V2 sau rollback"
-[ "$(q $DB2 "select count(*) from public.class_system_notices where kind = 'teacher_commented'")" = "0" ] && ok "thông báo V3 (nhận xét) đã gỡ" || fail "còn thông báo V3"
-[ "$(q $DB2 "select count(*) from public.class_system_notices")" = "$KEEP3" ] && ok "thông báo V1/V2 + chấm bằng V3 được GIỮ NGUYÊN ($KEEP3)" || fail "mất thông báo cũ"
-[ "$(q $DB2 "select pg_get_constraintdef(oid) from pg_constraint where conname='class_system_notices_kind_check'" | grep -c teacher_commented)" = "0" ] && ok "CHECK kind trở về V2" || fail "CHECK kind"
+[ "$(snapshot)" = "$SNAP0" ] && ok "KHÔNG mất / đổi dữ liệu thông báo + trạng thái đọc (so từng dòng, lần 1)" || fail "dữ liệu thông báo đổi sau rollback"
+[ "$(secsnap)" = "$SEC0" ] && ok "quyền / RLS / GRANT / policy / trigger không đổi (lần 1)" || fail "quyền hoặc RLS đổi sau rollback"
+psqld $DB2 -1 -f "$ROOT/db/class_system_chat_v3_rollback.sql" >/dev/null && ok "rollback V3 lần 2 (lặp lại)"
+[ "$(fnmd5)" = "$V2MD5" ] && [ "$(snapshot)" = "$SNAP0" ] && [ "$(secsnap)" = "$SEC0" ] && ok "lặp rollback: vẫn V2, dữ liệu và quyền không đổi" || fail "rollback lặp làm thay đổi"
+[ "$(q $DB2 "select count(*) from public.class_system_notices where kind = 'teacher_commented'")" = "$TC_BEFORE" ] && ok "thông báo teacher_commented ĐƯỢC GIỮ ($TC_BEFORE)" || fail "mất thông báo teacher_commented"
+[ "$(q $DB2 "select pg_get_constraintdef(oid) from pg_constraint where conname='class_system_notices_kind_check'" | grep -c teacher_commented)" = "1" ] && ok "CHECK kind giữ bản mở rộng V3 (dòng hiện hữu hợp lệ, không NOT VALID)" || fail "CHECK kind"
+[ "$(q $DB2 "select convalidated from pg_constraint where conname='class_system_notices_kind_check'")" = "t" ] && ok "CHECK kind đã validated" || fail "CHECK kind chưa validated"
+echo "── Test SQL sau rollback: đọc / đánh dấu đã đọc teacher_commented, hành vi V2"
+PGOPTIONS="-c client_min_messages=notice" "$PGBIN/psql" -X -q -h "$TMP" -p "$PORT" -U postgres -d $DB2 -v ON_ERROR_STOP=1 \
+  -f "$ROOT/db/tests/class_system_chat_v3_rollback_test.sql" 2>&1 | sed -E 's/^psql:[^:]*:[0-9]*: (NOTICE|ERROR):  //'
+[ "${PIPESTATUS[0]}" = "0" ] || fail "test SQL sau rollback V3"
+echo "── Cài lại V3 sau rollback: dữ liệu vẫn nguyên, hành vi V3 trở lại"
+SNAP1="$(snapshot)"
 mig $DB2 "$ROOT/db/class_system_chat_v3_setup.sql" >/dev/null && ok "cài lại V3 sau rollback"
+[ "$(snapshot)" = "$SNAP1" ] && ok "cài lại V3 không đổi dữ liệu thông báo" || fail "cài lại V3 làm đổi dữ liệu"
+[ "$(fnmd5)" != "$V2MD5" ] && ok "hàm trigger là V3 trở lại" || fail "hàm vẫn là V2"
 echo "ALL DB PASS"

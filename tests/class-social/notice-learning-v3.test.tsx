@@ -71,7 +71,9 @@ test("Migration V3 (bản nháp): additive, không bảng mới, không begin/co
   assert.match(sql, /revoke all on function public\.class_system_notice_on_event\(\) from public, anon, authenticated/);
   assert.equal(/học viên\s+\w*\s*tên|v_t\.learner_name|app_users\.name/i.test(sql), false, "không đưa tên học viên vào thông báo");
   const rb = code("db/class_system_chat_v3_rollback.sql");
-  assert.match(rb, /delete from public\.class_system_notices where kind = 'teacher_commented'/);
-  const deletes = rb.replace(/--.*$/gm, "").match(/delete from [^;]+;/gi) ?? [];
-  assert.equal(deletes.length, 1, "rollback chỉ có MỘT lệnh xoá (thông báo nhận xét V3); không xoá thông báo V1/V2");
+  const rbSql = rb.replace(/--.*$/gm, "");
+  assert.equal(/\bdelete\b|\btruncate\b|\bdrop\s+table\b|\bnot\s+valid\b/i.test(rbSql), false, "rollback bảo toàn dữ liệu: không xoá, không NOT VALID");
+  assert.equal(/class_system_notices_kind_check/.test(rbSql), false, "rollback giữ CHECK kind mở rộng của V3 (không đụng ràng buộc)");
+  assert.equal(/\b(policy|grant|alter\s+table)\b/i.test(rbSql), false, "rollback không đổi quyền / RLS / schema bảng");
+  assert.match(rbSql, /create or replace function public\.class_system_notice_on_event\(\)/);
 });

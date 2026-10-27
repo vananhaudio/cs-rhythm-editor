@@ -1,11 +1,8 @@
--- ROLLBACK Class System Chat V3 → trả về đúng V2 (hàm trigger + CHECK kind). Idempotent. Chạy bằng prod-db.py (một transaction).
--- Chỉ XOÁ thông báo do V3 tạo (kind teacher_commented). Thông báo V1/V2 (kể cả chấm ĐẠT/NỘP LẠI đã tạo bằng V3, kind checkpoint_graded) và trạng thái đọc GIỮ NGUYÊN.
--- Không đụng lt_*, dm_*, dữ liệu Learning Thread. Rollback FE (revert nhánh V3) TRƯỚC khi chạy file này.
-delete from public.class_system_notices where kind = 'teacher_commented';
-alter table public.class_system_notices drop constraint if exists class_system_notices_kind_check;
-alter table public.class_system_notices add constraint class_system_notices_kind_check
-  check (kind in ('checkpoint_graded', 'submission_received', 'question_received', 'question_answered'));
-
+-- ROLLBACK Class System Chat V3 → khôi phục HÀNH VI trigger V2 (thân hàm giống hệt V2). Idempotent. Chạy bằng prod-db.py (một transaction).
+-- BẢO TOÀN DỮ LIỆU: KHÔNG xoá thông báo nào (kể cả kind 'teacher_commented' đã tạo bởi V3); trạng thái đọc giữ nguyên.
+-- CHECK kind GIỮ NGUYÊN bản mở rộng của V3 (tập cha của V2, vô hại; hàm V2 không bao giờ sinh 'teacher_commented'). Vì vậy KHÔNG cần xoá hay NOT VALID.
+-- Thông báo 'teacher_commented' còn lại vẫn đọc / đánh dấu đã đọc bình thường qua RPC (RPC không lọc theo kind); app cũ hiện nút 'Xem chi tiết'.
+-- Không đụng lt_*, dm_*, dữ liệu Learning Thread, RLS, quyền. Rollback FE (revert nhánh V3) TRƯỚC khi chạy file này.
 create or replace function public.class_system_notice_on_event()
 returns trigger language plpgsql security definer set search_path = '' as $$
 declare

@@ -20,7 +20,12 @@ Một lần lưu của Thầy = một sự kiện = tối đa một thông báo.
 
 - Chỉ thêm MỘT kind (`teacher_commented`); ĐẠT/NỘP LẠI giữ `checkpoint_graded` nên app đã phát hành vẫn hiển thị và mở đúng ("Xem kết quả"). Kind mới trên app cũ: nút "Xem chi tiết", vẫn mở đúng thread.
 - Không bảng/policy/grant mới; không sửa `lt_*`, `dm_*`, RLS. Hàng thông báo cũ giữ nguyên.
-- Rollback: `db/class_system_chat_v3_rollback.sql` (hàm trigger về đúng V2; chỉ xoá thông báo `teacher_commented`).
+- Rollback: `db/class_system_chat_v3_rollback.sql` — khôi phục thân hàm trigger về đúng V2 (md5 khớp), **BẢO TOÀN DỮ LIỆU**: không `DELETE`, không `NOT VALID`.
+  - CHECK `kind` giữ bản mở rộng của V3 (tập cha của V2, đã validated); hàm V2 không bao giờ tạo `teacher_commented` nên không có tác dụng phụ.
+  - Các thông báo `teacher_commented` đã tạo vẫn đọc được qua RPC (RPC không lọc theo kind), `summary` vẫn đếm chưa đọc, `mark_read` hoạt động; app cũ hiện nút "Xem chi tiết" và mở đúng thread.
+  - Sau rollback hành vi là V2: chỉ nhận xét không tạo thông báo mới; chấm tạo thông báo "đã được chấm".
+  - Idempotent; không đổi quyền, RLS, GRANT, policy, trigger. Cài lại V3 sau rollback không đổi dữ liệu.
+  - Thứ tự: rollback FE (revert nhánh V3) trước, rồi chạy file này.
 - Kiểm thử DB: `bash scripts/test-class-system-chat-db.sh` (PostgreSQL tạm, qua RPC thật).
 
 ## Giới hạn đã biết
