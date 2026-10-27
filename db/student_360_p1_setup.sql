@@ -15,10 +15,9 @@
 --   • Học viên chỉ thấy hồ sơ CỦA MÌNH, và chỉ mục visibility='student_and_teacher'. Mira (P4) đọc bằng JWT
 --     học viên → cùng phạm vi này, không đọc hồ sơ người khác.
 --
--- CHẠY: dán NGUYÊN FILE (tự mở/đóng MỘT giao dịch). Cần sẵn: auth.users, app_users, edu_students, is_teacher().
+-- CHẠY: qua scripts/prod-db.py (script tự giữ giao dịch — file KHÔNG có begin/commit) hoặc psql -1 -f. Cần sẵn: auth.users, app_users, edu_students, is_teacher().
 -- ═══════════════════════════════════════════════════════════════════════════
 
-begin;
 set local lock_timeout = '5s';
 set local statement_timeout = '60s';
 
@@ -309,5 +308,3 @@ end $$;
 
 comment on table public.student_360_facts is
   'Student 360 P1: thông tin chắt lọc về học viên (có nguồn/xác minh). KHÔNG chứa tin nhắn gốc. Chỉ qua RPC student_360_*.';
-
-commit;

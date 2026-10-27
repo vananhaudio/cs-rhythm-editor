@@ -21,9 +21,13 @@ ok() { echo "PASS: $*"; }
 psqld -f "$ROOT/db/tests/local/social_fixture.sql" >/dev/null
 for f in package_student_identity_guard community_setup; do psqld -f "$ROOT/db/$f.sql" >/dev/null; done
 
+echo "── Preflight (chỉ đọc)"
+gate() { q "select item from ($(sed 's/;[[:space:]]*$//' "$ROOT/db/student_360_p1_preflight.sql")) z where section = 'GATE'"; }
+[ "$(gate)" = "PASS" ] && ok "preflight trên baseline: GATE = PASS" || fail "preflight baseline: $(gate)"
 echo "── Migration lần 1 + 2 + rls_setup.sql"
-psqld -f "$ROOT/db/student_360_p1_setup.sql" >/dev/null && ok "migration lần 1"
-psqld -f "$ROOT/db/student_360_p1_setup.sql" >/dev/null && ok "migration lần 2 (idempotent)"
+psqld -1 -f "$ROOT/db/student_360_p1_setup.sql" >/dev/null && ok "migration lần 1"
+psqld -1 -f "$ROOT/db/student_360_p1_setup.sql" >/dev/null && ok "migration lần 2 (idempotent)"
+[ "$(gate)" = "STOP" ] && ok "preflight sau migration: GATE = STOP (tên đã tồn tại, chặn chạy lại nhầm)" || fail "preflight sau migration"
 psqld -f "$ROOT/db/rls_setup.sql" >/dev/null && ok "chạy lại rls_setup.sql"
 [ "$(q "select count(*) from pg_policies where tablename like 'student\_360\_%'")" = "0" ] && ok "rls_setup KHÔNG áp policy rộng lên bảng 360" || fail "rls_setup mở policy"
 [ "$(q "select count(*) from information_schema.role_table_grants where table_name like 'student\_360\_%' and grantee in ('anon','authenticated','PUBLIC')")" = "0" ] \
@@ -37,10 +41,10 @@ PGOPTIONS="-c client_min_messages=notice" "$PGBIN/psql" -X -q -h "$TMP" -p "$POR
 [ "${PIPESTATUS[0]}" = "0" ] || fail "test SQL"
 
 echo "── Rollback ×2 + cài lại"
-psqld -f "$ROOT/db/student_360_p1_rollback.sql" >/dev/null && ok "rollback lần 1"
-psqld -f "$ROOT/db/student_360_p1_rollback.sql" >/dev/null && ok "rollback lần 2 (idempotent)"
+psqld -1 -f "$ROOT/db/student_360_p1_rollback.sql" >/dev/null && ok "rollback lần 1"
+psqld -1 -f "$ROOT/db/student_360_p1_rollback.sql" >/dev/null && ok "rollback lần 2 (idempotent)"
 [ "$(q "select count(*) from pg_proc where proname like 'student\_360\_%'")" = "0" ] && [ "$(q "select to_regclass('public.student_360_facts') is null")" = "t" ] \
   && ok "rollback sạch hàm + bảng" || fail "rollback còn sót"
 [ "$(q "select count(*) from public.edu_students")" = "3" ] && ok "bảng Class (edu_students) nguyên vẹn sau rollback" || fail "edu_students đổi"
-psqld -f "$ROOT/db/student_360_p1_setup.sql" >/dev/null && ok "cài lại sau rollback"
+psqld -1 -f "$ROOT/db/student_360_p1_setup.sql" >/dev/null && ok "cài lại sau rollback"
 echo "ALL PASS"
