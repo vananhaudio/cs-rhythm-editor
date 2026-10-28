@@ -115,16 +115,42 @@ test('xác minh bật/tắt đúng mức: chưa xác minh → teacher_verified; 
   assert.deepEqual(calls.find(c => c[0] === 'verify'), ['verify', 'f1', 'unverified'])
 })
 
-test('đổi phạm vi hiển thị: chỉ giáo viên ⇄ học viên cũng thấy', async () => {
+test('mục suy luận: "Cho học viên xem" phải xác nhận; chưa xác nhận thì không gọi RPC', async () => {
   facts = [fact({ origin: 'inferred', visibility: 'teacher', source_kind: 'crm_zalo' })]
   const v = mount(); await waitFor(() => v.getByText('Cho học viên xem'))
   fireEvent.click(v.getByText('Cho học viên xem'))
+  const g = v.getByRole('group', { name: 'Xác nhận cho học viên xem' })
+  assert.match(g.textContent!, /thông tin suy luận/); assert.match(g.textContent!, /chưa chính xác/); assert.match(g.textContent!, /học viên sẽ nhìn thấy/)
+  assert.equal(calls.filter(c => c[0] === 'vis').length, 0, 'chưa gọi RPC trước khi xác nhận')
+  fireEvent.click(v.getByText('Vẫn cho học viên xem'))
   await waitFor(() => v.getByText('Học viên đã có thể xem mục này.'))
+  assert.deepEqual(calls.filter(c => c[0] === 'vis'), [['vis', 'f1', 'student_and_teacher']])
+  assert.equal(calls.filter(c => c[0] === 'verify' || c[0] === 'edit').length, 0, 'không đổi xác minh/nội dung')
+})
+
+test('mục suy luận: Hủy xác nhận giữ nguyên dữ liệu, không gọi RPC, nút quay lại', async () => {
+  facts = [fact({ origin: 'inferred', visibility: 'teacher', source_kind: 'crm_zalo' })]
+  const v = mount(); await waitFor(() => v.getByText('Cho học viên xem'))
+  fireEvent.click(v.getByText('Cho học viên xem'))
+  fireEvent.click(v.getByText('Hủy'))
+  assert.equal(v.queryByRole('group', { name: 'Xác nhận cho học viên xem' }), null)
+  assert.equal(calls.filter(c => c[0] !== 'get').length, 0, 'Hủy không gọi RPC ghi nào')
+  assert.ok(v.getByText('Cho học viên xem'))
+  assert.ok(v.getAllByText('Chỉ giáo viên thấy').length >= 1)
+})
+
+test('đổi phạm vi hiển thị mục KHÔNG suy luận: làm ngay, không hỏi; thu về chỉ giáo viên: không hỏi', async () => {
+  facts = [fact({ origin: 'class_confirmed', visibility: 'teacher' })]
+  const v = mount(); await waitFor(() => v.getByText('Cho học viên xem'))
+  fireEvent.click(v.getByText('Cho học viên xem'))
+  await waitFor(() => v.getByText('Học viên đã có thể xem mục này.'))
+  assert.equal(v.queryByRole('group', { name: 'Xác nhận cho học viên xem' }), null)
   assert.deepEqual(calls.find(c => c[0] === 'vis'), ['vis', 'f1', 'student_and_teacher'])
-  cleanup(); calls = []; facts = [fact({ visibility: 'student_and_teacher' })]
+  cleanup(); calls = []; facts = [fact({ origin: 'inferred', visibility: 'student_and_teacher' })]
   const w = mount(); await waitFor(() => w.getByText('Chỉ giáo viên xem'))
   fireEvent.click(w.getByText('Chỉ giáo viên xem'))
   await waitFor(() => w.getByText('Mục này chỉ còn giáo viên thấy.'))
+  assert.equal(w.queryByRole('group', { name: 'Xác nhận cho học viên xem' }), null)
   assert.deepEqual(calls.find(c => c[0] === 'vis'), ['vis', 'f1', 'teacher'])
 })
 

@@ -134,6 +134,11 @@ const gotoTab = async page => {
   ok('thêm mục "Thầy suy đoán" → nhãn "Suy luận · Chưa xác minh", chỉ giáo viên thấy, không lộ source_ref')
 
   await page.getByRole('button', { name: 'Cho học viên xem' }).click()
+  await page.getByRole('group', { name: 'Xác nhận cho học viên xem' }).waitFor()
+  await page.getByRole('button', { name: 'Hủy', exact: true }).click()
+  assert.ok(await page.getByText('Chỉ giáo viên thấy', { exact: true }).isVisible(), 'Hủy giữ nguyên chỉ giáo viên thấy')
+  await page.getByRole('button', { name: 'Cho học viên xem' }).click()
+  await page.getByRole('button', { name: 'Vẫn cho học viên xem' }).click()
   await page.getByText('Học viên đã có thể xem mục này.').waitFor()
   await page.getByText('Học viên cũng thấy', { exact: true }).waitFor()
   await page.getByRole('button', { name: 'Xác minh', exact: true }).click()

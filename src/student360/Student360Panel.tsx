@@ -45,6 +45,7 @@ export default function Student360Panel({ userId, overview, api }: Props) {
   const [notice, setNotice] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null)
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null)
   const [revoking, setRevoking] = useState<{ id: string; reason: string } | null>(null)
+  const [sharing, setSharing] = useState<string | null>(null)
   const [history, setHistory] = useState<{ id: string; loading: boolean; entries: HistoryEntry[]; error?: string } | null>(null)
   const [draft, setDraft] = useState<{ category: Category; mode: AddModeKey; text: string }>({ category: 'goal', mode: 'observed', text: '' })
   const seq = useRef(0)
@@ -148,15 +149,21 @@ export default function Student360Panel({ userId, overview, api }: Props) {
           <div key={g.category} style={{ marginTop: 14 }}>
             <h4 style={{ margin: '0 0 8px', fontSize: 14, color: T.muted }}>{g.label}</h4>
             {g.facts.map(f => (
-              <FactCard key={f.id} fact={f} busy={busy} editing={editing?.id === f.id ? editing : null} revoking={revoking?.id === f.id ? revoking : null}
+              <FactCard key={f.id} fact={f} busy={busy} editing={editing?.id === f.id ? editing : null} revoking={revoking?.id === f.id ? revoking : null} sharing={sharing === f.id}
                 history={history?.id === f.id ? history : null}
                 onEditStart={() => setEditing({ id: f.id, text: f.content })}
                 onEditChange={text => setEditing({ id: f.id, text })}
                 onEditCancel={() => setEditing(null)}
                 onEditSave={async () => { if (editing && await act(`edit:${f.id}`, 'Đã lưu nội dung. Mức xác minh được đặt lại về "Chưa xác minh".', () => api.edit(f.id, editing.text))) setEditing(null) }}
                 onVerify={() => void act(`verify:${f.id}`, isVerified(f) ? 'Đã bỏ xác minh.' : 'Đã xác minh.', () => api.setVerification(f.id, isVerified(f) ? 'unverified' : 'teacher_verified'))}
-                onVisibility={() => void act(`vis:${f.id}`, f.visibility === 'teacher' ? 'Học viên đã có thể xem mục này.' : 'Mục này chỉ còn giáo viên thấy.',
-                  () => api.setVisibility(f.id, f.visibility === 'teacher' ? 'student_and_teacher' : 'teacher'))}
+                onVisibility={() => {
+                  // Chỉ mục suy luận khi MỞ cho học viên mới cần xác nhận; các thao tác khác làm ngay.
+                  if (f.origin === 'inferred' && f.visibility === 'teacher') { setSharing(f.id); return }
+                  void act(`vis:${f.id}`, f.visibility === 'teacher' ? 'Học viên đã có thể xem mục này.' : 'Mục này chỉ còn giáo viên thấy.',
+                    () => api.setVisibility(f.id, f.visibility === 'teacher' ? 'student_and_teacher' : 'teacher'))
+                }}
+                onShareCancel={() => setSharing(null)}
+                onShareConfirm={async () => { if (await act(`vis:${f.id}`, 'Học viên đã có thể xem mục này.', () => api.setVisibility(f.id, 'student_and_teacher'))) setSharing(null) }}
                 onHistory={() => void openHistory(f.id)}
                 onRevokeStart={() => setRevoking({ id: f.id, reason: '' })}
                 onRevokeChange={reason => setRevoking({ id: f.id, reason })}
@@ -201,10 +208,10 @@ export default function Student360Panel({ userId, overview, api }: Props) {
 
 interface CardProps {
   fact: Fact; busy: string | null
-  editing: { id: string; text: string } | null; revoking: { id: string; reason: string } | null
+  editing: { id: string; text: string } | null; revoking: { id: string; reason: string } | null; sharing: boolean
   history: { id: string; loading: boolean; entries: HistoryEntry[]; error?: string } | null
   onEditStart: () => void; onEditChange: (t: string) => void; onEditCancel: () => void; onEditSave: () => void
-  onVerify: () => void; onVisibility: () => void; onHistory: () => void
+  onVerify: () => void; onVisibility: () => void; onShareConfirm: () => void; onShareCancel: () => void; onHistory: () => void
   onRevokeStart: () => void; onRevokeChange: (r: string) => void; onRevokeCancel: () => void; onRevokeConfirm: () => void
 }
 
@@ -235,7 +242,7 @@ function FactCard(p: CardProps) {
       </div>
       <div style={{ fontSize: 12, color: T.muted, marginTop: 2 }}>Cập nhật {fmtVN(f.updated_at)}</div>
 
-      {!revoked && !p.editing && !p.revoking && (
+      {!revoked && !p.editing && !p.revoking && !p.sharing && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
           <button type="button" style={btn} disabled={disabled} onClick={p.onEditStart}>Sửa</button>
           <button type="button" style={btn} disabled={disabled} onClick={p.onVerify}>{verified ? 'Bỏ xác minh' : 'Xác minh'}</button>
@@ -246,6 +253,18 @@ function FactCard(p: CardProps) {
       )}
       {revoked && (
         <div style={{ marginTop: 8 }}><button type="button" style={btn} onClick={p.onHistory}>{p.history ? 'Ẩn lịch sử' : 'Lịch sử'}</button></div>
+      )}
+
+      {p.sharing && (
+        <div role="group" aria-label="Xác nhận cho học viên xem" style={{ marginTop: 10, padding: 12, borderRadius: 10, background: T.warnBg, border: `1px solid ${T.warn}` }}>
+          <div style={{ fontSize: 14, marginBottom: 8 }}>
+            <b>Đây là thông tin suy luận</b>, có thể chưa chính xác. Nếu tiếp tục, học viên sẽ nhìn thấy nội dung này trong hồ sơ của mình.
+          </div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button type="button" style={btnPrimary} disabled={disabled} onClick={p.onShareConfirm}>Vẫn cho học viên xem</button>
+            <button type="button" style={btn} onClick={p.onShareCancel}>Hủy</button>
+          </div>
+        </div>
       )}
 
       {p.revoking && (

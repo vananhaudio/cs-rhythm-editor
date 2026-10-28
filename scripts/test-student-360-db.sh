@@ -43,11 +43,20 @@ PGOPTIONS="-c client_min_messages=notice" "$PGBIN/psql" -X -q -h "$TMP" -p "$POR
 echo "── P2: preflight + migration ×2 + test set_visibility + rollback"
 gate2() { q "select item from ($(sed 's/;[[:space:]]*$//' "$ROOT/db/student_360_p2_preflight.sql")) z where section = 'GATE'"; }
 [ "$(gate2)" = "PASS" ] && ok "preflight P2: GATE = PASS" || fail "preflight P2: $(gate2)"
+P1_HASH="$(q "select md5(string_agg(proname || prosrc, '' order by proname)) from pg_proc where proname like 'student\_360\_%'")"
 psqld -1 -f "$ROOT/db/student_360_p2_setup.sql" >/dev/null && ok "migration P2 lần 1"
 psqld -1 -f "$ROOT/db/student_360_p2_setup.sql" >/dev/null && ok "migration P2 lần 2 (idempotent)"
 [ "$(gate2)" = "STOP" ] && ok "preflight P2 sau migration: STOP (chặn chạy lại nhầm)" || fail "preflight P2 sau migration"
 [ "$(q "select count(*) from information_schema.routine_privileges where routine_name = 'student_360_set_visibility' and grantee in ('anon','PUBLIC')")" = "0" ] \
   && ok "anon/PUBLIC không EXECUTE set_visibility" || fail "set_visibility lộ cho anon"
+[ "$(q "select prosecdef and proconfig = array['search_path=\"\"'] and has_function_privilege('authenticated', oid, 'execute') and not has_function_privilege('anon', oid, 'execute') from pg_proc where proname = 'student_360_set_visibility'")" = "t" ] \
+  && ok "set_visibility: SECURITY DEFINER + search_path rỗng + authenticated EXECUTE, anon không" || fail "set_visibility cấu hình hàm sai"
+[ "$(q "select count(*) from pg_proc where proname in ('student_360_log','student_360_need_uid') and (has_function_privilege('anon', oid, 'execute') or has_function_privilege('authenticated', oid, 'execute'))")" = "0" ] \
+  && ok "hàm nội bộ P1 vẫn không gọi được từ anon/authenticated sau P2" || fail "hàm nội bộ lộ"
+[ "$(q "select count(*) from information_schema.role_table_grants where table_name like 'student\_360\_%' and grantee in ('anon','authenticated','PUBLIC')")" = "0" ] \
+  && ok "bảng P1 vẫn không cấp quyền trực tiếp sau P2" || fail "bảng P1 lộ quyền"
+[ "$(q "select md5(string_agg(proname || prosrc, '' order by proname)) from pg_proc where proname like 'student\_360\_%' and proname <> 'student_360_set_visibility'")" = "$P1_HASH" ] \
+  && ok "P2 không đổi thân hàm P1 nào" || fail "P2 làm đổi hàm P1"
 PGOPTIONS="-c client_min_messages=notice" "$PGBIN/psql" -X -q -h "$TMP" -p "$PORT" -U postgres -d s360 -v ON_ERROR_STOP=1 \
   -f "$ROOT/db/tests/student_360_p2_test.sql" 2>&1 | sed -E 's/^psql:[^:]*:[0-9]*: (NOTICE|ERROR):  //'
 [ "${PIPESTATUS[0]}" = "0" ] || fail "test SQL P2"
