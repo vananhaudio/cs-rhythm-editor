@@ -9,7 +9,7 @@ import { readFileSync } from "node:fs";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
-  NOTICE_TARGET_SEARCH, SYSTEM_FOOTNOTE, SYSTEM_NAME, mergeNotices, toSystemNotices, toSystemSummary,
+  NOTICE_TARGET_SEARCH, SYSTEM_FOOTNOTE, mergeNotices, toSystemNotices, toSystemSummary,
   type SystemNotice,
 } from "../../src/class-social/chat/chatModel";
 import ConversationList from "../../src/class-social/chat/ConversationList";
