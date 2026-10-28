@@ -1,21 +1,23 @@
 // Hook Trò chuyện V1a. Chỉ biết interface ChatLive (polling hôm nay, realtime sau này) — không đụng timer/mạng trực tiếp.
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
-import { fetchConversations, fetchMessages, fetchSystemNotices, fetchSystemSummary, fetchUnreadCount, markRead, markSystemRead, sendMessage } from './chatApi'
+import { fetchConversations, fetchMessages, fetchSystemNotices, fetchSystemSummary, fetchUnreadBreakdown, markRead, markSystemRead, sendMessage } from './chatApi'
 import { pollingLive, type ChatLive } from './chatLive'
 import { createDmSoundTracker, createNoticeSoundGate, getSoundEnabled, installAudioUnlock, onNoticeAudioReady, playPendingNotice, subscribeSound, tryResumeNoticeAudio, writeSoundEnabled } from './noticeSound'
-import { PAGE, lastSeqOf, firstSeqOf, mergeMessages, mergeNotices, normalizeBody, NOTICE_PAGE, type ChatMessage, type ConversationItem, type PendingMessage, type SystemNotice, type SystemSummary } from './chatModel'
+import { PAGE, lastSeqOf, firstSeqOf, mergeMessages, buildUnread, mergeNotices, normalizeBody, NOTICE_PAGE, type ChatMessage, type ConversationItem, type PendingMessage, type SystemNotice, type SystemSummary, type UnreadCounts } from './chatModel'
 
-/** Badge menu Trò chuyện — MỘT nguồn ở SignedInShell: hội thoại cá nhân chưa đọc (dm) + thông báo Class 2.0 chưa đọc (tách trạng thái đọc). */
+/** Chưa đọc — MỘT nguồn ở shell, TÁCH theo nguồn: `unread.dm` · `unread.band` · `unread.notice`.
+ *  `unread.chatTotal` = dm + band (badge Trò chuyện); `unread.noticeTotal` = thông báo hệ thống (badge chuông).
+ *  Hai badge không bao giờ cộng vào nhau. `count` = chatTotal (tương thích nơi dùng cũ; KHÔNG còn gồm thông báo). */
 export function useChatUnread(live: ChatLive = pollingLive) {
-  const [dm, setDm] = useState(0)
+  const [chat, setChat] = useState({ dm: 0, band: 0 })
   const [system, setSystem] = useState<SystemSummary | null>(null)
   // Sound V1.2: gate DM riêng (theo lastSeq từng hội thoại), tạo lại mỗi lần đăng ký → đăng nhập lại/đổi live = mốc mới
   const dmTracker = useRef(createDmSoundTracker())
   useEffect(() => {
-    if (!live.watchInbox) return live.watchUnread(setDm)       // live không có hộp thư (test/realtime cũ): chỉ badge
+    if (!live.watchInbox) return live.watchUnread(n => setChat({ dm: n, band: 0 }))   // live không có hộp thư (test/realtime cũ): chỉ badge, tổng Trò chuyện
     dmTracker.current = createDmSoundTracker()
-    return live.watchInbox((rows, unread) => {
-      setDm(unread)
+    return live.watchInbox((rows, unread, split) => {
+      setChat(split ?? { dm: unread, band: 0 })
       dmTracker.current.observe(rows)
       playPendingNotice(dmTracker.current.gate)
     })
@@ -41,12 +43,14 @@ export function useChatUnread(live: ChatLive = pollingLive) {
       window.removeEventListener('pageshow', retry)
     }
   }, [])
+  // Làm mới: nguồn nào lỗi thì GIỮ số cũ của nguồn đó (không về 0 giả); thông báo lỗi → ẩn như trước
   const refresh = useCallback(async () => {
-    const [a, b] = await Promise.all([fetchUnreadCount(), fetchSystemSummary()])
-    if (a.ok) setDm(a.value)
+    const [a, b] = await Promise.all([fetchUnreadBreakdown(), fetchSystemSummary()])
+    if (a.ok) setChat(a.value)
     setSystem(b.ok ? b.value : null)
   }, [])
-  return { count: dm + (system?.unread ?? 0), system, refresh }
+  const unread: UnreadCounts = buildUnread(chat.dm, chat.band, system?.unread ?? 0)
+  return { count: unread.chatTotal, unread, system, refresh }
 }
 
 /** Công tắc "Âm thanh thông báo" (lưu trên thiết bị). Bật bằng thao tác người dùng ⇒ cũng mở khoá âm thanh trình duyệt. */

@@ -2,6 +2,7 @@
 import { toThreadCard, type ThreadCard } from '../../learning-thread/feedModel'
 import { parseExternalMedia, MEDIA_ERROR_TEXT, type ExternalMedia, type MediaProvider } from '../media/parseExternalMedia'
 import { safeImageUrl } from '../media/safeImageUrl'
+import { mapUgcError } from '../../class-safety/model'
 
 export type PostType = 'assignment' | 'question' | 'practice' | 'status' | 'tool_share'
 export const POST_TYPE_LABEL: Record<PostType, string> = {
@@ -105,6 +106,8 @@ export function checkWallDraft(draft: { body: string; url: string }): WallDraftC
 export type ErrorLike = { message?: string; code?: string; status?: number } | null | undefined
 
 export function friendlyError(err: ErrorLike, action: 'post' | 'feed', online = true): string {
+  const ugc = mapUgcError(err)
+  if (ugc) return ugc
   const msg = (err?.message ?? '').toLowerCase()
   if (!online || msg.includes('failed to fetch') || msg.includes('networkerror') || msg.includes('network request failed') || msg.includes('load failed')) {
     return 'Không có kết nối mạng. Kiểm tra mạng rồi thử lại.'

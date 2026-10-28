@@ -9,6 +9,8 @@ import { parseExternalMedia } from '../class-social/media/parseExternalMedia'
 import ResourceCard from '../class-social/sections/comments/ResourceCard'
 import { relativeTime } from '../class-social/posts/postModel'
 import { Avatar, PersonLink } from '../class-social/ui'
+import SafetyMenu from '../class-safety/SafetyMenu'
+import { useIsBlocked } from '../class-safety/blockedStore'
 import { IdentityBadges } from '../class-social/identity/IdentityBadges'
 import {
   SOCIAL_STATUS_LABEL, STATUS_UI, VISIBILITY_LABEL, eventLabels, identityLine, moduleLabel,
@@ -59,14 +61,18 @@ export function ThreadHeader({ thread, onOpenProfile, showIdentity = false }: { 
   )
 }
 
-function EventItem({ e, label, now, canModerate, onModerate, onOpenProfile }: {
+function EventItem({ e, label, now, canModerate, canReport, onModerate, onOpenProfile }: {
   e: ThreadEvent
   label: string
   now?: Date
   canModerate: boolean
+  /** Lượt của học viên khác (không phải của mình, không phải Thầy) → có Báo cáo / Chặn */
+  canReport: boolean
   onModerate?: (e: ThreadEvent, hidden: boolean) => void
   onOpenProfile?: (userId: string) => void
 }) {
+  const blocked = useIsBlocked(e.author.userId)
+  if (canReport && blocked) return null
   const teacher = e.authorRole === 'teacher'
   const parsed = e.mediaUrl ? parseExternalMedia(e.mediaUrl) : null
   const cls = 'lt-ev' + (teacher ? ' is-teacher' : '') + (e.verdict ? ' is-' + e.verdict : '') + (e.isHidden ? ' is-hidden' : '')
@@ -97,6 +103,11 @@ function EventItem({ e, label, now, canModerate, onModerate, onOpenProfile }: {
           )}
           {e.isHidden && <span className="lt-note">Đã ẩn · chỉ Thầy thấy</span>}
         </div>
+        {canReport && (
+          <div className="lt-ev-tools">
+            <SafetyMenu label="Tuỳ chọn lượt trao đổi" kind="thread" targetId={e.id} userId={e.author.userId || null} userName={e.author.name} noBlock={!e.author.userId} />
+          </div>
+        )}
         {canModerate && onModerate && (
           <div className="lt-ev-tools">
             <button type="button" className="lt-link-btn" onClick={() => onModerate(e, !e.isHidden)}>{e.isHidden ? 'Bỏ ẩn' : 'Ẩn lượt này'}</button>
@@ -107,12 +118,14 @@ function EventItem({ e, label, now, canModerate, onModerate, onOpenProfile }: {
   )
 }
 
-export function ThreadTimeline({ thread, now, canModerate = false, onModerate, onOpenProfile }: {
+export function ThreadTimeline({ thread, now, canModerate = false, onModerate, onOpenProfile, focus: focusProp }: {
   thread: ThreadDetail
   now?: Date
   canModerate?: boolean
   onModerate?: (e: ThreadEvent, hidden: boolean) => void
   onOpenProfile?: (userId: string) => void
+  /** Điểm cuộn tới khi mở từ thông báo; không truyền → đọc ?focus= trên URL (Web) */
+  focus?: 'ket-qua' | 'bai-moi'
 }) {
   const labels = eventLabels(thread.events)
   const list = useRef<HTMLOListElement>(null)
@@ -120,18 +133,18 @@ export function ThreadTimeline({ thread, now, canModerate = false, onModerate, o
   //   ?focus=ket-qua → phản hồi MỚI NHẤT của Thầy (đã chấm / đã trả lời) · ?focus=bai-moi → lượt MỚI NHẤT của học viên (Thầy xem bài / câu hỏi)
   useEffect(() => {
     if (typeof window === 'undefined') return
-    const focus = new URLSearchParams(window.location.search).get('focus')
+    const focus = focusProp ?? new URLSearchParams(window.location.search).get('focus')
     const sel = focus === 'ket-qua' ? '.lt-ev.is-teacher' : focus === 'bai-moi' ? '.lt-ev:not(.is-teacher)' : null
     if (!sel) return
     const hits = list.current?.querySelectorAll<HTMLElement>(sel)
     const el = hits && hits.length ? hits[hits.length - 1] : null
     if (el) { el.scrollIntoView({ block: 'center' }); el.classList.add('is-focus') }
-  }, [thread.id])
+  }, [thread.id, focusProp])
   if (thread.events.length === 0) return <p className="lt-empty">Chưa có lượt trao đổi nào.</p>
   return (
     <ol className="lt-timeline" aria-label="Dòng thời gian trao đổi" ref={list}>
       {thread.events.map((e, i) => (
-        <EventItem key={e.id} e={e} label={labels[i]} now={now} canModerate={canModerate} onModerate={onModerate} onOpenProfile={onOpenProfile} />
+        <EventItem key={e.id} e={e} label={labels[i]} now={now} canModerate={canModerate} canReport={!thread.isMine && !canModerate && e.authorRole === 'student'} onModerate={onModerate} onOpenProfile={onOpenProfile} />
       ))}
     </ol>
   )
@@ -145,6 +158,7 @@ export default function ThreadView(props: {
   onOpenProfile?: (userId: string) => void
   /** Social (/me/t/<id>): nhãn danh tính HIỆN TẠI của người học cạnh tên — tách khỏi danh tính lịch sử của bài */
   showIdentity?: boolean
+  focus?: 'ket-qua' | 'bai-moi'
 }) {
   return (
     <div className="lt-page">

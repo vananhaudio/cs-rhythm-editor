@@ -1,6 +1,7 @@
 // Trò chuyện V1a — domain THUẦN (không mạng/DOM) để test được.
 // Quyền nhắn tin do DB quyết (dm_* RPC); ở đây chỉ dựng giao diện từ dữ liệu server trả.
 import { safeImageUrl } from '../media/safeImageUrl'
+import { mapUgcError } from '../../class-safety/model'
 import { toShareRef, type ShareRef } from '../../share/shareRef'
 import { teamAssetUrl } from '../posts/postModel'
 
@@ -39,7 +40,7 @@ export type ConversationItem = {
 }
 
 /** Màn đang chọn trong /me/chat: chưa chọn · một hội thoại có sẵn · bắt đầu với một người (hội thoại tạo khi gửi tin đầu) */
-export type ChatSelection = { kind: 'none' } | { kind: 'conversation'; id: string } | { kind: 'with'; userId: string } | { kind: 'system' }
+export type ChatSelection = { kind: 'none' } | { kind: 'conversation'; id: string } | { kind: 'with'; userId: string }
 
 /** Chia sẻ nội bộ: CHỈ tham chiếu tới object gốc — Chat không giữ bản sao nội dung (loại/validate ở src/share/shareRef.ts) */
 export type ChatShareRef = ShareRef
@@ -138,6 +139,13 @@ export function toBandMembers(rows: BandMemberRow[] | null | undefined): BandMem
 }
 
 /** Danh sách gộp: nhóm có tin mới nhất trước, nhóm chưa có tin xếp cuối (theo tên) — ổn định, không nhảy khi poll */
+/** Nhóm chat của một Team (projects.id): "Band của tôi" liệt kê Team, nhóm chat gắn với Band (teamlab_bands) của Team đó qua project_id. Không đoán: không khớp → rỗng. */
+export function bandRoomsOfTeam(rooms: ConversationItem[] | null | undefined, teamId: string): ConversationItem[] {
+  const t = String(teamId ?? '').toLowerCase()
+  if (!t) return []
+  return (rooms ?? []).filter(r => r.kind === 'band' && !!r.projectId && r.projectId.toLowerCase() === t)
+}
+
 export function mergeConversationLists(dm: ConversationItem[], bands: ConversationItem[]): ConversationItem[] {
   const t = (c: ConversationItem) => { const n = Date.parse(c.lastAt); return Number.isNaN(n) ? -Infinity : n }
   return [...dm, ...bands].sort((a, b) => (t(b) - t(a)) || a.name.localeCompare(b.name, 'vi') || a.id.localeCompare(b.id))
@@ -149,6 +157,23 @@ export const INBOX_LIMIT = 100
 /** Số hội thoại chưa đọc — CÙNG ngữ nghĩa dm_unread_count (đếm hội thoại có last_seq > last_read_seq, không đếm số tin) */
 export function inboxUnread(rows: ConversationItem[]): number {
   return rows.reduce((n, c) => n + (c.unread > 0 ? 1 : 0), 0)
+}
+
+/** Chưa đọc theo TỪNG nguồn độc lập — Trò chuyện (dm + band) và Thông báo hệ thống không bao giờ cộng vào nhau. */
+export type UnreadCounts = { dm: number; band: number; notice: number; chatTotal: number; noticeTotal: number }
+
+const safeCount = (n: unknown): number => { const v = Math.floor(Number(n)); return Number.isFinite(v) && v > 0 ? v : 0 }
+
+export function buildUnread(dm: unknown, band: unknown, notice: unknown): UnreadCounts {
+  const d = safeCount(dm), b = safeCount(band), n = safeCount(notice)
+  return { dm: d, band: b, notice: n, chatTotal: d + b, noticeTotal: n }
+}
+
+/** Tách hộp thư gộp (dm + nhóm Band) thành hai nguồn — cùng ngữ nghĩa đếm hội thoại có tin chưa đọc */
+export function inboxUnreadSplit(rows: ConversationItem[]): { dm: number; band: number } {
+  let dm = 0, band = 0
+  for (const c of rows) if (c.unread > 0) { if (c.kind === 'band') band++; else dm++ }
+  return { dm, band }
 }
 
 export function toMessages(rows: MessageRow[] | null | undefined): ChatMessage[] {
@@ -220,6 +245,8 @@ export const unreadLabel = (n: number) => `${n} cuộc trò chuyện chưa đọ
 
 /** Lỗi RPC → câu tiếng Việt, KHÔNG lộ chi tiết (mọi "không thuộc về mình" đều là "không tìm thấy") */
 export function chatErrorText(err: { code?: string; message?: string; status?: number } | null | undefined, offline: boolean, ctx?: 'share'): string {
+  const ugc = mapUgcError(err)
+  if (ugc) return ugc
   const msg = (err?.message ?? '').toLowerCase()
   if (offline || msg.includes('failed to fetch') || msg.includes('networkerror') || msg.includes('network request failed') || msg.includes('load failed')) {
     return 'Không có kết nối mạng. Kiểm tra mạng rồi thử lại.'
@@ -295,12 +322,19 @@ export function mergeNotices(prev: SystemNotice[], incoming: SystemNotice[]): Sy
  *  chấm / trả lời → cuộn tới phản hồi mới nhất của Thầy; học viên nộp / hỏi → cuộn tới lượt mới nhất của học viên. */
 export const NOTICE_TARGET_SEARCH = '?focus=ket-qua'
 export const NOTICE_TARGET_SEARCH_STUDENT = '?focus=bai-moi'
+/** `?focus=…` → giá trị focus hợp lệ (Mobile không có URL thật để ThreadView tự đọc) */
+export type ThreadFocus = 'ket-qua' | 'bai-moi'
+export function focusFromSearch(search: string | null | undefined): ThreadFocus | undefined {
+  const f = new URLSearchParams(search ?? '').get('focus')
+  return f === 'ket-qua' || f === 'bai-moi' ? f : undefined
+}
 export function noticeAction(kind: string): { label: string; search: string } {
   switch (kind) {
     case 'submission_received': return { label: 'Xem bài', search: NOTICE_TARGET_SEARCH_STUDENT }
     case 'question_received': return { label: 'Xem câu hỏi', search: NOTICE_TARGET_SEARCH_STUDENT }
     case 'question_answered': return { label: 'Xem trả lời', search: NOTICE_TARGET_SEARCH }
-    case 'checkpoint_graded': return { label: 'Xem kết quả', search: NOTICE_TARGET_SEARCH }
+    case 'checkpoint_graded': return { label: 'Xem kết quả', search: NOTICE_TARGET_SEARCH }   // ĐẠT hoặc NỘP LẠI: nội dung thông báo nói rõ; đích = phản hồi mới nhất của Thầy
+    case 'teacher_commented': return { label: 'Xem nhận xét', search: NOTICE_TARGET_SEARCH }
     default: return { label: 'Xem chi tiết', search: '' }   // loại mới hơn FE: vẫn mở được trang, không đoán focus
   }
 }

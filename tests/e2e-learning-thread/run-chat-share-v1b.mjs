@@ -125,7 +125,7 @@ try {
   assert.equal(await B.$eval('.cs-chat-scroll img.cs-share-thumb', e => e.getAttribute('src')), 'https://i.ytimg.com/vi/dQw4w9WgXcQ/mqdefault.jpg')
   await waitFor(B, () => ![...document.querySelectorAll('.cs-sidebar .cs-nav-item')].find(i => i.textContent.includes('Trò chuyện'))?.querySelector('.cs-nav-badge'))
   assert.ok(calls(B, 'dm_mark_read').length >= 1, 'đọc tới tin share → dm_mark_read')
-  assert.ok(calls(B, 'dm_conversations').length >= 1)
+  assert.ok(calls(B, 'dm_conversations_safe').length >= 1)
   await B.screenshot({ path: `${SHOTS}/share-desktop-1280.png` })
   ok('2 B: badge 1 + preview "Đã chia sẻ một nội dung" → mở hội thoại → CARD (loại · tên · BPM/nhịp/hợp âm · ảnh · Luyện bài này), không URL thô → badge hết, dm_mark_read')
 
