@@ -15,7 +15,8 @@ export default function SystemNoticeView({ onBack, onActivity, onOpenThread, tit
   bare?: boolean
 }) {
   const s = useSystemNotices(onActivity)
-  const newestFirst = [...s.notices].reverse()   // mới nhất ở trên như danh sách thông báo (không phải chat)
+  const newestFirst = [...s.notices].reverse()
+  const hasUnread = s.notices.some(n => n.unread)   // mới nhất ở trên như danh sách thông báo (không phải chat)
 
   return (
     <>
@@ -37,9 +38,10 @@ export default function SystemNoticeView({ onBack, onActivity, onOpenThread, tit
       {s.status === 'ready' && (
         <div className="cs-chat-scroll-wrap">
           <div className="cs-chat-scroll cs-sys-scroll" role="log" aria-label={bare ? 'Thông báo' : 'Thông báo từ Class 2.0'}>
+            {hasUnread && <button type="button" className="cs-nr-markall" onClick={s.markAllRead}>Đánh dấu tất cả đã đọc</button>}
             {s.notices.length === 0 && <p className="cs-sys-empty">{bare ? 'Chưa có thông báo nào. Khi có việc cần bạn quan tâm, ứng dụng sẽ báo tại đây.' : 'Chưa có thông báo nào. Khi có việc cần bạn quan tâm, Class 2.0 sẽ báo tại đây.'}</p>}
             {newestFirst.map(n => (
-              <Notice key={n.seq} n={n} onOpen={() => onOpenThread(n.threadId, noticeAction(n.kind).search)} />
+              <Notice key={n.seq} n={n} onOpen={() => { s.markRead(n.seq); onOpenThread(n.threadId, noticeAction(n.kind).search) }} />
             ))}
             {s.hasMore && (
               <button type="button" className="cs-chat-older" onClick={() => void s.loadOlder()} disabled={s.loadingOlder}>

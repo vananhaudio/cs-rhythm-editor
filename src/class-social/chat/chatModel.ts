@@ -310,6 +310,12 @@ export function toSystemSummary(rows: SystemSummaryRow[] | null | undefined): Sy
 }
 
 /** Gộp theo seq (khử trùng), tăng dần */
+/** Con trỏ đã đọc: mọi thông báo có seq <= cursor thành đã đọc; phần còn lại giữ nguyên. Không bao giờ chuyển ngược về chưa đọc. */
+export function applyReadCursor(list: SystemNotice[], cursor: number): SystemNotice[] {
+  if (!(cursor > 0)) return list
+  return list.map(n => (n.unread && n.seq <= cursor ? { ...n, unread: false } : n))
+}
+
 export function mergeNotices(prev: SystemNotice[], incoming: SystemNotice[]): SystemNotice[] {
   if (incoming.length === 0) return prev
   const m = new Map<number, SystemNotice>()

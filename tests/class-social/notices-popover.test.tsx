@@ -103,3 +103,32 @@ test("Mobile: màn Thông báo toàn trang vẫn dùng SystemNoticeView (hàng g
   assert.doesNotMatch(code("src/class-mobile/MobileShell.tsx"), /NoticesPopover/);
   assert.match(code("src/class-mobile/classMobile.css"), /\.cm-notices \{[^}]*safe-area-inset-bottom/);
 });
+
+// ── Đã đọc: không tự đánh dấu khi mở popover/trang; chỉ khi chọn xem hoặc bấm "Đánh dấu tất cả" ──
+import { applyReadCursor } from "../../src/class-social/chat/chatModel";
+
+test("applyReadCursor: con trỏ chỉ đánh dấu seq <= cursor, không đảo ngược, không đổi thông báo mới hơn", () => {
+  const n = (seq: number, unread: boolean): SystemNotice => ({ ...mk("checkpoint_graded", "x", unread), seq });
+  const list = [n(1, true), n(2, true), n(3, true), n(4, false)];
+  assert.deepEqual(applyReadCursor(list, 2).map(x => x.unread), [false, false, true, false]);
+  assert.deepEqual(applyReadCursor(list, 0).map(x => x.unread), [true, true, true, false], "cursor 0: không đổi");
+  assert.deepEqual(applyReadCursor(list, 99).map(x => x.unread), [false, false, false, false]);
+  assert.equal(applyReadCursor(list, 99).length, 4, "không làm mất thông báo");
+  assert.equal(list[0].unread, true, "không đột biến mảng gốc");
+});
+
+test("Mở popover/trang KHÔNG tự đánh dấu đọc; chỉ chọn một thông báo hoặc 'Đánh dấu tất cả đã đọc'", () => {
+  const hooks = code("src/class-social/chat/useChat.ts");
+  const hook = hooks.slice(hooks.indexOf("export function useSystemNotices"));
+  assert.doesNotMatch(hook.slice(0, hook.indexOf("const commitRead")), /markSystemRead/, "không có effect tải/làm mới nào tự đánh dấu");
+  assert.equal((hook.match(/markSystemRead\(/g) ?? []).length, 1, "chỉ MỘT điểm ghi: commitRead");
+  assert.match(hook, /const commitRead = useCallback/);
+  assert.match(hook, /const markAllRead = useCallback\(\(\) => commitRead\(noticesRef\.current\.at\(-1\)\?\.seq \?\? 0\)/);
+  const view = code("src/class-social/chat/SystemNoticeView.tsx");
+  assert.match(view, /s\.markRead\(n\.seq\); onOpenThread\(n\.threadId, noticeAction\(n\.kind\)\.search\)/);
+  assert.match(view, /onClick=\{s\.markAllRead\}>Đánh dấu tất cả đã đọc/);
+  assert.match(view, /hasUnread &&/);
+  // con trỏ chỉ tăng; lỗi RPC trả lại con trỏ cũ để thử lại
+  assert.match(hook, /if \(!\(seq > marked\.current\)\) return/);
+  assert.match(hook, /else marked\.current = prev/);
+});

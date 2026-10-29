@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from '
 import { fetchConversations, fetchMessages, fetchSystemNotices, fetchSystemSummary, fetchUnreadBreakdown, markRead, markSystemRead, sendMessage } from './chatApi'
 import { pollingLive, type ChatLive } from './chatLive'
 import { createDmSoundTracker, createNoticeSoundGate, getSoundEnabled, installAudioUnlock, onNoticeAudioReady, playPendingNotice, subscribeSound, tryResumeNoticeAudio, writeSoundEnabled } from './noticeSound'
-import { PAGE, lastSeqOf, firstSeqOf, mergeMessages, buildUnread, mergeNotices, normalizeBody, NOTICE_PAGE, type ChatMessage, type ConversationItem, type PendingMessage, type SystemNotice, type SystemSummary, type UnreadCounts } from './chatModel'
+import { PAGE, lastSeqOf, firstSeqOf, mergeMessages, buildUnread, mergeNotices, applyReadCursor, normalizeBody, NOTICE_PAGE, type ChatMessage, type ConversationItem, type PendingMessage, type SystemNotice, type SystemSummary, type UnreadCounts } from './chatModel'
 
 /** Chưa đọc — MỘT nguồn ở shell, TÁCH theo nguồn: `unread.dm` · `unread.band` · `unread.notice`.
  *  `unread.chatTotal` = dm + band (badge Trò chuyện); `unread.noticeTotal` = thông báo hệ thống (badge chuông).
@@ -206,9 +206,13 @@ export type SystemNoticesState = {
   loadingOlder: boolean
   loadOlder: () => Promise<void>
   reload: () => void
+  /** Người dùng chọn xem thông báo `seq` → đánh dấu đã đọc tới seq (con trỏ: gồm cả các thông báo cũ hơn) */
+  markRead: (seq: number) => void
+  /** Chủ động "Đánh dấu tất cả đã đọc" */
+  markAllRead: () => void
 }
 
-/** Màn Class 2.0: trang mới nhất → làm mới định kỳ → đánh dấu đã đọc tới thông báo mới nhất (chỉ khi màn này đang mở). */
+/** Màn Thông báo: trang mới nhất → làm mới định kỳ. KHÔNG tự đánh dấu đã đọc khi mở (chỉ khi người dùng chọn / bấm đánh dấu tất cả). */
 export function useSystemNotices(onActivity: () => void): SystemNoticesState {
   const [state, setState] = useState<{ status: 'loading' | 'ready' | 'error'; error: string | null; notices: SystemNotice[]; hasMore: boolean }>(
     { status: 'loading', error: null, notices: [], hasMore: false })
@@ -237,13 +241,17 @@ export function useSystemNotices(onActivity: () => void): SystemNoticesState {
     return stop
   }, [])
 
-  // Đã đọc: chỉ khi màn đang mở, tới thông báo mới nhất đã hiện; chỉ tăng, không lặp lại
-  useEffect(() => {
-    const top = state.notices.at(-1)?.seq ?? 0
-    if (state.status !== 'ready' || top === 0 || top <= marked.current) return
-    marked.current = top
-    void markSystemRead(top).then(r => { if (r.ok) onActivity(); else marked.current = 0 })
-  }, [state.status, state.notices, onActivity])
+  // Đã đọc theo CON TRỎ (server lưu last_read_seq, chỉ tăng): KHÔNG tự đánh dấu khi mở màn/popover.
+  // Chỉ khi người dùng chọn xem một thông báo (hàm đọc theo seq) hoặc bấm "Đánh dấu tất cả đã đọc".
+  const commitRead = useCallback((seq: number) => {
+    if (!(seq > marked.current)) return
+    const prev = marked.current
+    marked.current = seq
+    setState(s => ({ ...s, notices: applyReadCursor(s.notices, seq) }))
+    void markSystemRead(seq).then(r => { if (r.ok) onActivity(); else marked.current = prev })
+  }, [onActivity])
+  const markRead = useCallback((seq: number) => commitRead(seq), [commitRead])
+  const markAllRead = useCallback(() => commitRead(noticesRef.current.at(-1)?.seq ?? 0), [commitRead])
 
   const loadOlder = useCallback(async () => {
     const first = noticesRef.current[0]?.seq
@@ -256,5 +264,5 @@ export function useSystemNotices(onActivity: () => void): SystemNoticesState {
   }, [loadingOlder])
 
   const reload = useCallback(() => { setState(s => ({ ...s, status: 'loading', error: null })); setRev(x => x + 1) }, [])
-  return { ...state, loadingOlder, loadOlder, reload }
+  return { ...state, loadingOlder, loadOlder, reload, markRead, markAllRead }
 }

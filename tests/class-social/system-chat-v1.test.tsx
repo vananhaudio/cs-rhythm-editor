@@ -97,7 +97,7 @@ test("Rào chắn phạm vi: màn Class 2.0 chỉ đọc — không ô nhập/g�
   // Mở danh sách KHÔNG tự đánh dấu đã đọc: markSystemRead chỉ nằm trong hook của MÀN Class 2.0
   const hooks = code("src/class-social/chat/useChat.ts");
   assert.equal((hooks.match(/markSystemRead\(/g) ?? []).length, 1);
-  assert.match(hooks.slice(hooks.indexOf("export function useSystemNotices")), /markSystemRead\(top\)/);
+  assert.match(hooks.slice(hooks.indexOf("export function useSystemNotices")), /markSystemRead\(seq\)/);
   assert.equal(/markSystemRead|markRead/.test(code("src/class-social/chat/ConversationList.tsx")), false);
   assert.equal(NOTICE_TARGET_SEARCH, "?focus=ket-qua");
 });
