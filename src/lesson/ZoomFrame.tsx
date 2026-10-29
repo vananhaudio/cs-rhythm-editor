@@ -9,6 +9,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 
 const STEPS = [1, 1.4, 1.8, 2.4]
+const OPEN_STEP = 1      // mở "Xem lớn" ở 140% — mở ra mà vẫn 100% thì chẳng lớn hơn bản nhạc đang xem
 
 export default function ZoomFrame(
   { children, hint, onZoom, enabled = true }:
@@ -46,7 +47,7 @@ export default function ZoomFrame(
         </div>
       )}
       {!big && enabled && (
-        <button type="button" className="lsn-zoom-btn no-print" onClick={() => setBig(true)}>↗ Xem lớn</button>
+        <button type="button" className="lsn-zoom-btn no-print" onClick={() => { setStep(OPEN_STEP); setBig(true) }}>↗ Xem lớn</button>
       )}
     </div>
   )

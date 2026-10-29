@@ -22,18 +22,26 @@ export default function LessonScore({ tex, barsPerRow = 4, zoomable = true }: Pr
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading')
   const [err, setErr] = useState('')
 
-  // Số ô nhịp mỗi dòng theo bề rộng KHUNG CHỨA (không phải cửa sổ): lúc xuất PDF
-  // khung được kéo về khổ A4 nên bản nhạc phải khắc lại cho đủ ô mỗi dòng.
-  const narrowNow = () => (hostRef.current?.clientWidth ?? window.innerWidth) < 620
-  // Đang chụp để lưu PDF: trang bị kéo về khổ giấy nên khung hẹp lại, nhưng ĐỪNG
-  // coi đó là điện thoại — vẫn giữ đủ số ô nhịp mỗi dòng. (Bản nhạc in ra to lên là
-  // nhờ ảnh chụp hẹp được kéo cho vừa giấy, KHÔNG phải nhờ tăng display.scale: tăng
-  // scale làm bản nhạc rộng quá khổ và bị cắt mất mép phải.)
+  // Cách khắc theo bề rộng KHUNG CHỨA (không phải cửa sổ): lúc xuất PDF khung được kéo về
+  // khổ A4 nên bản nhạc phải khắc lại cho đủ ô mỗi dòng.
+  // Đang chụp để lưu PDF: trang bị kéo về khổ giấy nên khung hẹp lại, nhưng ĐỪNG coi đó là
+  // điện thoại — vẫn giữ đủ số ô nhịp mỗi dòng và cỡ 0.95. (Bản nhạc in ra to lên là nhờ ảnh
+  // chụp hẹp được kéo cho vừa giấy, KHÔNG phải nhờ tăng display.scale: tăng scale làm bản
+  // nhạc rộng quá khổ và bị cắt mất mép phải.)
+  // Điện thoại: chọn theo ĐỘ ĐỌC được, không theo "càng nhiều ô càng tốt" — dọc 2 ô, ngang 3 ô,
+  // cỡ nốt 1.1 (nhờ khung được lấy lại lề, cỡ lớn hơn mà vẫn không tràn).
   const printingNow = () => !!document.querySelector('.lsn-paper.is-printing')
-  const restScale = () => (!printingNow() && narrowNow() ? 1 : 0.95)
-  const restRows = () => (printingNow() ? barsPerRow : narrowNow() ? Math.min(2, barsPerRow) : barsPerRow)
-  const narrow = typeof window !== 'undefined' && window.innerWidth < 640
-  const rows = narrow ? Math.min(2, barsPerRow) : barsPerRow
+  const layoutFor = (w: number) => {
+    if (printingNow()) return { rows: barsPerRow, scale: 0.95 }
+    // Chỉ ĐIỆN THOẠI (cạnh ngắn màn hình < 500px, dọc hoặc ngang). Máy tính bảng / desktop giữ cách cũ.
+    const phone = Math.min(window.innerWidth, window.innerHeight) < 500
+    if (!phone) return w < 620 ? { rows: Math.min(2, barsPerRow), scale: 1 } : { rows: barsPerRow, scale: 0.95 }
+    // Bản có LỜI: mỗi ô nhịp 8 chữ + nốt móc đơn, 2 ô/dòng trong ~360px làm lời chồng lên nhau ⇒ 1 ô/dòng
+    if (w < 560) return { rows: hasLyrics ? 1 : Math.min(2, barsPerRow), scale: 1.1 }
+    return { rows: Math.min(3, barsPerRow), scale: 1.1 }
+  }
+  const hasLyrics = tex.includes('\\lyrics')
+  const hostWidth = () => hostRef.current?.clientWidth || window.innerWidth
 
   useEffect(() => {
     let dead = false
@@ -58,8 +66,9 @@ export default function LessonScore({ tex, barsPerRow = 4, zoomable = true }: Pr
         // Bản nhạc tự khai \staff {score} (chỉ khuông, không TAB — vd bài để học viên TỰ
         // chọn vị trí) thì tôn trọng nó; còn lại mặc định khuông + TAB.
         s.display.staveProfile = tex.includes('\\staff') ? StaveProfile.Default : StaveProfile.ScoreTab
-        s.display.scale = narrow ? 1 : 0.95
-        s.display.barsPerRow = rows
+        const first = layoutFor(hostWidth())
+        s.display.scale = first.scale
+        s.display.barsPerRow = first.rows
         // alphaTab tô bè phụ (bè Bass) bằng màu xám mờ — in ra giấy gần như không
         // thấy. Kéo về đúng màu đen của bè chính.
         s.display.resources.secondaryGlyphColor = s.display.resources.mainGlyphColor
@@ -104,10 +113,11 @@ export default function LessonScore({ tex, barsPerRow = 4, zoomable = true }: Pr
     // Khắc lại khi BỀ RỘNG KHUNG đổi, kể cả khi số ô nhịp không đổi: alphaTab dàn nốt
     // theo bề ngang lúc khắc, giữ nguyên bản khắc cũ trong khung hẹp hơn là bản nhạc
     // thò ra ngoài mép phải và lúc chụp PDF sẽ bị cắt cụt.
-    let applied = `${host.clientWidth}/${rows}/${0.95}`
+    let applied = `${host.clientWidth}/${layoutFor(host.clientWidth || window.innerWidth).rows}/${layoutFor(host.clientWidth || window.innerWidth).scale}`
     const ro = new ResizeObserver(() => {
       if (bigRef.current) return                    // đang xem toàn màn hình: giữ nguyên cách khắc
-      const want = restRows(), wantScale = restScale(), w = host.clientWidth
+      const w = host.clientWidth
+      const { rows: want, scale: wantScale } = layoutFor(w || window.innerWidth)
       const api = apiRef.current
       if (!api || `${w}/${want}/${wantScale}` === applied) return
       applied = `${w}/${want}/${wantScale}`
@@ -134,10 +144,12 @@ export default function LessonScore({ tex, barsPerRow = 4, zoomable = true }: Pr
     try {
       if (big) {
         api.settings.display.scale = factor
-        api.settings.display.barsPerRow = Math.max(1, Math.floor(w / (factor * 250)))
+        // ~150px/ô ở cỡ 1: số ngón tay không dính đầu nốt; dọc 140% đọc từng ô một
+        api.settings.display.barsPerRow = Math.max(1, Math.min(barsPerRow, Math.floor(w / (factor * 150))))
       } else {
-        api.settings.display.scale = restScale()
-        api.settings.display.barsPerRow = restRows()
+        const l = layoutFor(w)
+        api.settings.display.scale = l.scale
+        api.settings.display.barsPerRow = l.rows
       }
       api.updateSettings()
       api.render()
