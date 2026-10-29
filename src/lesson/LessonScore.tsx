@@ -30,6 +30,7 @@ export default function LessonScore({ tex, barsPerRow = 4, zoomable = true }: Pr
   // nhạc rộng quá khổ và bị cắt mất mép phải.)
   // Điện thoại: chọn theo ĐỘ ĐỌC được, không theo "càng nhiều ô càng tốt" — dọc 2 ô, ngang 3 ô,
   // cỡ nốt 1.1 (nhờ khung được lấy lại lề, cỡ lớn hơn mà vẫn không tràn).
+  const LYRIC_BAR = 395     // px/ô nhịp ở cỡ 1 cho ô 8 âm tiết — dưới mức này lời hát chồng nhau
   const printingNow = () => !!document.querySelector('.lsn-paper.is-printing')
   const layoutFor = (w: number) => {
     if (printingNow()) return { rows: barsPerRow, scale: 0.95 }
@@ -40,7 +41,8 @@ export default function LessonScore({ tex, barsPerRow = 4, zoomable = true }: Pr
     // âm tiết dài ("Đường" ~40px) cạnh nhau bị chồng. Đo trên Buổi 04: cỡ 1.1 chồng 11/83 cặp (dọc);
     // cỡ 1.0 còn 1/83 (hở -0.6px). Nên bản có lời dùng cỡ 1.0: dọc 1 ô/dòng, ngang 3 ô/dòng.
     // (Không đổi effectFont: nó dùng chung cho hợp âm và ký hiệu khác.)
-    if (hasLyrics) return { rows: w < 560 ? 1 : Math.min(3, barsPerRow), scale: 1 }
+    // Máy hẹp (360px) thì co cỡ theo bề rộng: bề rộng/cỡ phải ≥ LYRIC_BAR (đo: 382/1.0 chồng 1 cặp, 402 thì hở)
+    if (hasLyrics) return { rows: w < 560 ? 1 : Math.min(3, barsPerRow), scale: Math.min(1, Math.round(w / LYRIC_BAR * 100) / 100) }
     if (w < 560) return { rows: Math.min(2, barsPerRow), scale: 1.1 }
     return { rows: Math.min(3, barsPerRow), scale: 1.1 }
   }
@@ -143,15 +145,28 @@ export default function LessonScore({ tex, barsPerRow = 4, zoomable = true }: Pr
   const onZoom = (big: boolean, factor: number) => {
     bigRef.current = big
     const api = apiRef.current
-    if (!api) return
-    const w = hostRef.current?.clientWidth || window.innerWidth
+    const host = hostRef.current
+    if (!api || !host) return
+    const w = host.clientWidth || window.innerWidth
     try {
       if (big) {
+        // Bản có LỜI: mỗi ô nhịp cần ~370 đơn vị bề ngang cho 8 âm tiết (đo ở Buổi 04). Phóng to thì bề rộng
+        // khuông = factor × 370px — rộng hơn màn hình thì để vùng Xem lớn cuộn ngang, KHÔNG ép khuông vào
+        // viewport (ép là lời chồng nhau). Cỡ nốt giữ đúng bằng factor.
+        if (hasLyrics) {
+          const vw = (host.parentElement?.parentElement?.clientWidth || window.innerWidth) - 20
+          const wide = Math.max(vw, Math.ceil(factor * LYRIC_BAR))
+          host.style.width = factor > 1 ? `${wide}px` : ''
+          if (factor <= 1) { api.settings.display.scale = layoutFor(vw).scale; api.settings.display.barsPerRow = layoutFor(vw).rows; api.updateSettings(); api.render(); return }
+          api.settings.display.barsPerRow = Math.max(1, Math.min(barsPerRow, Math.floor(wide / (factor * LYRIC_BAR))))
+        } else {
+          // ~150px/ô ở cỡ 1: số ngón tay không dính đầu nốt; dọc 140% đọc từng ô một
+          api.settings.display.barsPerRow = Math.max(1, Math.min(barsPerRow, Math.floor(w / (factor * 150))))
+        }
         api.settings.display.scale = factor
-        // ~150px/ô ở cỡ 1: số ngón tay không dính đầu nốt; dọc 140% đọc từng ô một
-        api.settings.display.barsPerRow = Math.max(1, Math.min(barsPerRow, Math.floor(w / (factor * (hasLyrics ? 392 : 150)))))   // bản có lời: ~392px/ô cho 8 âm tiết
       } else {
-        const l = layoutFor(w)
+        host.style.width = ''
+        const l = layoutFor(host.clientWidth || window.innerWidth)
         api.settings.display.scale = l.scale
         api.settings.display.barsPerRow = l.rows
       }
@@ -165,7 +180,6 @@ export default function LessonScore({ tex, barsPerRow = 4, zoomable = true }: Pr
 
   return (
     <ZoomFrame onZoom={onZoom} enabled={zoomable} memoryKey={memoryKey}
-               limitFactor={hasLyrics ? () => Math.max(1, (window.innerWidth - 20) / 392) : undefined}
                hint={zoomable ? 'Bản nhạc dài — bấm “Xem lớn” để đọc toàn màn hình.' : undefined}>
       <div className="lsn-score">
         {state === 'loading' && <div className="lsn-score-msg">Đang dựng bản nhạc…</div>}
