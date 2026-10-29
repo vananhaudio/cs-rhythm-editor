@@ -210,7 +210,7 @@ function SignedInShell({ base, view, onSection, onOpenProfile, onOpenThread, onO
   return (
     <ClassSocialLayout me={me} section={section} onSection={onSection} onOpenMyProfile={() => onOpenProfile(me.userId)}
       badges={{ friends: requests.count, chat: chatUnread.count }}
-      notices={{ count: chatUnread.unread.noticeTotal, active: view.kind === 'notices', onOpen: onOpenNotices }}
+      notices={{ count: chatUnread.unread.noticeTotal, active: view.kind === 'notices', onOpen: view.kind === 'notices' ? () => onBack(HOME) : onOpenNotices }}
       classNav={({ collapsed, onNavigate }) => (
         <ClassNav mine={classes.mine} loaded={classes.loaded} activeClassId={activeClassId} allClasses={classes.all != null}
           classesActive={view.kind === 'classes'} collapsed={collapsed}
@@ -259,7 +259,7 @@ function SignedInShell({ base, view, onSection, onOpenProfile, onOpenThread, onO
         soundToggle={chatUnread.system != null}
         onBackToList={() => onBack({ kind: 'section', section: 'chat' })} onOpenProfile={onOpenProfile}
         onOpenFriends={() => onSection('friends')} onUnreadChanged={() => void chatUnread.refresh()} />}
-      {view.kind === 'notices' && <Notices onUnreadChanged={() => void chatUnread.refresh()} onOpenThread={onOpenThread} />}
+      {view.kind === 'notices' && <Notices onUnreadChanged={() => void chatUnread.refresh()} onOpenThread={onOpenThread} onClose={() => onBack(HOME)} />}
       {section === 'tools' && <ToolsPage />}
       {editor.element}
       {editingProfile && <ProfileEditDialog me={me} onClose={() => setEditingProfile(false)} onSaved={onChanged} />}

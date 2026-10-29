@@ -227,7 +227,7 @@ export default function MobileShell({ base }: { base: ClassIdentity }) {
   return (
     <div className={'cs-root cm-root' + (keyboardOpen ? ' is-keyboard' : '')} data-bar-title={bar.hidePageTitle ? '1' : undefined}>
       <TopBar noticeCount={noticeCount} title={bar.title} onBack={bar.back ? (canPop(nav) ? back : null) : view.kind === 'studio' ? studioBack?.fn ?? null : null}
-        onHome={() => selectTabAndScroll('home')} onNotices={() => go({ kind: 'notices' })} onMore={() => setMore(true)} />
+        onHome={() => selectTabAndScroll('home')} onNotices={() => (view.kind === 'notices' || view.kind === 'chatSystem' ? backToOr(HOME_VIEW) : go({ kind: 'notices' }))} onMore={() => setMore(true)} />
       <main className="cm-content cs-main">
         {body()}
       </main>
