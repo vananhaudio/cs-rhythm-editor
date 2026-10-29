@@ -464,15 +464,15 @@ const CSS = `
 /* Vùng cuộn là .lsn-zoom-inner, thanh công cụ là một HÀNG ĐẶC phía trên (không phủ lên bản nhạc) */
 .lsn-zoom-frame.is-big .lsn-zoom-inner{flex:1;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;
   overscroll-behavior:contain;touch-action:pan-x pan-y;
-  padding:6px max(10px,env(safe-area-inset-right)) calc(20px + env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left));}
+  padding:6px max(10px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(10px,env(safe-area-inset-left,0px));}
 .lsn-zoom-tools{order:-1;flex:none;display:flex;align-items:center;justify-content:flex-end;gap:8px;background:#fff;
   border-bottom:1px solid ${P.line};
-  padding:calc(6px + env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) 6px max(12px,env(safe-area-inset-left));}
+  padding:calc(8px + env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) 8px max(12px,env(safe-area-inset-left,0px));}
 .lsn-zoom-tools button{border:1px solid ${P.line};background:#fff;color:${P.ink};font-family:inherit;
-  font-size:17px;font-weight:700;width:40px;height:36px;border-radius:10px;cursor:pointer;line-height:1;}
+  font-size:17px;font-weight:700;width:44px;height:44px;border-radius:10px;cursor:pointer;line-height:1;}
 .lsn-zoom-tools button:disabled{opacity:.4;cursor:default;}
 .lsn-zoom-tools span{font-size:13px;font-weight:600;color:${P.inkFaint};min-width:46px;text-align:center;}
-.lsn-zoom-tools .lsn-zoom-close{width:auto;padding:0 14px;font-size:14.5px;background:${P.purple};
+.lsn-zoom-tools .lsn-zoom-close{width:auto;min-width:44px;padding:0 16px;font-size:14.5px;background:${P.purple};
   color:#fff;border-color:${P.purple};}
 .lsn-zoom-frame.is-big .lsn-score,.lsn-zoom-frame.is-big .lsn-fb{border:none;max-width:none;overflow:visible;margin:0;padding:0;}
 .lsn-zoom-frame.is-big .lsn-score-host{overflow:visible;}
