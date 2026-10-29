@@ -156,8 +156,11 @@ export default function LessonScore({ tex, barsPerRow = 4, zoomable = true }: Pr
     } catch { /* */ }
   }
 
+  // Định danh ổn định để nhớ vị trí đọc: đường dẫn bài + dấu vân tay nội dung bản nhạc (sửa nhạc thì vị trí cũ tự bỏ)
+  const memoryKey = `${location.pathname}#${tex.split('').reduce((h, c) => (Math.imul(h ^ c.charCodeAt(0), 16777619) >>> 0), 2166136261).toString(36)}`
+
   return (
-    <ZoomFrame onZoom={onZoom} enabled={zoomable}
+    <ZoomFrame onZoom={onZoom} enabled={zoomable} memoryKey={memoryKey}
                hint={zoomable ? 'Bản nhạc dài — bấm “Xem lớn” để đọc toàn màn hình.' : undefined}>
       <div className="lsn-score">
         {state === 'loading' && <div className="lsn-score-msg">Đang dựng bản nhạc…</div>}

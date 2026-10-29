@@ -462,12 +462,24 @@ const CSS = `
 .lsn-zoom-frame.is-big{position:fixed;inset:0;z-index:140;background:#fff;margin:0;padding:0;
   display:flex;flex-direction:column;overflow:hidden;}
 /* Vùng cuộn là .lsn-zoom-inner, thanh công cụ là một HÀNG ĐẶC phía trên (không phủ lên bản nhạc) */
+.lsn-zoom-frame.is-big{--zt:61px;}
 .lsn-zoom-frame.is-big .lsn-zoom-inner{flex:1;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;
-  overscroll-behavior:contain;touch-action:pan-x pan-y;
-  padding:6px max(10px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(10px,env(safe-area-inset-left,0px));}
-.lsn-zoom-tools{order:-1;flex:none;display:flex;align-items:center;justify-content:flex-end;gap:8px;background:#fff;
-  border-bottom:1px solid ${P.line};
+  overscroll-behavior:contain;touch-action:pan-x pan-y;-webkit-tap-highlight-color:transparent;
+  padding:calc(var(--zt) + env(safe-area-inset-top,0px) + 4px) max(10px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(10px,env(safe-area-inset-left,0px));}
+/* Luyện đàn: thanh công cụ PHỦ lên trên, trượt ra khỏi màn hình sau vài giây (đầu bài đã chừa chỗ nên không che nốt) */
+.lsn-zoom-tools{position:absolute;top:0;left:0;right:0;z-index:3;display:flex;align-items:center;justify-content:flex-end;gap:8px;
+  background:rgba(255,255,255,.97);border-bottom:1px solid ${P.line};transition:transform .22s ease,opacity .22s ease;
   padding:calc(8px + env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) 8px max(12px,env(safe-area-inset-left,0px));}
+.lsn-zoom-frame.tools-off .lsn-zoom-tools{transform:translateY(-100%);opacity:0;pointer-events:none;}
+.lsn-zoom-pager{position:absolute;z-index:3;display:flex;flex-direction:column;gap:10px;
+  right:max(10px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));transition:opacity .22s ease;}
+.lsn-zoom-pager button{width:48px;height:48px;border-radius:50%;border:1px solid ${P.line};background:rgba(255,255,255,.94);
+  color:${P.purple};font-size:16px;font-family:inherit;cursor:pointer;box-shadow:0 2px 8px rgba(29,25,48,.18);}
+.lsn-zoom-frame.tools-off .lsn-zoom-pager{opacity:0;pointer-events:none;}
+@media (max-height:500px){
+  .lsn-zoom-frame.is-big{--zt:53px;}
+  .lsn-zoom-tools{padding-top:calc(4px + env(safe-area-inset-top,0px));padding-bottom:4px;}
+}
 .lsn-zoom-tools button{border:1px solid ${P.line};background:#fff;color:${P.ink};font-family:inherit;
   font-size:17px;font-weight:700;width:44px;height:44px;border-radius:10px;cursor:pointer;line-height:1;}
 .lsn-zoom-tools button:disabled{opacity:.4;cursor:default;}
