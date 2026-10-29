@@ -210,7 +210,7 @@ function SignedInShell({ base, view, onSection, onOpenProfile, onOpenThread, onO
   return (
     <ClassSocialLayout me={me} section={section} onSection={onSection} onOpenMyProfile={() => onOpenProfile(me.userId)}
       badges={{ friends: requests.count, chat: chatUnread.count }}
-      notices={{ count: chatUnread.unread.noticeTotal, active: view.kind === 'notices', onOpen: view.kind === 'notices' ? () => onBack(HOME) : onOpenNotices }}
+      notices={{ count: chatUnread.unread.noticeTotal, active: view.kind === 'notices', onOpen: view.kind === 'notices' ? () => onBack(HOME) : onOpenNotices, onActivity: () => void chatUnread.refresh(), onOpenThread }}
       classNav={({ collapsed, onNavigate }) => (
         <ClassNav mine={classes.mine} loaded={classes.loaded} activeClassId={activeClassId} allClasses={classes.all != null}
           classesActive={view.kind === 'classes'} collapsed={collapsed}

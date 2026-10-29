@@ -1,6 +1,5 @@
 // Class 2.0 — màn thông báo hệ thống: lịch sử theo thời gian, CHỈ ĐỌC (không ô nhập). Mỗi thông báo = nội dung ngắn + "Xem kết quả →".
 // Chat chỉ là cổng điều hướng: kết quả/nhận xét chi tiết nằm ở trang bài trả (hệ thống gốc), không sao chép vào đây.
-import { useLayoutEffect, useRef } from 'react'
 import { ArrowLeft, BellRing, RefreshCw } from 'lucide-react'
 import { SYSTEM_FOOTNOTE, SYSTEM_NAME, noticeAction } from './chatModel'
 import { Notice } from './SystemNoticeItem'
@@ -16,9 +15,7 @@ export default function SystemNoticeView({ onBack, onActivity, onOpenThread, tit
   bare?: boolean
 }) {
   const s = useSystemNotices(onActivity)
-  const box = useRef<HTMLDivElement>(null)
-  const last = s.notices.at(-1)?.seq ?? 0
-  useLayoutEffect(() => { const el = box.current; if (el) el.scrollTop = el.scrollHeight }, [last, s.status])   // mở / có thông báo mới → xuống cuối như chat
+  const newestFirst = [...s.notices].reverse()   // mới nhất ở trên như danh sách thông báo (không phải chat)
 
   return (
     <>
@@ -39,16 +36,17 @@ export default function SystemNoticeView({ onBack, onActivity, onOpenThread, tit
       )}
       {s.status === 'ready' && (
         <div className="cs-chat-scroll-wrap">
-          <div className="cs-chat-scroll cs-sys-scroll" ref={box} role="log" aria-label={bare ? 'Thông báo' : 'Thông báo từ Class 2.0'}>
+          <div className="cs-chat-scroll cs-sys-scroll" role="log" aria-label={bare ? 'Thông báo' : 'Thông báo từ Class 2.0'}>
+            {s.notices.length === 0 && <p className="cs-sys-empty">{bare ? 'Chưa có thông báo nào. Khi có việc cần bạn quan tâm, ứng dụng sẽ báo tại đây.' : 'Chưa có thông báo nào. Khi có việc cần bạn quan tâm, Class 2.0 sẽ báo tại đây.'}</p>}
+            {newestFirst.map(n => (
+              <Notice key={n.seq} n={n} onOpen={() => onOpenThread(n.threadId, noticeAction(n.kind).search)} />
+            ))}
             {s.hasMore && (
               <button type="button" className="cs-chat-older" onClick={() => void s.loadOlder()} disabled={s.loadingOlder}>
                 {s.loadingOlder ? 'Đang tải…' : 'Xem thông báo cũ hơn'}
               </button>
             )}
-            {s.notices.length === 0 && <p className="cs-sys-empty">{bare ? 'Chưa có thông báo nào. Khi có việc cần bạn quan tâm, ứng dụng sẽ báo tại đây.' : 'Chưa có thông báo nào. Khi có việc cần bạn quan tâm, Class 2.0 sẽ báo tại đây.'}</p>}
-            {s.notices.map((n, i) => (
-              <Notice key={n.seq} n={n} prev={s.notices[i - 1]} onOpen={() => onOpenThread(n.threadId, noticeAction(n.kind).search)} />
-            ))}
+
           </div>
         </div>
       )}

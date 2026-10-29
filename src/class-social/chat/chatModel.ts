@@ -328,6 +328,35 @@ export function focusFromSearch(search: string | null | undefined): ThreadFocus 
   const f = new URLSearchParams(search ?? '').get('focus')
   return f === 'ket-qua' || f === 'bai-moi' ? f : undefined
 }
+/** Phân loại hiển thị của một thông báo (chỉ từ kind + nội dung đã có; không suy ra người gửi / dữ liệu khác). */
+export type NoticeTone = 'submit' | 'resubmit' | 'comment' | 'pass' | 'redo' | 'graded' | 'question' | 'answer' | 'other'
+export function noticeVariant(kind: string, body: string): { tone: NoticeTone; chip: string } {
+  const b = body ?? ''
+  switch (kind) {
+    case 'submission_received': return /nộp lại/i.test(b) ? { tone: 'resubmit', chip: 'Nộp lại' } : { tone: 'submit', chip: 'Nộp bài' }
+    case 'teacher_commented': return { tone: 'comment', chip: 'Nhận xét' }
+    case 'checkpoint_graded':
+      if (/ĐẠT/.test(b)) return { tone: 'pass', chip: 'ĐẠT' }
+      if (/nộp lại/i.test(b)) return { tone: 'redo', chip: 'NỘP LẠI' }
+      return { tone: 'graded', chip: 'Đã chấm' }
+    case 'question_received': return { tone: 'question', chip: 'Câu hỏi' }
+    case 'question_answered': return { tone: 'answer', chip: 'Trả lời' }
+    default: return { tone: 'other', chip: 'Thông báo' }
+  }
+}
+
+/** Thời gian gọn kiểu mạng xã hội: "Vừa xong", "5 phút", "3 giờ", "2 ngày", hoặc dd/mm. '' nếu không hợp lệ. */
+export function relativeTime(iso: string, now = new Date()): string {
+  const t = new Date(iso)
+  if (Number.isNaN(t.getTime())) return ''
+  const m = Math.floor((now.getTime() - t.getTime()) / 60000)
+  if (m < 1) return 'Vừa xong'
+  if (m < 60) return `${m} phút`
+  if (m < 60 * 24) return `${Math.floor(m / 60)} giờ`
+  if (m < 60 * 24 * 7) return `${Math.floor(m / 1440)} ngày`
+  return `${pad(t.getDate())}/${pad(t.getMonth() + 1)}${t.getFullYear() === now.getFullYear() ? '' : '/' + t.getFullYear()}`
+}
+
 export function noticeAction(kind: string): { label: string; search: string } {
   switch (kind) {
     case 'submission_received': return { label: 'Xem bài', search: NOTICE_TARGET_SEARCH_STUDENT }

@@ -1,6 +1,6 @@
 // Khung (shell) của Class Social: top bar tối giản + sidebar (desktop) / menu sheet (mobile).
 // Logo = Trang chủ (/me); "Trang chủ" cũng là mục đầu tiên của menu. Nhóm LỚP HỌC (động) chèn ngay sau CỘNG ĐỒNG.
-import { useEffect, useState, type ReactNode } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Bell, Lock, Menu, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react'
 import { NAV_GROUPS, type NavItem } from './nav'
 import { SECTION_PATHS, type SocialSection } from './resolveMeRoute'
@@ -9,6 +9,9 @@ import { Avatar, ClassHomeLink, MoreMenu } from './ui'
 import { thuVienAccess } from '../thuvien/masterLibrary'
 import { safeImageUrl } from './media/safeImageUrl'
 import type { ImageKind } from './profile/imageFile'
+import { popoverEnabled } from './noticesPopoverLogic'
+
+const NoticesPopover = lazy(() => import('./NoticesPopover'))   // chỉ tải khi mở lần đầu
 
 const COLLAPSE_KEY = 'cs-sidebar-collapsed'
 
@@ -145,11 +148,30 @@ export default function ClassSocialLayout({ me, section, onSection, children, ca
   onOpenMyProfile?: () => void
   badges?: NavBadges
   /** Chuông Thông báo — badge RIÊNG (không cộng vào badge Trò chuyện / menu) */
-  notices?: { count: number; active: boolean; onOpen: () => void }
+  /** onOpen = mở trang đầy đủ /me/notices (hoặc đóng nếu đang ở đó). onActivity/onOpenThread có → desktop dùng popover dưới chuông. */
+  notices?: { count: number; active: boolean; onOpen: () => void; onActivity?: () => void; onOpenThread?: (threadId: string, search: string) => void }
   classNav?: ClassNavSlot
 }) {
   const totalBadge = Object.values(badges ?? {}).reduce((a, n) => a + (n ?? 0), 0)
   const [collapsed, setCollapsed] = useState(readCollapsed)
+  // Chuông: desktop (≥1024px) mở popover nhỏ; hẹp hơn / đang ở trang Thông báo → điều hướng như cũ
+  const bellRef = useRef<HTMLButtonElement>(null)
+  const [popOpen, setPopOpen] = useState(false)
+  const [wide, setWide] = useState(() => popoverEnabled())
+  useEffect(() => {
+    const mq = window.matchMedia?.('(min-width: 1024px)')
+    if (!mq) return
+    const on = () => { setWide(mq.matches); if (!mq.matches) setPopOpen(false) }
+    mq.addEventListener?.('change', on)
+    return () => mq.removeEventListener?.('change', on)
+  }, [])
+  const canPopover = wide && !!notices?.onActivity && !!notices?.onOpenThread
+  const closePop = useCallback(() => setPopOpen(false), [])
+  const onBell = () => {
+    if (!notices) return
+    if (notices.active || !canPopover) { setPopOpen(false); notices.onOpen(); return }
+    setPopOpen(o => !o)
+  }
   const [menuOpen, setMenuOpen] = useState(false)
   // Lối vào Thư viện cho Biên tập / Trưởng Band. Lỗi/không có vai → giữ nguyên mục khoá.
   const [libraryOpen, setLibraryOpen] = useState(false)
@@ -192,11 +214,19 @@ export default function ClassSocialLayout({ me, section, onSection, children, ca
         </a>
         <div className="cs-topbar-spacer" />
         {notices && (
-          <button type="button" className={'cs-icon-btn cs-bell-btn' + (notices.active ? ' is-active' : '')} onClick={notices.onOpen}
-            aria-label={notices.count > 0 ? `Thông báo, ${notices.count} chưa đọc` : 'Thông báo'} aria-current={notices.active ? 'page' : undefined}>
-            <Bell size={22} aria-hidden="true" />
-            {notices.count > 0 && <span className="cs-nav-badge is-corner" aria-hidden="true">{notices.count > 99 ? '99+' : notices.count}</span>}
-          </button>
+          <span className="cs-bell-wrap">
+            <button type="button" ref={bellRef} className={'cs-icon-btn cs-bell-btn' + (notices.active || popOpen ? ' is-active' : '')} onClick={onBell}
+              aria-label={notices.count > 0 ? `Thông báo, ${notices.count} chưa đọc` : 'Thông báo'} aria-current={notices.active ? 'page' : undefined}
+              aria-haspopup={canPopover ? 'dialog' : undefined} aria-expanded={canPopover ? popOpen : undefined}>
+              <Bell size={22} aria-hidden="true" />
+              {notices.count > 0 && <span className="cs-nav-badge is-corner" aria-hidden="true">{notices.count > 99 ? '99+' : notices.count}</span>}
+            </button>
+            {popOpen && notices.onActivity && notices.onOpenThread && (
+              <Suspense fallback={null}>
+                <NoticesPopover bellRef={bellRef} onClose={closePop} onViewAll={notices.onOpen} onActivity={notices.onActivity} onOpenThread={notices.onOpenThread} />
+              </Suspense>
+            )}
+          </span>
         )}
         <ClassHomeLink label="Class" quiet />
         <MoreMenu className="cs-account" label={`Tài khoản: ${me.name}`}

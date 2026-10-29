@@ -177,7 +177,7 @@
 @media (max-width: 440px) { .cs-topbar .cs-brand .cs-brand-text { display: inline; font-size: clamp(0.875rem, 4vw, 1rem); } }
 
 /* Thông báo: khung đứng riêng, cuộn trong hộp có chiều cao theo màn hình */
-.cm-notices { display: flex; flex-direction: column; height: calc(100dvh - var(--cm-top-h) - var(--cm-tab-h) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 150px); min-height: 320px; border-radius: 14px; overflow: hidden; background: var(--cs-surface); box-shadow: var(--cs-shadow); }
+.cm-notices { display: flex; flex-direction: column; max-height: calc(100dvh - var(--cm-top-h) - var(--cm-tab-h) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 96px); min-height: 160px; border-radius: 14px; overflow: hidden; background: var(--cs-surface); box-shadow: var(--cs-shadow); }
 
 /* Một nút Quay lại duy nhất: BackBar của khung. Nút tự vẽ của màn con (kiểu cs-btn / pill) ẩn trong Class Mobile; web /me giữ nguyên. */
 .cm-root .cs-profile-back, .cm-root .cs-band-back, .cm-root .cs-back-btn { display: none; }
