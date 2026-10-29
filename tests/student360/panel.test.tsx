@@ -87,9 +87,33 @@ test('thêm: mặc định chỉ bật khi có nội dung; "Thầy suy đoán" g
   assert.equal((v.getByText('Thêm') as HTMLButtonElement).disabled, false)
   fireEvent.click(v.getByText('Thêm'))
   await waitFor(() => v.getByText('Đã thêm thông tin.'))
-  assert.deepEqual(calls.find(c => c[0] === 'add')![1], { userId: U, category: 'support_need', content: 'Cần bài tập chậm', origin: 'inferred', sourceKind: 'teacher' })
+  assert.deepEqual(calls.find(c => c[0] === 'add')![1], { userId: U, category: 'support_need', content: 'Cần bài tập chậm', origin: 'inferred', sourceKind: 'teacher', visibility: 'teacher' })
   assert.equal((v.getByLabelText('Nội dung') as HTMLTextAreaElement).value, '', 'xoá ô nhập sau khi thêm')
   assert.equal(calls.filter(c => c[0] === 'get').length, 2, 'tải lại từ server sau khi thêm')
+})
+
+test('form thêm: bắt buộc chọn nguồn, hiện ai sẽ thấy, mặc định chỉ giáo viên, chia sẻ phải tích rõ, không giữ lựa chọn sang lần sau', async () => {
+  const v = mount(); await waitFor(() => v.getByText(/Chưa có thông tin nào/))
+  const src = v.getByLabelText('Nguồn thông tin') as HTMLSelectElement
+  assert.equal(src.value, '', 'không có nguồn mặc định')
+  fireEvent.change(v.getByLabelText('Nội dung'), { target: { value: 'Muốn đệm hát' } })
+  assert.equal((v.getByText('Thêm') as HTMLButtonElement).disabled, true, 'có nội dung nhưng chưa chọn nguồn thì chưa thêm được')
+  assert.match(v.getByLabelText('Ai sẽ thấy').textContent!, /chọn nguồn/)
+  fireEvent.change(src, { target: { value: 'observed' } })
+  assert.match(v.getByLabelText('Ai sẽ thấy').textContent!, /chỉ giáo viên/)
+  fireEvent.click(v.getByText('Thêm')); await waitFor(() => v.getByText('Đã thêm thông tin.'))
+  assert.equal((calls.find(c => c[0] === 'add')![1] as { visibility: string }).visibility, 'teacher', 'không tích → chỉ giáo viên')
+  assert.equal((v.getByLabelText('Nguồn thông tin') as HTMLSelectElement).value, '', 'sau khi thêm, nguồn được đặt lại')
+  calls.length = 0
+  fireEvent.change(v.getByLabelText('Nguồn thông tin'), { target: { value: 'told' } })
+  fireEvent.click(v.getByLabelText('Cho học viên xem ngay'))
+  assert.match(v.getByLabelText('Ai sẽ thấy').textContent!, /giáo viên và học viên/)
+  fireEvent.change(v.getByLabelText('Nội dung'), { target: { value: 'Thích bolero' } })
+  fireEvent.click(v.getByText('Thêm')); await waitFor(() => assert.equal(calls.filter(c => c[0] === 'add').length, 1))
+  assert.equal((calls.find(c => c[0] === 'add')![1] as { visibility: string }).visibility, 'student_and_teacher')
+  assert.equal((v.getByLabelText('Cho học viên xem ngay') as HTMLInputElement).checked, false, 'ô chia sẻ cũng được đặt lại')
+  fireEvent.change(v.getByLabelText('Nguồn thông tin'), { target: { value: 'guess' } })
+  assert.equal(v.queryByLabelText('Cho học viên xem ngay'), null, 'mục suy đoán không cho chia sẻ ngay lúc thêm')
 })
 
 test('sửa: gửi nội dung mới và báo mức xác minh bị đặt lại', async () => {
