@@ -37,13 +37,17 @@ const save = (key: string | undefined, v: Saved) => {
 const pinchSteps = (ratio: number) => (ratio > 1.7 ? 2 : ratio > 1.15 ? 1 : ratio < 0.55 ? -2 : ratio < 0.87 ? -1 : 0)
 
 export default function ZoomFrame(
-  { children, hint, onZoom, enabled = true, memoryKey }:
-  { children: ReactNode; hint?: string; onZoom?: (big: boolean, factor: number) => void; enabled?: boolean; memoryKey?: string },
+  { children, hint, onZoom, enabled = true, memoryKey, limitFactor }:
+  { children: ReactNode; hint?: string; onZoom?: (big: boolean, factor: number) => void; enabled?: boolean; memoryKey?: string;
+    /** hệ số phóng tối đa an toàn cho nội dung (vd. bản có lời: lời chồng nhau nếu phóng quá bề rộng khung); hỏi lại mỗi lần mở */
+    limitFactor?: () => number },
 ) {
   const [big, setBig] = useState(false)
   const [step, setStep] = useState(1)
   const [tools, setTools] = useState(true)
-  const factor = STEPS[step]
+  const [top, setTop] = useState(STEPS.length - 1)      // bậc phóng cao nhất được phép
+  const topRef = useRef(top)
+  const factor = STEPS[Math.min(step, top)]
   const innerRef = useRef<HTMLDivElement>(null)
   const hideT = useRef<number | undefined>(undefined)
   const tapT = useRef<number | undefined>(undefined)
@@ -61,7 +65,7 @@ export default function ZoomFrame(
 
   // Đổi mức phóng: alphaTab khắc lại nên chiều cao đổi — giữ đúng đoạn đang đọc
   const changeStep = (next: number) => {
-    const n = Math.max(0, Math.min(STEPS.length - 1, next))
+    const n = Math.max(0, Math.min(topRef.current, next))
     if (n === stepRef.current) return
     restore.current = { r: ratio(), until: Date.now() + 4000 }
     setStep(n)
@@ -75,7 +79,10 @@ export default function ZoomFrame(
   }, [])
   const openBig = () => {
     const sv = load(memoryKey)
-    setStep(sv ? sv.step : OPEN_STEP)
+    const lim = limitFactor ? limitFactor() : Infinity
+    const t = Math.max(0, STEPS.reduce((a, f, i) => (f <= lim ? i : a), 0))
+    topRef.current = t; setTop(t)
+    setStep(Math.min(t, sv ? sv.step : OPEN_STEP))
     restore.current = sv && sv.r > 0 ? { r: sv.r, until: Date.now() + 4000 } : null
     poke()
     setBig(true)
@@ -182,7 +189,7 @@ export default function ZoomFrame(
     if (now - lastTap.current < DOUBLE_MS) {
       lastTap.current = 0
       window.clearTimeout(tapT.current)
-      changeStep(stepRef.current === 0 ? 2 : 0)
+      changeStep(stepRef.current === 0 ? 2 : 0)   // 2 vượt bậc tối đa thì tự bị kẹp lại
       return
     }
     lastTap.current = now
@@ -213,7 +220,7 @@ export default function ZoomFrame(
                     aria-label="Thu nhỏ">−</button>
             <span>{Math.round(factor * 100)}%</span>
             <button type="button" onClick={() => changeStep(step + 1)}
-                    disabled={step === STEPS.length - 1} aria-label="Phóng to">+</button>
+                    disabled={step >= top} aria-label="Phóng to">+</button>
             <button type="button" className="lsn-zoom-close" onClick={closeBig}>✕ Đóng</button>
           </div>
           <div className="lsn-zoom-pager no-print" onPointerDown={poke}>
