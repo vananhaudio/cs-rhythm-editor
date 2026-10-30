@@ -37,9 +37,9 @@ const LABELS: Record<SessionLearningLabel['label'], SessionLearningLabel> = {
   'Chưa trả': { label: 'Chưa trả', tone: 'none', mark: '○' },
 }
 
-export function sessionLearningLabel(s: SessionState, st: Pick<Ready, 'role' | 'mode'>): SessionLearningLabel | null {
+export function sessionLearningLabel(s: SessionState, st: Pick<Ready, 'role' | 'mode'> & Partial<Pick<Ready, 'unlockPolicy'>>): SessionLearningLabel | null {
   if (st.role === 'teacher' || st.mode !== 'checkpoint') return null            // Thầy: không có trạng thái theo học viên
-  if (sessionPhase(s, st.role, st.mode) === 'locked') return null               // buổi khoá: server không lộ bài trả
+  if (sessionPhase(s, st.role, st.mode, st.unlockPolicy) === 'locked') return null               // buổi khoá: server không lộ bài trả
   const req = s.checkpoints.filter(c => c.required)
   if (req.length === 0) return null
   const open = req.filter(c => !checkpointPassed(c))                            // chưa Đạt (passed_at / quiz) — nộp lại sau Đạt vẫn là Đạt
@@ -61,8 +61,8 @@ export type SessionView = {
   submissions: { passed: number; total: number } | null
 }
 
-export function sessionView(s: SessionState, st: Pick<Ready, 'role' | 'mode'>): SessionView {
-  const phase = sessionPhase(s, st.role, st.mode)
+export function sessionView(s: SessionState, st: Pick<Ready, 'role' | 'mode'> & Partial<Pick<Ready, 'unlockPolicy'>>): SessionView {
+  const phase = sessionPhase(s, st.role, st.mode, st.unlockPolicy)
   if (st.role === 'teacher') {
     return { locked: false, state: s.published ? '' : 'Đang soạn', submissions: s.checkpoints.length ? { passed: 0, total: s.checkpoints.length } : null }
   }
