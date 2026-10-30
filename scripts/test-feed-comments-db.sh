@@ -53,6 +53,18 @@ PGOPTIONS="-c client_min_messages=notice" "$PGBIN/psql" -X -q -h "$TMP" -p "$POR
   -f "$ROOT/db/tests/feed_comments_v2_test.sql" 2>&1 | sed -E 's/^psql:[^:]*:[0-9]*: (NOTICE|ERROR):  //'
 [ "${PIPESTATUS[0]}" = "0" ] || fail "test SQL"
 
+echo "── Feed Comments Safety V1 (chặn người dùng + Báo cáo)"
+psqld $DB -f "$ROOT/db/tests/local/ugc_safety_min_fixture.sql" >/dev/null && ok "nền UGC Safety tối thiểu đã cài"
+psqld $DB -1 -f "$ROOT/db/feed_comments_safety_v1_setup.sql" >/dev/null && ok "safety migration lần 1"
+psqld $DB -1 -f "$ROOT/db/feed_comments_safety_v1_setup.sql" >/dev/null && ok "safety migration lần 2 (idempotent)"
+PGOPTIONS="-c client_min_messages=notice" "$PGBIN/psql" -X -q -h "$TMP" -p "$PORT" -U postgres -d $DB -v ON_ERROR_STOP=1 \
+  -f "$ROOT/db/tests/feed_comments_safety_v1_test.sql" 2>&1 | sed -E 's/^psql:[^:]*:[0-9]*: (NOTICE|ERROR):  //'
+[ "${PIPESTATUS[0]}" = "0" ] || fail "test safety"
+[ "$(q $DB "select has_function_privilege('anon','public.feed_comment_report(uuid,text,text)','execute')")" = "f" ] && ok "anon không gọi được feed_comment_report" || fail "anon gọi được report"
+psqld $DB -1 -f "$ROOT/db/feed_comments_safety_v1_rollback.sql" >/dev/null && psqld $DB -1 -f "$ROOT/db/feed_comments_safety_v1_rollback.sql" >/dev/null && ok "safety rollback ×2"
+[ "$(q $DB "select count(*) from pg_proc where proname in ('feed_comment_report','feed_comment_report_apply')")" = "0" ] && ok "safety rollback gỡ hàm/trigger" || fail "còn hàm safety"
+[ "$(q $DB "select count(*) from pg_trigger where tgname='feed_comment_report_apply'")" = "0" ] && ok "trigger report đã gỡ" || fail "còn trigger report"
+[ "$(q $DB "select count(*) from pg_proc where proname='feed_comment_list'")" = "1" ] && ok "feed_comment_list vẫn còn (bản V2)" || fail "mất feed_comment_list"
 echo "── Rollback ×2 + cài lại"
 psqld $DB -1 -f "$ROOT/db/feed_comments_v2_rollback.sql" >/dev/null && psqld $DB -1 -f "$ROOT/db/feed_comments_v2_rollback.sql" >/dev/null && ok "rollback ×2"
 [ "$(q $DB "select count(*) from pg_class where relname = 'feed_comments'")" = "0" ] && ok "bảng đã gỡ" || fail "còn bảng"

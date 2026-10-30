@@ -6,7 +6,7 @@ const ReportSheet = lazy(() => import('./ReportSheet'))
 const BlockConfirm = lazy(() => import('./BlockConfirm'))
 import type { ReportKind } from './model'
 
-export default function SafetyMenu({ label, kind, targetId, userId, userName, extraItems = [], noBlock = false, trigger, className }: {
+export default function SafetyMenu({ label, kind, targetId, userId, userName, extraItems = [], noBlock = false, via, trigger, className }: {
   label: string
   kind: ReportKind
   targetId: string
@@ -15,6 +15,8 @@ export default function SafetyMenu({ label, kind, targetId, userId, userName, ex
   userName?: string
   extraItems?: { label: string; onSelect: () => void; danger?: boolean }[]
   noBlock?: boolean
+  /** Bình luận Thread/TeamLab → báo cáo qua feed_comment_report */
+  via?: 'feed_comment'
   trigger?: ReactNode
   className?: string
 }) {
@@ -28,7 +30,7 @@ export default function SafetyMenu({ label, kind, targetId, userId, userName, ex
     <>
       <MoreMenu label={label} items={items} trigger={trigger} className={className} />
       <Suspense fallback={null}>
-      {dlg === 'report' && <ReportSheet kind={kind} targetId={targetId} onClose={() => setDlg(null)} />}
+      {dlg === 'report' && <ReportSheet kind={kind} targetId={targetId} via={via} onClose={() => setDlg(null)} />}
       {dlg === 'block' && userId && <BlockConfirm userId={userId} name={userName || 'người dùng này'} onClose={() => setDlg(null)} />}
       </Suspense>
     </>

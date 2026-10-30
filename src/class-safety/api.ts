@@ -25,9 +25,11 @@ async function call<T>(fn: string, args: Record<string, unknown>): Promise<Resul
 export async function submitReport(i: ReportInput): Promise<Result<number | null>> {
   const bad = validateReport(i)
   if (bad) return { ok: false, message: bad }
-  const r = await call<number | string | null>('class_report_submit', {
-    p_kind: i.kind, p_target_id: i.targetId, p_reason: i.reason, p_note: cleanNote(i.note),
-  })
+  const r = i.via === 'feed_comment'
+    ? await call<number | string | null>('feed_comment_report', { p_comment: i.targetId, p_reason: i.reason, p_note: cleanNote(i.note) })
+    : await call<number | string | null>('class_report_submit', {
+      p_kind: i.kind, p_target_id: i.targetId, p_reason: i.reason, p_note: cleanNote(i.note),
+    })
   return r.ok ? { ok: true, value: r.value == null ? null : Number(r.value) } : r
 }
 
