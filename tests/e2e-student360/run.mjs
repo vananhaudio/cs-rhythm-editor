@@ -46,7 +46,7 @@ function makeStore(opts = {}) {
     }
     if (name === 'student_360_add_fact') {
       const f = { id: 'f' + (facts.length + 1), category: a.p_category, content: a.p_content, origin: a.p_origin, verification: 'unverified', source_kind: a.p_source_kind,
-        visibility: a.p_origin === 'inferred' ? 'teacher' : 'student_and_teacher', status: 'active', created_at: now(), updated_at: now(), source_ref: 'crm-link:SECRET' }
+        visibility: a.p_visibility || (a.p_origin === 'inferred' ? 'teacher' : 'student_and_teacher'), status: 'active', created_at: now(), updated_at: now(), source_ref: 'crm-link:SECRET' }
       facts.push(f); act(f.id, 'create', null, j(f)); return { data: j(f) }
     }
     const f = facts.find(x => x.id === a.p_fact); if (!f) return { error: { message: 'not_found', code: 'P0002' } }
@@ -199,8 +199,11 @@ const gotoTab = async page => {
   await page.getByRole('button', { name: 'Xác minh', exact: true }).first().click()
   await page.getByText('Đã xác minh.').waitFor()
   await page.getByLabel('Nội dung').fill('Cần bài tập chậm')
+  assert.ok(await page.getByRole('button', { name: 'Thêm', exact: true }).isDisabled(), 'chưa chọn nguồn thì chưa thêm được')
+  await page.getByLabel('Nguồn thông tin').selectOption('observed')
   await page.getByRole('button', { name: 'Thêm', exact: true }).click()
   await page.getByText('Cần bài tập chậm').waitFor()
+  assert.equal(store.facts.at(-1).visibility, 'teacher', 'mục thêm từ giao diện mặc định chỉ giáo viên thấy')
   await shot(page, 'mobile-2-after')
   assert.deepEqual(errors, [])
   ok('điện thoại: xác minh + thêm mục hoạt động')
@@ -212,7 +215,8 @@ const gotoTab = async page => {
   const store = makeStore({ failRpc: 'student_360_add_fact' })
   const { ctx, page } = await open(store, { width: 1280, height: 900 })
   await gotoTab(page)
-  await page.getByLabel('Nội dung').fill('thử')
+  await page.getByLabel('Nội dung').fill('thử nghiệm')
+  await page.getByLabel('Nguồn thông tin').selectOption('observed')
   await page.getByRole('button', { name: 'Thêm', exact: true }).click()
   await page.getByRole('alert').getByText('Bạn không có quyền thực hiện thao tác này.').waitFor()
   assert.equal(store.facts.length, 0)
