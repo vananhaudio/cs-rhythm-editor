@@ -10,6 +10,8 @@ import { relativeTime } from '../../posts/postModel'
 import type { ClassIdentity } from '../../useClassSession'
 import { Avatar, MoreMenu, PersonLink } from '../../ui'
 import ExpandableText from '../ExpandableText'
+import SafetyMenu from '../../../class-safety/SafetyMenu'
+import { useIsBlocked } from '../../../class-safety/blockedStore'
 
 const api: TargetCommentsApi = supabaseTargetCommentsApi
 
@@ -56,6 +58,8 @@ function Row({ c, isReply, me, now, editing, onReply, onEdit, onEditDone, onDele
   onReply?: () => void; onEdit: () => void; onEditDone: () => void; onDelete: () => void; onHide: (h: boolean) => void
   onOpenProfile?: (userId: string) => void; saveEdit: (body: string) => Promise<string | null>
 }) {
+  const blocked = useIsBlocked(c.author.userId)
+  if (blocked && !c.isMine) return null
   const menu = [
     ...(c.isMine ? [{ label: 'Sửa bình luận', onSelect: onEdit }, { label: 'Xoá bình luận', danger: true, onSelect: onDelete }] : []),
     ...(me?.isTeacher && !c.isMine ? [{ label: c.isHidden ? 'Bỏ ẩn bình luận' : 'Ẩn bình luận', onSelect: () => onHide(!c.isHidden) }] : []),
@@ -84,7 +88,9 @@ function Row({ c, isReply, me, now, editing, onReply, onEdit, onEditDone, onDele
             <time dateTime={c.createdAt}>{relativeTime(c.createdAt, now)}</time>
             {c.edited && <span>· đã sửa</span>}
             {onReply && me && <button type="button" className="cs-link-btn cs-cmt-reply" onClick={onReply}>Trả lời</button>}
-            {menu.length > 0 && <MoreMenu label="Tuỳ chọn bình luận" items={menu} />}
+            {c.isMine
+              ? (menu.length > 0 && <MoreMenu label="Tuỳ chọn bình luận" items={menu} />)
+              : <SafetyMenu label="Tuỳ chọn bình luận" kind="comment" via="feed_comment" targetId={c.id} userId={c.author.userId} userName={c.author.name} extraItems={menu} />}
           </div>
         )}
       </div>

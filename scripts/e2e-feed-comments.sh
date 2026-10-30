@@ -9,7 +9,8 @@ A=aaaaaaaa-0000-4000-8000-00000000000a; B=bbbbbbbb-0000-4000-8000-00000000000b
   cat "$ROOT/db/tests/local/teamlab_publications_fixture.sql" "$ROOT/db/social_feed_teamlab_publications_v1_setup.sql" \
       "$ROOT/db/social_feed_teamlab_publications_v2_setup.sql" "$ROOT/db/tests/local/teamlab_publications_seed.sql"
   cat "$ROOT/db/tests/local/social_feed_safe_stub.sql"
-  cat "$ROOT/db/class_system_chat_v1_setup.sql" "$ROOT/db/feed_likes_v1_setup.sql" "$ROOT/db/feed_comments_v2_setup.sql"
+  cat "$ROOT/db/class_system_chat_v1_setup.sql" "$ROOT/db/feed_likes_v1_setup.sql" "$ROOT/db/feed_comments_v2_setup.sql" \
+      "$ROOT/db/tests/local/ugc_safety_min_fixture.sql" "$ROOT/db/feed_comments_safety_v1_setup.sql"
   cat <<SQL
 insert into public.class_posts (id, author_user_id, type, audience, body, created_at)
   values ('00000000-fa00-4000-8000-000000000001', '$A', 'practice', 'class', 'CMTPOST bài luyện tập', now() - interval '1 minute');
