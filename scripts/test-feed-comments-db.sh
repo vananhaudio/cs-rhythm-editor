@@ -65,6 +65,23 @@ psqld $DB -1 -f "$ROOT/db/feed_comments_safety_v1_rollback.sql" >/dev/null && ps
 [ "$(q $DB "select count(*) from pg_proc where proname in ('feed_comment_report','feed_comment_report_apply')")" = "0" ] && ok "safety rollback gỡ hàm/trigger" || fail "còn hàm safety"
 [ "$(q $DB "select count(*) from pg_trigger where tgname='feed_comment_report_apply'")" = "0" ] && ok "trigger report đã gỡ" || fail "còn trigger report"
 [ "$(q $DB "select count(*) from pg_proc where proname='feed_comment_list'")" = "1" ] && ok "feed_comment_list vẫn còn (bản V2)" || fail "mất feed_comment_list"
+echo "── Feed Comment Notify V2 (thông báo bình luận bài Social + TeamLab)"
+q $DB "alter table public.teamlab_publications add column if not exists published_by uuid, add column if not exists unpublished_at timestamptz" >/dev/null   # cột published_by + unpublished_at có ở production (audit 30/10); fixture local chưa có
+NOTIFY_MD5_BEFORE="$(q $DB "select md5(prosrc) from pg_proc where proname='feed_comment_notify'")"
+psqld $DB -1 -f "$ROOT/db/feed_comment_notify_v2_preflight.sql" >/dev/null && ok "preflight chạy được"
+psqld $DB -1 -f "$ROOT/db/feed_comment_notify_v2_setup.sql" >/dev/null && ok "notify V2 lần 1"
+psqld $DB -1 -f "$ROOT/db/feed_comment_notify_v2_setup.sql" >/dev/null && ok "notify V2 lần 2 (idempotent)"
+[ "$(q $DB "select count(*) from pg_trigger where tgname='class_post_comment_notify' and not tgisinternal")" = "1" ] && ok "đúng 1 trigger class_post_comment_notify" || fail "trigger"
+[ "$(q $DB "select count(*) from (select 1 from pg_policies where tablename='class_system_notices') x")" = "0" ] && ok "class_system_notices vẫn 0 policy" || fail "có policy"
+[ "$(q $DB "select count(*) from information_schema.role_table_grants where table_name='class_system_notices' and grantee in ('anon','authenticated','PUBLIC')")" = "0" ] && ok "anon/authenticated không có quyền bảng thông báo" || fail "quyền bảng"
+PGOPTIONS="-c client_min_messages=notice" "$PGBIN/psql" -X -q -h "$TMP" -p "$PORT" -U postgres -d $DB -v ON_ERROR_STOP=1 \
+  -f "$ROOT/db/tests/feed_comment_notify_v2_test.sql" 2>&1 | sed -E 's/^psql:[^:]*:[0-9]*: (NOTICE|ERROR):  //'
+[ "${PIPESTATUS[0]}" = "0" ] || fail "test notify V2"
+psqld $DB -1 -f "$ROOT/db/feed_comment_notify_v2_postflight.sql" >/dev/null && ok "postflight chạy được"
+psqld $DB -1 -f "$ROOT/db/feed_comment_notify_v2_rollback.sql" >/dev/null && psqld $DB -1 -f "$ROOT/db/feed_comment_notify_v2_rollback.sql" >/dev/null && ok "notify V2 rollback ×2"
+[ "$(q $DB "select md5(prosrc) from pg_proc where proname='feed_comment_notify'")" = "$NOTIFY_MD5_BEFORE" ] && ok "rollback trả feed_comment_notify về ĐÚNG thân hàm cũ" || fail "thân hàm sau rollback khác"
+[ "$(q $DB "select count(*) from pg_trigger where tgname='class_post_comment_notify'")" = "0" ] && ok "rollback gỡ trigger bài Social" || fail "còn trigger"
+[ "$(q $DB "select pg_get_constraintdef(oid) from pg_constraint where conname='class_system_notices_ref_check'")" = "CHECK (((ref_type = 'thread'::text) AND (ref_key ~ '^[0-9a-f-]{36}$'::text)))" ] && ok "rollback trả ref_check về bản chỉ-thread" || fail "ref_check"
 echo "── Rollback ×2 + cài lại"
 psqld $DB -1 -f "$ROOT/db/feed_comments_v2_rollback.sql" >/dev/null && psqld $DB -1 -f "$ROOT/db/feed_comments_v2_rollback.sql" >/dev/null && ok "rollback ×2"
 [ "$(q $DB "select count(*) from pg_class where relname = 'feed_comments'")" = "0" ] && ok "bảng đã gỡ" || fail "còn bảng"

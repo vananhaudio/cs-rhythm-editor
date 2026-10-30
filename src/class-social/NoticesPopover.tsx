@@ -4,12 +4,13 @@ import { useEffect, useRef } from 'react'
 import SystemNoticeView from './chat/SystemNoticeView'
 import { isOutsidePopover } from './noticesPopoverLogic'
 
-export default function NoticesPopover({ bellRef, onClose, onViewAll, onActivity, onOpenThread }: {
+export default function NoticesPopover({ bellRef, onClose, onViewAll, onActivity, onOpenThread, onOpenFeed }: {
   bellRef: React.RefObject<HTMLElement | null>
   onClose: () => void
   onViewAll: () => void
   onActivity: () => void
   onOpenThread: (threadId: string, search: string) => void
+  onOpenFeed?: () => void
 }) {
   const box = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -23,7 +24,7 @@ export default function NoticesPopover({ bellRef, onClose, onViewAll, onActivity
     <div className="cs-notif-pop" ref={box} role="dialog" aria-label="Thông báo">
       <div className="cs-notif-pop-head"><h2>Thông báo</h2></div>
       <div className="cs-notif-pop-body">
-        <SystemNoticeView bare onBack={() => undefined} onActivity={onActivity} onOpenThread={(id, search) => { onClose(); onOpenThread(id, search) }} />
+        <SystemNoticeView bare onBack={() => undefined} onActivity={onActivity} onOpenThread={(id, search) => { onClose(); onOpenThread(id, search) }} onOpenFeed={() => { onClose(); onOpenFeed?.() }} />
       </div>
       <div className="cs-notif-pop-foot">
         <button type="button" className="cs-notif-all" onClick={() => { onClose(); onViewAll() }}>Xem tất cả</button>

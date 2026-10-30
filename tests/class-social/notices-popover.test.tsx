@@ -125,7 +125,7 @@ test("Mở popover/trang KHÔNG tự đánh dấu đọc; chỉ chọn một th�
   assert.match(hook, /const commitRead = useCallback/);
   assert.match(hook, /const markAllRead = useCallback\(\(\) => commitRead\(noticesRef\.current\.at\(-1\)\?\.seq \?\? 0\)/);
   const view = code("src/class-social/chat/SystemNoticeView.tsx");
-  assert.match(view, /s\.markRead\(n\.seq\); onOpenThread\(n\.threadId, noticeAction\(n\.kind\)\.search\)/);
+  assert.match(view, /s\.markRead\(n\.seq\); if \(.*\) onOpenThread\(n\.threadId, noticeAction\(n\.kind\)\.search\)/);
   assert.match(view, /onClick=\{s\.markAllRead\}>Đánh dấu tất cả đã đọc/);
   assert.match(view, /hasUnread &&/);
   // con trỏ chỉ tăng; lỗi RPC trả lại con trỏ cũ để thử lại

@@ -211,7 +211,7 @@ export default function MobileShell({ base }: { base: ClassIdentity }) {
         return <StudioPage key={view.projectId ?? 'home'} projectId={view.projectId} onExit={back} onBackChange={fn => setStudioBack(fn ? { fn } : null)} />
       case 'notices':
       case 'chatSystem':   // đường cũ /me/chat/system → cùng màn Thông báo riêng
-        return <NoticesPage onActivity={() => void chatUnread.refresh()} onOpenThread={openThread} />
+        return <NoticesPage onActivity={() => void chatUnread.refresh()} onOpenThread={openThread} onOpenFeed={() => selectTabAndScroll('home')} />
       case 'account':
         return <AccountPage me={me} canEditAvatar={editor.canEditAvatar} onEditMedia={editor.pick}
           onEditProfile={me.studentId ? () => setEditingProfile(true) : undefined} onSignOut={onSignOut}

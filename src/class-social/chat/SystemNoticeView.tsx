@@ -5,10 +5,12 @@ import { SYSTEM_FOOTNOTE, SYSTEM_NAME, noticeAction } from './chatModel'
 import { Notice } from './SystemNoticeItem'
 import { useSystemNotices } from './useChat'
 
-export default function SystemNoticeView({ onBack, onActivity, onOpenThread, title = SYSTEM_NAME, bare = false }: {
+export default function SystemNoticeView({ onBack, onActivity, onOpenThread, onOpenFeed, title = SYSTEM_NAME, bare = false }: {
   onBack: () => void
   onActivity: () => void
   onOpenThread: (threadId: string, search: string) => void
+  /** Thông báo bình luận trên bài Social / bài TeamLab của mình → về Feed (chưa có trang mở bài đơn lẻ). Không truyền → chỉ đánh dấu đã đọc. */
+  onOpenFeed?: () => void
   /** Tên hiển thị ở đầu màn (Class Mobile: "Thông báo"). Mặc định như cũ. */
   title?: string
   /** Class Mobile: màn Thông báo đứng riêng trong khung — khung lo tiêu đề + nút Quay lại, không lặp header/chân trang "Class 2.0". */
@@ -41,7 +43,7 @@ export default function SystemNoticeView({ onBack, onActivity, onOpenThread, tit
             {hasUnread && <button type="button" className="cs-nr-markall" onClick={s.markAllRead}>Đánh dấu tất cả đã đọc</button>}
             {s.notices.length === 0 && <p className="cs-sys-empty">{bare ? 'Chưa có thông báo nào. Khi có việc cần bạn quan tâm, ứng dụng sẽ báo tại đây.' : 'Chưa có thông báo nào. Khi có việc cần bạn quan tâm, Class 2.0 sẽ báo tại đây.'}</p>}
             {newestFirst.map(n => (
-              <Notice key={n.seq} n={n} onOpen={() => { s.markRead(n.seq); onOpenThread(n.threadId, noticeAction(n.kind).search) }} />
+              <Notice key={n.seq} n={n} onOpen={() => { s.markRead(n.seq); if ((n.refType ?? 'thread') === 'thread') onOpenThread(n.threadId, noticeAction(n.kind).search); else onOpenFeed?.() }} />
             ))}
             {s.hasMore && (
               <button type="button" className="cs-chat-older" onClick={() => void s.loadOlder()} disabled={s.loadingOlder}>
