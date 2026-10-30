@@ -34,3 +34,6 @@ hoàn thành → chuỗi đứng). Hành Trình cần nút Trả bài nhưng h�
 - DB: `bash scripts/test-class-unlock-policy-db.sh` (cluster PostgreSQL 17 tạm): md5 cổng · preflight · setup ×2 · postflight · ca nghiệp vụ (mặc định giữ nguyên; open mở mọi buổi đã xuất bản, buổi nháp không mở;
   trả bài khi chưa xong buổi trước; chấm Đạt hoàn thành đúng buổi; Thầy không nộp; ngoài lớp bị chặn; lớp khác không ảnh hưởng; đổi lại sequential giữ lịch sử; ca Hành Trình) · rollback có/không dữ liệu · cài lại · drift.
 - FE: `npm run test:class-social` (`unlock-policy.test.ts`, `ht-tra-bai.test.ts`).
+
+## Hiệu chỉnh 30/10/2026 (phát hiện khi chạy preflight production)
+Preflight production báo `lsp_sync` md5 `85655a79…` ≠ bản V1 (`c85a6a52…`): production đã áp dụng `db/class_session_zero_intro.sql` (Buổi 0). Cổng md5 đã dừng migration đúng thiết kế. Migration + rollback + test nay dựa trên bản **Buổi 0** (md5 `85655a791d24a9a0997d94bcbe6687a3`); `class_learning_state` giữ md5 QUIZ `db9015ea…` (khớp production). Test DB 46 PASS gồm ca Buổi 0 + lớp `open`.
