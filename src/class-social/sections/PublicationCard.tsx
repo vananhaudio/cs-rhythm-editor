@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'react'
 import { relativeTime, type PublicationEntry } from '../posts/postModel'
 import { Avatar } from '../ui'
 import {
-  EMBED_DEFAULT_H, bandPath, closeEmbed, embedSrc, heightFromMessage, openEmbed, publicSongUrl, songPath, useActiveEmbed,
+  EMBED_DEFAULT_H, EMBED_NATIVE_H, bandPath, embedOrigin, isNativeShell, webBase, closeEmbed, embedSrc, heightFromMessage, openEmbed, publicSongUrl, songPath, useActiveEmbed,
 } from './publicationEmbed'
 
 const LOAD_TIMEOUT_MS = 15000
@@ -34,12 +34,13 @@ function useShare(title: string, url: string) {
 }
 
 function EmbeddedPlayer({ slug, onClose }: { slug: string; onClose: () => void }) {
-  const [height, setHeight] = useState(EMBED_DEFAULT_H)
+  const native = isNativeShell()
+  const [height, setHeight] = useState(native ? EMBED_NATIVE_H : EMBED_DEFAULT_H)
   const [failed, setFailed] = useState(false)
   const loaded = useRef(false)
   useEffect(() => {
     const onMsg = (ev: MessageEvent) => {
-      const h = heightFromMessage(ev, window.location.origin, slug)
+      const h = heightFromMessage(ev, embedOrigin(window.location.origin, native), slug)
       if (h === null) return
       loaded.current = true
       setHeight(h)
@@ -47,14 +48,15 @@ function EmbeddedPlayer({ slug, onClose }: { slug: string; onClose: () => void }
     window.addEventListener('message', onMsg)
     const t = setTimeout(() => { if (!loaded.current) setFailed(true) }, LOAD_TIMEOUT_MS)
     return () => { window.removeEventListener('message', onMsg); clearTimeout(t) }
-  }, [slug])
+  }, [slug, native])
   return (
     <div className="cs-pub-player">
       {failed ? (
-        <p className="cs-pub-err" role="alert">Chưa tải được trình phát. <a href={songPath(slug)}>Mở trang bài hát</a></p>
+        <p className="cs-pub-err" role="alert">Chưa tải được trình phát. <a href={webBase(native) + songPath(slug)}>Mở trang bài hát</a></p>
       ) : (
         <iframe className="cs-pub-frame" src={embedSrc(slug)} title="Trình phát bài hát" style={{ height }}
-          allow="autoplay" referrerPolicy="same-origin" />
+          allow="autoplay" referrerPolicy={native ? 'strict-origin-when-cross-origin' : 'same-origin'}
+          onLoad={() => { loaded.current = true }} />
       )}
       <button type="button" className="cs-btn cs-btn-ghost cs-btn-sm cs-pub-close" onClick={onClose}>Đóng trình phát</button>
     </div>
@@ -92,7 +94,7 @@ export default function PublicationCard({ entry, now }: { entry: PublicationEntr
         <div className="lt-feed-foot cs-pub-actions">
           {!open && <button type="button" className="lt-btn lt-feed-open cs-pub-listen" onClick={() => openEmbed(entry.id)}>Nghe ngay</button>}
           <button type="button" className="cs-btn cs-btn-ghost cs-btn-sm cs-pub-share" onClick={share}>Chia sẻ</button>
-          <a className="cs-btn cs-btn-ghost cs-btn-sm cs-pub-open" href={songPath(entry.slug)}>Xem bài hát</a>
+          <a className="cs-btn cs-btn-ghost cs-btn-sm cs-pub-open" href={webBase() + songPath(entry.slug)}>Xem bài hát</a>
           {band && <a className="cs-btn cs-btn-ghost cs-btn-sm cs-pub-band" href={band}>Khám phá Band</a>}
         </div>
         {note && <div className="cs-pub-note" role="status">{note}</div>}
