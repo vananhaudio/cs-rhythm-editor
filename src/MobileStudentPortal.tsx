@@ -356,10 +356,12 @@ const TOOLS_MAP: Record<string, { label: string; icon: string; color: string; ro
   ear:           { label: 'Luyện tai',    icon: '👂', color: '#0891B2', route: '/tap'    },
 }
 
-interface Props { student: Student; onLogout: () => void; preview?: boolean; guest?: boolean; onLoginRequired?: () => void }
+/** embed (Class Mobile V1): nhúng MỘT tab của App học (Học / Tập) vào khung 5 tab mới — ẩn thanh tab cũ, theo chiều cao khung chứa. Không có → hành vi cũ nguyên vẹn. */
+interface Props { student: Student; onLogout: () => void; preview?: boolean; guest?: boolean; onLoginRequired?: () => void; embed?: 'hoc' | 'tap'; onDeepChange?: (deep: boolean) => void }
 
-export default function MobileStudentPortal({ student, onLogout, preview = false, guest = false, onLoginRequired }: Props) {
+export default function MobileStudentPortal({ student, onLogout, preview = false, guest = false, onLoginRequired, embed, onDeepChange }: Props) {
   const [tab, setTab]             = useState<Tab>(() => {
+    if (embed) return embed
     // Vào từ /me hoặc ?tab= → mở đúng tab (đường về sau story/route ngoài)
     try {
       if (window.location.pathname.startsWith('/me')) return 'me'
@@ -400,6 +402,9 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   const [deleteError, setDeleteError] = useState('')
   const avatarFileRef = useRef<HTMLInputElement>(null)
   const [screen, setScreen]       = useState<Screen>('home')
+  // embed (Class Mobile 1.6): đang ở màn con của Học (hành trình/bài) → khung ẩn tiêu đề "Lớp Học" + phân đoạn, chỉ còn header của màn con.
+  useEffect(() => { onDeepChange?.(!!embed && tab === 'hoc' && screen !== 'home') }, [embed, tab, screen, onDeepChange])
+  useEffect(() => () => onDeepChange?.(false), [onDeepChange])
   const [enrollments, setEnrollments] = useState<Enrollment[]>([])
   const [modules, setModules]     = useState<Module[]>([])
   const [lessons, setLessons]     = useState<Lesson[]>([])
@@ -1948,12 +1953,12 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
       </div>
     )}
     <div style={{
-      maxWidth: 430, margin: '0 auto', height: '100dvh',
+      maxWidth: 430, margin: '0 auto', height: embed ? '100%' : '100dvh',
       display: 'flex', flexDirection: 'column',
-      background: L.bg, fontFamily: '"SF Pro Display", "DM Sans", system-ui, sans-serif',
+      background: embed ? 'transparent' : L.bg, fontFamily: '"SF Pro Display", "DM Sans", system-ui, sans-serif',
       color: L.t1, position: 'relative', overflow: 'hidden',
     }}>
-      <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 'calc(90px + env(safe-area-inset-bottom))' }}>
+      <div style={{ flex: 1, overflowY: 'auto', paddingBottom: embed ? 16 : 'calc(90px + env(safe-area-inset-bottom))' }}>
         {entitlementError && (
           <div style={{ margin: 'max(14px, env(safe-area-inset-top, 0px)) 16px 0', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 14, padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 10, color: '#991B1B', fontSize: 13, fontWeight: 700 }}>
             <span style={{ flex: 1 }}>Không tải được quyền truy cập.</span>
@@ -2130,8 +2135,9 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
         {/* ── HOME (tab Học) ──────────────────────────────────────────── */}
         {tab === 'hoc' && screen === 'home' && (
           <>
-            <div style={{ padding: 'max(26px, calc(env(safe-area-inset-top, 0px) + 12px)) 18px 8px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ padding: embed ? '2px 16px 6px' : 'max(26px, calc(env(safe-area-inset-top, 0px) + 12px)) 18px 8px' }}>
+              {/* embed (Class Mobile V1.1): tiêu đề Học đã có ở phân đoạn "Khoá tự học" — chỉ giữ dòng hướng dẫn */}
+              {!embed && <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <div style={{ width: 40, height: 40, borderRadius: 14, background: L.p1, color: '#fff', display: 'grid', placeItems: 'center', boxShadow: L.shadow }}>
                   <NavIcon name="hoc" color="#fff" size={22} />
                 </div>
@@ -2139,8 +2145,8 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                   <div style={{ fontSize: 12, color: L.t3, fontWeight: 800, letterSpacing: '.04em' }}>THẦY VĂN ANH GUITAR</div>
                   <div style={{ fontSize: 28, lineHeight: 1.1, fontWeight: 900, color: L.t1, letterSpacing: 0 }}>Học</div>
                 </div>
-              </div>
-              <div style={{ marginTop: 7, color: L.t2, fontSize: 13.5, lineHeight: 1.45 }}>Chọn một môn để vào hành trình học — vuốt ngang, học từng bài.</div>
+              </div>}
+              <div style={{ marginTop: embed ? 0 : 7, color: L.t2, fontSize: 13.5, lineHeight: 1.45 }}>Chọn một môn để vào hành trình học — vuốt ngang, học từng bài.</div>
             </div>
 
             {/* Lớp đang học (lớp trực tiếp) — tách khỏi Khóa học số; chỉ hiện khi có lớp */}
@@ -2706,8 +2712,8 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
 
         {/* ── TẬP ─────────────────────────────────────────────────────── */}
         {tab === 'tap' && (
-          <div style={{ padding: 'max(52px, calc(env(safe-area-inset-top, 0px) + 12px)) 16px 16px' }}>
-            <div style={{ fontWeight: 800, fontSize: 22, marginBottom: 4 }}>Luyện tập</div>
+          <div style={{ padding: embed ? '2px 16px 16px' : 'max(52px, calc(env(safe-area-inset-top, 0px) + 12px)) 16px 16px' }}>
+            {!embed && <div style={{ fontWeight: 800, fontSize: 22, marginBottom: 4 }}>Luyện tập</div>}
 
             {/* ══ HÔM NAY LUYỆN GÌ ══ */}
             <div style={{ marginBottom: 20 }}>
@@ -3366,9 +3372,9 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
           }, 90)
         }
         return (
-          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 'calc(62px + env(safe-area-inset-bottom))', background: L.bg, display: 'flex', flexDirection: 'column', zIndex: 8 }}>
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: embed ? 0 : 'calc(62px + env(safe-area-inset-bottom))', background: L.bg, display: 'flex', flexDirection: 'column', zIndex: 8 }}>
             {/* Header — gọn, ngữ cảnh, KHÔNG nhấn tổng bài */}
-            <div style={{ background: L.surface, padding: 'max(46px, calc(env(safe-area-inset-top, 0px) + 10px)) 16px 10px', boxShadow: '0 1px 0 ' + L.border, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ background: L.surface, padding: embed ? '10px 16px' : 'max(46px, calc(env(safe-area-inset-top, 0px) + 10px)) 16px 10px', boxShadow: '0 1px 0 ' + L.border, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 12 }}>
               <button onClick={() => { setScreen('home'); setActiveSubject(null); setActiveLevel(null) }} style={{ background: L.p2, border: 'none', borderRadius: 10, width: 34, height: 34, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: L.p1, flexShrink: 0 }}>‹</button>
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontWeight: 900, fontSize: 19, color: L.t1, lineHeight: 1.1, ...clamp1 }}>{subject?.title ?? 'Hành trình'}</div>
@@ -3440,7 +3446,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
       })()}
 
       {/* ══ BOTTOM NAV ════════════════════════════════════════════════════ */}
-      <div style={{
+      {!embed && <div style={{
         position: 'absolute', bottom: 0, left: 0, right: 0,
         background: 'rgba(255,255,255,0.92)',
         backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
@@ -3472,7 +3478,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
             </button>
           )
         })}
-      </div>
+      </div>}
     </div>
 
     {/* ── Modal Cài đặt hồ sơ ── */}

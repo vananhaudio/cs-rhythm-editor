@@ -5,6 +5,7 @@
 // Xem docs/LEARNING-THREAD-P1.md.
 // ─────────────────────────────────────────────────────────────────────────────
 import { safeImageUrl } from '../class-social/media/safeImageUrl'
+import { mapUgcError } from '../class-safety/model'
 
 export type SubmissionMode = 'off' | 'allowed' | 'required'
 export type QuestionMode = 'off' | 'allowed'
@@ -424,6 +425,8 @@ const LT_ERROR_TEXT: Record<string, string> = {
 }
 
 export function ltErrorText(err: { message?: string; code?: string; status?: number } | null | undefined, online = true): string {
+  const ugc = mapUgcError(err)
+  if (ugc) return ugc
   const msg = err?.message ?? ''
   const code = Object.keys(LT_ERROR_TEXT).find(k => msg === k || msg.startsWith(k + ' ') || msg.includes(k))
   if (code) return LT_ERROR_TEXT[code]

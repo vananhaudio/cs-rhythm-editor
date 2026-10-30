@@ -85,10 +85,11 @@ const GUEST_STUDENT: Student = {
 
 type Step = 'welcome' | 'login' | 'portal'
 
-export default function StudentOnboarding() {
+/** embed (Class Mobile V1): chỉ nhúng tab Học / Tập của App học vào khung 5 tab mới (không màn đăng nhập riêng, theo chiều cao khung chứa). */
+export default function StudentOnboarding({ embed, onDeepChange }: { embed?: 'hoc' | 'tap'; onDeepChange?: (deep: boolean) => void } = {}) {
   // Web /start = MÀN ĐĂNG NHẬP của Class: khách thấy form ngay; đã đăng nhập → về ?return= hoặc /me.
   // App native và /learn, /me (App học) giữ nguyên như cũ.
-  const loginScreen = !IS_NATIVE_CAPACITOR && window.location.pathname.startsWith('/start')
+  const loginScreen = !embed && !IS_NATIVE_CAPACITOR && window.location.pathname.startsWith('/start')
   const [step, setStep]           = useState<Step>(loginScreen ? 'login' : 'portal')
   const [student, setStudent]     = useState<Student | null>(GUEST_STUDENT)
   // Chưa biết đã đăng nhập hay chưa → hiện splash, KHÔNG mount portal guest giả
@@ -455,7 +456,7 @@ export default function StudentOnboarding() {
         </div>
       )}
       {step === 'portal' && student && authChecked && (
-        <div style={{ minHeight: '100dvh', background: 'radial-gradient(120% 80% at 50% 0%, #EDEAFB 0%, #F0F2F5 55%)' }}>
+        <div style={{ minHeight: embed ? undefined : '100dvh', height: embed ? '100%' : undefined, background: embed ? 'transparent' : 'radial-gradient(120% 80% at 50% 0%, #EDEAFB 0%, #F0F2F5 55%)' }}>
           <MobileStudentPortal
             key={`${student.id}:${preview ? 'preview' : 'normal'}`}
             student={student}
@@ -463,6 +464,8 @@ export default function StudentOnboarding() {
             preview={preview}
             guest={student.id === GUEST_STUDENT.id}
             onLoginRequired={() => setStep('login')}
+            embed={embed}
+            onDeepChange={onDeepChange}
           />
         </div>
       )}

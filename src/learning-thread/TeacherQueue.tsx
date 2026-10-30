@@ -46,7 +46,7 @@ export default function TeacherQueue({ onOpenThread, onBack }: { onOpenThread: (
   return (
     <div className="cs-col cs-home lt-page">
       <div className="lt-actions">
-        <button type="button" className="cs-btn cs-btn-ghost cs-btn-sm" onClick={onBack}><ArrowLeft size={16} /> Quay lại</button>
+        <button type="button" className="cs-btn cs-btn-ghost cs-btn-sm cs-back-btn" onClick={onBack}><ArrowLeft size={16} /> Quay lại</button>
       </div>
       <section className="lt-card" aria-labelledby="lt-queue-title">
         <h2 id="lt-queue-title" style={{ margin: '0 0 10px', fontSize: 18, fontWeight: 800 }}>Hàng đợi Trả bài / Hỏi bài</h2>

@@ -37,6 +37,7 @@ export function createStudent360Api(rpc: RpcFn): Student360Api {
     get: (userId, includeRevoked) => call<Student360>('student_360_get', { p_user: userId, p_include_revoked: includeRevoked }),
     add: (i: NewFactInput) => call<Fact>('student_360_add_fact', {
       p_user: i.userId, p_category: i.category, p_content: i.content, p_origin: i.origin, p_source_kind: i.sourceKind,
+      ...(i.visibility ? { p_visibility: i.visibility } : {}),
     }),
     edit: (factId, content) => call<Fact>('student_360_edit_fact', { p_fact: factId, p_content: content }),
     setVerification: (factId, level: Verification) => call<Fact>('student_360_set_verification', { p_fact: factId, p_level: level }),

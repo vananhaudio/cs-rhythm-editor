@@ -7,6 +7,8 @@ import ResourceCard from './ResourceCard'
 import { IdentityBadges } from '../../identity/IdentityBadges'
 import ExpandableText from '../ExpandableText'
 import { Composer } from './TargetComments'
+import SafetyMenu from '../../../class-safety/SafetyMenu'
+import { useIsBlocked } from '../../../class-safety/blockedStore'
 
 export default function CommentItem({ c, canModerate, now, onDelete, onModerate, onOpenProfile, editing, onEdit, onEditDone, saveEdit }: {
   editing?: boolean
@@ -21,6 +23,8 @@ export default function CommentItem({ c, canModerate, now, onDelete, onModerate,
   onModerate: (c: Comment, hidden: boolean) => void
 }) {
   const teacher = c.author.isTeacher
+  const blocked = useIsBlocked(c.author.userId)
+  if (blocked && !c.isMine) return null
   const menu = [
     ...(c.isMine && onEdit ? [{ label: 'Sửa bình luận', onSelect: onEdit }] : []),
     ...(c.isMine ? [{ label: 'Xoá bình luận', danger: true, onSelect: () => onDelete(c) }] : []),
@@ -59,7 +63,9 @@ export default function CommentItem({ c, canModerate, now, onDelete, onModerate,
         )}
         <div className="cs-cmt-meta">
           <time dateTime={c.createdAt}>{relativeTime(c.createdAt, now)}</time>
-          <MoreMenu label="Tuỳ chọn bình luận" items={menu} />
+          {c.isMine
+            ? <MoreMenu label="Tuỳ chọn bình luận" items={menu} />
+            : <SafetyMenu label="Tuỳ chọn bình luận" kind="comment" targetId={c.id} userId={c.author.userId} userName={c.author.name} extraItems={menu} />}
         </div>
       </div>
     </li>

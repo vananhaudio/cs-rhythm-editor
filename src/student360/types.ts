@@ -49,6 +49,7 @@ export interface NewFactInput {
   content: string
   origin: Origin
   sourceKind: SourceKind
+  visibility?: Visibility   // gửi tường minh; bỏ trống thì máy chủ tự chọn theo origin
 }
 
 export interface Student360Api {

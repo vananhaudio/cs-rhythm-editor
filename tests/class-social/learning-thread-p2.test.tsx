@@ -196,7 +196,7 @@ test("JourneyTimeline render: năm · chặng có màu · mốc bấm được �
 
 // ── Chốt chặn nguồn ──────────────────────────────────────────────────────────
 test("Feed/Tường/Hành trình đọc qua RPC; KHÔNG copy thread sang class_posts; không bảng journey", () => {
-  assert.match(src("class-social/posts/postsApi.ts"), /rpc\('social_feed'/);
+  assert.match(src("class-social/posts/postsApi.ts"), /rpc\('social_feed_safe'/);
   assert.match(src("class-social/friends/friendsApi.ts"), /'user_wall'/);
   assert.match(src("learning-thread/ltApi.ts"), /rpc\('learning_journey'/);
   assert.match(src("class-social/posts/useCommunityFeed.ts"), /for_you: c => fetchScopedFeedPage\('for_you', c\)/);   // Feed V1: Dành cho bạn vẫn qua social_feed

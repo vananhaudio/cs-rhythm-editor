@@ -1,12 +1,15 @@
 // Một bài đăng trong feed cộng đồng. Chưa có reaction/share → KHÔNG render nút giả.
 // Nội dung là plain text: React tự escape, xuống dòng giữ bằng CSS (pre-wrap).
 import type { ReactNode } from 'react'
+import { useState } from 'react'
 import { Lock } from 'lucide-react'
 import ExternalMediaView from '../media/ExternalMediaView'
 import { POST_TYPE_LABEL, relativeTime, type FeedPost } from '../posts/postModel'
 import type { PostComments } from '../comments/useFeedComments'
 import type { ClassIdentity } from '../useClassSession'
-import { Avatar, MoreMenu, PersonLink } from '../ui'
+import { Avatar, ConfirmDialog, MoreMenu, PersonLink } from '../ui'
+import SafetyMenu from '../../class-safety/SafetyMenu'
+import { useIsBlocked } from '../../class-safety/blockedStore'
 import CommentsSection from './comments/CommentsSection'
 import ToolShareBody from '../toolshare/ToolShareCard'
 import { IdentityBadges } from '../identity/IdentityBadges'
@@ -30,6 +33,22 @@ export default function PostCard({ post, now, social, footer }: { post: FeedPost
   const { author } = post
   const when = new Date(post.createdAt)
   const canModerate = !!social?.me?.isTeacher
+  const blocked = useIsBlocked(author.userId)
+  const [removed, setRemoved] = useState(false)
+  const [confirmDel, setConfirmDel] = useState(false)
+  const [delBusy, setDelBusy] = useState(false)
+  const [delErr, setDelErr] = useState('')
+  if (removed || (blocked && !post.isMine)) return null
+  const moderateItem = canModerate && social ? [{
+    label: post.isHidden ? 'Bỏ ẩn bài' : 'Ẩn bài',
+    onSelect: () => social.onModeratePost(post, !post.isHidden),
+  }] : []
+  const doDelete = async () => {
+    setDelBusy(true); setDelErr('')
+    const r = await (await import('../posts/postsApi')).deletePost(post.id)
+    setDelBusy(false)
+    if (r.ok) { setRemoved(true); setConfirmDel(false) } else setDelErr(r.message)
+  }
   return (
     <article className={'cs-card cs-post' + (post.isHidden ? ' is-hidden' : '')} aria-label={`${POST_TYPE_LABEL[post.type]} của ${author.name}`}>
       <header className="cs-post-head">
@@ -53,13 +72,15 @@ export default function PostCard({ post, now, social, footer }: { post: FeedPost
             {post.friendsOnly && <><span aria-hidden="true">·</span><span className="cs-post-audience" title="Chỉ bạn bè xem được"><Lock size={11} strokeWidth={2.4} aria-hidden="true" />Bạn bè</span></>}
           </div>
         </div>
-        {canModerate && social && (
-          <MoreMenu label="Tuỳ chọn bài" items={[{
-            label: post.isHidden ? 'Bỏ ẩn bài' : 'Ẩn bài',
-            onSelect: () => social.onModeratePost(post, !post.isHidden),
-          }]} />
-        )}
+        {post.isMine
+          ? <MoreMenu label="Tuỳ chọn bài" items={[...moderateItem, { label: 'Xóa bài', danger: true, onSelect: () => { setDelErr(''); setConfirmDel(true) } }]} />
+          : <SafetyMenu label="Tuỳ chọn bài" kind="post" targetId={post.id} userId={author.userId} userName={author.name} extraItems={moderateItem} />}
       </header>
+      {confirmDel && (
+        <ConfirmDialog title="Xóa bài này?" confirmLabel="Xóa bài" danger busy={delBusy} onConfirm={() => void doDelete()} onCancel={() => setConfirmDel(false)}>
+          {delErr || 'Bài và các bình luận của bài sẽ bị xóa, không khôi phục được.'}
+        </ConfirmDialog>
+      )}
       {post.isHidden && <p className="cs-post-hidden">Bài đã bị ẩn — học sinh không thấy bài này.</p>}
       {/* Kết quả công cụ (Tool Share): nội dung theo registry — không media/ghi chú */}
       {post.type === 'tool_share' && <ToolShareBody postId={post.id} />}

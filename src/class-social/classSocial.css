@@ -1,3 +1,4 @@
+@import '../class-safety/safety.css';
 /* ─────────────────────────────────────────────────────────────────────────────
    Class Social — style RIÊNG, mọi class có tiền tố cs-, token đặt trên .cs-root.
    Không dùng token của MobileStudentPortal. Nhận diện: TÍM + TRẮNG.
@@ -50,9 +51,9 @@
 /* ── Top bar (tối giản) ──────────────────────────────────────────────────── */
 .cs-topbar {
   position: sticky; top: 0; z-index: 30;
-  height: var(--cs-topbar-h);
+  height: calc(var(--cs-topbar-h) + env(safe-area-inset-top, 0px));
   display: flex; align-items: center; gap: 6px;
-  padding: 0 14px;
+  padding: env(safe-area-inset-top, 0px) 14px 0;
   background: var(--cs-surface);
   border-bottom: 1px solid var(--cs-border);
 }
@@ -509,6 +510,10 @@
 .cs-dialog p { color: var(--cs-muted); margin: 0 0 20px; }
 .cs-dialog .cs-btn { width: 100%; }
 
+/* ── Thông báo (khu vực riêng, tách khỏi Trò chuyện) ── */
+.cs-notices { display: flex; flex-direction: column; max-height: calc(100dvh - var(--cs-topbar-h) - 96px); min-height: 160px; overflow: hidden; padding: 0; }
+.cs-notices-page { max-width: 680px; }
+
 /* ── Trò chuyện ──────────────────────────────────────────────────────────── */
 .cs-chat { display: grid; grid-template-columns: 340px minmax(0, 1fr); height: clamp(480px, calc(100dvh - var(--cs-topbar-h) - 128px), 760px); overflow: hidden; padding: 0; }
 .cs-chat-list { border-right: 1px solid var(--cs-border); display: flex; flex-direction: column; min-height: 0; min-width: 0; }
@@ -607,12 +612,8 @@ a.cs-share-card:focus-visible { outline: 2px solid var(--cs-p); outline-offset: 
 .cs-chat-items-system { margin: 0 0 6px; padding: 0 0 6px; border-bottom: 1px solid var(--cs-border); list-style: none; flex: none; overflow: visible; }   /* hàng cố định theo nội dung (không ăn flex:1 của .cs-chat-items → hết khoảng trống + hết cắt hàng cuối) */
 .cs-sys-avatar { flex: none; display: inline-grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; background: var(--cs-p-soft); color: var(--cs-p-strong); }
 .cs-sys-avatar.is-sm { width: 40px; height: 40px; }
-.cs-sys-scroll { gap: 8px; }
+.cs-sys-scroll { gap: 0; padding: 4px 0; }
 .cs-sys-empty { margin: auto; max-width: 320px; text-align: center; color: var(--cs-muted); font-size: 14px; }
-.cs-sys-notice { align-self: flex-start; max-width: min(88%, 520px); padding: 10px 14px 8px; border-radius: 18px; background: var(--cs-neutral-soft); color: var(--cs-text); }
-.cs-sys-notice.is-unread { background: var(--cs-p-soft); }
-.cs-sys-body { margin: 0; font-size: 15px; line-height: 1.4; overflow-wrap: anywhere; }
-.cs-sys-action { display: inline-flex; align-items: center; gap: 4px; margin-top: 4px; padding: 6px 0; border: none; background: none; color: var(--cs-p-strong); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; min-height: 32px; }
 
 .cs-rel-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .cs-person-msg { flex: none; }
@@ -684,7 +685,8 @@ a.cs-share-card:focus-visible { outline: 2px solid var(--cs-p); outline-offset: 
 .cs-sidebar.is-collapsed .cs-nav-item { position: relative; }
 .cs-nav-badge.is-dot { position: absolute; top: 4px; right: 12px; min-width: 18px; height: 18px; padding: 0 5px; font-size: 11px; }
 .cs-sidebar.is-collapsed .cs-nav-badge.is-dot { display: inline-grid; }
-.cs-menu-btn { position: relative; }
+.cs-menu-btn, .cs-bell-btn { position: relative; }
+.cs-bell-btn.is-active { color: var(--cs-primary, currentColor); }
 .cs-nav-badge.is-corner {
   position: absolute; top: 1px; right: -2px; margin: 0;
   min-width: 18px; height: 18px; padding: 0 5px; font-size: 11px; box-shadow: 0 0 0 2px var(--cs-surface);
@@ -1709,3 +1711,39 @@ button.cs-subs-title:hover { color: var(--cs-accent); }
 .cs-cmts-empty, .cs-cmts-loading { margin: 0; font-size: 13px; color: var(--cs-muted); }
 .cs-cmt-reply, .cs-cmt-cancel { min-height: 32px; padding: 0 6px; font-weight: 600; }
 .cs-likebar-btn .cs-likebar-n { font-weight: 500; opacity: 0.85; }
+/* ── Thông báo: hàng gọn kiểu Facebook (trang /me/notices, popover desktop, màn Class Mobile) ── */
+.cs-nr { border-bottom: 1px solid var(--cs-border); }
+.cs-nr:last-of-type { border-bottom: none; }
+.cs-nr-main { display: flex; align-items: flex-start; gap: 12px; width: 100%; padding: 10px 14px; border: none; background: none; color: var(--cs-text); font: inherit; text-align: left; cursor: pointer; min-height: 56px; }
+.cs-nr-main:hover { background: var(--cs-neutral-soft); }
+.cs-nr-main:focus-visible { outline: 2px solid var(--cs-p-strong); outline-offset: -2px; }
+.cs-nr.is-unread .cs-nr-main { background: var(--cs-p-softer); }
+.cs-nr-icon { flex: none; display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: var(--cs-p-soft); color: var(--cs-p-strong); }
+.cs-nr.is-pass .cs-nr-icon, .cs-nr.is-graded .cs-nr-icon { background: var(--cs-ok-soft); color: var(--cs-ok); }
+.cs-nr.is-redo .cs-nr-icon, .cs-nr.is-resubmit .cs-nr-icon { background: var(--cs-warn-soft); color: var(--cs-warn); }
+.cs-nr-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.cs-nr-chip { font-size: 11px; font-weight: 800; letter-spacing: .02em; text-transform: uppercase; color: var(--cs-muted); }
+.cs-nr.is-pass .cs-nr-chip { color: var(--cs-ok); }
+.cs-nr.is-redo .cs-nr-chip, .cs-nr.is-resubmit .cs-nr-chip { color: var(--cs-warn); }
+.cs-nr-body { font-size: 14px; line-height: 1.35; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.cs-nr.is-unread .cs-nr-body { font-weight: 600; }
+.cs-nr-meta { display: flex; gap: 8px; align-items: baseline; font-size: 12px; color: var(--cs-muted); }
+.cs-nr.is-unread .cs-nr-time { color: var(--cs-p-strong); font-weight: 700; }
+.cs-nr-act { color: var(--cs-p-strong); font-weight: 600; }
+.cs-nr-dot { flex: none; align-self: center; width: 10px; height: 10px; border-radius: 50%; background: var(--cs-p-strong); }
+
+/* Popover desktop dưới chuông */
+.cs-bell-wrap { position: relative; display: inline-flex; }
+.cs-notif-pop { position: absolute; top: calc(100% + 8px); right: -8px; z-index: 60; width: 400px; max-width: calc(100vw - 24px); display: flex; flex-direction: column; max-height: min(560px, calc(100dvh - var(--cs-topbar-h) - 24px)); background: var(--cs-surface); border: 1px solid var(--cs-border); border-radius: 14px; box-shadow: 0 8px 28px rgba(28, 24, 48, 0.18); overflow: hidden; }
+.cs-notif-pop-head { padding: 12px 16px 8px; border-bottom: 1px solid var(--cs-border); }
+.cs-notif-pop-head h2 { margin: 0; font-size: 18px; font-weight: 800; }
+.cs-notif-pop-body { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+.cs-notif-pop-body .cs-chat-scroll-wrap { min-height: 0; }
+.cs-notif-pop-body .cs-chat-body-state { padding: 24px 16px; }
+.cs-notif-pop-foot { border-top: 1px solid var(--cs-border); padding: 4px; }
+.cs-notif-all { display: block; width: 100%; padding: 10px; border: none; border-radius: 10px; background: none; color: var(--cs-p-strong); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; text-align: center; }
+.cs-notif-all:hover { background: var(--cs-neutral-soft); }
+.cs-notif-all:focus-visible { outline: 2px solid var(--cs-p-strong); outline-offset: -2px; }
+.cs-nr-markall { align-self: flex-end; margin: 2px 10px 4px; padding: 6px 10px; border: none; border-radius: 8px; background: none; color: var(--cs-p-strong); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; flex: none; }
+.cs-nr-markall:hover { background: var(--cs-neutral-soft); }
+.cs-nr-markall:focus-visible { outline: 2px solid var(--cs-p-strong); outline-offset: 2px; }

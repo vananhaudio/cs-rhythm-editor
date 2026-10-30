@@ -1,0 +1,192 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Class Mobile V1 — khung ứng dụng 5 tab. Tiền tố cm-. Dùng token --cs-* của Class Social (cùng thương hiệu tím),
+   tái sử dụng nguyên các trang con (.cs-*) bên trong; chỉ thêm khung (thanh trên, thanh tab, ngăn kéo) và vài màn riêng.
+   Phong cách: iOS HIG — thanh trong suốt, tab dưới 5 mục, vùng chạm ≥ 44pt, Safe Area, chữ theo Dynamic Type (rem).
+   ───────────────────────────────────────────────────────────────────────────── */
+.cm-root {
+  --cm-tab-h: 52px;
+  --cm-top-h: 44px;
+  /* V1.1 Light: nền nhóm kiểu iOS, thẻ trắng phẳng, đường kẻ rất mảnh; giữ tím thương hiệu Class */
+  --cs-bg: #f2f2f7; --cs-surface: #ffffff; --cs-text: #1c1c1e; --cs-muted: #5a5a64; --cs-faint: #72727c;
+  --cs-border: #e6e6eb; --cs-hover: #f2f2f7; --cs-neutral-soft: #efeff4; --cs-neutral-line: #d1d1d6;
+  --cs-shadow: 0 0 0 0.5px rgba(60, 60, 67, 0.07), 0 1px 2px rgba(28, 24, 48, 0.04);
+  --cs-radius: 16px;
+  --cm-ios-gray: #8e8e93;
+  min-height: 100dvh;
+  padding-bottom: calc(var(--cm-tab-h) + env(safe-area-inset-bottom, 0px));
+  -webkit-text-size-adjust: 100%;
+}
+.cm-root.is-embed { padding-bottom: 0; }
+
+/* ── Thanh trên: thương hiệu Class + Thông báo + Chức năng khác ── */
+.cm-top {
+  position: sticky; top: 0; z-index: 30;
+  padding-top: env(safe-area-inset-top, 0px);
+  background: var(--cs-surface);
+  border-bottom: 0.5px solid var(--cs-border);
+}
+.cm-top-row { height: var(--cm-top-h); display: flex; align-items: center; gap: 2px; padding: 0 6px 0 16px; }
+.cm-brand { display: flex; align-items: center; gap: 8px; min-width: 0; font-weight: 800; font-size: clamp(0.9375rem, 4.6vw, 1.1875rem); letter-spacing: -0.02em; color: var(--cs-text); background: none; border: 0; padding: 0; min-height: 44px; cursor: pointer; }
+.cm-brand img { width: 24px; height: 23px; display: block; flex-shrink: 0; }
+.cm-brand span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cm-top-spacer { flex: 1; }
+.cm-top-back { width: 44px; height: 44px; margin-left: -10px; border: 0; background: none; color: var(--cs-p); display: grid; place-items: center; cursor: pointer; flex-shrink: 0; }
+.cm-top-back svg { width: 28px; height: 28px; stroke-width: 2.2; }
+.cm-top-title { margin: 0; font-size: clamp(1rem, 4.6vw, 1.1875rem); font-weight: 800; letter-spacing: -0.02em; line-height: 1.2; color: var(--cs-text); min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Thanh đã mang tên màn → tiêu đề lớn của trang không hiện lặp (ẩn hẳn, trình đọc màn hình nghe tên màn một lần ở thanh) */
+.cm-root[data-bar-title] .cm-content h1.cm-title, .cm-root[data-bar-title] .cm-content h1.cs-page-title { display: none; }
+.cm-root[data-bar-title] .cm-page { padding-top: 12px; }
+.cm-icon-btn {
+  position: relative; width: 44px; height: 44px; border: 0; background: transparent; border-radius: 50%;
+  display: grid; place-items: center; color: var(--cs-text); cursor: pointer;
+}
+.cm-icon-btn:active { background: var(--cs-neutral-soft); }
+.cm-icon-btn svg { width: 22px; height: 22px; stroke-width: 1.9; }
+.cm-badge {
+  position: absolute; top: 6px; right: 5px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px;
+  background: #e11d48; color: #fff; font-size: 0.6875rem; font-weight: 800; line-height: 14px; text-align: center;
+  border: 2px solid var(--cs-surface); box-sizing: border-box; pointer-events: none;
+}
+
+/* ── Nội dung ── */
+.cm-content { min-height: 50vh; }
+/* MỘT hệ lề cho cả khung: main KHÔNG có lề (lề desktop của .cs-main bị bỏ), mỗi trang tự có lề 16px đều — trước đây 12px (main) + 16px (.cm-page) cộng dồn thành 28px, Home 12px, Studio bị bó trong khung. */
+.cm-root .cs-main { padding: 8px 0 16px; }
+.cm-root .cs-main > .cs-col, .cm-root .cs-main > .cs-col-wide { max-width: none; padding-left: 16px; padding-right: 16px; }
+.cm-backbar { display: flex; align-items: center; padding: 6px 6px 0; }
+.cm-back {
+  display: inline-flex; align-items: center; gap: 2px; min-height: 44px; padding: 0 10px 0 4px; border: 0; background: none;
+  color: var(--cs-p); font: inherit; font-size: 1.0625rem; font-weight: 600; cursor: pointer;
+}
+.cm-back svg { width: 24px; height: 24px; }
+.cm-page { padding: 2px 16px 28px; max-width: 640px; margin: 0 auto; }
+.cm-title { font-size: 2rem; font-weight: 800; letter-spacing: -0.025em; line-height: 1.15; margin: 4px 2px 16px; }
+.cm-h2 { font-size: 0.8125rem; font-weight: 600; color: var(--cs-muted); text-transform: uppercase; letter-spacing: 0.04em; margin: 24px 16px 8px; }
+.cm-note { font-size: 0.8125rem; color: var(--cs-muted); line-height: 1.5; margin: 8px 16px; }
+
+/* ── Danh sách kiểu iOS (grouped) ── */
+.cm-list { background: var(--cs-surface); border-radius: 12px; overflow: hidden; margin: 0 0 14px; padding: 0; list-style: none; box-shadow: var(--cs-shadow); }
+.cm-row {
+  display: flex; align-items: center; gap: 12px; width: 100%; min-height: 56px; padding: 10px 14px; text-align: left;
+  background: none; border: 0; color: var(--cs-text); font: inherit; cursor: pointer; text-decoration: none; position: relative;
+  -webkit-tap-highlight-color: transparent;
+}
+/* đường kẻ thụt vào theo icon (chuẩn iOS), không kẻ ở dòng cuối */
+.cm-list > li + li > .cm-row::before, .cm-list > .cm-row + .cm-row::before { content: ''; position: absolute; top: 0; left: 60px; right: 0; height: 0.5px; background: var(--cs-border); }
+.cm-row:active { background: var(--cs-neutral-soft); }
+.cm-row[aria-disabled='true'] { opacity: 0.55; cursor: default; }
+.cm-row-ic { width: 34px; height: 34px; border-radius: 9px; background: var(--cs-p-soft); color: var(--cs-p); display: grid; place-items: center; flex: none; }
+.cm-row-ic svg { width: 19px; height: 19px; }
+.cm-row-body { flex: 1; min-width: 0; }
+.cm-row-t { font-size: 1.0625rem; font-weight: 500; line-height: 1.25; }
+.cm-row-s { font-size: 0.8125rem; color: var(--cs-muted); margin-top: 2px; line-height: 1.35; }
+.cm-row-chev { width: 18px; height: 18px; color: var(--cs-faint); flex: none; }
+.cm-row.is-danger .cm-row-t { color: #dc2626; }
+.cm-count { min-width: 22px; height: 22px; border-radius: 11px; background: var(--cs-p); color: #fff; font-size: 0.75rem; font-weight: 800; display: grid; place-items: center; padding: 0 6px; }
+
+/* ── Phân đoạn (segmented control) ── */
+.cm-seg { display: flex; background: rgba(118, 118, 128, 0.12); border-radius: 10px; padding: 2px; margin: 0 0 16px; }
+.cm-seg button { flex: 1; min-height: 36px; border: 0; border-radius: 8px; background: transparent; font: inherit; font-size: 0.875rem; font-weight: 600; color: var(--cs-muted); cursor: pointer; }
+.cm-seg button[aria-pressed='true'] { background: var(--cs-surface); color: var(--cs-text); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 0 0 0.5px rgba(0, 0, 0, 0.04); }
+.cm-embed { height: calc(100dvh - var(--cm-top-h) - var(--cm-tab-h) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 64px); min-height: 360px; border-radius: 14px; overflow: hidden; background: var(--cs-surface); box-shadow: var(--cs-shadow); }
+.cm-embed.is-deep { height: calc(100dvh - var(--cm-top-h) - var(--cm-tab-h) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 24px); }
+
+/* ── Thẻ Band ── */
+.cm-card { background: var(--cs-surface); border-radius: 16px; padding: 16px 16px 6px; margin: 0 0 14px; box-shadow: var(--cs-shadow); }
+.cm-band-name { font-size: 1.25rem; font-weight: 800; margin: 0 0 2px; }
+.cm-band-meta { font-size: 0.875rem; color: var(--cs-muted); margin: 0 0 12px; }
+.cm-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 0 18px; border-radius: 12px; border: 0; background: var(--cs-p); color: #fff; font: inherit; font-size: 1rem; font-weight: 700; cursor: pointer; text-decoration: none; }
+.cm-btn.is-soft { background: var(--cs-p-soft); color: var(--cs-p); }
+.cm-btn.is-block { width: 100%; }
+.cm-empty { text-align: center; padding: 34px 18px; color: var(--cs-muted); }
+.cm-empty h2 { color: var(--cs-text); font-size: 1.25rem; margin: 10px 0 6px; }
+.cm-empty-ic { width: 56px; height: 56px; border-radius: 50%; background: var(--cs-p-soft); color: var(--cs-p); display: grid; place-items: center; margin: 0 auto; }
+.cm-empty-ic svg { width: 28px; height: 28px; }
+.cm-skeleton { height: 92px; border-radius: 16px; margin: 0 0 14px; background: linear-gradient(90deg, var(--cs-neutral-soft), var(--cs-hover), var(--cs-neutral-soft)); background-size: 200% 100%; animation: cm-shimmer 1.3s linear infinite; }
+@keyframes cm-shimmer { to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .cm-skeleton { animation: none; } }
+.cm-error { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; border-radius: 14px; padding: 12px 14px; margin: 0 0 14px; font-size: 0.9375rem; display: flex; gap: 10px; align-items: center; }
+.cm-error button { margin-left: auto; min-height: 36px; padding: 0 14px; border-radius: 10px; border: 0; background: #b91c1c; color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
+
+/* ── Thanh tab dưới (5 tab) ── */
+.cm-tabbar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+  display: flex; padding: 5px 2px calc(3px + env(safe-area-inset-bottom, 0px));
+  background: var(--cs-surface);
+  border-top: 0.5px solid var(--cs-border);
+}
+.cm-tab {
+  flex: 1; min-width: 0; min-height: 44px; border: 0; background: none; cursor: pointer; font: inherit; color: var(--cm-ios-gray); -webkit-tap-highlight-color: transparent;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; position: relative;
+}
+.cm-tab svg { width: 24px; height: 24px; stroke-width: 1.8; transition: transform 0.12s ease; }
+.cm-tab:active svg { transform: scale(0.9); }
+.cm-tab span.cm-tab-l { font-size: 0.625rem; font-weight: 500; letter-spacing: 0.005em; white-space: nowrap; }
+.cm-tab[aria-current='page'] { color: var(--cs-p); }
+.cm-tab[aria-current='page'] svg { stroke-width: 2.3; }
+.cm-tab[aria-current='page'] span.cm-tab-l { font-weight: 700; }
+.cm-tab .cm-badge { top: 1px; right: calc(50% - 22px); }
+
+/* ── Ngăn kéo chức năng khác ── */
+.cm-sheet-bg { position: fixed; inset: 0; z-index: 60; background: rgba(0, 0, 0, 0.35); }
+.cm-sheet {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 61; max-height: 88dvh; display: flex; flex-direction: column;
+  background: var(--cs-bg); border-radius: 14px 14px 0 0; padding-bottom: env(safe-area-inset-bottom, 0px);
+  box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.25);
+}
+.cm-sheet-grab { width: 38px; height: 5px; border-radius: 3px; background: var(--cs-neutral-line); margin: 8px auto 2px; flex: none; }
+.cm-sheet-head { display: flex; align-items: center; padding: 4px 8px 6px 18px; font-size: 1.1875rem; font-weight: 800; }
+.cm-sheet-head span { flex: 1; }
+.cm-sheet-body { overflow-y: auto; padding: 0 14px 22px; -webkit-overflow-scrolling: touch; }
+.cm-tools { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 0 0 14px; padding: 0; list-style: none; }
+.cm-tool { display: flex; flex-direction: column; align-items: center; gap: 6px; min-height: 92px; padding: 14px 6px 10px; background: var(--cs-surface); border-radius: 14px; text-align: center; font-size: 0.75rem; font-weight: 600; line-height: 1.2; color: var(--cs-text); text-decoration: none; box-shadow: var(--cs-shadow); }
+.cm-tool .cm-row-ic { width: 40px; height: 40px; border-radius: 12px; }
+
+/* ── Splash ── */
+.cm-splash { min-height: 100dvh; display: grid; place-items: center; color: var(--cs-muted); background: var(--cs-bg); }
+
+/* ── Trò chuyện / Thông báo toàn màn hình: nằm TRÊN thanh tab (đã có sẵn ở Chat: fixed theo viewport thật) ── */
+.cm-root .cs-chat-pane.is-open { z-index: 50; }
+
+/* ── Chế độ tối (theo hệ thống) ── */
+@media (prefers-color-scheme: dark) {
+  .cm-root {
+    --cs-p: #a78bfa; --cs-p-strong: #c4b5fd; --cs-p-soft: #2b2154; --cs-p-softer: #211a40;
+    --cs-bg: #0e0e12; --cs-surface: #1a1a20; --cs-text: #f4f4f5; --cs-muted: #b4b4be; --cs-faint: #8b8b97;
+    --cs-border: #2e2e36; --cs-hover: #25252d; --cs-neutral-soft: #25252d; --cs-neutral-line: #3b3b45;
+    --cs-ok: #4ade80; --cs-ok-soft: #12301f; --cs-warn: #fbbf24; --cs-warn-soft: #3a2a0c;
+    --cs-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    color-scheme: dark;
+  }
+  /* các chỗ Class Social đặt màu sáng cố định → theo token tối */
+  .cm-root .cs-share-input, .cm-root .cs-tool-share, .cm-root .cs-cmt-bubble, .cm-root .cs-cmt-inputwrap,
+  .cm-root .cs-cmt.is-teacher .cs-cmt-bubble, .cm-root .lt-page .lt-ev-bubble, .cm-root .lt-ev.is-teacher .lt-ev-bubble,
+  .cm-root .cs-btn-soft { background: var(--cs-neutral-soft); color: var(--cs-text); }
+  .cm-root .cs-btn-soft:hover, .cm-root .cs-btn-soft:hover:not(:disabled) { background: var(--cs-hover); }
+  .cm-root .cs-share-input.is-open { background: var(--cs-surface); }
+}
+
+/* ── Cỡ chữ lớn / màn nhỏ ── */
+@media (max-width: 360px) { .cm-tab span.cm-tab-l { font-size: 0.5625rem; } .cm-tools { grid-template-columns: repeat(2, 1fr); } }
+
+/* ── V1.2: bàn phím mở → ẩn thanh tab, trả chỗ cho ô nhập ── */
+.cm-root.is-keyboard .cm-tabbar { display: none; }
+.cm-root.is-keyboard { padding-bottom: 0; }
+
+/* Màn đăng nhập trong khung Class Mobile: hiện tên thương hiệu cạnh logo (CSS web ẩn chữ ở ≤440px — chỉ ghi đè trong phạm vi Class Mobile) */
+@media (max-width: 440px) { .cs-topbar .cs-brand .cs-brand-text { display: inline; font-size: clamp(0.875rem, 4vw, 1rem); } }
+
+/* Thông báo: khung đứng riêng, cuộn trong hộp có chiều cao theo màn hình */
+.cm-notices { display: flex; flex-direction: column; max-height: calc(100dvh - var(--cm-top-h) - var(--cm-tab-h) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 96px); min-height: 160px; border-radius: 14px; overflow: hidden; background: var(--cs-surface); box-shadow: var(--cs-shadow); }
+
+/* Một nút Quay lại duy nhất: BackBar của khung. Nút tự vẽ của màn con (kiểu cs-btn / pill) ẩn trong Class Mobile; web /me giữ nguyên. */
+.cm-root .cs-profile-back, .cm-root .cs-band-back, .cm-root .cs-back-btn { display: none; }
+
+/* Quản lý Band (Thầy): tiêu đề cùng cỡ với tiêu đề tab (S1) — chỉ trong Class Mobile */
+.cm-root .cs-band-admin .cs-page-title { font-size: 2rem; letter-spacing: -0.025em; line-height: 1.15; margin: 4px 2px 16px; }
+.cm-root .cs-band-admin .cs-band-admin-title .cs-page-title { margin-bottom: 10px; }
+
+/* Studio TeamLab nhúng: khung lấp vùng giữa thanh trên và thanh tab; iframe chiếm phần còn lại (sau nút Quay lại nếu có); cuộn bên trong iframe */
+.cm-studio-wrap { display: flex; flex-direction: column; margin-top: -8px; margin-bottom: -16px; height: calc(100dvh - var(--cm-top-h) - var(--cm-tab-h) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); min-height: 360px; }   /* tràn mép: bù lại padding của main */
+.cm-studio { display: block; flex: 1 1 auto; min-height: 0; width: 100%; border: 0; background: #030712; visibility: hidden; }
+.cm-studio.is-ready { visibility: visible; }

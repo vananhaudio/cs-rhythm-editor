@@ -12,7 +12,7 @@ const online = () => (typeof navigator === 'undefined' ? true : navigator.onLine
 
 export async function fetchFeedPage(cursor?: { createdAt: string; id: string }): Promise<Result<{ posts: FeedPost[]; hasMore: boolean }>> {
   try {
-    const { data, error, status } = await supabase.rpc('class_feed', {
+    const { data, error, status } = await supabase.rpc('class_feed_safe', {
       p_before: cursor?.createdAt ?? null,
       p_before_id: cursor?.id ?? null,
       p_limit: FEED_PAGE,
@@ -31,7 +31,7 @@ export async function fetchFeedPage(cursor?: { createdAt: string; id: string }):
 /** Feed /me (P2): bài Social (đúng luật class_feed) + thread community — một thread = một mục, theo hoạt động mới nhất. */
 export async function fetchSocialFeedPage(cursor?: { createdAt: string; key: string }): Promise<Result<{ posts: FeedEntry[]; hasMore: boolean }>> {
   try {
-    const { data, error, status } = await supabase.rpc('social_feed', {
+    const { data, error, status } = await supabase.rpc('social_feed_safe', {
       p_before: cursor?.createdAt ?? null,
       p_before_key: cursor?.key ?? null,
       p_limit: FEED_PAGE,
@@ -54,7 +54,7 @@ export async function fetchSocialFeedPage(cursor?: { createdAt: string; key: str
 export async function fetchScopedFeedPage(scope: FeedScope, cursor?: { createdAt: string; key: string }): Promise<Result<{ posts: FeedEntry[]; hasMore: boolean }>> {
   if (scope === 'for_you') return fetchSocialFeedPage(cursor)
   try {
-    const { data, error, status } = await supabase.rpc('social_feed_scoped', {
+    const { data, error, status } = await supabase.rpc('social_feed_scoped_safe', {
       p_scope: scope,
       p_before: cursor?.createdAt ?? null,
       p_before_key: cursor?.key ?? null,
@@ -80,6 +80,17 @@ export async function createPost(insert: NewPost): Promise<Result<{ id: string }
       return { ok: false, message: friendlyError(error ? { ...error, status } : null, 'post', online()) }
     }
     return { ok: true, value: { id: (data as { id: string }).id } }
+  } catch (e) {
+    return { ok: false, message: friendlyError(e as Error, 'post', online()) }
+  }
+}
+
+/** Xoá bài CỦA CHÍNH MÌNH (RLS class_posts_own_delete: chỉ tác giả). Bình luận đi theo bài (FK). */
+export async function deletePost(id: string): Promise<Result<null>> {
+  try {
+    const { error, status } = await supabase.from('class_posts').delete().eq('id', id)
+    if (error) return { ok: false, message: friendlyError({ ...error, status }, 'post', online()) }
+    return { ok: true, value: null }
   } catch (e) {
     return { ok: false, message: friendlyError(e as Error, 'post', online()) }
   }

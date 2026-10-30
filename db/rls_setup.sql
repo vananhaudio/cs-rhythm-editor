@@ -75,6 +75,9 @@ DECLARE
     -- Band — Tuyển thành viên V1 (db/band_recruit_v1_setup.sql): RLS bật, KHÔNG policy; khách/học viên
     -- chỉ đi qua RPC band_* (SECURITY DEFINER). Áp policy rộng = mọi tài khoản đọc SĐT ứng viên.
     'bands', 'band_recruitments', 'band_rule_versions', 'band_applications', 'band_members', 'band_member_roles',
+    -- Class UGC Safety V1 (db/class_ugc_safety_v1_setup.sql): RLS bật, KHÔNG policy; báo cáo/chặn/đồng ý/từ cấm chỉ đi qua RPC
+    -- (SECURITY DEFINER). Áp policy rộng = học viên đọc báo cáo của nhau, tự sửa trạng thái báo cáo hoặc gỡ từ cấm.
+    'class_reports', 'class_user_blocks', 'class_ugc_consent', 'class_ugc_blocklist',
     -- Thư viện hợp âm chuẩn hoá V1 (db/chord_library_v1_setup.sql): RLS bật, KHÔNG policy; mọi thứ đi qua
     -- RPC chord_sheet_* (SECURITY DEFINER). Áp policy rộng = học viên đọc bản private của nhau.
     'chord_sheets', 'chord_sheet_versions',

@@ -189,7 +189,7 @@ test("feed cộng đồng không dựng từ dữ liệu tiến độ cá nhân 
     assert.equal(/edu_lesson_progress|student_practice_log|student_songs|student_xp_log/.test(src), false, f);
   }
   const api = read("posts/postsApi.ts");
-  assert.match(api, /rpc\('class_feed'/);
+  assert.match(api, /rpc\('class_feed_safe'/);
   assert.match(api, /from\('class_posts'\)\.insert\(insert\)/);
 });
 
