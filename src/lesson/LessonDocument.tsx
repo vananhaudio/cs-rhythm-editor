@@ -664,6 +664,9 @@ const CSS = `
   /* Bản nhạc: sát mép màn hình, không viền; hàng "Xem lớn" giữ lề chữ */
   .lsn-paper:not(.is-printing) .lsn-zoom-frame:not(.is-big) .lsn-score{margin:2px calc(-1 * max(var(--gut),env(safe-area-inset-left,0px))) 6px;
     border:0;border-radius:0;padding:0;background:none;}
+  /* Nhúng trong /me: .lsn cắt tràn ngang và paper không có lề riêng ⇒ không tràn lề (tràn sẽ bị cắt mất khuông/ngoặc) */
+  .lsn.is-embedded .lsn-paper:not(.is-printing){padding:0 6px 8px;}   /* chữ cách mép 12+6=18px như trang riêng */
+  .lsn.is-embedded .lsn-paper:not(.is-printing) .lsn-zoom-frame:not(.is-big) .lsn-score{margin:2px -6px 6px;}
   .lsn-paper:not(.is-printing) .lsn-zoom-frame:not(.is-big) .lsn-zoom-hint{font-size:13px;color:${P.inkFaint};}
   .lsn-paper:not(.is-printing) .lsn-zoom-frame:not(.is-big) .lsn-zoom-btn{background:${P.purpleTint};border:0;box-shadow:none;
     border-radius:999px;padding:8px 14px;font-size:13.5px;}
