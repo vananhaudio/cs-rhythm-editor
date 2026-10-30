@@ -27,7 +27,8 @@ export const REPORT_KIND_LABEL: Record<ReportKind, string> = {
   post: 'bài đăng', comment: 'bình luận', profile: 'trang cá nhân', dm_message: 'tin nhắn', band_message: 'tin nhắn nhóm', thread: 'lượt trao đổi',
 }
 
-export type ReportInput = { kind: ReportKind; targetId: string; reason: ReportReason; note?: string }
+/** via: 'feed_comment' = bình luận Thread/TeamLab (bảng feed_comments) → RPC feed_comment_report; mặc định class_report_submit */
+export type ReportInput = { kind: ReportKind; targetId: string; reason: ReportReason; note?: string; via?: 'feed_comment' }
 
 /** Kiểm tra đầu vào TRƯỚC khi gọi mạng; trả thông báo lỗi tiếng Việt hoặc null nếu hợp lệ. */
 export function validateReport(i: { kind: unknown; targetId: unknown; reason: unknown; note?: unknown }): string | null {

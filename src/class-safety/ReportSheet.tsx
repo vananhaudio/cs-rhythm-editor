@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom'
 import { submitReport } from './api'
 import { NOTE_MAX, REPORT_KIND_LABEL, REPORT_REASONS, type ReportKind, type ReportReason } from './model'
 
-export default function ReportSheet({ kind, targetId, onClose }: { kind: ReportKind; targetId: string; onClose: () => void }) {
+export default function ReportSheet({ kind, targetId, via, onClose }: { kind: ReportKind; targetId: string; via?: 'feed_comment'; onClose: () => void }) {
   const [reason, setReason] = useState<ReportReason | ''>('')
   const [note, setNote] = useState('')
   const [state, setState] = useState<'idle' | 'sending' | 'done'>('idle')
@@ -22,7 +22,7 @@ export default function ReportSheet({ kind, targetId, onClose }: { kind: ReportK
     if (!reason || lock.current) return
     lock.current = true
     setState('sending'); setErr('')
-    const r = await submitReport({ kind, targetId, reason, note })
+    const r = await submitReport({ kind, targetId, reason, note, via })
     lock.current = false
     if (r.ok) setState('done')
     else { setState('idle'); setErr(r.message) }

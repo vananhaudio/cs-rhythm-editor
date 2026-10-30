@@ -459,22 +459,34 @@ const CSS = `
   color:${P.purple};font-size:12.5px;font-weight:600;border-radius:8px;padding:5px 10px;cursor:pointer;
   font-family:inherit;box-shadow:0 1px 3px rgba(29,25,48,.08);}
 .lsn-zoom-hint{margin:8px 0 0;font-size:12.5px;color:${P.inkFaint};}
-.lsn-zoom-frame.is-big{position:fixed;inset:0;z-index:140;background:#fff;margin:0;
-  padding:58px 12px 28px;overflow:auto;-webkit-overflow-scrolling:touch;
-  overscroll-behavior:contain;touch-action:pan-x pan-y;}
-.lsn-zoom-tools{position:fixed;top:10px;right:12px;left:12px;z-index:2;display:flex;align-items:center;
-  justify-content:flex-end;gap:8px;}
+.lsn-zoom-frame.is-big{position:fixed;inset:0;z-index:140;background:#fff;margin:0;padding:0;
+  display:flex;flex-direction:column;overflow:hidden;}
+/* Vùng cuộn là .lsn-zoom-inner, thanh công cụ là một HÀNG ĐẶC phía trên (không phủ lên bản nhạc) */
+.lsn-zoom-frame.is-big{--zt:61px;}
+.lsn-zoom-frame.is-big .lsn-zoom-inner{flex:1;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;touch-action:pan-x pan-y;-webkit-tap-highlight-color:transparent;
+  padding:calc(var(--zt) + env(safe-area-inset-top,0px) + 4px) max(10px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(10px,env(safe-area-inset-left,0px));}
+/* Luyện đàn: thanh công cụ PHỦ lên trên, trượt ra khỏi màn hình sau vài giây (đầu bài đã chừa chỗ nên không che nốt) */
+.lsn-zoom-tools{position:absolute;top:0;left:0;right:0;z-index:3;display:flex;align-items:center;justify-content:flex-end;gap:8px;
+  background:rgba(255,255,255,.97);border-bottom:1px solid ${P.line};transition:transform .22s ease,opacity .22s ease;
+  padding:calc(8px + env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) 8px max(12px,env(safe-area-inset-left,0px));}
+.lsn-zoom-frame.tools-off .lsn-zoom-tools{transform:translateY(-100%);opacity:0;pointer-events:none;}
+.lsn-zoom-pager{position:absolute;z-index:3;display:flex;flex-direction:column;gap:10px;
+  right:max(10px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));transition:opacity .22s ease;}
+.lsn-zoom-pager button{width:48px;height:48px;border-radius:50%;border:1px solid ${P.line};background:rgba(255,255,255,.94);
+  color:${P.purple};font-size:16px;font-family:inherit;cursor:pointer;box-shadow:0 2px 8px rgba(29,25,48,.18);}
+.lsn-zoom-frame.tools-off .lsn-zoom-pager{opacity:0;pointer-events:none;}
+@media (max-height:500px){
+  .lsn-zoom-frame.is-big{--zt:53px;}
+  .lsn-zoom-tools{padding-top:calc(4px + env(safe-area-inset-top,0px));padding-bottom:4px;}
+}
 .lsn-zoom-tools button{border:1px solid ${P.line};background:#fff;color:${P.ink};font-family:inherit;
-  font-size:17px;font-weight:700;width:38px;height:38px;border-radius:10px;cursor:pointer;line-height:1;}
+  font-size:17px;font-weight:700;width:44px;height:44px;border-radius:10px;cursor:pointer;line-height:1;}
 .lsn-zoom-tools button:disabled{opacity:.4;cursor:default;}
 .lsn-zoom-tools span{font-size:13px;font-weight:600;color:${P.inkFaint};min-width:46px;text-align:center;}
-.lsn-zoom-tools .lsn-zoom-close{width:auto;padding:0 14px;font-size:14.5px;background:${P.purple};
+.lsn-zoom-tools .lsn-zoom-close{width:auto;min-width:44px;padding:0 16px;font-size:14.5px;background:${P.purple};
   color:#fff;border-color:${P.purple};}
-.lsn-zoom-rotate{position:fixed;left:12px;bottom:10px;margin:0;font-size:12.5px;color:${P.inkFaint};}
-@media (orientation:landscape){.lsn-zoom-rotate{display:none;}}
-.lsn-zoom-frame.is-big .lsn-zoom-btn{position:fixed;right:12px;top:12px;font-size:15px;padding:9px 16px;
-  background:${P.purple};color:#fff;border-color:${P.purple};}
-.lsn-zoom-frame.is-big .lsn-score,.lsn-zoom-frame.is-big .lsn-fb{border:none;max-width:none;overflow:visible;}
+.lsn-zoom-frame.is-big .lsn-score,.lsn-zoom-frame.is-big .lsn-fb{border:none;max-width:none;overflow:visible;margin:0;padding:0;}
 .lsn-zoom-frame.is-big .lsn-score-host{overflow:visible;}
 .lsn-zoom-frame.is-big .lsn-score-host svg{max-width:none;}
 /* Sơ đồ phóng bằng chính bề rộng của SVG (vector, vẫn nét) — KHÔNG dùng CSS zoom:
@@ -487,8 +499,6 @@ const CSS = `
 .lsn-score{position:relative;border:1px solid ${P.line};border-radius:12px;background:#fff;padding:6px 4px;}
 .lsn-score-host{overflow-x:auto;}
 .lsn-score-host svg{max-width:100%;height:auto;}
-.lsn-score.is-big .lsn-score-host{overflow-x:auto;}
-.lsn-score.is-big .lsn-score-host svg{max-width:none;transform:scale(1.5);transform-origin:top left;}
 .lsn-score-msg{font-size:13.5px;color:${P.inkFaint};padding:10px;}
 .lsn-score-msg.err{color:#B91C1C;}
 .lsn-marks{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
@@ -564,16 +574,111 @@ const CSS = `
   .lsn-bar a{font-size:13px;max-width:52%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .lsn-fb{position:relative;}
   /* màn hẹp: nút "Xem lớn" đặt thành hàng riêng phía trên, không đè lên bản nhạc/sơ đồ */
-  .lsn-zoom-frame:not(.is-big){display:flex;flex-direction:column-reverse;}
-  .lsn-zoom-frame:not(.is-big) .lsn-zoom-btn{position:static;align-self:flex-end;margin:0 0 8px;
-    font-size:13px;padding:7px 12px;}
-  .lsn-zoom-frame:not(.is-big) .lsn-zoom-hint{margin:8px 0 0;}
   /* vệt mờ mép phải: báo cho biết sơ đồ còn nội dung bên ngoài màn hình */
   .lsn-zoom-frame:not(.is-big) .lsn-fb:after{content:'';position:absolute;top:0;right:0;bottom:0;width:26px;
     pointer-events:none;background:linear-gradient(90deg,rgba(255,255,255,0),#fff);}
   .lsn-head h1{font-size:25px;}
   .lsn-block{padding:14px 12px;}
   .lsn{font-size:15.5px;}
+}
+
+/* ── Điện thoại (dọc ≤640px, hoặc ngang: máy thấp ≤500px) — lấy lại bề rộng cho bản nhạc ──
+   Bản nhạc bị lề của 4 lớp lồng nhau (trang, khối, khung, khuông) ăn mất ~13% bề rộng.
+   Bản nhạc tràn ra sát mép KHỐI (không viền hai bên); chữ trong khối vẫn giữ lề.
+   Không áp khi đang chụp PDF (.is-printing): mốc ngắt trang đã đo theo khung gốc. */
+@media (max-width:640px),(max-height:500px){
+  .lsn-zoom-frame:not(.is-big){display:flex;flex-wrap:wrap;align-items:center;gap:0 8px;}
+  .lsn-zoom-frame:not(.is-big) .lsn-zoom-inner{order:3;flex:0 0 100%;min-width:0;}
+  .lsn-zoom-frame:not(.is-big) .lsn-zoom-hint{order:1;flex:1;min-width:0;margin:0 0 8px;font-size:12px;}
+  .lsn-zoom-frame:not(.is-big) .lsn-zoom-btn{order:2;position:static;margin:0 0 8px;font-size:13px;padding:7px 12px;flex:none;}
+}
+/* ══ TYPOGRAPHY ĐIỆN THOẠI — "cuốn sách nhạc" (lát 3) ══
+   Chỉ áp cho màn điện thoại (dọc ≤640px, ngang ≤500px cao) và KHÔNG áp khi chụp PDF (.is-printing).
+   Nguyên tắc: một trang trắng liền mạch thay cho chồng thẻ viền; thứ bậc bằng cỡ + độ đậm + khoảng trắng,
+   không bằng khung. Chỉ ba loại nền tô nhẹ, mỗi loại một nghĩa:
+     tím nhạt = việc học viên LÀM (mục tiêu, bài trả) · vàng nhạt = LƯU Ý · xám-tím nhạt = ôn lại/so sánh.
+   Bản nhạc tràn sát mép màn hình, không viền — như bản nhạc in trong sách. */
+@media (max-width:640px),(max-height:500px){
+  .lsn-paper:not(.is-printing){--gut:18px;max-width:800px;
+    padding:6px max(var(--gut),env(safe-area-inset-right,0px)) 64px max(var(--gut),env(safe-area-inset-left,0px));}
+  .lsn:not(.is-embedded):has(.lsn-paper:not(.is-printing)){background:#fff;}
+  .lsn-paper:not(.is-printing){font-size:16.5px;line-height:1.6;letter-spacing:-.003em;-webkit-font-smoothing:antialiased;}
+
+  /* Đầu buổi: không thẻ, tiêu đề lớn */
+  .lsn-paper:not(.is-printing) .lsn-head{background:none;border:0;border-radius:0;padding:14px 0 22px;margin:0 0 6px;
+    border-bottom:1px solid ${P.line};}
+  .lsn-paper:not(.is-printing) .lsn-head-top{font-size:12px;letter-spacing:.1em;}
+  .lsn-paper:not(.is-printing) .lsn-head h1{font-size:34px;font-weight:800;letter-spacing:-.025em;line-height:1.1;margin:6px 0 8px;}
+  .lsn-paper:not(.is-printing) .lsn-head-title{font-size:19px;font-weight:600;line-height:1.35;color:${P.ink};}
+  .lsn-paper:not(.is-printing) .lsn-head-stage{font-size:13.5px;margin-top:10px;}
+
+  /* Mục học: phẳng, ngăn bằng khoảng trắng */
+  .lsn-paper:not(.is-printing) .lsn-block{background:none;border:0;border-radius:0;padding:0;margin:0;
+    padding:26px 0 6px;}
+  .lsn-paper:not(.is-printing) .lsn-block + .lsn-block:not(.lsn-note):not(.lsn-goals):not(.lsn-cp){border-top:1px solid ${P.line};}
+  .lsn-paper:not(.is-printing) .lsn-block-h{margin-bottom:12px;}
+  .lsn-paper:not(.is-printing) .lsn-tag{background:none;padding:0;border-radius:0;font-size:12px;letter-spacing:.1em;margin-bottom:4px;}
+  .lsn-paper:not(.is-printing) .lsn-block h2,.lsn-paper:not(.is-printing) .lsn-goals h2,.lsn-paper:not(.is-printing) .lsn-recap h2{
+    font-size:23px;font-weight:750;letter-spacing:-.018em;line-height:1.22;margin:0 0 10px;}
+  .lsn-paper:not(.is-printing) .lsn-sub{font-size:15.5px;line-height:1.5;color:${P.inkSoft};margin-top:6px;}
+
+  /* Nội dung */
+  .lsn-paper:not(.is-printing) .lsn-st-h{font-size:18px;font-weight:700;letter-spacing:-.01em;margin:22px 0 8px;}
+  .lsn-paper:not(.is-printing) .lsn-st-p{font-size:16.5px;line-height:1.62;color:${P.ink};margin:0 0 12px;}
+  .lsn-paper:not(.is-printing) .lsn-st-list{font-size:16.5px;line-height:1.55;color:${P.ink};padding-left:22px;margin:0 0 14px;}
+  .lsn-paper:not(.is-printing) .lsn-st-list li{margin:5px 0;}
+  .lsn-paper:not(.is-printing) .lsn-st-callout,.lsn-paper:not(.is-printing) .lsn-note{
+    background:${P.honeyTint};border:0;border-radius:14px;padding:14px 16px;margin:18px 0;}
+  .lsn-paper:not(.is-printing) .lsn-st-callout{background:${P.purpleTint};}
+  .lsn-paper:not(.is-printing) .lsn-st-callout strong,.lsn-paper:not(.is-printing) .lsn-note strong{
+    font-size:12px;letter-spacing:.09em;text-transform:uppercase;margin-bottom:4px;}
+  .lsn-paper:not(.is-printing) .lsn-st-callout p,.lsn-paper:not(.is-printing) .lsn-note p{font-size:16px;line-height:1.55;color:${P.ink};}
+  .lsn-paper:not(.is-printing) .lsn-st-table{font-size:15px;}
+  .lsn-paper:not(.is-printing) .lsn-guide,.lsn-paper:not(.is-printing) .lsn-hw,.lsn-paper:not(.is-printing) .lsn-goals ol,
+  .lsn-paper:not(.is-printing) .lsn-goals li{font-size:16.5px;line-height:1.55;}
+  .lsn-paper:not(.is-printing) .lsn-hw li,.lsn-paper:not(.is-printing) .lsn-goals li{margin:7px 0;}
+  .lsn-paper:not(.is-printing) .lsn-cp-prompt,.lsn-paper:not(.is-printing) .lsn-quiz-opts,.lsn-paper:not(.is-printing) .lsn-check{font-size:16.5px;}
+  .lsn-paper:not(.is-printing) .lsn-cp-q{font-size:17.5px;}
+  .lsn-paper:not(.is-printing) .lsn-piece-note,.lsn-paper:not(.is-printing) .lsn-rep-list{font-size:16px;line-height:1.55;}
+  .lsn-paper:not(.is-printing) .lsn-piece-by{font-size:14px;}
+  .lsn-paper:not(.is-printing) .lsn-piece-h h3{font-size:20px;font-weight:720;letter-spacing:-.012em;line-height:1.25;}
+
+  /* Ba loại nền tô nhẹ: LÀM (mục tiêu / bài trả) · LƯU Ý · ÔN LẠI */
+  .lsn-paper:not(.is-printing) .lsn-goals,.lsn-paper:not(.is-printing) .lsn-cp{background:#F4F2FD;border:0;border-radius:18px;
+    padding:18px 18px 14px;margin:22px 0;}
+  .lsn-paper:not(.is-printing) .lsn-cp{background:#fff;border:1px solid ${P.purple}33;}
+  .lsn-paper:not(.is-printing) .lsn-recap{border:0;}
+  .lsn-paper:not(.is-printing) .lsn-recap-grid{gap:10px;grid-template-columns:1fr;}
+  .lsn-paper:not(.is-printing) .lsn-recap-step{background:#F7F5FC;border:0;border-radius:14px;padding:14px 16px;}
+  .lsn-paper:not(.is-printing) .lsn-recap-step b{font-size:12px;letter-spacing:.09em;}
+  .lsn-paper:not(.is-printing) .lsn-recap-step ul{font-size:16px;line-height:1.5;padding-left:20px;}
+  .lsn-paper:not(.is-printing) .lsn-recap-msg,.lsn-paper:not(.is-printing) .lsn-msg{font-size:15.5px;line-height:1.5;border-radius:14px;padding:12px 14px;}
+  .lsn-paper:not(.is-printing) .lsn-layers{gap:0;}
+  .lsn-paper:not(.is-printing) .lsn-layer{background:none;border:0;border-top:1px solid ${P.line};border-radius:0;padding:16px 0;}
+  .lsn-paper:not(.is-printing) .lsn-layer.is-current{background:${P.purpleTint};border:0;border-radius:14px;padding:16px;margin:4px 0;}
+  .lsn-paper:not(.is-printing) .lsn-layer-no{font-size:12px;letter-spacing:.1em;color:${P.purple};background:none;padding:0;border-radius:0;}
+  .lsn-paper:not(.is-printing) .lsn-cp h2{font-size:20px;}
+  .lsn-paper:not(.is-printing) .lsn-layer-h b{font-size:16.5px;}
+  .lsn-paper:not(.is-printing) .lsn-piece{margin-top:18px;padding-top:18px;}
+
+  /* Bản nhạc: sát mép màn hình, không viền; hàng "Xem lớn" giữ lề chữ */
+  .lsn-paper:not(.is-printing) .lsn-zoom-frame:not(.is-big) .lsn-score{margin:2px calc(-1 * max(var(--gut),env(safe-area-inset-left,0px))) 6px;
+    border:0;border-radius:0;padding:0;background:none;}
+  /* Nhúng trong /me: .lsn cắt tràn ngang và paper không có lề riêng ⇒ không tràn lề (tràn sẽ bị cắt mất khuông/ngoặc) */
+  .lsn.is-embedded .lsn-paper:not(.is-printing){padding:0 6px 8px;}   /* chữ cách mép 12+6=18px như trang riêng */
+  .lsn.is-embedded .lsn-paper:not(.is-printing) .lsn-zoom-frame:not(.is-big) .lsn-score{margin:2px -6px 6px;}
+  .lsn-paper:not(.is-printing) .lsn-zoom-frame:not(.is-big) .lsn-zoom-hint{font-size:13px;color:${P.inkFaint};}
+  .lsn-paper:not(.is-printing) .lsn-zoom-frame:not(.is-big) .lsn-zoom-btn{background:${P.purpleTint};border:0;box-shadow:none;
+    border-radius:999px;padding:8px 14px;font-size:13.5px;}
+
+  /* Thanh trên: nhẹ hơn, nút Lưu PDF thành nút phụ */
+  .lsn-bar{background:#fff;backdrop-filter:none;padding:8px max(var(--gut,16px),env(safe-area-inset-right,0px)) 8px max(var(--gut,16px),env(safe-area-inset-left,0px));}
+  .lsn-bar button{background:${P.purpleTint};color:${P.purple};border-color:transparent;font-size:13.5px;padding:8px 14px;border-radius:999px;}
+  .lsn-foot{padding-top:18px;}
+}
+/* Máy ngang (thấp): thanh trên không dính, khỏi ăn 1/8 chiều cao màn hình */
+@media (max-height:500px){
+  .lsn-bar{position:static;}
 }
 
 /* ── IN GIÁO TRÌNH A4 ── */

@@ -3,7 +3,7 @@
 // hiển thị trực tiếp từ bản ghi edu_students mà StudentProfile đã tải.
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
-import type { Fact, HistoryEntry, Student360, Student360Api, Category } from './types'
+import type { Fact, HistoryEntry, Student360, Student360Api, Category, Visibility } from './types'
 import { Student360Error } from './api'
 import {
   ADD_MODES, CATEGORY_LABEL, CATEGORY_ORDER, MAX_CONTENT, SOURCE_LABEL, VISIBILITY_LABEL,
@@ -47,7 +47,7 @@ export default function Student360Panel({ userId, overview, api }: Props) {
   const [revoking, setRevoking] = useState<{ id: string; reason: string } | null>(null)
   const [sharing, setSharing] = useState<string | null>(null)
   const [history, setHistory] = useState<{ id: string; loading: boolean; entries: HistoryEntry[]; error?: string } | null>(null)
-  const [draft, setDraft] = useState<{ category: Category; mode: AddModeKey; text: string }>({ category: 'goal', mode: 'observed', text: '' })
+  const [draft, setDraft] = useState<{ category: Category; mode: AddModeKey | ''; share: boolean; text: string }>({ category: 'goal', mode: '', share: false, text: '' })
   const seq = useRef(0)
 
   const load = useCallback(async () => {
@@ -108,7 +108,9 @@ export default function Student360Panel({ userId, overview, api }: Props) {
   }
 
   const groups = data ? groupFacts(data.facts) : []
-  const canSubmit = draft.text.trim().length > 0 && draft.text.length <= MAX_CONTENT && !busy
+  const canSubmit = draft.mode !== '' && draft.text.trim().length > 0 && draft.text.length <= MAX_CONTENT && !busy
+  // Chỉ chia sẻ khi giáo viên tích rõ ràng; mục suy luận không bao giờ chia sẻ ngay lúc thêm (phải qua hộp xác nhận ở thẻ mục).
+  const addVisibility: Visibility = draft.share && draft.mode !== '' && draft.mode !== 'guess' ? 'student_and_teacher' : 'teacher'
 
   return (
     <div style={{ textAlign: 'left' }}>
@@ -184,19 +186,30 @@ export default function Student360Panel({ userId, overview, api }: Props) {
             </select>
           </label>
           <label style={{ fontSize: 13, color: T.muted }}>Thông tin này đến từ đâu
-            <select aria-label="Nguồn thông tin" style={field} value={draft.mode} onChange={e => setDraft({ ...draft, mode: e.target.value as AddModeKey })}>
+            <select aria-label="Nguồn thông tin" style={field} value={draft.mode} onChange={e => setDraft({ ...draft, mode: e.target.value as AddModeKey | '', share: e.target.value === 'guess' ? false : draft.share })}>
+              <option value="" disabled>Chọn nguồn…</option>
               {ADD_MODES.map(m => <option key={m.key} value={m.key}>{m.label}</option>)}
             </select>
           </label>
         </div>
         <textarea aria-label="Nội dung" style={{ ...field, minHeight: 88 }} maxLength={MAX_CONTENT} value={draft.text} placeholder="Ví dụ: Muốn tự đệm hát được vài bài Bolero"
           onChange={e => setDraft({ ...draft, text: e.target.value })} />
+        {draft.mode !== 'guess' && (
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, minHeight: 44 }}>
+            <input type="checkbox" checked={draft.share} onChange={e => setDraft({ ...draft, share: e.target.checked })} /> Cho học viên xem ngay
+          </label>
+        )}
+        <div role="status" aria-label="Ai sẽ thấy" style={{ fontSize: 13, color: addVisibility === 'teacher' ? T.muted : T.primary, margin: '2px 0 6px' }}>
+          {draft.mode === '' ? 'Hãy chọn nguồn thông tin trước khi thêm.' : addVisibility === 'teacher' ? 'Ai sẽ thấy: chỉ giáo viên.' : 'Ai sẽ thấy: giáo viên và học viên.'}
+        </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginTop: 8 }}>
           <span style={{ fontSize: 12, color: T.muted }}>{draft.text.length}/{MAX_CONTENT} · luôn bắt đầu ở mức "Chưa xác minh"</span>
           <button type="button" style={canSubmit ? btnPrimary : { ...btnPrimary, opacity: 0.5, cursor: 'not-allowed' }} disabled={!canSubmit}
             onClick={async () => {
-              const m = ADD_MODES.find(x => x.key === draft.mode)!
-              if (await act('add', 'Đã thêm thông tin.', () => api.add({ userId, category: draft.category, content: draft.text.trim(), origin: m.origin, sourceKind: m.sourceKind }))) setDraft({ ...draft, text: '' })
+              const m = ADD_MODES.find(x => x.key === draft.mode)
+              if (!m) return
+              if (await act('add', 'Đã thêm thông tin.', () => api.add({ userId, category: draft.category, content: draft.text.trim(), origin: m.origin, sourceKind: m.sourceKind, visibility: addVisibility })))
+                setDraft({ category: draft.category, mode: '', share: false, text: '' })   // không giữ lựa chọn nguồn/chia sẻ sang lần thêm sau
             }}>
             {busy === 'add' ? 'Đang lưu…' : 'Thêm'}
           </button>

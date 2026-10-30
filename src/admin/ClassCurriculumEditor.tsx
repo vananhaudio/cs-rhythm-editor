@@ -8,7 +8,7 @@ import LessonDocument from '../lesson/LessonDocument'
 import type { LessonDoc } from '../lesson/lessonTypes'
 import {
   assignSessionStage, assignSessionsStage, createStage, deleteSessionContent, deleteStage, fetchClassOutline, fetchSessionContent,
-  saveSessionContent, updateStage, fetchClassCheckpointMode, type ClassOutlineData, type Db,
+  saveSessionContent, updateStage, fetchClassCheckpointMode, fetchClassUnlockPolicy, type ClassOutlineData, type Db,
 } from '../classLearning/api'
 import {
   groupOutline, parseSections, planStagesFromTemplate, stageDates, toLessonDoc,
@@ -211,10 +211,12 @@ function LessonEditor({ client, cls, session, stage, template, onClose, onSaved 
   const [preview, setPreview] = useState(false)
   const [busy, setBusy] = useState(false)
   const [checkpointMode, setCheckpointMode] = useState(false)   // lớp có bài trả đã xuất bản → buổi phải có đường hoàn thành
+  const [openPolicy, setOpenPolicy] = useState(false)           // lớp 'open' (Hành Trình): không khoá tuần tự → KHÔNG ép mỗi buổi phải có bài trả bắt buộc
 
   useEffect(() => {
     let alive = true
     void fetchClassCheckpointMode(client, cls.id).then(m => { if (alive) setCheckpointMode(m) }, () => {})
+    void fetchClassUnlockPolicy(client, cls.id).then(p => { if (alive) setOpenPolicy(p === 'open') }, () => {})
     return () => { alive = false }
   }, [client, cls.id])
   useEffect(() => {
@@ -234,7 +236,7 @@ function LessonEditor({ client, cls, session, stage, template, onClose, onSaved 
   // Bài trả (checkpoint) sai id/trùng/thiếu tiêu đề → CHẶN Xuất bản (server sẽ bỏ qua id sai → học viên kẹt buổi).
   // Lệch khuôn SOLO01 (đuôi buổi, objectives) → chỉ cảnh báo. Chuẩn: docs/GIAO-TRINH-CHUAN.md.
   const cpProblems = parsed.ok
-    ? [...checkpointProblems(parsed.sections), ...completionProblems(parsed.sections, { checkpointMode, sessionNo: session.session_number ?? 0 })] : []
+    ? [...checkpointProblems(parsed.sections), ...completionProblems(parsed.sections, { checkpointMode: checkpointMode && !openPolicy, sessionNo: session.session_number ?? 0 })] : []
   const stdWarnings = parsed.ok && cls.code?.startsWith('SOLO01') && parsed.sections.length
     ? solo01Problems(parsed.sections, session.session_number ?? 0).filter(w => !cpProblems.includes(w)) : []
 

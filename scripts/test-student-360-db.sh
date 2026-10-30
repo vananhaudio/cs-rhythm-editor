@@ -60,6 +60,32 @@ psqld -1 -f "$ROOT/db/student_360_p2_setup.sql" >/dev/null && ok "migration P2 l
 PGOPTIONS="-c client_min_messages=notice" "$PGBIN/psql" -X -q -h "$TMP" -p "$PORT" -U postgres -d s360 -v ON_ERROR_STOP=1 \
   -f "$ROOT/db/tests/student_360_p2_test.sql" 2>&1 | sed -E 's/^psql:[^:]*:[0-9]*: (NOTICE|ERROR):  //'
 [ "${PIPESTATUS[0]}" = "0" ] || fail "test SQL P2"
+echo "── P2b: mặc định an toàn của add_fact (preflight + migration ×2 + test + rollback ×2)"
+gate2b() { q "select item from ($(sed 's/;[[:space:]]*$//' "$ROOT/db/student_360_p2b_preflight.sql")) z where section = 'GATE'"; }
+ADD_P1_MD5="$(q "select md5(prosrc) from pg_proc where proname = 'student_360_add_fact'")"
+OTHERS_HASH="$(q "select md5(string_agg(proname || prosrc, '' order by proname)) from pg_proc where proname like 'student\_360\_%' and proname <> 'student_360_add_fact'")"
+ACL_BEFORE="$(q "select proacl::text from pg_proc where proname = 'student_360_add_fact'")"
+[ "$ADD_P1_MD5" = "a42fa03906e06e2cb3c49331701edd05" ] && ok "thân add_fact trên cluster = md5 bản P1 mà production đang giữ" || fail "md5 add_fact khác production: $ADD_P1_MD5"
+[ "$(gate2b)" = "PASS" ] && ok "preflight P2b: GATE = PASS" || fail "preflight P2b: $(gate2b)"
+psqld -1 -f "$ROOT/db/student_360_p2b_setup.sql" >/dev/null && ok "migration P2b lần 1"
+psqld -1 -f "$ROOT/db/student_360_p2b_setup.sql" >/dev/null && ok "migration P2b lần 2 (idempotent)"
+[ "$(gate2b)" = "STOP" ] && ok "preflight P2b sau migration: STOP (chặn chạy lại nhầm)" || fail "preflight P2b sau migration"
+[ "$(q "select count(*) from pg_proc where proname = 'student_360_add_fact'")" = "1" ] && ok "không tạo overload" || fail "add_fact có overload"
+[ "$(q "select md5(string_agg(proname || prosrc, '' order by proname)) from pg_proc where proname like 'student\_360\_%' and proname <> 'student_360_add_fact'")" = "$OTHERS_HASH" ] \
+  && ok "P2b không đổi thân hàm P1/P2 nào khác" || fail "P2b làm đổi hàm khác"
+[ "$(q "select proacl::text from pg_proc where proname = 'student_360_add_fact'")" = "$ACL_BEFORE" ] && ok "quyền EXECUTE của add_fact không đổi" || fail "ACL add_fact đổi"
+[ "$(q "select prosecdef and proconfig = array['search_path=\"\"'] and has_function_privilege('authenticated', oid, 'execute') and not has_function_privilege('anon', oid, 'execute') from pg_proc where proname = 'student_360_add_fact'")" = "t" ] \
+  && ok "add_fact: SECURITY DEFINER + search_path rỗng + chỉ authenticated EXECUTE" || fail "cấu hình add_fact sai"
+[ "$(q "select count(*) from information_schema.role_table_grants where table_name like 'student\_360\_%' and grantee in ('anon','authenticated','PUBLIC')")" = "0" ] \
+  && ok "bảng P1 vẫn không cấp quyền trực tiếp sau P2b" || fail "bảng lộ quyền sau P2b"
+PGOPTIONS="-c client_min_messages=notice" "$PGBIN/psql" -X -q -h "$TMP" -p "$PORT" -U postgres -d s360 -v ON_ERROR_STOP=1 \
+  -f "$ROOT/db/tests/student_360_p2b_test.sql" 2>&1 | sed -E 's/^psql:[^:]*:[0-9]*: (NOTICE|ERROR):  //'
+[ "${PIPESTATUS[0]}" = "0" ] || fail "test SQL P2b"
+psqld -1 -f "$ROOT/db/student_360_p2b_rollback.sql" >/dev/null && psqld -1 -f "$ROOT/db/student_360_p2b_rollback.sql" >/dev/null \
+  && [ "$(q "select md5(prosrc) from pg_proc where proname = 'student_360_add_fact'")" = "$ADD_P1_MD5" ] \
+  && [ "$(q "select proacl::text from pg_proc where proname = 'student_360_add_fact'")" = "$ACL_BEFORE" ] \
+  && ok "rollback P2b ×2: add_fact về đúng bản P1, quyền như cũ" || fail "rollback P2b"
+[ "$(gate2b)" = "PASS" ] && ok "preflight P2b PASS lại sau rollback" || fail "preflight P2b sau rollback"
 psqld -1 -f "$ROOT/db/student_360_p2_rollback.sql" >/dev/null && psqld -1 -f "$ROOT/db/student_360_p2_rollback.sql" >/dev/null \
   && [ "$(q "select count(*) from pg_proc where proname = 'student_360_set_visibility'")" = "0" ] \
   && [ "$(q "select count(*) from pg_proc where proname = 'student_360_get'")" = "1" ] \

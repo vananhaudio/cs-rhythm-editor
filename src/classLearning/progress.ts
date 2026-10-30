@@ -37,12 +37,18 @@ export type BreakRow = { beforeNo: number | null; title: string }
  *               không nút trả bài, không tiến độ/màu (không giả completion), buổi hiện tại theo LỊCH thật.
  */
 export type LearnMode = 'checkpoint' | 'curriculum'
+/**
+ * CLASS_UNLOCK_POLICY_V1 — tách ĐIỂM NỘP BÀI khỏi MỞ KHOÁ: 'sequential' (mặc định, như Solo) = xong bài trả bắt buộc mới mở buổi kế;
+ * 'open' (vd Hành Trình) = mọi buổi ĐÃ XUẤT BẢN đều mở; bài trả vẫn nộp/chấm bình thường, chỉ không khoá buổi nào.
+ */
+export type UnlockPolicy = 'sequential' | 'open'
 export type ClassLearningState =
   | { enabled: false; classId: string }
   | {
       enabled: true
       classId: string
       mode: LearnMode
+      unlockPolicy: UnlockPolicy
       role: 'learner' | 'teacher'
       programCode: string
       classCode: string | null
@@ -79,7 +85,7 @@ export function toClassLearningState(v: unknown, classId: string): ClassLearning
       published: s.published === true,
       openedAt: str(s.opened_at),
       completedAt: str(s.completed_at),
-      startAt: null,
+      startAt: str(s.start_at),
       checkpoints: (Array.isArray(s.checkpoints) ? s.checkpoints : []).map(obj).filter(c => str(c.id)).map(c => ({
         id: c.id as string,
         title: typeof c.title === 'string' ? c.title : '',
@@ -94,6 +100,7 @@ export function toClassLearningState(v: unknown, classId: string): ClassLearning
     enabled: true,
     classId,
     mode: 'checkpoint',
+    unlockPolicy: o.unlock_policy === 'open' ? 'open' : 'sequential',
     breaks: [],
     role: o.role === 'teacher' ? 'teacher' : 'learner',
     programCode: o.program_code as string,
@@ -138,7 +145,7 @@ export function curriculumState(input: {
       }
     })
   return {
-    enabled: true, classId: input.classId, mode: 'curriculum', role: input.role,
+    enabled: true, classId: input.classId, mode: 'curriculum', unlockPolicy: 'open', role: input.role,
     programCode: input.programCode || input.classCode || '', classCode: input.classCode, className: input.className,
     serverNow: null, paceDays: 7, sessions, breaks,
   }
@@ -148,15 +155,17 @@ export const pad2 = (n: number) => String(n).padStart(2, '0')
 export const sessionLabel = (s: Pick<SessionState, 'no' | 'title'>) => `Buổi ${pad2(s.no)} · ${s.title}`
 
 /** Buổi xem được: người học = đã mở (server); Thầy = mọi buổi (xem trước). */
-export function sessionPhase(s: SessionState, role: 'learner' | 'teacher', mode: LearnMode = 'checkpoint'): 'locked' | 'open' | 'done' {
+export function sessionPhase(s: SessionState, role: 'learner' | 'teacher', mode: LearnMode = 'checkpoint', policy: UnlockPolicy = 'sequential'): 'locked' | 'open' | 'done' {
   if (role === 'teacher' || mode === 'curriculum') return 'open'
+  // 'open': KHÔNG buổi nào bị khoá. Buổi chưa xuất bản vẫn 'open' để trang buổi báo "đang được cập nhật" (không giả lời nhắc trả bài).
+  if (policy === 'open') return s.completedAt ? 'done' : 'open'
   if (!s.openedAt) return 'locked'
   return s.completedAt ? 'done' : 'open'
 }
 
 /** Buổi tự mở khi vào lớp: buổi đã mở mà chưa xong, số nhỏ nhất; xong hết → buổi đã mở cuối cùng. Thầy: buổi đã xuất bản đầu tiên. */
 export function currentSessionNo(st: Extract<ClassLearningState, { enabled: true }>, now: Date = new Date()): number | null {
-  if (st.mode === 'curriculum') {
+  if (st.mode === 'curriculum' || (st.role === 'learner' && st.unlockPolicy === 'open')) {
     // Theo LỊCH thật: buổi đã xuất bản gần nhất đã tới NGÀY học (giờ Việt Nam — ngày có buổi là buổi hiện tại từ sáng);
     // chưa tới buổi nào → buổi xuất bản đầu tiên.
     const vnDay = (t: number) => new Date(t + 7 * 3_600_000).toISOString().slice(0, 10)
@@ -184,6 +193,7 @@ const DAY = 86_400_000
 export const EARLY_MARGIN_DAYS = 2
 
 export function sessionPace(s: Pick<SessionState, 'openedAt' | 'completedAt'>, now: Date, paceDays = 7): Pace | null {
+  if (!(paceDays > 0)) return null   // 0 = lớp 'open': không có nhịp tuần (opened_at là lúc mở lười, không phải hạn)
   if (!s.openedAt) return null
   const opened = new Date(s.openedAt).getTime()
   if (!Number.isFinite(opened)) return null
@@ -228,13 +238,14 @@ export function checkpointUi(t: CheckpointThread | null): CheckpointUi {
 }
 
 /** Huy hiệu ngắn trên dòng buổi (khi thu gọn). */
-export function sessionBadge(s: SessionState, role: 'learner' | 'teacher', now: Date, paceDays: number, mode: LearnMode = 'checkpoint'): string {
+export function sessionBadge(s: SessionState, role: 'learner' | 'teacher', now: Date, paceDays: number, mode: LearnMode = 'checkpoint', policy: UnlockPolicy = 'sequential'): string {
   if (mode === 'curriculum') return ''   // chưa có tiến độ thật → dòng gọn, trạng thái trung tính
   if (role === 'teacher') return s.published ? '' : 'Đang soạn'
-  const phase = sessionPhase(s, role)
+  const phase = sessionPhase(s, role, mode, policy)
   if (phase === 'locked') return '🔒'
   const pace = sessionPace(s, now, paceDays)
   if (phase === 'done') return `✓ ${pace ? `${PACE_DOT[pace.tone]} ${pace.label}` : 'Hoàn thành'}`.trim()
   if (!s.published) return 'Đang soạn'
+  if (policy === 'open') return ''   // không nhịp tuần, không "đang học": mọi buổi đã xuất bản mở như nhau
   return pace?.tone === 'overdue' ? '🔴 Đang học' : 'Đang học'
 }

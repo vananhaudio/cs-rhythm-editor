@@ -2,6 +2,7 @@
 import type { supabase } from '../supabase'
 import type { LessonSection } from '../lesson/lessonTypes'
 import { parseSections, type ClassRow, type ContentState, type SessionRow, type StageRow } from './outline'
+import type { UnlockPolicy } from './progress'
 
 export type Db = Pick<typeof supabase, 'from' | 'rpc'>
 
@@ -58,6 +59,15 @@ export async function fetchClassCheckpointMode(db: Db, classId: string): Promise
     .in('session_id', (se.data as { id: string }[]).map(x => x.id)).eq('status', 'published')
     .filter('blocks', 'cs', '[{"kind":"checkpoint"}]').limit(1)
   return !c.error && (c.data?.length ?? 0) > 0
+}
+
+/**
+ * Chính sách mở khoá của lớp (CLASS_UNLOCK_POLICY_V1). Cột chưa có (chưa migration) hoặc lỗi → 'sequential' (an toàn: giữ luật chặt).
+ * Admin dùng để biết có áp luật "buổi phải có bài trả bắt buộc" không (chỉ cần khi khoá tuần tự).
+ */
+export async function fetchClassUnlockPolicy(db: Db, classId: string): Promise<UnlockPolicy> {
+  const r = await db.from('class_schedule').select('unlock_policy').eq('id', classId).maybeSingle()
+  return !r.error && (r.data as { unlock_policy?: string } | null)?.unlock_policy === 'open' ? 'open' : 'sequential'
 }
 
 // ── Ghi (Admin / teacher). RLS: class_stages, class_sessions, class_lesson_content chỉ teacher ghi. ──
