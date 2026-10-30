@@ -5,7 +5,7 @@ Dành cho phiên hợp nhất TVA Guitar (App Store / Google Play). Không chứ
 ## 1. Đã vào main
 | Mục | Giá trị |
 |---|---|
-| PR | #43 → `origin/main` = `7388068e` (rollback FE: `014f2445`) |
+| PR | #43 → `7388068e` (rollback FE `014f2445`); #44 (kiểm duyệt) → `a1adc3f7` (rollback FE `7388068e`) |
 | Nhánh nguồn | `integrate/feed-like-comments-20261030` (chứa `feat/feed-like-v1` Lát 1 + `feat/feed-comments-v2` Lát 2, đã gộp `origin/main` lúc đó, giữ cả lớp chặn/báo cáo của main) |
 | Bundle production | `index-DwBJcYwk.js` (chunk `SystemNoticeView-DNYrFlPk.js` chứa `feed_like_set`, `feed_comment_add`) |
 
@@ -22,7 +22,7 @@ Thích (post / learning_thread / teamlab_publication) · Bình luận thread + b
 
 ## 4. Migration kiểm duyệt (đã chạy) và còn thiếu
 - `db/feed_comments_safety_v1_setup.sql` sha256 `2a5112d9b5452a99fd79ec45bacdf34f9d949fdf85811474661a7afee5ba58c9`: **COMMIT 30/10**. Postflight PASS: trigger `feed_comment_report_apply` (trigger duy nhất trên `class_reports`), `anon` không gọi được `feed_comment_report`, `authenticated` gọi được, `feed_comment_report_apply` không gọi trực tiếp được, `feed_comments` RLS bật + 0 policy, md5 `class_report_resolve` không đổi, `class_post_comments` 41 dòng; `feed_comments`/`class_reports`/`feed_likes` còn 0 dòng.
-- Frontend kiểm duyệt: PR `feat/feed-comments-safety-v1` → main (commit merge xem mục 1 sau khi deploy; rollback FE = `7388068e`).
+- Frontend kiểm duyệt: PR `feat/feed-comments-safety-v1` → main PR #44 đã merge và deploy: `origin/main` = `a1adc3f7` (bundle `index-DGq9r7mD.js` chứa `feed_comment_report`); rollback FE = `7388068e`.
 - Chưa nghiệm thu bằng thao tác thật trên production (chưa được phép tạo dữ liệu); chưa kiểm WebKit/iPhone/TVA Guitar thật (Chrome 390px không phải nghiệm thu thiết bị).
 - Hoãn: trả lời bình luận Social (2.1), Chia sẻ vào Trò chuyện + trang mở bài gốc + thông báo bài Social/TeamLab (Lát 3). Không có trong main.
 
