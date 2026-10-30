@@ -7,5 +7,9 @@ select check_name, ok, detail from (values
   ('hàm trigger không gọi được bởi anon/authenticated', not has_function_privilege('anon','public.class_post_comment_notify()','execute') and not has_function_privilege('authenticated','public.class_post_comment_notify()','execute') and not has_function_privilege('authenticated','public.feed_comment_notify()','execute'), null),
   ('class_system_notices vẫn RLS bật, 0 policy', (select relrowsecurity from pg_class where oid='public.class_system_notices'::regclass) and not exists (select 1 from pg_policies where tablename='class_system_notices'), null),
   ('class_add_comment không đổi (md5 production 6bf7f734…)', coalesce((select md5(prosrc) = '6bf7f734ee46554b7f443d82a25f3d35' from pg_proc where proname='class_add_comment' and pronamespace='public'::regnamespace limit 1), false), null),
-  ('số bình luận class_post_comments không đổi (đối chiếu tay với trước khi chạy)', true, (select count(*)::text from public.class_post_comments))
+  ('đối chiếu số liệu cũ (trước: checkpoint_graded=82, submission_received=20, teacher_commented=2; class_post_comments=43, feed_comments=1)',
+     (select count(*) filter (where kind='checkpoint_graded')=82 and count(*) filter (where kind='submission_received')=20 and count(*) filter (where kind='teacher_commented')=2 from public.class_system_notices)
+       and (select count(*) from public.class_post_comments)=43 and (select count(*) from public.feed_comments)=1,
+     (select string_agg(kind||'='||n, ', ' order by kind) from (select kind, count(*) n from public.class_system_notices group by kind) x)
+       || '; class_post_comments=' || (select count(*) from public.class_post_comments) || ', feed_comments=' || (select count(*) from public.feed_comments))
 ) as t(check_name, ok, detail);
