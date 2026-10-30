@@ -20,17 +20,17 @@ Lưu ý: CHECK `class_system_notices_kind_check` phải giữ kind `teacher_comm
 ## 3. Chức năng đã lên production
 Thích (post / learning_thread / teamlab_publication) · Bình luận thread + bài TeamLab (trả lời một cấp, sửa/xoá của mình, Thầy ẩn) · sửa bình luận bài Social · số bình luận trên thanh · thông báo System Chat cho chủ thread (gộp theo người/ngày).
 
-## 4. Chưa xong / chưa nghiệm thu
-- **Chờ Owner duyệt migration**: `db/feed_comments_safety_v1_setup.sql` sha256 `2a5112d9b5452a99fd79ec45bacdf34f9d949fdf85811474661a7afee5ba58c9` (đã dryrun PASS; rollback sha `5b775773d8119b3f991fd9a0921471c1228bf24a77c9915d542f1a18a12c4c96`). Nhánh `feat/feed-comments-safety-v1` (FE + test) **chưa merge**; FE nhánh này gọi `feed_comment_report` nên PHẢI migrate trước khi deploy.
-- Cho tới khi migration trên chạy: bình luận Thread/TeamLab trên production **chưa lọc người chặn và chưa có Báo cáo** → không đưa bản này lên Apple/Google trước đó.
-- Chưa nghiệm thu bằng thao tác thật trên production (chưa được phép tạo dữ liệu). Chưa kiểm WebKit/iPhone/TVA Guitar thật; Chrome 390px không phải nghiệm thu thiết bị.
+## 4. Migration kiểm duyệt (đã chạy) và còn thiếu
+- `db/feed_comments_safety_v1_setup.sql` sha256 `2a5112d9b5452a99fd79ec45bacdf34f9d949fdf85811474661a7afee5ba58c9`: **COMMIT 30/10**. Postflight PASS: trigger `feed_comment_report_apply` (trigger duy nhất trên `class_reports`), `anon` không gọi được `feed_comment_report`, `authenticated` gọi được, `feed_comment_report_apply` không gọi trực tiếp được, `feed_comments` RLS bật + 0 policy, md5 `class_report_resolve` không đổi, `class_post_comments` 41 dòng; `feed_comments`/`class_reports`/`feed_likes` còn 0 dòng.
+- Frontend kiểm duyệt: PR `feat/feed-comments-safety-v1` → main (commit merge xem mục 1 sau khi deploy; rollback FE = `7388068e`).
+- Chưa nghiệm thu bằng thao tác thật trên production (chưa được phép tạo dữ liệu); chưa kiểm WebKit/iPhone/TVA Guitar thật (Chrome 390px không phải nghiệm thu thiết bị).
 - Hoãn: trả lời bình luận Social (2.1), Chia sẻ vào Trò chuyện + trang mở bài gốc + thông báo bài Social/TeamLab (Lát 3). Không có trong main.
 
 ## 5. Tương thích Class Mobile / TVA Guitar
 Cùng một codebase và cùng RPC `feed_*` (không có hệ thống riêng cho mobile). Nút Thích/Bình luận là nút thật, ≥44px, Light Mode, không có nút giả (không có Chia sẻ). Bản native/Capacitor cần build từ main ≥ `7388068e` (và ≥ commit của PR safety khi được duyệt).
 
 ## 6. Bắt buộc trước khi lên Apple / Google Play
-1. Owner duyệt + chạy migration safety (mục 4), rồi merge FE `feat/feed-comments-safety-v1`.
+1. (XONG 30/10) migration safety + FE kiểm duyệt đã lên production — kiểm lại bundle trước khi build native.
 2. Apple 1.2: Báo cáo + Chặn + lọc từ cấm + đồng ý quy tắc phải phủ MỌI nơi hiển thị UGC — sau bước 1 thì bình luận Thread/TeamLab đã phủ; kiểm lại khi thêm Lát 3.
 3. Kiểm thật trên iPhone/WebKit và Android: Thích, Bình luận, Báo cáo, Chặn (Chrome 390px chưa đủ).
 4. Nghiệm thu production bằng tài khoản thử + bài thử có kiểm soát, rồi dọn dữ liệu thử (xem mục 8).
