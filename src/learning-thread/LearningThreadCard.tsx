@@ -1,6 +1,7 @@
 // Thẻ "câu chuyện học tập" trên Feed / Tường (/me). MỘT thread = MỘT thẻ; không bung toàn bộ event.
 // Đọc 2–4 giây là hiểu: AI (+ danh tính ngắn, nhỏ) · ❓/🎸 LOẠI · BÀI NÀO · (Thầy vừa làm gì) · TRẠNG THÁI → [Xem cuộc trao đổi].
 // Ngữ cảnh sâu (khoá, lớp đầy đủ) nằm ở /me/t/<id>. Component lá (không import CSS) — CSS .lt-* nạp ở container.
+import type { ReactNode } from 'react'
 import { relativeTime } from '../class-social/posts/postModel'
 import { Avatar, PersonLink } from '../class-social/ui'
 import { VISIBILITY_LABEL, identityLine, moduleLabel } from './ltModel'
@@ -9,7 +10,8 @@ import { StatusChip } from './ThreadView'
 import { IdentityBadges } from '../class-social/identity/IdentityBadges'
 import UiIcon from '../class-social/UiIcon'
 
-export default function LearningThreadCard({ card, now, onOpenThread, onOpenProfile, inClass = false }: {
+export default function LearningThreadCard({ card, now, onOpenThread, onOpenProfile, inClass = false, footer }: {
+  footer?: ReactNode
   card: ThreadCard
   now?: Date
   onOpenThread?: (threadId: string) => void
@@ -58,6 +60,7 @@ export default function LearningThreadCard({ card, now, onOpenThread, onOpenProf
             <button type="button" className="lt-btn lt-feed-open" onClick={() => onOpenThread(card.id)}>Xem cuộc trao đổi</button>
           )}
         </div>
+        {footer}
       </div>
     </article>
   )

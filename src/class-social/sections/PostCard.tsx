@@ -1,5 +1,6 @@
 // Một bài đăng trong feed cộng đồng. Chưa có reaction/share → KHÔNG render nút giả.
 // Nội dung là plain text: React tự escape, xuống dòng giữ bằng CSS (pre-wrap).
+import type { ReactNode } from 'react'
 import { Lock } from 'lucide-react'
 import ExternalMediaView from '../media/ExternalMediaView'
 import { POST_TYPE_LABEL, relativeTime, type FeedPost } from '../posts/postModel'
@@ -25,7 +26,7 @@ export type PostSocial = {
   threadContext?: 'feed' | 'class'
 }
 
-export default function PostCard({ post, now, social }: { post: FeedPost; now?: Date; social?: PostSocial }) {
+export default function PostCard({ post, now, social, footer }: { post: FeedPost; now?: Date; social?: PostSocial; footer?: ReactNode }) {
   const { author } = post
   const when = new Date(post.createdAt)
   const canModerate = !!social?.me?.isTeacher
@@ -74,6 +75,7 @@ export default function PostCard({ post, now, social }: { post: FeedPost; now?: 
           <ExpandableText text={post.body} className="cs-post-body" lines={6} />
         </div>
       )}
+      {footer}
       {social && (
         <CommentsSection postId={post.id} total={post.commentCount} state={social.comments[post.id]} me={social.me} now={now}
           onRefresh={social.onRefreshComments} onExpand={social.onExpandComments} onOpenProfile={social.onOpenProfile} />

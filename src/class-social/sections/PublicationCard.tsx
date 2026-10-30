@@ -2,7 +2,7 @@
 // teamlab_public_song (tên Band, tên bài, ảnh Team, thời điểm, slug) — KHÔNG take/track/người tham gia.
 // Nghe ngay: nhúng NGUYÊN Published Player công khai của TeamLab (iframe /teamlab/song/<slug>?embed=1), chỉ nạp khi bấm,
 // mỗi lúc một bài, đóng/đổi bài/rời Feed → gỡ iframe. Không tự phát. Không copy audio hay logic player.
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { relativeTime, type PublicationEntry } from '../posts/postModel'
 import { Avatar } from '../ui'
 import {
@@ -61,7 +61,7 @@ function EmbeddedPlayer({ slug, onClose }: { slug: string; onClose: () => void }
   )
 }
 
-export default function PublicationCard({ entry, now }: { entry: PublicationEntry; now?: Date }) {
+export default function PublicationCard({ entry, now, footer }: { entry: PublicationEntry; now?: Date; footer?: ReactNode }) {
   const who = entry.bandName ?? entry.projectName
   const [coverBroken, setCoverBroken] = useState(false)
   const active = useActiveEmbed()
@@ -96,6 +96,7 @@ export default function PublicationCard({ entry, now }: { entry: PublicationEntr
           {band && <a className="cs-btn cs-btn-ghost cs-btn-sm cs-pub-band" href={band}>Khám phá Band</a>}
         </div>
         {note && <div className="cs-pub-note" role="status">{note}</div>}
+        {footer}
       </div>
     </article>
   )

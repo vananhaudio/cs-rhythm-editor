@@ -6,11 +6,13 @@ import { isPublicationEntry, isThreadEntry, type FeedEntry } from '../posts/post
 import LearningThreadCard from '../../learning-thread/LearningThreadCard'
 import PostCard, { type PostSocial } from './PostCard'
 import PublicationCard from './PublicationCard'
+import LikeBar from '../likes/LikeBar'
 
 export default function FeedEntryCard({ entry, now, social }: { entry: FeedEntry; now?: Date; social?: PostSocial }) {
-  if (isPublicationEntry(entry)) return <PublicationCard entry={entry} now={now} />
+  if (isPublicationEntry(entry)) return <PublicationCard entry={entry} now={now} footer={<LikeBar kind="teamlab_publication" id={entry.id} />} />
   if (isThreadEntry(entry)) {
-    return <LearningThreadCard card={entry.card} now={now} onOpenThread={social?.onOpenThread} onOpenProfile={social?.onOpenProfile} inClass={social?.threadContext === 'class'} />
+    return <LearningThreadCard card={entry.card} now={now} onOpenThread={social?.onOpenThread} onOpenProfile={social?.onOpenProfile} inClass={social?.threadContext === 'class'}
+      footer={<LikeBar kind="learning_thread" id={entry.id} />} />
   }
-  return <PostCard post={entry} now={now} social={social} />
+  return <PostCard post={entry} now={now} social={social} footer={<LikeBar kind="post" id={entry.id} />} />
 }

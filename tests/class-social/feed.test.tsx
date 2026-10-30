@@ -53,7 +53,7 @@ test("Một bài YouTube: avatar/tên, nhãn TRẢ BÀI, thời gian, nội dung
   assert.match(html, /cs-media-frame is-landscape/);
 });
 
-test("Nhiều bài, nhiều tác giả, mới nhất trước; không nút reaction/comment/share giả", () => {
+test("Nhiều bài, nhiều tác giả, mới nhất trước; không nút comment/share giả (Thích là nút thật từ Feed Likes V1)", () => {
   const posts = toFeedPosts([
     row({ id: "a", author_name: "An", created_at: "2026-09-24T08:00:00Z" }),
     row({ id: "b", author_name: "Bình", created_at: "2026-09-24T09:00:00Z", media_url: "https://www.tiktok.com/@b/video/7301234567890123456" }),
@@ -66,7 +66,8 @@ test("Nhiều bài, nhiều tác giả, mới nhất trước; không nút react
   assert.match(html, /tiktok\.com\/player\/v1\/7301234567890123456\?autoplay=0/);
   assert.match(html, /cs-media-frame is-portrait/);           // TikTok dọc, không ép 16:9
   assert.match(html, /Xem thêm/);                              // trang tiếp theo có thật
-  for (const fake of ["Thích", "Bình luận", "Chia sẻ", "lượt xem"]) assert.ok(!html.includes(fake), fake);
+  assert.match(html, /cs-likebar-btn/);                       // Feed Likes V1: Thích là nút thật
+  for (const fake of ["Bình luận", "Chia sẻ", "lượt xem"]) assert.ok(!html.includes(fake), fake);
 });
 
 test("Facebook / TikTok rút gọn / link khác → thẻ mở nội dung gốc, mở tab mới an toàn, không iframe", () => {
