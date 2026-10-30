@@ -12,6 +12,7 @@ A=aaaaaaaa-0000-4000-8000-00000000000a
 insert into public.class_posts (id, author_user_id, type, audience, body, created_at)
   values ('00000000-fa00-4000-8000-000000000001', '$A', 'practice', 'class', 'LIKEPOST bài luyện tập để thích', now() - interval '1 minute');
 SQL
+  cat "$ROOT/db/tests/local/social_feed_safe_stub.sql"
   cat "$ROOT/db/feed_likes_v1_setup.sql"
 } > "$TMPX/extra.sql"
 E2E_CHECKPOINTS=1 E2E_SKIP_BASE=1 E2E_EXTRA_SQL="$TMPX/extra.sql" \
