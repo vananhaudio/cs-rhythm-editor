@@ -49,7 +49,7 @@ try {
   const pubBtn = '.cs-pub-card .cs-likebar-btn'
   await b.page.waitForSelector(pubBtn)
   for (let i = 0; i < 3; i++) await b.page.click(pubBtn)
-  await b.page.waitForFunction(() => document.querySelector('.cs-pub-card .cs-likebar-count')?.textContent === '1 lượt thích', { timeout: 10000 })
+  await b.page.waitForFunction(() => document.querySelector('.cs-pub-card .cs-likebar-count')?.textContent === '1 lượt thích', { timeout: 10000, polling: 200 })
   assert.equal(await b.page.$eval(pubBtn, e => e.getAttribute('aria-pressed')), 'true')
   assert.equal(await b.page.$eval(pubBtn, e => e.textContent.trim()), 'Đã thích')
   ok('Thích thẻ TeamLab bấm liên tiếp 3 lần → Đã thích, 1 lượt thích')
@@ -57,26 +57,26 @@ try {
 
   // Thích bài Social
   await b.page.click('article.cs-post:not(.cs-pub-card) .cs-likebar-btn')
-  await b.page.waitForFunction(() => /1 lượt thích/.test(document.querySelector('article.cs-post:not(.cs-pub-card) .cs-likebar')?.textContent ?? ''), { timeout: 10000 })
+  await b.page.waitForFunction(() => /1 lượt thích/.test(document.querySelector('article.cs-post:not(.cs-pub-card) .cs-likebar')?.textContent ?? ''), { timeout: 10000, polling: 200 })
   ok('Thích bài Social → 1 lượt thích')
 
   // Tải lại trang: trạng thái còn nguyên từ DB (đồng bộ thiết bị/app khác dùng cùng DB)
   await b.page.reload({ waitUntil: 'networkidle0' }); await b.page.waitForSelector('.cs-likebar-btn')
-  await b.page.waitForFunction(() => document.querySelector('.cs-pub-card .cs-likebar-btn')?.getAttribute('aria-pressed') === 'true', { timeout: 10000 })
+  await b.page.waitForFunction(() => document.querySelector('.cs-pub-card .cs-likebar-btn')?.getAttribute('aria-pressed') === 'true', { timeout: 10000, polling: 200 })
   ok('Tải lại: lượt thích còn nguyên (đọc từ DB)')
 
   // Người thứ hai: thấy 1 lượt, chưa thích; thích → 2; không thể trùng
   const c = await meAs('c@test.local')
-  await c.page.waitForFunction(() => document.querySelector('.cs-pub-card .cs-likebar-count')?.textContent === '1 lượt thích', { timeout: 10000 })
+  await c.page.waitForFunction(() => document.querySelector('.cs-pub-card .cs-likebar-count')?.textContent === '1 lượt thích', { timeout: 10000, polling: 200 })
   assert.equal(await c.page.$eval(pubBtn, e => e.getAttribute('aria-pressed')), 'false')
   await c.page.click(pubBtn)
-  await c.page.waitForFunction(() => document.querySelector('.cs-pub-card .cs-likebar-count')?.textContent === '2 lượt thích', { timeout: 10000 })
+  await c.page.waitForFunction(() => document.querySelector('.cs-pub-card .cs-likebar-count')?.textContent === '2 lượt thích', { timeout: 10000, polling: 200 })
   ok('Người thứ hai thấy 1 lượt (chưa thích), thích → 2 lượt')
 
   // Lỗi mạng: tắt mạng → bấm → báo lỗi, hoàn về trạng thái cũ
   await c.page.setOfflineMode(true)
   await c.page.click(pubBtn)
-  await c.page.waitForSelector('.cs-likebar-err', { timeout: 10000 })
+  await c.page.waitForSelector('.cs-likebar-err', { timeout: 10000, polling: 200 })
   assert.equal(await c.page.$eval(pubBtn, e => e.getAttribute('aria-pressed')), 'true', 'giữ trạng thái đã xác nhận')
   assert.match(await c.page.$eval('.cs-likebar-err', e => e.textContent), /mạng|Chưa lưu/)
   ok('Mất mạng: báo lỗi ngắn, trạng thái đã xác nhận không đổi')

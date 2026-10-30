@@ -6,8 +6,13 @@ import { Avatar, MoreMenu, PersonLink } from '../../ui'
 import ResourceCard from './ResourceCard'
 import { IdentityBadges } from '../../identity/IdentityBadges'
 import ExpandableText from '../ExpandableText'
+import { Composer } from './TargetComments'
 
-export default function CommentItem({ c, canModerate, now, onDelete, onModerate, onOpenProfile }: {
+export default function CommentItem({ c, canModerate, now, onDelete, onModerate, onOpenProfile, editing, onEdit, onEditDone, saveEdit }: {
+  editing?: boolean
+  onEdit?: () => void
+  onEditDone?: () => void
+  saveEdit?: (body: string) => Promise<string | null>
   c: Comment
   onOpenProfile?: (userId: string) => void
   canModerate: boolean
@@ -17,6 +22,7 @@ export default function CommentItem({ c, canModerate, now, onDelete, onModerate,
 }) {
   const teacher = c.author.isTeacher
   const menu = [
+    ...(c.isMine && onEdit ? [{ label: 'Sửa bình luận', onSelect: onEdit }] : []),
     ...(c.isMine ? [{ label: 'Xoá bình luận', danger: true, onSelect: () => onDelete(c) }] : []),
     ...(canModerate && !c.isMine ? [{ label: c.isHidden ? 'Bỏ ẩn bình luận' : 'Ẩn bình luận', onSelect: () => onModerate(c, !c.isHidden) }] : []),
   ]
@@ -26,6 +32,10 @@ export default function CommentItem({ c, canModerate, now, onDelete, onModerate,
         <Avatar name={c.author.name} url={c.author.avatarUrl} size={32} />
       </PersonLink>
       <div className="cs-cmt-main">
+        {editing && saveEdit ? (
+          <Composer idBase={`cs-edit-${c.id}`} placeholder="Sửa bình luận…" initial={c.body} submitLabel="Lưu bình luận" me={null} autoFocus
+            onSubmit={async b => { const e = await saveEdit(b); if (!e) onEditDone?.(); return e }} onCancel={onEditDone} />
+        ) : (
         <div className="cs-cmt-bubble">
           <div className="cs-cmt-head">
             <PersonLink userId={c.author.userId} onOpen={onOpenProfile} label={`Trang cá nhân của ${c.author.name}`} className="cs-cmt-author">
@@ -46,6 +56,7 @@ export default function CommentItem({ c, canModerate, now, onDelete, onModerate,
             </div>
           )}
         </div>
+        )}
         <div className="cs-cmt-meta">
           <time dateTime={c.createdAt}>{relativeTime(c.createdAt, now)}</time>
           <MoreMenu label="Tuỳ chọn bình luận" items={menu} />
