@@ -46,7 +46,7 @@
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>TVA Guitar dùng microphone để nhận diện cao độ khi lên dây đàn và ghi lại tiếng đàn khi bạn luyện tập (bản thu này chỉ lưu tạm trên thiết bị). Khi bạn nói yêu cầu bài tập cho Piano Journey, đoạn ghi âm ngắn đó được gửi đi để chuyển thành chữ, rồi xoá ngay sau khi xử lý.</string>
+	<string>TVA Guitar dùng microphone để nhận diện cao độ khi lên dây đàn và ghi lại tiếng đàn khi bạn luyện tập (bản thu luyện tập chỉ lưu tạm trên thiết bị). Khi bạn nói yêu cầu bài tập cho Piano Journey, đoạn ghi âm ngắn đó được gửi đi để chuyển thành chữ, rồi xoá ngay sau khi xử lý. Trong Studio Ban Nhạc, khi bạn dừng thu, bản thu sẽ tự động được tải lên dự án Band để các thành viên có quyền truy cập nghe lại.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>TVA Guitar có thể dùng camera để quay video luyện tập và nộp bài.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>

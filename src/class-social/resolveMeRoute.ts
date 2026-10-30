@@ -154,8 +154,10 @@ export const CHAT_WITH_PREFIX = CHAT_PREFIX + 'u/'
 /** Nhóm chat của Band: /me/chat/b/<band id>. Trong ứng dụng, id hội thoại của nhóm là `band:<band id>` (không lẫn với hội thoại cá nhân). */
 export const CHAT_BAND_PREFIX = CHAT_PREFIX + 'b/'
 export const BAND_CONVERSATION_PREFIX = 'band:'
-/** Class 2.0 — kênh thông báo hệ thống (cố định, không phải UUID hội thoại) */
+/** Đường dẫn CŨ của thông báo hệ thống (khi còn nằm trong Trò chuyện) — vẫn nhận (bookmark, thông báo cũ, app Mobile) và chuyển sang NOTICES_PATH, không bao giờ 404 */
 export const CHAT_SYSTEM_PATH = CHAT_PREFIX + 'system'
+/** Thông báo = khu vực RIÊNG, tách khỏi Trò chuyện (chuông trên thanh trên) */
+export const NOTICES_PATH = '/me/notices'
 
 export function chatConversationPath(conversationId: string): string {
   if (conversationId.startsWith(BAND_CONVERSATION_PREFIX)) return CHAT_BAND_PREFIX + conversationId.slice(BAND_CONVERSATION_PREFIX.length)
@@ -185,7 +187,7 @@ export function chatWithUserIdFromPath(pathname: string): string | null {
 export type MeView =
   | { kind: 'section'; section: SocialSection }
   | { kind: 'profile'; userId: string }
-  | { kind: 'thread'; threadId: string }
+  | { kind: 'thread'; threadId: string; focus?: 'ket-qua' | 'bai-moi' }   // focus: chỉ Mobile (không có URL); Web đọc ?focus= từ URL
   | { kind: 'queue' }
   | { kind: 'classes' }
   | { kind: 'class'; classId: string }
@@ -196,7 +198,8 @@ export type MeView =
   | { kind: 'bandAdmin'; slug: string }
   | { kind: 'chatConversation'; conversationId: string }
   | { kind: 'chatWith'; userId: string }
-  | { kind: 'chatSystem' }
+  | { kind: 'chatSystem' }   // đường cũ → canonicalView() đổi sang 'notices'
+  | { kind: 'notices' }
 
 export function viewFromPath(pathname: string): MeView {
   const userId = profileUserIdFromPath(pathname)
@@ -214,6 +217,7 @@ export function viewFromPath(pathname: string): MeView {
   const bandSlug = bandAdminSlugFromPath(pathname)
   if (bandSlug) return { kind: 'bandAdmin', slug: bandSlug }
   if (pathname.replace(/\/+$/, '') === CHAT_SYSTEM_PATH) return { kind: 'chatSystem' }
+  if (pathname.replace(/\/+$/, '') === NOTICES_PATH) return { kind: 'notices' }
   const chatId = chatConversationIdFromPath(pathname)
   if (chatId) return { kind: 'chatConversation', conversationId: chatId }
   const chatWith = chatWithUserIdFromPath(pathname)
@@ -240,6 +244,7 @@ export function sameView(a: MeView, b: MeView): boolean {
     case 'chatConversation': return b.kind === 'chatConversation' && a.conversationId === b.conversationId
     case 'chatWith': return b.kind === 'chatWith' && a.userId === b.userId
     case 'chatSystem': return b.kind === 'chatSystem'
+    case 'notices': return b.kind === 'notices'
     default: return b.kind === 'section' && a.section === b.section
   }
 }
@@ -259,8 +264,14 @@ export function viewPath(view: MeView): string {
     case 'chatConversation': return chatConversationPath(view.conversationId)
     case 'chatWith': return chatWithPath(view.userId)
     case 'chatSystem': return CHAT_SYSTEM_PATH
+    case 'notices': return NOTICES_PATH
     default: return SECTION_PATHS[view.section]
   }
+}
+
+/** Đường cũ /me/chat/system → màn Thông báo riêng (giữ tương thích, không route chết) */
+export function canonicalView(view: MeView): MeView {
+  return view.kind === 'chatSystem' ? { kind: 'notices' } : view
 }
 
 /** Link sâu nên GIỮ qua bước đăng nhập (khách → đăng nhập tại chỗ → đúng trang). */

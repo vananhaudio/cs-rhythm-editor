@@ -14,8 +14,10 @@ import TeacherComposer from './TeacherComposer'
 
 type Load = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; thread: ThreadDetail }
 
-export default function ThreadPage({ threadId, isTeacher, onBack, onOpenQueue, onOpenProfile, onOpenClass, onOpenSession }: {
+export default function ThreadPage({ threadId, isTeacher, onBack, onOpenQueue, onOpenProfile, onOpenClass, onOpenSession, focus }: {
   threadId: string
+  /** Mobile: điểm cuộn từ thông báo (Web đọc ?focus= trên URL) */
+  focus?: 'ket-qua' | 'bai-moi'
   isTeacher: boolean
   onBack: () => void
   onOpenQueue?: () => void
@@ -52,7 +54,7 @@ export default function ThreadPage({ threadId, isTeacher, onBack, onOpenQueue, o
 
   const back = (
     <div className="lt-actions">
-      <button type="button" className="cs-btn cs-btn-ghost cs-btn-sm" onClick={onBack}><ArrowLeft size={16} /> Quay lại</button>
+      <button type="button" className="cs-btn cs-btn-ghost cs-btn-sm cs-back-btn" onClick={onBack}><ArrowLeft size={16} /> Quay lại</button>
       {isTeacher && onOpenQueue && (
         <button type="button" className="cs-btn cs-btn-ghost cs-btn-sm" onClick={onOpenQueue}><ListChecks size={16} /> Hàng đợi Trả/Hỏi bài</button>
       )}
@@ -94,7 +96,7 @@ export default function ThreadPage({ threadId, isTeacher, onBack, onOpenQueue, o
   return (
     <div className="cs-col cs-home lt-page">
       {back}
-      <ThreadView thread={t} canModerate={isTeacher} onModerate={moderateEvent} onOpenProfile={onOpenProfile} showIdentity />
+      <ThreadView thread={t} canModerate={isTeacher} onModerate={moderateEvent} onOpenProfile={onOpenProfile} focus={focus} showIdentity />
       {cp?.classId && (onOpenSession || onOpenClass) && (t.isMine || !isTeacher) && (
         <div className="lt-actions">
           <button type="button" className="lt-btn is-ghost"

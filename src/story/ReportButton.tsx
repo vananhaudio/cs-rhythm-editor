@@ -60,7 +60,7 @@ export default function ReportButton({ storyId }: { storyId: string }) {
                 <div className="rp-done-icon">✓</div>
                 <h3>Cảm ơn bạn đã báo</h3>
                 <p className="rp-done-text">
-                  Ban biên tập sẽ xem lại câu chuyện này <b>trong vòng 24 giờ</b> và gỡ xuống
+                  Ban biên tập sẽ xem lại câu chuyện này và gỡ xuống
                   nếu nội dung thật sự không phù hợp.
                 </p>
                 <button className="rp-btn rp-btn-primary" onClick={close}>Đóng</button>
@@ -68,7 +68,7 @@ export default function ReportButton({ storyId }: { storyId: string }) {
             ) : (
               <>
                 <h3>Báo cáo câu chuyện này</h3>
-                <p className="rp-sub">Bạn thấy điều gì không ổn? Ban biên tập sẽ đọc lại trong vòng 24 giờ.</p>
+                <p className="rp-sub">Bạn thấy điều gì không ổn? Ban biên tập sẽ đọc lại.</p>
 
                 <div className="rp-reasons">
                   {REASONS.map(r => (

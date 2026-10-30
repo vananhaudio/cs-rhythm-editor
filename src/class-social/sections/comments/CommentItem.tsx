@@ -6,6 +6,8 @@ import { Avatar, MoreMenu, PersonLink } from '../../ui'
 import ResourceCard from './ResourceCard'
 import { IdentityBadges } from '../../identity/IdentityBadges'
 import ExpandableText from '../ExpandableText'
+import SafetyMenu from '../../../class-safety/SafetyMenu'
+import { useIsBlocked } from '../../../class-safety/blockedStore'
 
 export default function CommentItem({ c, canModerate, now, onDelete, onModerate, onOpenProfile }: {
   c: Comment
@@ -16,6 +18,8 @@ export default function CommentItem({ c, canModerate, now, onDelete, onModerate,
   onModerate: (c: Comment, hidden: boolean) => void
 }) {
   const teacher = c.author.isTeacher
+  const blocked = useIsBlocked(c.author.userId)
+  if (blocked && !c.isMine) return null
   const menu = [
     ...(c.isMine ? [{ label: 'Xoá bình luận', danger: true, onSelect: () => onDelete(c) }] : []),
     ...(canModerate && !c.isMine ? [{ label: c.isHidden ? 'Bỏ ẩn bình luận' : 'Ẩn bình luận', onSelect: () => onModerate(c, !c.isHidden) }] : []),
@@ -48,7 +52,9 @@ export default function CommentItem({ c, canModerate, now, onDelete, onModerate,
         </div>
         <div className="cs-cmt-meta">
           <time dateTime={c.createdAt}>{relativeTime(c.createdAt, now)}</time>
-          <MoreMenu label="Tuỳ chọn bình luận" items={menu} />
+          {c.isMine
+            ? <MoreMenu label="Tuỳ chọn bình luận" items={menu} />
+            : <SafetyMenu label="Tuỳ chọn bình luận" kind="comment" targetId={c.id} userId={c.author.userId} userName={c.author.name} extraItems={menu} />}
         </div>
       </div>
     </li>

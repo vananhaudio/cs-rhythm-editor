@@ -29,8 +29,10 @@ export function ClassRow({ c, onOpen, quiet = false, meta = classMetaLine(c) }: 
   )
 }
 
-export default function ClassesPage({ classes, onOpenClass, onJoined }: {
+export default function ClassesPage({ classes, onOpenClass, onJoined, hideTitle = false }: {
   classes: SocialClasses; onOpenClass: (id: string) => void
+  /** Class Mobile: tiêu đề đã nằm ở phân đoạn "Lớp của tôi" → không lặp lại. Web /me giữ nguyên. */
+  hideTitle?: boolean
   /** Vừa tham gia bằng mã: nạp lại Lớp của tôi/sidebar + danh tính học tập, rồi mở lớp */
   onJoined?: (id: string) => void
 }) {
@@ -43,7 +45,7 @@ export default function ClassesPage({ classes, onOpenClass, onJoined }: {
   const noClass = classes.loaded && classes.mine.length === 0
   return (
     <div className="cs-col cs-home cs-myclasses-page">
-      <h1 className="cs-page-title">Lớp của tôi</h1>
+      {!hideTitle && <h1 className="cs-page-title">Lớp của tôi</h1>}
       {!classes.loaded && <p className="cs-loading" role="status">Đang tải lớp học…</p>}
       {classes.loaded && classes.error && <p className="cs-form-error" role="alert">{classes.error}</p>}
 

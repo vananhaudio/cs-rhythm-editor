@@ -29,17 +29,31 @@ async function rpc<T>(fn: string, args: Record<string, unknown>, ctx?: 'share'):
 /** Hội thoại cá nhân (dm_*) + nhóm Band (bandchat_*). Nhóm Band là phần BỔ SUNG: lỗi/chưa có tính năng ở server → danh sách cá nhân vẫn hiện bình thường. */
 export async function fetchConversations(limit = 50): Promise<Result<ConversationItem[]>> {
   const [r, b] = await Promise.all([
-    rpc<ConversationRow[]>('dm_conversations', { p_limit: limit }),
+    rpc<ConversationRow[]>('dm_conversations_safe', { p_limit: limit }),
     rpc<BandRoomRow[]>('bandchat_rooms', { p_limit: limit }),
   ])
   if (!r.ok) return r
   return { ok: true, value: mergeConversationLists(toConversations(r.value), b.ok ? toBandConversations(b.value) : []) }
 }
 
-export async function fetchUnreadCount(): Promise<Result<number>> {
+/** Chỉ các nhóm Band mình thấy được (bandchat_rooms: thành viên, hoặc Thầy/Admin xem hỗ trợ). Không tạo phòng, chỉ đọc. */
+export async function fetchBandRooms(limit = 50): Promise<Result<ConversationItem[]>> {
+  const b = await rpc<BandRoomRow[]>('bandchat_rooms', { p_limit: limit })
+  return b.ok ? { ok: true, value: toBandConversations(b.value) } : b
+}
+
+/** Chưa đọc tách theo nguồn: dm_unread_count (lỗi → lỗi) và bandchat_unread_count (lỗi/chưa có → 0, như trước). */
+export async function fetchUnreadBreakdown(): Promise<Result<{ dm: number; band: number }>> {
   const [r, b] = await Promise.all([rpc<number>('dm_unread_count', {}), rpc<number>('bandchat_unread_count', {})])
   if (!r.ok) return r
-  return { ok: true, value: Math.max(0, Number(r.value) || 0) + (b.ok ? Math.max(0, Number(b.value) || 0) : 0) }
+  const n = (v: unknown) => Math.max(0, Number(v) || 0)
+  return { ok: true, value: { dm: n(r.value), band: b.ok ? n(b.value) : 0 } }
+}
+
+/** Tổng Trò chuyện (dm + band) — không gồm thông báo hệ thống */
+export async function fetchUnreadCount(): Promise<Result<number>> {
+  const r = await fetchUnreadBreakdown()
+  return r.ok ? { ok: true, value: r.value.dm + r.value.band } : r
 }
 
 /** Thành viên hiện hành của một nhóm Band (id hội thoại dạng `band:<id>`) */
@@ -51,7 +65,7 @@ export async function fetchBandMembers(conversationId: string): Promise<Result<B
 /** Tin của một hội thoại. afterSeq → chỉ tin mới (polling); beforeSeq → trang cũ hơn; không có → trang mới nhất */
 export async function fetchMessages(conversationId: string, opts: { afterSeq?: number; beforeSeq?: number; limit?: number } = {}): Promise<Result<ChatMessage[]>> {
   if (isBandConversation(conversationId)) {
-    const b = await rpc<BandMessageRow[]>('bandchat_messages', {
+    const b = await rpc<BandMessageRow[]>('bandchat_messages_safe', {
       p_band: bandIdOf(conversationId),
       p_after_seq: opts.afterSeq ?? null,
       p_before_seq: opts.beforeSeq ?? null,
@@ -59,7 +73,7 @@ export async function fetchMessages(conversationId: string, opts: { afterSeq?: n
     })
     return b.ok ? { ok: true, value: toBandMessages(b.value) } : b
   }
-  const r = await rpc<MessageRow[]>('dm_messages', {
+  const r = await rpc<MessageRow[]>('dm_messages_safe', {
     p_conversation: conversationId,
     p_after_seq: opts.afterSeq ?? null,
     p_before_seq: opts.beforeSeq ?? null,

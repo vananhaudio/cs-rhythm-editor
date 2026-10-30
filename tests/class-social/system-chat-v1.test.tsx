@@ -9,11 +9,11 @@ import { readFileSync } from "node:fs";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
-  NOTICE_TARGET_SEARCH, SYSTEM_FOOTNOTE, SYSTEM_NAME, mergeNotices, toSystemNotices, toSystemSummary,
+  NOTICE_TARGET_SEARCH, SYSTEM_FOOTNOTE, mergeNotices, toSystemNotices, toSystemSummary,
   type SystemNotice,
 } from "../../src/class-social/chat/chatModel";
 import ConversationList from "../../src/class-social/chat/ConversationList";
-import { CHAT_SYSTEM_PATH, keepsPathForGuest, sameView, viewFromPath, viewPath } from "../../src/class-social/resolveMeRoute";
+import { CHAT_SYSTEM_PATH, NOTICES_PATH, canonicalView, keepsPathForGuest, sameView, viewFromPath, viewPath } from "../../src/class-social/resolveMeRoute";
 void React;
 
 const read = (f: string) => readFileSync(new URL(`../../${f}`, import.meta.url), "utf8");
@@ -58,6 +58,12 @@ test("Route: /me/chat/system là màn riêng; không nhầm với UUID hội tho
   assert.equal(sameView(v, { kind: "chatSystem" }), true);
   assert.equal(sameView(v, { kind: "section", section: "chat" }), false);
   assert.deepEqual(viewFromPath("/me/chat"), { kind: "section", section: "chat" });
+  assert.deepEqual(canonicalView(v), { kind: "notices" }, "đường cũ chuyển sang màn Thông báo riêng, không route chết");
+  assert.deepEqual(viewFromPath("/me/notices"), { kind: "notices" });
+  assert.equal(viewPath({ kind: "notices" }), NOTICES_PATH);
+  assert.equal(NOTICES_PATH, "/me/notices");
+  assert.equal(sameView({ kind: "notices" }, { kind: "chatSystem" }), false);
+  assert.deepEqual(canonicalView({ kind: "section", section: "chat" }), { kind: "section", section: "chat" }, "route khác không đổi");
   assert.equal(keepsPathForGuest(v), false, "khách không giữ link kênh thông báo (đích bài trả thì có: kind thread)");
   assert.equal(keepsPathForGuest({ kind: "thread", threadId: TID }), true);
 });
@@ -65,28 +71,17 @@ test("Route: /me/chat/system là màn riêng; không nhầm với UUID hội tho
 const noop = () => {};
 const items = [{ id: "c1", peerId: "p1", name: "Bạn A", avatarUrl: null, isTeacher: false, lastSeq: 1, lastBody: "chào", lastMine: false, lastAt: "2026-10-12T00:00:00Z", unread: 2, canSend: true }];
 
-test("Danh sách: có hàng Class 2.0 (nhận diện hệ thống, không avatar cá nhân) + chưa đọc; hàng cá nhân giữ nguyên", () => {
+test("Danh sách Trò chuyện CHỈ có hội thoại thật — không còn hàng Class 2.0 / thông báo hệ thống", () => {
   const html = renderToStaticMarkup(
-    <ConversationList state={{ status: "ready", items }} selectedId={null} onSelect={noop} onRetry={noop} onOpenFriends={noop}
-      system={{ lastSeq: 4, lastBody: "Bài trả Buổi 02 của bạn đã được chấm.", lastAt: "2026-10-12T01:00:00Z", unread: 3 }} systemActive={false} onSelectSystem={noop} />,
+    <ConversationList state={{ status: "ready", items }} selectedId={null} onSelect={noop} onRetry={noop} onOpenFriends={noop} />,
   );
-  assert.match(html, new RegExp(SYSTEM_NAME));
-  assert.match(html, /Bài trả Buổi 02 của bạn đã được chấm\./);
-  assert.match(html, /cs-chat-item-system/);
-  assert.match(html, /Class 2\.0, thông báo chính thức, 3 chưa đọc/);
   assert.match(html, /Bạn A/, "hội thoại cá nhân vẫn còn");
-  assert.ok(html.indexOf("Class 2.0") < html.indexOf("Bạn A"), "kênh hệ thống ghim trên cùng, không đảo thứ tự cuộc trò chuyện cá nhân");
-});
-
-test("Danh sách: system=null (chưa có tính năng) → không hiện mục; hệ thống rỗng → 'Chưa có thông báo'", () => {
-  const none = renderToStaticMarkup(
-    <ConversationList state={{ status: "ready", items }} selectedId={null} onSelect={noop} onRetry={noop} onOpenFriends={noop} system={null} onSelectSystem={noop} />);
-  assert.doesNotMatch(none, /Class 2\.0/);
+  assert.doesNotMatch(html, /Class 2\.0|cs-chat-item-system|thông báo chính thức/);
   const empty = renderToStaticMarkup(
-    <ConversationList state={{ status: "ready", items: [] }} selectedId={null} onSelect={noop} onRetry={noop} onOpenFriends={noop}
-      system={{ lastSeq: 0, lastBody: "", lastAt: "", unread: 0 }} onSelectSystem={noop} />);
-  assert.match(empty, /Chưa có thông báo/);
-  assert.doesNotMatch(empty, /cs-nav-badge/);
+    <ConversationList state={{ status: "ready", items: [] }} selectedId={null} onSelect={noop} onRetry={noop} onOpenFriends={noop} />);
+  assert.doesNotMatch(empty, /Class 2\.0|Chưa có thông báo/);
+  const list = code("src/class-social/chat/ConversationList.tsx");
+  assert.equal(/SystemSummary|SystemItem|onSelectSystem|BellRing/.test(list), false, "mã danh sách không còn nhánh thông báo");
 });
 
 test("Rào chắn phạm vi: màn Class 2.0 chỉ đọc — không ô nhập/gửi, không ghi, đích chỉ là thread; API chỉ 3 RPC", () => {
@@ -102,7 +97,7 @@ test("Rào chắn phạm vi: màn Class 2.0 chỉ đọc — không ô nhập/g�
   // Mở danh sách KHÔNG tự đánh dấu đã đọc: markSystemRead chỉ nằm trong hook của MÀN Class 2.0
   const hooks = code("src/class-social/chat/useChat.ts");
   assert.equal((hooks.match(/markSystemRead\(/g) ?? []).length, 1);
-  assert.match(hooks.slice(hooks.indexOf("export function useSystemNotices")), /markSystemRead\(top\)/);
+  assert.match(hooks.slice(hooks.indexOf("export function useSystemNotices")), /markSystemRead\(seq\)/);
   assert.equal(/markSystemRead|markRead/.test(code("src/class-social/chat/ConversationList.tsx")), false);
   assert.equal(NOTICE_TARGET_SEARCH, "?focus=ket-qua");
 });

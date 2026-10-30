@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:native": "tsc -b && vite build --mode native && node scripts/build-teamlab-embed.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
     "mira:content": "node scripts/mira-content.mjs",
@@ -28,6 +29,9 @@
     "test:e2e-students-guard": "node tests/e2e-students-guard/run.mjs",
     "test:admin-ai-schedule": "tsc -p tests/admin-ai-schedule/tsconfig.json && TZ=Asia/Ho_Chi_Minh node --experimental-strip-types --test tests/admin-ai-schedule/schedule.test.ts",
     "test:route-guard": "tsc -p tests/route-guard/tsconfig.json && node --experimental-strip-types --test tests/route-guard/teacherRoute.test.ts tests/route-guard/authSession.test.ts tests/route-guard/authReturn.test.ts",
+    "test:class-mobile": "tsc -p tests/class-mobile/tsconfig.json && tsx --tsconfig tsconfig.app.json --test tests/class-mobile/*.test.ts",
+    "test:class-safety": "tsc -p tests/class-safety/tsconfig.json && tsx --tsconfig tsconfig.app.json --test tests/class-safety/*.test.ts",
+    "test:ios-payment": "tsc -p tests/ios-payment/tsconfig.json && tsx --tsconfig tsconfig.app.json --test tests/ios-payment/*.test.ts",
     "test:student360": "tsc -p tests/student360/tsconfig.json && tsx --tsconfig tsconfig.app.json --test tests/student360/*.test.ts tests/student360/*.test.tsx",
     "test:class-social": "tsc -p tests/class-social/tsconfig.json && tsx --tsconfig tsconfig.app.json --test tests/class-social/*.test.ts tests/class-social/*.test.tsx",
     "test:nhipphach-layout": "tsc -p tests/nhipphach-layout/tsconfig.json && node --experimental-strip-types --test tests/nhipphach-layout/layout.test.ts tests/nhipphach-layout/architecture.test.ts",

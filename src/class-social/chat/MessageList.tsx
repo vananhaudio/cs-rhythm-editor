@@ -4,11 +4,16 @@ import { useCallback, useLayoutEffect, useRef, useState } from 'react'
 import { ArrowDown } from 'lucide-react'
 import { Avatar } from '../ui'
 import ShareMessageCard from './ShareMessageCard'
-import { firstSeqOf, lastSeqOf, layoutMessages, type ChatMessage, type PendingMessage } from './chatModel'
+import SafetyMenu from '../../class-safety/SafetyMenu'
+import { useBlockedSet } from '../../class-safety/blockedStore'
+import { messageReportKind } from '../../class-safety/model'
+import { isBandConversation, firstSeqOf, lastSeqOf, layoutMessages, type ChatMessage, type PendingMessage } from './chatModel'
 
 const NEAR_BOTTOM = 96
 
-export default function MessageList({ messages, pending, hasMore, loadingOlder, onLoadOlder, onRetry, onDiscard }: {
+export default function MessageList({ conversationId, messages, pending, hasMore, loadingOlder, onLoadOlder, onRetry, onDiscard }: {
+  /** Id hội thoại (dm hoặc band:<id>) — để Báo cáo tin của người khác */
+  conversationId?: string
   messages: ChatMessage[]
   pending: PendingMessage[]
   hasMore: boolean
@@ -51,7 +56,9 @@ export default function MessageList({ messages, pending, hasMore, loadingOlder, 
 
   // Card share tải xong → cao hơn khung chờ: đang ở cuối thì giữ ở cuối
   const settle = useCallback(() => { const el = box.current; if (el && stick.current) el.scrollTop = el.scrollHeight }, [])
-  const rows = layoutMessages(messages)
+  const blockedSet = useBlockedSet()
+  const visible = blockedSet.size === 0 ? messages : messages.filter(m => m.mine || !m.sender?.id || !blockedSet.has(m.sender.id))
+  const rows = layoutMessages(visible)
   const lastMine = messages.length > 0 && messages[messages.length - 1].mine
   return (
     <div className="cs-chat-scroll-wrap">
@@ -68,6 +75,10 @@ export default function MessageList({ messages, pending, hasMore, loadingOlder, 
           const content = m.ref
             ? <div className="cs-msg-share"><ShareMessageCard shareRef={m.ref} onSettle={settle} /></div>
             : <div className="cs-msg-bubble">{m.body}</div>
+          const menu = !m.mine && conversationId && (
+            <SafetyMenu className="csafe-msg-menu" label="Tuỳ chọn tin nhắn" kind={messageReportKind(isBandConversation(conversationId))}
+              targetId={`${conversationId}:${m.seq}`} userId={who?.id || null} userName={who?.name} noBlock={!who?.id} />
+          )
           return (
             <div key={m.seq}>
               {label && <div className="cs-chat-divider">{label}</div>}
@@ -80,9 +91,10 @@ export default function MessageList({ messages, pending, hasMore, loadingOlder, 
                         {!cont && <div className="cs-msg-sender">{who.name}</div>}
                         {content}
                       </div>
+                      {menu}
                     </>
                   )
-                  : content}
+                  : <>{content}{menu}</>}
               </div>
             </div>
           )

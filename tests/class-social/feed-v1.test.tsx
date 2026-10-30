@@ -50,7 +50,7 @@ test("API: Dành cho bạn gọi ĐÚNG social_feed (không đổi); hai góc nh
   const api = readFileSync("src/class-social/posts/postsApi.ts", "utf8");
   assert.match(api, /if \(scope === 'for_you'\) return fetchSocialFeedPage\(cursor\)/);
   const scoped = api.slice(api.indexOf("export async function fetchScopedFeedPage"), api.indexOf("/** Trả bài"));
-  assert.match(scoped, /rpc\('social_feed_scoped', \{\s*p_scope: scope,\s*p_before:[^,]+,\s*p_before_key:[^,]+,\s*p_limit: FEED_PAGE,\s*\}\)/);
+  assert.match(scoped, /rpc\('social_feed_scoped_safe', \{\s*p_scope: scope,\s*p_before:[^,]+,\s*p_before_key:[^,]+,\s*p_limit: FEED_PAGE,\s*\}\)/);
   assert.equal(/user_id|p_friend|p_class|is_teacher|auth\./.test(scoped.replace(/\/\/.*$/gm, "")), false, "không gửi danh tính / quyền từ client");
   const hook = readFileSync("src/class-social/posts/useCommunityFeed.ts", "utf8");
   assert.match(hook, /usePostsFeed\(scope === 'my_classes' \? classesFetch : SCOPED_FETCHERS\[scope\]\)/, "mỗi góc nhìn một hàm tải ổn định → đổi tab = đổi nguồn, bỏ kết quả về muộn");

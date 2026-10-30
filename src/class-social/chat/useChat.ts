@@ -1,21 +1,23 @@
 // Hook Trò chuyện V1a. Chỉ biết interface ChatLive (polling hôm nay, realtime sau này) — không đụng timer/mạng trực tiếp.
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
-import { fetchConversations, fetchMessages, fetchSystemNotices, fetchSystemSummary, fetchUnreadCount, markRead, markSystemRead, sendMessage } from './chatApi'
+import { fetchConversations, fetchMessages, fetchSystemNotices, fetchSystemSummary, fetchUnreadBreakdown, markRead, markSystemRead, sendMessage } from './chatApi'
 import { pollingLive, type ChatLive } from './chatLive'
 import { createDmSoundTracker, createNoticeSoundGate, getSoundEnabled, installAudioUnlock, onNoticeAudioReady, playPendingNotice, subscribeSound, tryResumeNoticeAudio, writeSoundEnabled } from './noticeSound'
-import { PAGE, lastSeqOf, firstSeqOf, mergeMessages, mergeNotices, normalizeBody, NOTICE_PAGE, type ChatMessage, type ConversationItem, type PendingMessage, type SystemNotice, type SystemSummary } from './chatModel'
+import { PAGE, lastSeqOf, firstSeqOf, mergeMessages, buildUnread, mergeNotices, applyReadCursor, normalizeBody, NOTICE_PAGE, type ChatMessage, type ConversationItem, type PendingMessage, type SystemNotice, type SystemSummary, type UnreadCounts } from './chatModel'
 
-/** Badge menu Trò chuyện — MỘT nguồn ở SignedInShell: hội thoại cá nhân chưa đọc (dm) + thông báo Class 2.0 chưa đọc (tách trạng thái đọc). */
+/** Chưa đọc — MỘT nguồn ở shell, TÁCH theo nguồn: `unread.dm` · `unread.band` · `unread.notice`.
+ *  `unread.chatTotal` = dm + band (badge Trò chuyện); `unread.noticeTotal` = thông báo hệ thống (badge chuông).
+ *  Hai badge không bao giờ cộng vào nhau. `count` = chatTotal (tương thích nơi dùng cũ; KHÔNG còn gồm thông báo). */
 export function useChatUnread(live: ChatLive = pollingLive) {
-  const [dm, setDm] = useState(0)
+  const [chat, setChat] = useState({ dm: 0, band: 0 })
   const [system, setSystem] = useState<SystemSummary | null>(null)
   // Sound V1.2: gate DM riêng (theo lastSeq từng hội thoại), tạo lại mỗi lần đăng ký → đăng nhập lại/đổi live = mốc mới
   const dmTracker = useRef(createDmSoundTracker())
   useEffect(() => {
-    if (!live.watchInbox) return live.watchUnread(setDm)       // live không có hộp thư (test/realtime cũ): chỉ badge
+    if (!live.watchInbox) return live.watchUnread(n => setChat({ dm: n, band: 0 }))   // live không có hộp thư (test/realtime cũ): chỉ badge, tổng Trò chuyện
     dmTracker.current = createDmSoundTracker()
-    return live.watchInbox((rows, unread) => {
-      setDm(unread)
+    return live.watchInbox((rows, unread, split) => {
+      setChat(split ?? { dm: unread, band: 0 })
       dmTracker.current.observe(rows)
       playPendingNotice(dmTracker.current.gate)
     })
@@ -41,12 +43,14 @@ export function useChatUnread(live: ChatLive = pollingLive) {
       window.removeEventListener('pageshow', retry)
     }
   }, [])
+  // Làm mới: nguồn nào lỗi thì GIỮ số cũ của nguồn đó (không về 0 giả); thông báo lỗi → ẩn như trước
   const refresh = useCallback(async () => {
-    const [a, b] = await Promise.all([fetchUnreadCount(), fetchSystemSummary()])
-    if (a.ok) setDm(a.value)
+    const [a, b] = await Promise.all([fetchUnreadBreakdown(), fetchSystemSummary()])
+    if (a.ok) setChat(a.value)
     setSystem(b.ok ? b.value : null)
   }, [])
-  return { count: dm + (system?.unread ?? 0), system, refresh }
+  const unread: UnreadCounts = buildUnread(chat.dm, chat.band, system?.unread ?? 0)
+  return { count: unread.chatTotal, unread, system, refresh }
 }
 
 /** Công tắc "Âm thanh thông báo" (lưu trên thiết bị). Bật bằng thao tác người dùng ⇒ cũng mở khoá âm thanh trình duyệt. */
@@ -202,9 +206,13 @@ export type SystemNoticesState = {
   loadingOlder: boolean
   loadOlder: () => Promise<void>
   reload: () => void
+  /** Người dùng chọn xem thông báo `seq` → đánh dấu đã đọc tới seq (con trỏ: gồm cả các thông báo cũ hơn) */
+  markRead: (seq: number) => void
+  /** Chủ động "Đánh dấu tất cả đã đọc" */
+  markAllRead: () => void
 }
 
-/** Màn Class 2.0: trang mới nhất → làm mới định kỳ → đánh dấu đã đọc tới thông báo mới nhất (chỉ khi màn này đang mở). */
+/** Màn Thông báo: trang mới nhất → làm mới định kỳ. KHÔNG tự đánh dấu đã đọc khi mở (chỉ khi người dùng chọn / bấm đánh dấu tất cả). */
 export function useSystemNotices(onActivity: () => void): SystemNoticesState {
   const [state, setState] = useState<{ status: 'loading' | 'ready' | 'error'; error: string | null; notices: SystemNotice[]; hasMore: boolean }>(
     { status: 'loading', error: null, notices: [], hasMore: false })
@@ -233,13 +241,17 @@ export function useSystemNotices(onActivity: () => void): SystemNoticesState {
     return stop
   }, [])
 
-  // Đã đọc: chỉ khi màn đang mở, tới thông báo mới nhất đã hiện; chỉ tăng, không lặp lại
-  useEffect(() => {
-    const top = state.notices.at(-1)?.seq ?? 0
-    if (state.status !== 'ready' || top === 0 || top <= marked.current) return
-    marked.current = top
-    void markSystemRead(top).then(r => { if (r.ok) onActivity(); else marked.current = 0 })
-  }, [state.status, state.notices, onActivity])
+  // Đã đọc theo CON TRỎ (server lưu last_read_seq, chỉ tăng): KHÔNG tự đánh dấu khi mở màn/popover.
+  // Chỉ khi người dùng chọn xem một thông báo (hàm đọc theo seq) hoặc bấm "Đánh dấu tất cả đã đọc".
+  const commitRead = useCallback((seq: number) => {
+    if (!(seq > marked.current)) return
+    const prev = marked.current
+    marked.current = seq
+    setState(s => ({ ...s, notices: applyReadCursor(s.notices, seq) }))
+    void markSystemRead(seq).then(r => { if (r.ok) onActivity(); else marked.current = prev })
+  }, [onActivity])
+  const markRead = useCallback((seq: number) => commitRead(seq), [commitRead])
+  const markAllRead = useCallback(() => commitRead(noticesRef.current.at(-1)?.seq ?? 0), [commitRead])
 
   const loadOlder = useCallback(async () => {
     const first = noticesRef.current[0]?.seq
@@ -252,5 +264,5 @@ export function useSystemNotices(onActivity: () => void): SystemNoticesState {
   }, [loadingOlder])
 
   const reload = useCallback(() => { setState(s => ({ ...s, status: 'loading', error: null })); setRev(x => x + 1) }, [])
-  return { ...state, loadingOlder, loadOlder, reload }
+  return { ...state, loadingOlder, loadOlder, reload, markRead, markAllRead }
 }

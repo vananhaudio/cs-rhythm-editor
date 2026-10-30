@@ -9,6 +9,7 @@ import ChatHeader from './ChatHeader'
 import Composer from './Composer'
 import MessageList from './MessageList'
 import { useConversation } from './useChat'
+import SafetyMenu from '../../class-safety/SafetyMenu'
 
 export type Peer = {
   id: string; name: string; avatarUrl: string | null; isTeacher: boolean
@@ -39,7 +40,8 @@ export default function ConversationView({ id, peer, canSend, onBack, onOpenProf
         onBack={onBack}
         onOpenProfile={peer ? (isBand ? () => setShowMembers(v => !v) : () => onOpenProfile(peer.id)) : undefined}
         tag={isBand ? `Nhóm Band${peer?.readOnly === 'archived' ? ' · Lưu trữ' : peer?.readOnly === 'support' ? ' · Chế độ hỗ trợ' : ''}${peer?.memberCount ? ` · ${peer.memberCount} thành viên` : ''}` : undefined}
-        actionLabel={isBand && peer ? `Thành viên nhóm ${peer.name}` : undefined} />
+        actionLabel={isBand && peer ? `Thành viên nhóm ${peer.name}` : undefined}
+        menu={!isBand && peer ? <SafetyMenu label={`Tuỳ chọn về ${peer.name}`} kind="profile" targetId={peer.id} userId={peer.id} userName={peer.name} /> : undefined} />
       {isBand && showMembers && <BandMembers id={id} projectId={peer?.projectId ?? null} onClose={() => setShowMembers(false)} onOpenProfile={onOpenProfile} />}
 
       {c.status === 'loading' && <div className="cs-chat-body-state"><div className="cs-spinner" role="status" aria-label="Đang tải" /></div>}
@@ -58,7 +60,7 @@ export default function ConversationView({ id, peer, canSend, onBack, onOpenProf
 
       {c.status === 'ready' && (
         <>
-          <MessageList messages={c.messages} pending={c.pending} hasMore={c.hasMore} loadingOlder={c.loadingOlder}
+          <MessageList conversationId={id} messages={c.messages} pending={c.pending} hasMore={c.hasMore} loadingOlder={c.loadingOlder}
             onLoadOlder={() => void c.loadOlder()} onRetry={c.retry} onDiscard={c.discard} />
           {c.error && c.pending.every(p => p.state !== 'failed') && <p className="cs-form-error cs-chat-error" role="alert">{c.error}</p>}
           {canSend === false
