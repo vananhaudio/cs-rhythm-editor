@@ -2,12 +2,13 @@
 // Sơ đồ DỌC: mỗi buổi một dòng "Buổi 01 · Tiêu đề" (thu gọn); bài trả hiện trạng thái + nút NGAY tại checkpoint.
 import type { ReactNode } from 'react'
 import { checkpointUi, currentSessionNo, lockedHint, pad2, requiredProgress, sessionBadge, sessionLabel, sessionPace, sessionPhase, PACE_DOT,
-  type CheckpointState, type ClassLearningState, type LearnMode, type SessionState } from '../../classLearning/progress'
+  type CheckpointState, type ClassLearningState, type LearnMode, type SessionState, type UnlockPolicy } from '../../classLearning/progress'
 
-export function SessionRowHead({ s, role, now, paceDays, expanded, current, onToggle, mode = 'checkpoint', disabled = false }: {
+export function SessionRowHead({ s, role, now, paceDays, expanded, current, onToggle, mode = 'checkpoint', policy = 'sequential', disabled = false }: {
   s: SessionState
   role: 'learner' | 'teacher'
   mode?: LearnMode
+  policy?: UnlockPolicy
   /** buổi khoá với người học: thấy trên bản đồ nhưng không vào học */
   disabled?: boolean
   now: Date
@@ -16,8 +17,8 @@ export function SessionRowHead({ s, role, now, paceDays, expanded, current, onTo
   current: boolean
   onToggle: () => void
 }) {
-  const phase = sessionPhase(s, role, mode)
-  const badge = sessionBadge(s, role, now, paceDays, mode)
+  const phase = sessionPhase(s, role, mode, policy)
+  const badge = sessionBadge(s, role, now, paceDays, mode, policy)
   return (
     <button type="button" className={'cs-learn-row is-' + phase + (current ? ' is-current' : '') + (s.published ? '' : ' is-pending')} aria-current={current ? 'step' : undefined} data-selected={expanded || undefined}
       disabled={disabled} aria-disabled={disabled || undefined} onClick={onToggle} id={`buoi-${pad2(s.no)}`}>

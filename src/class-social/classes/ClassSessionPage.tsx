@@ -62,11 +62,11 @@ export default function ClassSessionPage({ classId, sessionNo, isTeacher = false
   if (!learn) return shell(<>{head(null)}<p className="cs-learn-locked">Bạn chưa xem được giáo trình của lớp này.</p></>)
   if (!s) return shell(<>{head(null)}<p className="cs-learn-locked">Không tìm thấy buổi này trong lớp.</p></>)
 
-  const phase = sessionPhase(s, learn.role, learn.mode)
+  const phase = sessionPhase(s, learn.role, learn.mode, learn.unlockPolicy)
   const idx = learn.sessions.indexOf(s)
   const prev = learn.sessions[idx - 1] ?? null
   const next = learn.sessions[idx + 1] ?? null
-  const canEnter = (x: SessionState | null) => !!x && sessionPhase(x, learn.role, learn.mode) !== 'locked'
+  const canEnter = (x: SessionState | null) => !!x && sessionPhase(x, learn.role, learn.mode, learn.unlockPolicy) !== 'locked'
   const nav = (
     <nav className="cs-session-nav" aria-label="Chuyển buổi">
       {prev ? <button type="button" className="cs-btn cs-btn-ghost cs-btn-sm" disabled={!canEnter(prev)} onClick={() => onOpenSession(prev.no)}><ArrowLeft size={16} /> Buổi {pad2(prev.no)}</button> : <span />}
