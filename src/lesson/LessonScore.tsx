@@ -30,7 +30,8 @@ export default function LessonScore({ tex, barsPerRow = 4, zoomable = true }: Pr
   // nhạc rộng quá khổ và bị cắt mất mép phải.)
   // Điện thoại: chọn theo ĐỘ ĐỌC được, không theo "càng nhiều ô càng tốt" — dọc 2 ô, ngang 3 ô,
   // cỡ nốt 1.1 (nhờ khung được lấy lại lề, cỡ lớn hơn mà vẫn không tràn).
-  const LYRIC_BAR = 395     // px/ô nhịp ở cỡ 1 cho ô 8 âm tiết — dưới mức này lời hát chồng nhau
+  const PHONE_PAD = 8     // lề trái/phải trong SVG trên điện thoại (mặc định alphaTab 35)
+const LYRIC_BAR = 395     // px/ô nhịp ở cỡ 1 cho ô 8 âm tiết — dưới mức này lời hát chồng nhau
   const printingNow = () => !!document.querySelector('.lsn-paper.is-printing')
   const layoutFor = (w: number) => {
     if (printingNow()) return { rows: barsPerRow, scale: 0.95 }
@@ -42,7 +43,7 @@ export default function LessonScore({ tex, barsPerRow = 4, zoomable = true }: Pr
     // cỡ 1.0 còn 1/83 (hở -0.6px). Nên bản có lời dùng cỡ 1.0: dọc 1 ô/dòng, ngang 3 ô/dòng.
     // (Không đổi effectFont: nó dùng chung cho hợp âm và ký hiệu khác.)
     // Máy hẹp (360px) thì co cỡ theo bề rộng: bề rộng/cỡ phải ≥ LYRIC_BAR (đo: 382/1.0 chồng 1 cặp, 402 thì hở)
-    if (hasLyrics) return { rows: w < 560 ? 1 : Math.min(3, barsPerRow), scale: Math.min(1, Math.round(w / LYRIC_BAR * 100) / 100) }
+    if (hasLyrics) return { rows: w < 560 ? 1 : Math.min(3, barsPerRow), scale: Math.min(1.05, Math.round((w + 54) / LYRIC_BAR * 100) / 100) }
     if (w < 560) return { rows: Math.min(2, barsPerRow), scale: 1.1 }
     return { rows: Math.min(3, barsPerRow), scale: 1.1 }
   }
@@ -75,6 +76,9 @@ export default function LessonScore({ tex, barsPerRow = 4, zoomable = true }: Pr
         const first = layoutFor(hostWidth())
         s.display.scale = first.scale
         s.display.barsPerRow = first.rows
+        // alphaTab chừa mặc định 35px mỗi bên TRONG SVG ⇒ khuông hẹp hơn khung 70px. Điện thoại: lề trái/phải nhỏ lại
+        // (khóa Sol/số nhịp vẫn có chỗ riêng bên trong khuông). Bản in/PDF và máy tính giữ nguyên.
+        if (!printingNow() && Math.min(window.innerWidth, window.innerHeight) < 500) s.display.padding = [PHONE_PAD, 35]
         // alphaTab tô bè phụ (bè Bass) bằng màu xám mờ — in ra giấy gần như không
         // thấy. Kéo về đúng màu đen của bè chính.
         s.display.resources.secondaryGlyphColor = s.display.resources.mainGlyphColor
