@@ -176,10 +176,11 @@ end $$;
 revoke all on function public.feed_comment_hide(uuid, boolean) from public, anon;
 grant execute on function public.feed_comment_hide(uuid, boolean) to authenticated;
 
+-- LƯU Ý: production đang có kind 'teacher_commented' (không có trong repo) → phải giữ trong CHECK (dryrun 30/10 đã bắt lỗi này).
 -- Thông báo: bình luận mới của NGƯỜI KHÁC trên thread → học viên chủ thread (System Chat). Lỗi thông báo KHÔNG phá bình luận.
 alter table public.class_system_notices drop constraint if exists class_system_notices_kind_check;
 alter table public.class_system_notices add constraint class_system_notices_kind_check
-  check (kind in ('checkpoint_graded', 'submission_received', 'question_received', 'question_answered', 'feed_comment'));
+  check (kind in ('checkpoint_graded', 'submission_received', 'question_received', 'question_answered', 'teacher_commented', 'feed_comment'));
 
 create or replace function public.feed_comment_notify()
 returns trigger language plpgsql security definer set search_path = '' as $$

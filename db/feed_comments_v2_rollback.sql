@@ -13,4 +13,4 @@ drop table if exists public.feed_comments;
 delete from public.class_system_notices where kind = 'feed_comment';
 alter table public.class_system_notices drop constraint if exists class_system_notices_kind_check;
 alter table public.class_system_notices add constraint class_system_notices_kind_check
-  check (kind in ('checkpoint_graded', 'submission_received', 'question_received', 'question_answered'));
+  check (kind in ('checkpoint_graded', 'submission_received', 'question_received', 'question_answered', 'teacher_commented'));
