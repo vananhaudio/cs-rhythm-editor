@@ -129,6 +129,10 @@ DECLARE
     -- Sản phẩm công cụ chia sẻ (db/social_bms_artifact_v1_setup.sql): chủ bài + thành viên Class ĐỌC;
     -- KHÔNG ai ghi thẳng (chỉ qua RPC). Áp policy rộng = người xem sửa/xoá bài BMS của chủ bài.
     'tool_artifacts',
+    -- Lượt thích Feed (db/feed_likes_v1_setup.sql): KHÔNG policy, KHÔNG quyền bảng — chỉ ghi/đọc qua RPC feed_like_set / feed_like_summary.
+    'feed_likes',
+    -- Bình luận thread/publication (db/feed_comments_v2_setup.sql): KHÔNG policy/quyền bảng — chỉ RPC feed_comment_*.
+    'feed_comments',
     -- Ảnh bìa hồ sơ (db/profile_media_setup.sql): thành viên Class đọc; CHỈ chính chủ ghi.
     'profile_media',
     -- Bạn bè + tường (db/class_social_friends_wall_setup.sql): friendships KHÔNG ai đọc/ghi thẳng

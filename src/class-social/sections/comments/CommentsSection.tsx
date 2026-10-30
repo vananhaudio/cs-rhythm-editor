@@ -20,6 +20,7 @@ export default function CommentsSection({ postId, total, state, me, now, onRefre
   onOpenProfile?: (userId: string) => void
 }) {
   const [actionError, setActionError] = useState<string | null>(null)
+  const [editing, setEditing] = useState<string | null>(null)
   const [limit, setLimit] = useState(COMMENTS_PREVIEW)   // số bình luận mới nhất đang hiện; "Xem thêm" mở thêm từng đợt
   const all = state?.items ?? []
   const items = all.length > limit ? all.slice(-limit) : all
@@ -36,6 +37,12 @@ export default function CommentsSection({ postId, total, state, me, now, onRefre
     const r = await (await loadCommentsApi()).deleteComment(c.id)
     if (!r.ok) { setActionError(r.message); return }
     setActionError(null); await onRefresh(postId)
+  }
+  const saveEdit = (c: Comment) => async (body: string): Promise<string | null> => {
+    const { supabaseTargetCommentsApi } = await import('../../comments/targetCommentsApi')
+    const r = await supabaseTargetCommentsApi.edit('post', c.id, body)
+    if (!r.ok) return r.message
+    await onRefresh(postId); return null
   }
   const onModerate = async (c: Comment, hidden: boolean) => {
     const r = await (await loadCommentsApi()).moderate('comment', c.id, hidden)
@@ -56,6 +63,7 @@ export default function CommentsSection({ postId, total, state, me, now, onRefre
         <ul className="cs-cmt-list">
           {items.map(c => (
             <CommentItem key={c.id} c={c} now={now} canModerate={!!me?.isTeacher} onOpenProfile={onOpenProfile}
+              editing={editing === c.id} onEdit={() => setEditing(c.id)} onEditDone={() => setEditing(null)} saveEdit={saveEdit(c)}
               onDelete={c2 => void onDelete(c2)} onModerate={(c2, h) => void onModerate(c2, h)} />
           ))}
         </ul>
