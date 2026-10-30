@@ -72,9 +72,9 @@ export const HT2027_STAGES: HtStage[] = [
     title: 'Làm chủ khuôn hình và phát triển giai điệu trên cần đàn',
     goal: 'Nhìn thấy mối quan hệ giữa âm chủ, khuôn hình và giai điệu; không phụ thuộc hoàn toàn vào tab hoặc một vị trí cố định.',
     lessons: [
-      { title: 'Âm chủ và cấu trúc khuôn hình' },
-      { title: 'Khuôn hình trong giọng trưởng' },
-      { title: 'Khuôn hình trong giọng thứ' },
+      { title: 'Âm chủ và cấu trúc khuôn hình', doc: '/hanhtrinh2027/buoi-09' },
+      { title: 'Khuôn hình trong giọng trưởng', doc: '/hanhtrinh2027/buoi-10' },
+      { title: 'Khuôn hình trong giọng thứ', doc: '/hanhtrinh2027/buoi-11' },
       { title: 'Kết nối các khuôn hình' },
       { title: 'Xây dựng câu nhạc' },
       { title: 'Tìm giai điệu bằng tai' },

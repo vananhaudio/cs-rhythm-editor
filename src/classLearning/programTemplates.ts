@@ -10,6 +10,9 @@ import { SOLO01_BUOI02 } from '../data/solo01/buoi02'
 import { SOLO01_BUOI03 } from '../data/solo01/buoi03'
 import { SOLO01_BUOI04 } from '../data/solo01/buoi04'
 import { SOLO01_BUOI05 } from '../data/solo01/buoi05'
+import { SOLO01_BUOI06 } from '../data/solo01/buoi06'
+import { SOLO01_BUOI07 } from '../data/solo01/buoi07'
+import { SOLO01_BUOI08 } from '../data/solo01/buoi08'
 import { CB1_BUOI00 } from '../data/cb1/buoi00'
 import { CB1_BUOI01 } from '../data/cb1/buoi01'
 import { CB1_BUOI02 } from '../data/cb1/buoi02'
@@ -27,6 +30,9 @@ import { HT2027_BUOI05 } from '../data/ht2027/buoi05'
 import { HT2027_BUOI06 } from '../data/ht2027/buoi06'
 import { HT2027_BUOI07 } from '../data/ht2027/buoi07'
 import { HT2027_BUOI08 } from '../data/ht2027/buoi08'
+import { HT2027_BUOI09 } from '../data/ht2027/buoi09'
+import { HT2027_BUOI10 } from '../data/ht2027/buoi10'
+import { HT2027_BUOI11 } from '../data/ht2027/buoi11'
 
 export interface ProgramTemplate {
   perStage: number
@@ -46,11 +52,11 @@ export const PROGRAM_TEMPLATES: Record<string, ProgramTemplate> = {
   'SOLO01.TH01': {
     perStage: 8,
     stages: SOLO01_STAGES.map(s => ({ no: s.no, title: s.title.trim(), summary: s.goal })),
-    lessons: { 1: SOLO01_BUOI01, 2: SOLO01_BUOI02, 3: SOLO01_BUOI03, 4: SOLO01_BUOI04, 5: SOLO01_BUOI05 },
+    lessons: { 1: SOLO01_BUOI01, 2: SOLO01_BUOI02, 3: SOLO01_BUOI03, 4: SOLO01_BUOI04, 5: SOLO01_BUOI05, 6: SOLO01_BUOI06, 7: SOLO01_BUOI07, 8: SOLO01_BUOI08 },
   },
   'HT2027.TH01': {
     perStage: 8,
     stages: HT2027_STAGES.map(s => ({ no: s.no, title: s.title.trim(), summary: s.goal })),
-    lessons: { 1: HT2027_BUOI01, 2: HT2027_BUOI02, 3: HT2027_BUOI03, 4: HT2027_BUOI04, 5: HT2027_BUOI05, 6: HT2027_BUOI06, 7: HT2027_BUOI07, 8: HT2027_BUOI08 },
+    lessons: { 1: HT2027_BUOI01, 2: HT2027_BUOI02, 3: HT2027_BUOI03, 4: HT2027_BUOI04, 5: HT2027_BUOI05, 6: HT2027_BUOI06, 7: HT2027_BUOI07, 8: HT2027_BUOI08, 9: HT2027_BUOI09, 10: HT2027_BUOI10, 11: HT2027_BUOI11 },
   },
 }

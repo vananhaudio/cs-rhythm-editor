@@ -9,13 +9,19 @@ import { SOLO01_BUOI02 } from "../../src/data/solo01/buoi02";
 import { SOLO01_BUOI03 } from "../../src/data/solo01/buoi03";
 import { SOLO01_BUOI04 } from "../../src/data/solo01/buoi04";
 import { SOLO01_BUOI05 } from "../../src/data/solo01/buoi05";
+import { SOLO01_BUOI06 } from "../../src/data/solo01/buoi06";
+import { SOLO01_BUOI07 } from "../../src/data/solo01/buoi07";
+import { SOLO01_BUOI08 } from "../../src/data/solo01/buoi08";
 import { HT2027_BUOI01 } from "../../src/data/ht2027/buoi01";
 import { HT2027_BUOI02 } from "../../src/data/ht2027/buoi02";
 import { HT2027_BUOI03 } from "../../src/data/ht2027/buoi03";
+import { HT2027_BUOI09 } from "../../src/data/ht2027/buoi09";
+import { HT2027_BUOI10 } from "../../src/data/ht2027/buoi10";
+import { HT2027_BUOI11 } from "../../src/data/ht2027/buoi11";
 import { KNOWN_SECTION_KINDS, solo01DocProblems, solo01Problems } from "../../src/lesson/curriculumStandard";
 import type { LessonSection } from "../../src/lesson/lessonTypes";
 
-const SOLO = [SOLO01_BUOI01, SOLO01_BUOI02, SOLO01_BUOI03, SOLO01_BUOI04, SOLO01_BUOI05];
+const SOLO = [SOLO01_BUOI01, SOLO01_BUOI02, SOLO01_BUOI03, SOLO01_BUOI04, SOLO01_BUOI05, SOLO01_BUOI06, SOLO01_BUOI07, SOLO01_BUOI08];
 
 test("mọi buổi SOLO01 đã soạn đạt chuẩn Golden Reference (khối · mạch · bài trả)", () => {
   SOLO.forEach((doc, i) => {
@@ -25,7 +31,7 @@ test("mọi buổi SOLO01 đã soạn đạt chuẩn Golden Reference (khối ·
 });
 
 test("Hành trình 2027 dùng chung renderer: chỉ khối LessonDocument hiểu", () => {
-  for (const doc of [HT2027_BUOI01, HT2027_BUOI02, HT2027_BUOI03]) {
+  for (const doc of [HT2027_BUOI01, HT2027_BUOI02, HT2027_BUOI03, HT2027_BUOI09, HT2027_BUOI10, HT2027_BUOI11]) {
     assert.deepEqual(doc.sections.filter(s => !KNOWN_SECTION_KINDS.includes(s.kind)), []);
   }
 });
