@@ -11,14 +11,14 @@
 --     lt_answer_checkpoint (đã kiểm "buổi đã mở") KHÔNG phải sửa. Hoàn thành buổi (lsp_try_complete) vẫn ghi nhận tiến độ.
 --   • class_learning_state: trả thêm unlock_policy · pace_days (0 khi 'open' = không nhịp tuần) · start_at từng buổi.
 -- KHÔNG đặt lớp nào sang 'open' trong file này. Việc đó là thao tác dữ liệu riêng, Owner duyệt (xem docs).
--- Thay đúng 2 hàm (cổng md5 = bản repo = production sau V1 + QUIZ): lsp_sync, class_learning_state.
+-- Thay đúng 2 hàm (cổng md5 = bản repo = production sau V1 + QUIZ + Buổi 0 (class_session_zero_intro)): lsp_sync, class_learning_state.
 -- Idempotent. CHẠY bằng scripts/prod-db.py (prod-db sở hữu transaction — file KHÔNG có begin/commit).
 -- ═══════════════════════════════════════════════════════════════════════════
 set local lock_timeout = '5s';
 
 do $gate$
 declare
-  replaced constant jsonb := '{"lsp_sync": "c85a6a5255959b7a03be96a3f188427c", "class_learning_state": "db9015ea8a462af44a7750a5bbc26f86"}';
+  replaced constant jsonb := '{"lsp_sync": "85655a791d24a9a0997d94bcbe6687a3", "class_learning_state": "db9015ea8a462af44a7750a5bbc26f86"}';
   needed constant text[] := array['is_teacher', 'cl_session_checkpoints', 'cl_next_session', 'lsp_try_complete', 'lsp_on_checkpoint_passed', 'lt_submit_checkpoint', 'lt_answer_checkpoint'];
   k text; v text; src text; drift text[] := '{}';
 begin
@@ -48,19 +48,25 @@ end $c$;
 comment on column public.class_schedule.unlock_policy is
   'CLASS_UNLOCK_POLICY_V1: sequential = mở buổi kế khi xong bài trả bắt buộc của buổi trước (mặc định) · open = mọi buổi đã xuất bản đều mở; bài trả vẫn nộp/chấm bình thường';
 
--- ── 2) lsp_sync: chính sách 'open' mở mọi buổi đã xuất bản (phần còn lại GIỮ NGUYÊN bản V1) ──
+-- ── 2) lsp_sync: chính sách 'open' mở mọi buổi đã xuất bản (phần còn lại GIỮ NGUYÊN bản Buổi 0) ──
 create or replace function public.lsp_sync(p_user uuid, p_class uuid, p_program text)
 returns void language plpgsql security definer set search_path = '' as $$
 declare v_first int; r record; v_policy text;
 begin
-  -- CLASS_UNLOCK_POLICY_V1: chính sách mở khoá theo lớp ('sequential' = như cũ · 'open' = mọi buổi ĐÃ XUẤT BẢN đều mở)
   perform pg_advisory_xact_lock(hashtextextended('lsp:' || p_user::text || ':' || p_program, 0));
   select min(s.session_number) into v_first from public.class_sessions s
-   where s.class_id = p_class and s.event_type = 'lesson' and s.session_number is not null;
+   where s.class_id = p_class and s.event_type = 'lesson' and s.session_number is not null and s.session_number >= 1;
+  -- Buổi 0 (nhập môn): mở + xong ngay, không bao giờ chặn buổi 1.
+  if exists (select 1 from public.class_sessions s where s.class_id = p_class and s.event_type = 'lesson' and s.session_number = 0) then
+    insert into public.learning_session_progress (learner_user_id, program_code, session_no, class_schedule_id, completed_at, completed_class_schedule_id)
+    values (p_user, p_program, 0, p_class, now(), p_class)
+    on conflict (learner_user_id, program_code, session_no) do nothing;
+  end if;
   if v_first is null then return; end if;
   insert into public.learning_session_progress (learner_user_id, program_code, session_no, class_schedule_id)
   values (p_user, p_program, v_first, p_class)
   on conflict (learner_user_id, program_code, session_no) do nothing;
+  -- CLASS_UNLOCK_POLICY_V1: chính sách theo lớp ('sequential' = như cũ · 'open' = mọi buổi ĐÃ XUẤT BẢN đều mở)
   select coalesce(c.unlock_policy, 'sequential') into v_policy from public.class_schedule c where c.id = p_class;
   if v_policy = 'open' then
     insert into public.learning_session_progress (learner_user_id, program_code, session_no, class_schedule_id)

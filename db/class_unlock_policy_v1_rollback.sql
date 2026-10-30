@@ -2,7 +2,7 @@
 -- ROLLBACK — CLASS_UNLOCK_POLICY_V1. Idempotent. Chạy bằng scripts/prod-db.py (không begin/commit).
 -- Thứ tự production: (1) đặt mọi lớp về 'sequential' nếu muốn khoá lại (UPDATE riêng, Owner duyệt) hoặc chấp nhận để 'open' đứng yên,
 -- (2) frontend về bản trước, (3) file này.
--- LUÔN làm: lsp_sync về ĐÚNG bản V1 và class_learning_state về ĐÚNG bản QUIZ V1 (md5 như cổng của setup).
+-- LUÔN làm: lsp_sync về ĐÚNG bản Buổi 0 (db/class_session_zero_intro.sql) và class_learning_state về ĐÚNG bản QUIZ V1 (md5 như cổng của setup).
 -- CHỈ KHI MỌI LỚP LÀ 'sequential': gỡ ràng buộc + cột. Còn lớp 'open' → GIỮ cột (không xoá cấu hình), báo NOTICE.
 -- KHÔNG xoá tiến độ nào (learning_session_progress bất biến lịch sử): các buổi đã mở theo 'open' vẫn mở.
 -- ═══════════════════════════════════════════════════════════════════════════
@@ -14,7 +14,13 @@ declare v_first int; r record;
 begin
   perform pg_advisory_xact_lock(hashtextextended('lsp:' || p_user::text || ':' || p_program, 0));
   select min(s.session_number) into v_first from public.class_sessions s
-   where s.class_id = p_class and s.event_type = 'lesson' and s.session_number is not null;
+   where s.class_id = p_class and s.event_type = 'lesson' and s.session_number is not null and s.session_number >= 1;
+  -- Buổi 0 (nhập môn): mở + xong ngay, không bao giờ chặn buổi 1.
+  if exists (select 1 from public.class_sessions s where s.class_id = p_class and s.event_type = 'lesson' and s.session_number = 0) then
+    insert into public.learning_session_progress (learner_user_id, program_code, session_no, class_schedule_id, completed_at, completed_class_schedule_id)
+    values (p_user, p_program, 0, p_class, now(), p_class)
+    on conflict (learner_user_id, program_code, session_no) do nothing;
+  end if;
   if v_first is null then return; end if;
   insert into public.learning_session_progress (learner_user_id, program_code, session_no, class_schedule_id)
   values (p_user, p_program, v_first, p_class)

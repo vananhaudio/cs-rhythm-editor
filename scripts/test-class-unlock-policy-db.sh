@@ -47,18 +47,19 @@ cp_base() {
   psqld "$1" -f "$ROOT/db/tests/local/class_checkpoints_fixture_data.sql" >/dev/null
 }
 cp_setup() { psqld "$1" -c "begin;" -f "$ROOT/db/class_checkpoints_v1_setup.sql" -c "commit;" >/dev/null; }
+zi_setup() { psqld "$1" -c "begin;" -f "$ROOT/db/class_session_zero_intro.sql" -c "commit;" >/dev/null; }
 qz_setup() { psqld "$1" -c "begin;" -f "$ROOT/db/quiz_checkpoint_v1_setup.sql" -c "commit;" >/dev/null; }
 up_setup() { psqld "$1" -c "begin;" -f "$ROOT/db/class_unlock_policy_v1_setup.sql" -c "commit;" >/dev/null; }
 up_rollback() { psqld "$1" -c "begin;" -f "$ROOT/db/class_unlock_policy_v1_rollback.sql" -c "commit;" >/dev/null; }
 UP_MD5() { q "$1" "select string_agg(proname || '=' || md5(prosrc), ' ' order by proname) from pg_proc where proname in ('lsp_sync', 'class_learning_state')"; }
 UPGATE() { q "$1" "select item from ($(sed 's/;[[:space:]]*$//' "$ROOT/db/class_unlock_policy_v1_preflight.sql")) z where section = 'GATE'"; }
 UPPOST() { q "$1" "select item from ($(sed 's/;[[:space:]]*$//' "$ROOT/db/class_unlock_policy_v1_postflight.sql")) z where section = 'GATE'"; }
-UP_EXPECTED="class_learning_state=db9015ea8a462af44a7750a5bbc26f86 lsp_sync=c85a6a5255959b7a03be96a3f188427c"
+UP_EXPECTED="class_learning_state=db9015ea8a462af44a7750a5bbc26f86 lsp_sync=85655a791d24a9a0997d94bcbe6687a3"
 
 echo "── CLASS_UNLOCK_POLICY_V1: không begin/commit · md5 cổng = bản repo · preflight · setup ×2 · postflight · test · rollback · cài lại · drift"
 grep -qiE '^\s*(begin|commit|rollback)\s*;' "$ROOT/db/class_unlock_policy_v1_setup.sql" "$ROOT/db/class_unlock_policy_v1_rollback.sql" \
   && fail "file migration có begin/commit (prod-db.py sở hữu transaction)" || ok "setup/rollback không tự begin/commit (đúng luật prod-db.py)"
-cp_base t_up && cp_setup t_up && qz_setup t_up
+cp_base t_up && cp_setup t_up && qz_setup t_up && zi_setup t_up
 [ "$(UP_MD5 t_up)" = "$UP_EXPECTED" ] && ok "md5 2 hàm bị thay (repo: V1 + QUIZ) = hằng md5 trong cổng" || fail "md5 repo khác hằng cổng: $(UP_MD5 t_up)"
 [ "$(UPGATE t_up)" = "PASS" ] && ok "preflight: GATE = PASS" || fail "preflight: $(UPGATE t_up)"
 up_setup t_up && up_setup t_up && ok "migration ×2 (idempotent; cổng nhận bản đã chạy)"
@@ -67,6 +68,15 @@ up_setup t_up && up_setup t_up && ok "migration ×2 (idempotent; cổng nhận b
 [ "$(q t_up "select count(*) from public.class_schedule where unlock_policy <> 'sequential'")" = "0" ] \
   && ok "mọi lớp hiện có giữ 'sequential' (không đổi chính sách lớp đang chạy)" || fail "có lớp bị đổi chính sách"
 psqld t_up -f "$ROOT/db/rls_setup.sql" >/dev/null && ok "rls_setup.sql chạy lại được sau migration"
+# Buổi 0 (nhập môn) + open — trong transaction rồi ROLLBACK (không làm bẩn dữ liệu các kiểm tra sau)
+Z0="$(q t_up "begin;
+  insert into public.class_sessions (id, class_id, session_number, title, event_type) values ('53000000-0000-4000-8000-0000000000a0', 'b1000000-0000-4000-8000-000000000003', 0, 'Buổi 0 · Nhập môn', 'lesson');
+  insert into public.class_lesson_content (session_id, status, blocks) values ('53000000-0000-4000-8000-0000000000a0', 'published', '[{\"kind\":\"note\",\"text\":\"n\"}]');
+  update public.class_schedule set unlock_policy = 'open' where id = 'b1000000-0000-4000-8000-000000000003';
+  select public.lsp_sync('aaaaaaaa-0000-4000-8000-00000000000a', 'b1000000-0000-4000-8000-000000000003', 'HT2027');
+  select string_agg(session_no::text || case when completed_at is not null then 'x' else '' end, ',' order by session_no) from public.learning_session_progress where learner_user_id = 'aaaaaaaa-0000-4000-8000-00000000000a' and program_code = 'HT2027' and class_schedule_id = 'b1000000-0000-4000-8000-000000000003';
+  rollback;" | grep -v '^$' | tail -1)"
+[ "$Z0" = "0x,1" ] && ok "Buổi 0 + lớp open: buổi 0 xong ngay, Buổi 1 mở (đúng cả với bản lsp_sync Buổi 0 của production)" || fail "Buổi 0 + open: '$Z0'"
 PGOPTIONS="-c client_min_messages=notice" "$PGBIN/psql" -X -q -h "$TMP" -p "$PORT" -U postgres -d t_up -v ON_ERROR_STOP=1 \
   -f "$ROOT/db/tests/class_unlock_policy_v1_test.sql" 2>&1 | sed -E 's/^psql:[^:]*:[0-9]*: (NOTICE|ERROR):  //'
 [ "${PIPESTATUS[0]}" = "0" ] || fail "test SQL class_unlock_policy_v1"
@@ -83,7 +93,7 @@ up_rollback t_up
   && ok "rollback khi mọi lớp 'sequential': gỡ cột" || fail "rollback không gỡ cột"
 up_setup t_up && [ "$(UPGATE t_up)" = "PASS" ] && [ "$(UPPOST t_up)" = "PASS" ] && ok "cài lại sau rollback: preflight + postflight PASS"
 # Cổng drift: sửa tay một hàm phụ thuộc → migration phải DỪNG, không đổi gì
-cp_base t_up2 && cp_setup t_up2 && qz_setup t_up2
+cp_base t_up2 && cp_setup t_up2 && qz_setup t_up2 && zi_setup t_up2
 psqld t_up2 -c "create or replace function public.lsp_sync(p_user uuid, p_class uuid, p_program text) returns void language plpgsql security definer set search_path = '' as \$f\$ begin null; end \$f\$;" >/dev/null
 [ "$(UPGATE t_up2)" = "STOP - DO NOT MIGRATE" ] && ok "preflight bắt hàm lsp_sync bị sửa tay → STOP" || fail "preflight không bắt drift: $(UPGATE t_up2)"
 psqld t_up2 -c "begin;" -f "$ROOT/db/class_unlock_policy_v1_setup.sql" -c "commit;" >/dev/null 2>"$TMP/up2.err" && fail "migration chạy dù hàm lệch"
