@@ -22,18 +22,33 @@ export default function LessonScore({ tex, barsPerRow = 4, zoomable = true }: Pr
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading')
   const [err, setErr] = useState('')
 
-  // Số ô nhịp mỗi dòng theo bề rộng KHUNG CHỨA (không phải cửa sổ): lúc xuất PDF
-  // khung được kéo về khổ A4 nên bản nhạc phải khắc lại cho đủ ô mỗi dòng.
-  const narrowNow = () => (hostRef.current?.clientWidth ?? window.innerWidth) < 620
-  // Đang chụp để lưu PDF: trang bị kéo về khổ giấy nên khung hẹp lại, nhưng ĐỪNG
-  // coi đó là điện thoại — vẫn giữ đủ số ô nhịp mỗi dòng. (Bản nhạc in ra to lên là
-  // nhờ ảnh chụp hẹp được kéo cho vừa giấy, KHÔNG phải nhờ tăng display.scale: tăng
-  // scale làm bản nhạc rộng quá khổ và bị cắt mất mép phải.)
+  // Cách khắc theo bề rộng KHUNG CHỨA (không phải cửa sổ): lúc xuất PDF khung được kéo về
+  // khổ A4 nên bản nhạc phải khắc lại cho đủ ô mỗi dòng.
+  // Đang chụp để lưu PDF: trang bị kéo về khổ giấy nên khung hẹp lại, nhưng ĐỪNG coi đó là
+  // điện thoại — vẫn giữ đủ số ô nhịp mỗi dòng và cỡ 0.95. (Bản nhạc in ra to lên là nhờ ảnh
+  // chụp hẹp được kéo cho vừa giấy, KHÔNG phải nhờ tăng display.scale: tăng scale làm bản
+  // nhạc rộng quá khổ và bị cắt mất mép phải.)
+  // Điện thoại: chọn theo ĐỘ ĐỌC được, không theo "càng nhiều ô càng tốt" — dọc 2 ô, ngang 3 ô,
+  // cỡ nốt 1.1 (nhờ khung được lấy lại lề, cỡ lớn hơn mà vẫn không tràn).
+  const PHONE_PAD = 8     // lề trái/phải trong SVG trên điện thoại (mặc định alphaTab 35)
+const LYRIC_BAR = 395     // px/ô nhịp ở cỡ 1 cho ô 8 âm tiết — dưới mức này lời hát chồng nhau
   const printingNow = () => !!document.querySelector('.lsn-paper.is-printing')
-  const restScale = () => (!printingNow() && narrowNow() ? 1 : 0.95)
-  const restRows = () => (printingNow() ? barsPerRow : narrowNow() ? Math.min(2, barsPerRow) : barsPerRow)
-  const narrow = typeof window !== 'undefined' && window.innerWidth < 640
-  const rows = narrow ? Math.min(2, barsPerRow) : barsPerRow
+  const layoutFor = (w: number) => {
+    if (printingNow()) return { rows: barsPerRow, scale: 0.95 }
+    // Chỉ ĐIỆN THOẠI (cạnh ngắn màn hình < 500px, dọc hoặc ngang). Máy tính bảng / desktop giữ cách cũ.
+    const phone = Math.min(window.innerWidth, window.innerHeight) < 500
+    if (!phone) return w < 620 ? { rows: Math.min(2, barsPerRow), scale: 1 } : { rows: barsPerRow, scale: 0.95 }
+    // Bản có LỜI: lời hát cỡ 12×scale px mà alphaTab xếp khoảng cách theo nốt, không theo bề rộng chữ —
+    // âm tiết dài ("Đường" ~40px) cạnh nhau bị chồng. Đo trên Buổi 04: cỡ 1.1 chồng 11/83 cặp (dọc);
+    // cỡ 1.0 còn 1/83 (hở -0.6px). Nên bản có lời dùng cỡ 1.0: dọc 1 ô/dòng, ngang 3 ô/dòng.
+    // (Không đổi effectFont: nó dùng chung cho hợp âm và ký hiệu khác.)
+    // Máy hẹp (360px) thì co cỡ theo bề rộng: bề rộng/cỡ phải ≥ LYRIC_BAR (đo: 382/1.0 chồng 1 cặp, 402 thì hở)
+    if (hasLyrics) return { rows: w < 560 ? 1 : Math.min(3, barsPerRow), scale: Math.min(1.05, Math.round((w + 54) / LYRIC_BAR * 100) / 100) }
+    if (w < 560) return { rows: Math.min(2, barsPerRow), scale: 1.1 }
+    return { rows: Math.min(3, barsPerRow), scale: 1.1 }
+  }
+  const hasLyrics = tex.includes('\\lyrics')
+  const hostWidth = () => hostRef.current?.clientWidth || window.innerWidth
 
   useEffect(() => {
     let dead = false
@@ -58,8 +73,12 @@ export default function LessonScore({ tex, barsPerRow = 4, zoomable = true }: Pr
         // Bản nhạc tự khai \staff {score} (chỉ khuông, không TAB — vd bài để học viên TỰ
         // chọn vị trí) thì tôn trọng nó; còn lại mặc định khuông + TAB.
         s.display.staveProfile = tex.includes('\\staff') ? StaveProfile.Default : StaveProfile.ScoreTab
-        s.display.scale = narrow ? 1 : 0.95
-        s.display.barsPerRow = rows
+        const first = layoutFor(hostWidth())
+        s.display.scale = first.scale
+        s.display.barsPerRow = first.rows
+        // alphaTab chừa mặc định 35px mỗi bên TRONG SVG ⇒ khuông hẹp hơn khung 70px. Điện thoại: lề trái/phải nhỏ lại
+        // (khóa Sol/số nhịp vẫn có chỗ riêng bên trong khuông). Bản in/PDF và máy tính giữ nguyên.
+        if (!printingNow() && Math.min(window.innerWidth, window.innerHeight) < 500) s.display.padding = [PHONE_PAD, 35]
         // alphaTab tô bè phụ (bè Bass) bằng màu xám mờ — in ra giấy gần như không
         // thấy. Kéo về đúng màu đen của bè chính.
         s.display.resources.secondaryGlyphColor = s.display.resources.mainGlyphColor
@@ -104,10 +123,11 @@ export default function LessonScore({ tex, barsPerRow = 4, zoomable = true }: Pr
     // Khắc lại khi BỀ RỘNG KHUNG đổi, kể cả khi số ô nhịp không đổi: alphaTab dàn nốt
     // theo bề ngang lúc khắc, giữ nguyên bản khắc cũ trong khung hẹp hơn là bản nhạc
     // thò ra ngoài mép phải và lúc chụp PDF sẽ bị cắt cụt.
-    let applied = `${host.clientWidth}/${rows}/${0.95}`
+    let applied = `${host.clientWidth}/${layoutFor(host.clientWidth || window.innerWidth).rows}/${layoutFor(host.clientWidth || window.innerWidth).scale}`
     const ro = new ResizeObserver(() => {
       if (bigRef.current) return                    // đang xem toàn màn hình: giữ nguyên cách khắc
-      const want = restRows(), wantScale = restScale(), w = host.clientWidth
+      const w = host.clientWidth
+      const { rows: want, scale: wantScale } = layoutFor(w || window.innerWidth)
       const api = apiRef.current
       if (!api || `${w}/${want}/${wantScale}` === applied) return
       applied = `${w}/${want}/${wantScale}`
@@ -129,23 +149,41 @@ export default function LessonScore({ tex, barsPerRow = 4, zoomable = true }: Pr
   const onZoom = (big: boolean, factor: number) => {
     bigRef.current = big
     const api = apiRef.current
-    if (!api) return
-    const w = hostRef.current?.clientWidth || window.innerWidth
+    const host = hostRef.current
+    if (!api || !host) return
+    const w = host.clientWidth || window.innerWidth
     try {
       if (big) {
+        // Bản có LỜI: mỗi ô nhịp cần ~370 đơn vị bề ngang cho 8 âm tiết (đo ở Buổi 04). Phóng to thì bề rộng
+        // khuông = factor × 370px — rộng hơn màn hình thì để vùng Xem lớn cuộn ngang, KHÔNG ép khuông vào
+        // viewport (ép là lời chồng nhau). Cỡ nốt giữ đúng bằng factor.
+        if (hasLyrics) {
+          const vw = (host.parentElement?.parentElement?.clientWidth || window.innerWidth) - 20
+          const wide = Math.max(vw, Math.ceil(factor * LYRIC_BAR))
+          host.style.width = factor > 1 ? `${wide}px` : ''
+          if (factor <= 1) { api.settings.display.scale = layoutFor(vw).scale; api.settings.display.barsPerRow = layoutFor(vw).rows; api.updateSettings(); api.render(); return }
+          api.settings.display.barsPerRow = Math.max(1, Math.min(barsPerRow, Math.floor(wide / (factor * LYRIC_BAR))))
+        } else {
+          // ~150px/ô ở cỡ 1: số ngón tay không dính đầu nốt; dọc 140% đọc từng ô một
+          api.settings.display.barsPerRow = Math.max(1, Math.min(barsPerRow, Math.floor(w / (factor * 150))))
+        }
         api.settings.display.scale = factor
-        api.settings.display.barsPerRow = Math.max(1, Math.floor(w / (factor * 250)))
       } else {
-        api.settings.display.scale = restScale()
-        api.settings.display.barsPerRow = restRows()
+        host.style.width = ''
+        const l = layoutFor(host.clientWidth || window.innerWidth)
+        api.settings.display.scale = l.scale
+        api.settings.display.barsPerRow = l.rows
       }
       api.updateSettings()
       api.render()
     } catch { /* */ }
   }
 
+  // Định danh ổn định để nhớ vị trí đọc: đường dẫn bài + dấu vân tay nội dung bản nhạc (sửa nhạc thì vị trí cũ tự bỏ)
+  const memoryKey = `${location.pathname}#${tex.split('').reduce((h, c) => (Math.imul(h ^ c.charCodeAt(0), 16777619) >>> 0), 2166136261).toString(36)}`
+
   return (
-    <ZoomFrame onZoom={onZoom} enabled={zoomable}
+    <ZoomFrame onZoom={onZoom} enabled={zoomable} memoryKey={memoryKey}
                hint={zoomable ? 'Bản nhạc dài — bấm “Xem lớn” để đọc toàn màn hình.' : undefined}>
       <div className="lsn-score">
         {state === 'loading' && <div className="lsn-score-msg">Đang dựng bản nhạc…</div>}
