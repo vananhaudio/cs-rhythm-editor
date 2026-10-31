@@ -15,6 +15,7 @@ function rig() {
   const api: MiraGradingApi = {
     ticket: (id) => new Promise((resolve) => pending.push({ id, resolve })),
     end: async (id) => { ended.push(id) },
+    pilotEnabled: async () => true,
   }
   const ctl = createDockController({ api, post: (m) => posts.push(m), onStatus: (s) => statuses.push(s), now: () => t,
     setTimer: (fn, ms) => { const h = ++n; timers.push({ fn, ms, h }); return h }, clearTimer: (h) => { const i = timers.findIndex((x) => x.h === h); if (i >= 0) timers.splice(i, 1) } })
@@ -61,4 +62,10 @@ test('chưa bật/hỏng phía máy chủ: báo trạng thái, không ném, khô
 test('rời màn bài trả (setThread null): xoá ngữ cảnh ở iframe và thu hồi vé', async () => {
   const r = rig(); r.ctl.onChild({ v: 1, type: 'mira-grading-ready' }); r.ctl.setThread(A); await r.flush(); r.ok(0); await r.flush()
   r.ctl.setThread(null); assert.equal(r.posts.at(-1)?.type, 'mira-context-clear'); assert.deepEqual(r.ended, [A]); assert.equal(r.timers.length, 0)
+})
+
+test('server từ chối (forbidden) → trạng thái denied: không gửi gì cho iframe, không hẹn gia hạn, không thử lại vòng lặp', async () => {
+  const r = rig(); r.ctl.onChild({ v: 1, type: 'mira-grading-ready' }); r.ctl.setThread(A); await r.flush()
+  r.pending[0].resolve({ ok: false, reason: 'forbidden' }); await r.flush()
+  assert.equal(r.statuses.at(-1), 'denied'); assert.equal(r.posts.length, 0); assert.equal(r.timers.length, 0)
 })

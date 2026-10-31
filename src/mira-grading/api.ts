@@ -24,6 +24,13 @@ export function createMiraGradingApi(rpc: RpcFn) {
       if (!j || typeof j.ticket !== 'string' || !/^[0-9a-f]{64}$/.test(j.ticket)) return { ok: false, reason: 'error' }
       return { ok: true, value: { ticket: j.ticket, expiresAt: String(j.expires_at ?? '') } }
     },
+    /** "Tôi có được dùng Mira không?" — RPC chỉ trả trạng thái của CHÍNH người gọi, KHÔNG tạo vé. Hàm chưa có / lỗi / không rõ → false (ẩn). */
+    async pilotEnabled(): Promise<boolean> {
+      try {
+        const r = await rpc('mira_grading_pilot_enabled', {})
+        return !r.error && r.data === true
+      } catch { return false }
+    },
     async end(threadId: string): Promise<void> {
       try { await rpc('mira_grading_end', { p_thread: threadId }) } catch { /* vé tự hết hạn sau 5 phút */ }
     },

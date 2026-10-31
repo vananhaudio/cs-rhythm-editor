@@ -34,7 +34,8 @@ function Dock({ url, origin, api, threadId, children }: { url: string; origin: s
   const wide = useSyncExternalStore(subscribeWide, isWide, () => true)
   const ctl = useRef<ReturnType<typeof createDockController> | null>(null)
   // Màn rộng: nạp Mira ngay. Màn nhỏ: CHỈ nạp sau khi Thầy bấm nút Mira (không tốn mạng, không mở cuộc trao đổi khi chưa cần).
-  const active = (wide && !collapsed) || everOpened
+  const denied = status === 'denied'                   // server từ chối (không/không còn trong pilot): ẩn hẳn, không nạp Mira
+  const active = !denied && ((wide && !collapsed) || everOpened)
 
   const post = useCallback((m: ContextMessage | ClearMessage) => {
     frameRef.current?.contentWindow?.postMessage(m, origin)   // đích CỤ THỂ, không '*'
@@ -62,7 +63,7 @@ function Dock({ url, origin, api, threadId, children }: { url: string; origin: s
   const statusText = STATUS_TEXT[status]
 
   return (
-    <div className={'mira-dock-wrap' + (collapsed ? ' is-collapsed' : '')} data-protocol={PROTOCOL_VERSION}>
+    <div className={'mira-dock-wrap' + (collapsed ? ' is-collapsed' : '') + (denied ? ' is-denied' : '')} data-protocol={PROTOCOL_VERSION}>
       <div className="mira-dock-main">{children}</div>
       <div className={'mira-dock-backdrop' + (open ? ' is-open' : '')} onClick={() => setOpen(false)} aria-hidden="true" />
       <aside className={'mira-dock-panel' + (open ? ' is-open' : '') + (collapsed ? ' is-collapsed' : '')} aria-label="Mira — trao đổi khi chấm bài" data-testid="mira-panel">

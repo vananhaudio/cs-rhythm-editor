@@ -9,7 +9,7 @@ export const RENEW_MS = 3 * 60_000
 /** Iframe xin vé lại: tối đa một lần / 5 giây cho mỗi bài — chặn vòng lặp xin-vé-liên-tục nếu Mira bị cấu hình sai. */
 export const NEED_COOLDOWN_MS = 5_000
 
-export type DockStatus = 'idle' | 'loading' | 'ready' | 'unavailable' | 'error'
+export type DockStatus = 'idle' | 'loading' | 'ready' | 'unavailable' | 'denied' | 'error'
 export type Deps = {
   api: MiraGradingApi
   post: (m: ContextMessage | ClearMessage) => void   // gửi tới iframe (đã ghim origin ở nơi gọi)
@@ -43,7 +43,8 @@ export function createDockController(deps: Deps) {
       if (r.ok) void deps.api.end(id)
       return
     }
-    if (!r.ok) { deps.onStatus(r.reason === 'unavailable' ? 'unavailable' : 'error'); return }
+    // 'forbidden' = server không cho (tài khoản không (còn) trong pilot, hoặc mất vai) → ẩn khung, không báo lỗi gây rối
+    if (!r.ok) { deps.onStatus(r.reason === 'unavailable' ? 'unavailable' : r.reason === 'forbidden' ? 'denied' : 'error'); return }
     deps.post({ v: 1, type: 'mira-context', kind: 'learning_thread', id, ticket: r.value.ticket, expiresAt: r.value.expiresAt, seq: ++seq })
     deps.onStatus('ready')
     stopTimer()

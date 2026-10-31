@@ -30,3 +30,7 @@
 }
 @keyframes mira-dock-up { from { transform: translateY(24px); opacity: .6; } to { transform: none; opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .mira-dock-panel.is-open { animation: none; } }
+
+/* Server từ chối (không/không còn trong pilot): trả về đúng bố cục một cột như khi chưa có tính năng. */
+.mira-dock-wrap.is-denied { display: block; }
+.mira-dock-wrap.is-denied .mira-dock-panel, .mira-dock-wrap.is-denied .mira-dock-fab, .mira-dock-wrap.is-denied .mira-dock-backdrop { display: none !important; }

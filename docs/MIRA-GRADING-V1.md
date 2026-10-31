@@ -41,3 +41,17 @@ Rollback nhanh: bỏ biến `VITE_MIRA_GRADING_URL` (Class tắt), hoặc thu h�
 
 ## Test
 `npm run test:db-mira-grading` (58) · `npm run test:mira-grading` (16) · `npm run e2e:mira-grading` (30, Chrome thật + Mira thật) · Mira: `npm run test:grading` (34).
+
+## V1.1 — Pilot theo tài khoản (Owner duyệt 01/11/2026; CHƯA áp production)
+Mục tiêu: lúc thử nghiệm CHỈ tài khoản Owner dùng được Mira; teacher/admin khác và học viên bị chặn **ở server**, không dựa vào giao diện.
+- **Bảng** `mira_grading_pilot(user_id uuid pk, added_at, note)`: RLS bật, không policy, không quyền cho client, không FK, nằm trong `self_managed` của `rls_setup.sql`. Không ai (kể cả Thầy) tự thêm mình được; chỉ qua SQL do Owner duyệt.
+- **`mira_grading_ticket`** đòi `is_teacher()` **và** có trong pilot (cùng lỗi `forbidden`, không lộ danh sách).
+- **`mira_grading_context`** đòi Thầy của vé **còn** trong pilot: gỡ khỏi pilot là mọi vé đang sống (≤ 5 phút) bị từ chối ngay.
+- **`mira_grading_pilot_enabled()`** (authenticated): giao diện hỏi "tôi có được dùng Mira không" mà KHÔNG phải xin vé; chỉ trả trạng thái của chính người gọi. Hàm thiếu / lỗi / không rõ → ẩn.
+- **Giao diện:** `PilotDock` hỏi `pilot_enabled` trước; chưa biết / không được / lỗi → chỉ render màn chấm bài (không iframe, không xin vé, không đổi bố cục, DOM y như bản cũ). Nếu server từ chối vé giữa phiên (bị gỡ) → khung tự ẩn.
+- **Cổng bản V1:** migration chỉ thay thân hàm khi thân hiện tại đúng md5 bản V1 đã nghiệm thu (ticket `b21ea338…`, context `32741fd4…`) hoặc đã là bản pilot; bản lạ → dừng, không ghi đè.
+- **Thêm Owner (chỉ khi Owner duyệt, một dòng):**
+  `insert into public.mira_grading_pilot (user_id, note) select id, 'Owner' from public.app_users where id = '<UUID Owner>' and role in ('teacher','admin');` (0 dòng nếu uid không phải teacher/admin).
+- **Trình tự production:** preflight pilot → dryrun → migrate `db/mira_grading_pilot_v1_setup.sql` → postflight pilot (thay postflight V1 vì sau pilot có 4 hàm) → thêm uid Owner → postflight (PILOT = 1) → merge Class → deploy Class có `VITE_MIRA_GRADING_URL`.
+- **Rollback:** `db/mira_grading_pilot_v1_rollback.sql` trả đúng thân V1, gỡ hàm/bảng pilot, giữ nguyên bảng khoá/vé. Trước khi rollback nên tắt tính năng ở Class (nếu không mọi teacher sẽ xin được vé như V1).
+- **Test:** `npm run test:db-mira-grading-pilot` (64 kiểm tra, gồm: Owner được phép, teacher khác/học viên/anon bị chặn, vé giả, quyền bảng, gỡ pilot vô hiệu vé ngay, bản lạ dừng, khoá DDL, rollback ×2, tương thích 39 kiểm tra V1) · `npm run test:mira-grading` (24) · `npm run e2e:mira-grading` (35, Chrome thật, gồm thầy ngoài pilot và gỡ pilot giữa phiên).

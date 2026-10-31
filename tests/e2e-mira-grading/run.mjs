@@ -77,6 +77,7 @@ async function login(page, email, p = '') {
   await page.type('#cs-login-email', email); await page.type('#cs-login-pass', 'e2e'); await page.click('.cs-guest-submit')
 }
 const miraFrame = async page => { await page.waitForFunction(() => document.querySelector('iframe.mira-dock-frame')); for (let i = 0; i < 100; i++) { const f = page.frames().find(x => x.url().startsWith(MIRA + '/grading')); if (f) return f; await sleep(150) } throw new Error('không thấy iframe Mira; frames=' + page.frames().map(x => x.url()).join(' | ') + ' src=' + await page.evaluate(() => document.querySelector('iframe.mira-dock-frame')?.getAttribute('src'))) }
+const frames_has_mira = page => page.frames().some(x => x.url().startsWith(MIRA + '/grading'))
 const curFrame = page => page.frames().find(x => x.url().startsWith(MIRA + '/grading'))
 const fText = async (page, sel = 'main') => { for (let i = 0; i < 40; i++) { try { return await curFrame(page).$eval(sel, e => e.innerText) } catch { await sleep(250) } } throw new Error('không đọc được khung Mira') }
 async function fWait(page, re0, ms = 20000) {
@@ -191,6 +192,29 @@ try {
   assert.match(await E.page.evaluate(() => document.body.innerText), /chỉ dùng bên cạnh màn chấm bài/); ok('mở /grading trực tiếp: báo "chỉ dùng bên cạnh màn chấm bài", không có ô chat')
   await E.ctx.close()
 
+  // ── A2. Thầy khác (KHÔNG trong pilot): server chặn, giao diện không hiện Mira ──
+  const T2 = await ctxPage(1366, 900)
+  const t2auth = {}
+  T2.page.on('request', r => { const h = r.headers(); if (/\/rest\/v1\//.test(r.url()) && /^Bearer eyJ/.test(h.authorization ?? '') && /"role":"authenticated"/.test(Buffer.from(h.authorization.split('.')[1], 'base64url').toString())) { t2auth.jwt = h.authorization; t2auth.apikey = h.apikey } })
+  const rpcCalls = []; T2.page.on('request', r => { const m = /rest\/v1\/rpc\/(mira_grading_\w+)/.exec(r.url()); if (m) rpcCalls.push(m[1]) })
+  await login(T2.page, 't2@test.local', `/t/${TH_A}`)
+  await T2.page.waitForSelector('.lt-page', { timeout: 20000 })
+  await sleep(1500)
+  assert.equal(await T2.page.$('iframe.mira-dock-frame'), null); assert.equal(await T2.page.$('.mira-dock-fab'), null); assert.equal(await T2.page.$('.mira-dock-wrap'), null)
+  assert.ok(!frames_has_mira(T2.page), 'iframe Mira không được nạp')
+  assert.deepEqual([...new Set(rpcCalls)], ['mira_grading_pilot_enabled'], 'thầy ngoài pilot chỉ hỏi pilot_enabled, KHÔNG xin vé: ' + JSON.stringify(rpcCalls))
+  assert.equal(Number(psql('e2e', "select count(*) from public.mira_grading_tickets where teacher_id = 'ffffffff-0000-4000-8000-00000000000f'")), 0)
+  // màn chấm bài của thầy này vẫn dùng bình thường
+  assert.ok(await T2.page.$('.lt-page')); await noOverflow(T2.page, 'thầy ngoài pilot')
+  ok('thầy khác (không trong pilot): không khung Mira, không nút, không iframe; chỉ hỏi pilot_enabled, không xin vé nào; màn chấm bài vẫn nguyên')
+  // ép gọi thẳng RPC xin vé bằng JWT THẬT của chính thầy này (lấy từ request của trang): server từ chối
+  assert.ok(t2auth.jwt, 'không bắt được JWT của thầy ngoài pilot')
+  const dr = await fetch(`http://127.0.0.1:${process.env.E2E_PROXY_PORT}/rest/v1/rpc/mira_grading_ticket`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: t2auth.jwt, apikey: t2auth.apikey ?? '' }, body: JSON.stringify({ p_thread: TH_A }) })
+  const direct = { status: dr.status, body: (await dr.json()).message }
+  assert.ok(direct.status >= 400 && direct.body === 'forbidden', 'RPC xin vé của thầy ngoài pilot phải bị từ chối: ' + JSON.stringify(direct))
+  ok(`thầy khác gọi THẲNG RPC xin vé bằng JWT thật của mình: HTTP ${direct.status} "${direct.body}" (chặn ở server, không dựa vào giao diện)`)
+  await T2.ctx.close()
+
   // ── F. Học viên (không phải Thầy) mở bài của mình: không có Mira ──
   const S = await ctxPage(1366, 900)
   await login(S.page, 'a@test.local', `/t/${TH_A}`)
@@ -199,6 +223,16 @@ try {
   assert.equal(await S.page.$('iframe.mira-dock-frame'), null); assert.equal(await S.page.$('.mira-dock-fab'), null); assert.equal(await S.page.$('.mira-dock-wrap'), null)
   ok('học viên mở bài của chính mình: không có khung Mira, không có nút Mira')
   await S.ctx.close()
+
+  // ── F2. Owner gỡ T khỏi pilot GIỮA phiên: vé đang sống mất hiệu lực, khung Mira tự ẩn ──
+  psql('e2e', "delete from public.mira_grading_pilot where user_id = 'dddddddd-0000-4000-8000-00000000000d'")
+  await ask(D.page, 'Hỏi sau khi bị gỡ khỏi pilot')
+  await D.page.waitForFunction(() => document.querySelector('.mira-dock-wrap')?.classList.contains('is-denied'), { timeout: 30000 })
+  assert.equal(await D.page.$eval('.mira-dock-frame', f => f.getAttribute('src')), null)
+  assert.ok(await D.page.$('.lt-page')); await noOverflow(D.page, 'sau khi bị gỡ khỏi pilot')
+  assert.equal(await D.page.evaluate(() => getComputedStyle(document.querySelector('.mira-dock-panel')).display), 'none')
+  ok('gỡ khỏi pilot giữa phiên: Mira từ chối vé cũ, Class xin vé mới bị server chặn → khung tự ẩn, bố cục về một cột, màn chấm bài nguyên vẹn')
+  psql('e2e', "insert into public.mira_grading_pilot (user_id, note) values ('dddddddd-0000-4000-8000-00000000000d', 'Owner (E2E)')")
   await D.ctx.close()
 
   // ── G. Điện thoại 390: nút Mira, ngăn trượt, không che nội dung khi đóng ──

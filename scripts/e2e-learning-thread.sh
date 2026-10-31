@@ -102,7 +102,7 @@ server-host = "127.0.0.1"
 EOF
 postgrest "$TMP/pgrst.conf" >"$TMP/pgrst.log" 2>&1 & PIDS+=($!)
 
-USERS='{"a@test.local":"aaaaaaaa-0000-4000-8000-00000000000a","b@test.local":"bbbbbbbb-0000-4000-8000-00000000000b","c@test.local":"cccccccc-0000-4000-8000-00000000000c","t@test.local":"dddddddd-0000-4000-8000-00000000000d","n@test.local":"eeeeeeee-0000-4000-8000-00000000000e"}'
+USERS='{"a@test.local":"aaaaaaaa-0000-4000-8000-00000000000a","b@test.local":"bbbbbbbb-0000-4000-8000-00000000000b","c@test.local":"cccccccc-0000-4000-8000-00000000000c","t@test.local":"dddddddd-0000-4000-8000-00000000000d","n@test.local":"eeeeeeee-0000-4000-8000-00000000000e","t2@test.local":"ffffffff-0000-4000-8000-00000000000f"}'
 PROXY_PORT=$PROXY_PORT PGRST_URL="http://127.0.0.1:$API_PORT" JWT_SECRET="$SECRET" E2E_USERS="$USERS" \
   node "$ROOT/scripts/e2e-learning-thread-proxy.mjs" >"$TMP/proxy.log" 2>&1 & PIDS+=($!)
 ANON_KEY="$(JWT_SECRET="$SECRET" node -e '

@@ -16,6 +16,7 @@ function mkApi() {
   const api: MiraGradingApi = {
     ticket: async (id) => { asked.push(id); return { ok: true, value: { ticket: (id === A ? 'a' : 'b').repeat(64), expiresAt: 'T' } } },
     end: async (id) => { ended.push(id) },
+    pilotEnabled: async () => true,
   }
   return { api, asked, ended }
 }
@@ -66,7 +67,7 @@ test('tin giả: sai origin / sai cửa sổ không kích hoạt cấp vé', asy
   await new Promise((res) => setTimeout(res, 30)); assert.deepEqual(asked, [])
 })
 test('máy chủ Mira/Class chưa sẵn sàng: hiện thông báo nhẹ, màn chấm bài không bị ảnh hưởng', async () => {
-  const api: MiraGradingApi = { ticket: async () => ({ ok: false, reason: 'unavailable' }), end: async () => {} }
+  const api: MiraGradingApi = { ticket: async () => ({ ok: false, reason: 'unavailable' }), end: async () => {}, pilotEnabled: async () => true }
   const r = render(<DockView enabled cfg={CFG} api={api} threadId={A}><p>Màn chấm</p></DockView>)
   const { cw } = stubFrame(r.container); await fromChild(cw, { v: 1, type: 'mira-grading-ready' })
   await waitFor(() => assert.ok(r.getByText(/Mira chưa sẵn sàng/))); assert.ok(r.getByText('Màn chấm'))
@@ -79,4 +80,13 @@ test('màn nhỏ: bấm nút Mira mở ngăn, đóng lại trả về màn chấ
   fireEvent.click(r.getByRole('button', { name: 'Mira' })); assert.ok(panel.className.includes('is-open'))
   fireEvent.click(r.getByRole('button', { name: 'Đóng Mira' })); assert.ok(!panel.className.includes('is-open'))
   r.unmount(); await waitFor(() => assert.deepEqual(ended, [A]))
+})
+
+test('server từ chối vé (forbidden: không/không còn trong pilot): khung bị ẩn hẳn, bố cục về một cột, iframe không còn nạp', async () => {
+  const api: MiraGradingApi = { ticket: async () => ({ ok: false, reason: 'forbidden' }), end: async () => {}, pilotEnabled: async () => true }
+  const r = render(<DockView enabled cfg={CFG} api={api} threadId={A}><p>Màn chấm</p></DockView>)
+  const { cw } = stubFrame(r.container); await fromChild(cw, { v: 1, type: 'mira-grading-ready' })
+  await waitFor(() => assert.ok(r.container.querySelector('.mira-dock-wrap')!.className.includes('is-denied')))
+  assert.equal(r.container.querySelector('iframe')!.getAttribute('src'), null, 'không nạp Mira khi bị từ chối')
+  assert.ok(r.getByText('Màn chấm')); assert.equal(r.queryByText(/Chưa kết nối được Mira/), null, 'không hiện lỗi gây rối')
 })

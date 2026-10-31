@@ -1,7 +1,13 @@
 -- Dữ liệu + migration cho E2E Mira cạnh màn chấm bài (cluster TẠM, KHÔNG production). Nạp sau fixture SOLO01.TH01 (A, B là học viên; T là Thầy).
 \ir ../../db/student_360_p1_setup.sql
 \ir ../../db/mira_grading_v1_setup.sql
+\ir ../../db/mira_grading_pilot_v1_setup.sql
+-- Thầy thứ hai (KHÔNG trong pilot) để chứng minh bị chặn ở server
+insert into auth.users (id, email) values ('ffffffff-0000-4000-8000-00000000000f', 't2@test.local');
+insert into public.app_users (id, role, name, email) values ('ffffffff-0000-4000-8000-00000000000f', 'teacher', 'Thầy khác', 't2@test.local');
 insert into public.mira_grading_keys (key_hash) values (encode(sha256(convert_to('e2e-mira-key', 'UTF8')), 'hex'));
+-- Pilot: CHỈ T (Owner trong E2E). Dùng đúng cổng thêm như thao tác thật: chỉ thêm uid là teacher/admin.
+insert into public.mira_grading_pilot (user_id, note) select id, 'Owner (E2E)' from public.app_users where id = 'dddddddd-0000-4000-8000-00000000000d' and role in ('teacher', 'admin');
 
 select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-0000-4000-8000-00000000000a","role":"authenticated"}', false);
 set role authenticated;

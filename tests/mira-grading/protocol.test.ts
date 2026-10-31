@@ -42,6 +42,14 @@ test('API: gọi đúng RPC với đúng tham số; chưa có migration → unav
   assert.deepEqual(await mk({ error: { code: '42501', message: 'forbidden' } }).ticket(ID), { ok: false, reason: 'forbidden' })
   assert.deepEqual(await mk({ error: { code: '54000', message: 'rate_limited' } }).ticket(ID), { ok: false, reason: 'rate_limited' })
   assert.deepEqual(await mk({ data: { ticket: 'eyJhbGciOi.JWT.token', expires_at: 'T' } }).ticket(ID), { ok: false, reason: 'error' })
+  // pilot_enabled: chỉ true khi RPC trả đúng true; thiếu hàm / lỗi / trả khác → false (ẩn)
+  assert.equal(await mk({ data: true }).pilotEnabled(), true)
+  assert.equal(await mk({ data: false }).pilotEnabled(), false)
+  assert.equal(await mk({ data: 'true' }).pilotEnabled(), false)
+  assert.equal(await mk({ data: null }).pilotEnabled(), false)
+  assert.equal(await mk({ error: { code: 'PGRST202', message: 'Could not find the function' } }).pilotEnabled(), false)
+  assert.equal(await mk({ error: { code: '42501', message: 'permission denied' } }).pilotEnabled(), false)
+  assert.deepEqual(calls.slice(-1)[0], ['mira_grading_pilot_enabled', {}])
   const boom = createMiraGradingApi((async () => { throw new Error('mạng') }) as RpcFn)
-  assert.deepEqual(await boom.ticket(ID), { ok: false, reason: 'error' }); await boom.end(ID) // không ném
+  assert.deepEqual(await boom.ticket(ID), { ok: false, reason: 'error' }); await boom.end(ID); assert.equal(await boom.pilotEnabled(), false) // không ném
 })
