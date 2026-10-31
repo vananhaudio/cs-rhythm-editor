@@ -40,6 +40,12 @@ psqld -f "$ROOT/db/rls_setup.sql" >/dev/null && ok "chạy lại rls_setup.sql"
 [ "$(q "select count(*) from information_schema.role_table_grants where table_name like 'mira\_grading\_%' and grantee in ('anon','authenticated','PUBLIC')")" = "0" ] \
   && ok "sau rls_setup: anon/authenticated vẫn không có quyền bảng mira_grading_*" || fail "rls_setup/grant mặc định mở quyền bảng"
 [ "$(q "select count(*) from pg_policies where tablename like 'mira\_grading\_%'")" = "0" ] && ok "không có policy nào trên bảng mira_grading_*" || fail "có policy"
+[ "$(q "select count(*) from pg_constraint where contype = 'f' and conrelid in ('public.mira_grading_keys'::regclass, 'public.mira_grading_tickets'::regclass)")" = "0" ] \
+  && ok "2 bảng mới không có FK (không khoá auth.users / learning_threads)" || fail "có FK"
+post() { q "select item from ($(sed 's/;[[:space:]]*$//' "$ROOT/db/mira_grading_v1_postflight.sql")) z where section = 'GATE'"; }
+[ "$(post)" = "PASS" ] && ok "postflight (chỉ đọc): GATE = PASS — quyền/cấu hình đúng thiết kế" || { q "select item from ($(sed 's/;[[:space:]]*$//' "$ROOT/db/mira_grading_v1_postflight.sql")) z where item like 'FAIL%'"; fail "postflight"; }
+[ "$(q "select item from ($(sed 's/;[[:space:]]*$//' "$ROOT/db/mira_grading_v1_postflight.sql")) z where section = 'KEY'")" = "CHƯA đặt khoá Mira (bước cuối trước khi bật)" ] && ok "postflight báo đúng: chưa đặt khoá Mira" || fail "KEY"
+
 
 echo "── Test SQL (quyền/RPC theo từng identity)"
 PGOPTIONS="-c client_min_messages=notice" "$PGBIN/psql" -X -q -h "$TMP" -p "$PORT" -U postgres -d mg -v ON_ERROR_STOP=1 \
@@ -53,5 +59,15 @@ psqld -1 -f "$ROOT/db/mira_grading_v1_rollback.sql" >/dev/null && ok "rollback l
 [ "$(gate)" = "PASS" ] && ok "sau rollback: preflight PASS lại" || fail "preflight sau rollback"
 [ "$(q "select md5(string_agg(proname || prosrc, '' order by proname)) from pg_proc where proname like 'student\_360\_%' or proname in ('is_teacher','class_public_identity','lt_detail')")" = "$FN_BEFORE" ] \
   && ok "migration/rollback không đổi thân hàm Class nào (student_360_*, is_teacher, class_public_identity, lt_detail)" || fail "hàm Class bị đổi"
+# Ảnh hưởng khoá: trong CHÍNH giao dịch migration, bảng nào ngoài 2 bảng mới bị giữ khoá GHI (ngoài AccessShare/RowShare)? Phải là 0.
+{ echo "begin;"; cat "$ROOT/db/mira_grading_v1_setup.sql"; echo "select 'LOCKS=' || count(*) from pg_locks l join pg_class c on c.oid = l.relation join pg_namespace n on n.oid = c.relnamespace
+        where l.pid = pg_backend_pid() and l.locktype = 'relation' and n.nspname in ('public', 'auth') and c.relname not like 'mira\\_grading\\_%'
+          and l.mode not in ('AccessShareLock', 'RowShareLock') and c.relkind in ('r', 'v', 'm');"; echo "rollback;"; } > "$TMP/lockprobe.sql"
+LOCKS="$(psqld -tA -f "$TMP/lockprobe.sql" | grep '^LOCKS=')"
+[ "$LOCKS" = "LOCKS=0" ] && ok "migration không giữ khoá ghi lên bảng Class nào (${LOCKS})" || fail "migration giữ khoá lên bảng ngoài: $LOCKS"
+# Đối chứng dương: nếu migration có FK tới learning_threads thì thăm dò PHẢI thấy khoá → chứng minh phép đo không mù
+sed 's/^begin;$/begin; lock table public.learning_threads in share row exclusive mode;/' "$TMP/lockprobe.sql" > "$TMP/lockprobe_pos.sql"
+POS="$(psqld -tA -f "$TMP/lockprobe_pos.sql" | grep '^LOCKS=')"; [ "$POS" != "LOCKS=0" ] && ok "đối chứng dương: thăm dò phát hiện khoá khi có (${POS})" || fail "thăm dò khoá mù"
+[ "$(gate)" = "PASS" ] && ok "thăm dò khoá đã rollback sạch (preflight PASS)" || fail "thăm dò khoá để lại dấu"
 psqld -1 -f "$ROOT/db/mira_grading_v1_setup.sql" >/dev/null && ok "cài lại sau rollback"
 echo "XONG: Mira grading DB — mọi kiểm tra đạt"

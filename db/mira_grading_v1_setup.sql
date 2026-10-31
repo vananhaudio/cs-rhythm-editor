@@ -41,8 +41,10 @@ revoke all on public.mira_grading_keys from public, anon, authenticated;
 -- ── 2) Vé ngắn hạn (chỉ băm vé) ──
 create table if not exists public.mira_grading_tickets (
   ticket_hash text primary key check (ticket_hash ~ '^[0-9a-f]{64}$'),
-  teacher_id  uuid not null references auth.users(id) on delete cascade,
-  thread_id   uuid not null references public.learning_threads(id) on delete cascade,
+  -- KHÔNG FK tới auth.users / learning_threads: tạo FK khoá bảng gốc (đụng đăng nhập/trả bài) mà vé chỉ sống 5 phút, hàm đọc đã tự kiểm
+  -- Thầy còn vai và bài trả còn tồn tại ở MỖI lần đọc; vé mồ côi tự hết hạn và bị dọn ở lần cấp vé kế tiếp.
+  teacher_id  uuid not null,
+  thread_id   uuid not null,
   created_at  timestamptz not null default now(),
   expires_at  timestamptz not null
 );

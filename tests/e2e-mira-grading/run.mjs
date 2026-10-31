@@ -48,7 +48,7 @@ const CLASS_ANON = jwt(process.env.E2E_JWT_SECRET, { role: 'anon', iss: 'e2e', e
 const miraEnv = {
   ...process.env, NEXT_PUBLIC_SUPABASE_URL: `http://127.0.0.1:${MPG}`, SUPABASE_SERVICE_ROLE_KEY: SERVICE, MIRA_GRADING_KEY: 'e2e-mira-key',
   MIRA_GRADING_PARENT_ORIGINS: CLASS, OPENAI_API_KEY: 'fake', E2E_CLASS_URL: `http://127.0.0.1:${process.env.E2E_PROXY_PORT}`, E2E_CLASS_ANON: CLASS_ANON,
-  E2E_OPENAI_LOG: OPENAI_LOG, NODE_OPTIONS: `--require ${path.join(MIRA_DIR, 'tests/e2e/preload.cjs')}`, PORT: MP,
+  E2E_OPENAI_LOG: OPENAI_LOG, GRADING_PURGE_TOKEN: 'e2e-purge-token', NODE_OPTIONS: `--require ${path.join(MIRA_DIR, 'tests/e2e/preload.cjs')}`, PORT: MP,
 }
 execFileSync('npx', ['next', 'build'], { cwd: MIRA_DIR, env: { ...miraEnv, NODE_OPTIONS: '' }, stdio: 'ignore' })
 run('npx', ['next', 'start', '-p', MP, '-H', '127.0.0.1'], { cwd: MIRA_DIR, env: miraEnv })
@@ -127,6 +127,7 @@ try {
   assert.equal(L1.store, false); assert.equal(L1.tools, undefined)
   for (const need of ['BÀI-NỘP-CỦA-AN', 'MỤC-TIÊU-CỦA-AN', 'Gửi video chơi âm giai']) assert.ok(all1.includes(need), 'prompt thiếu ' + need)
   for (const bad of ['BÀI-NỘP-CỦA-BÌNH', 'REF-NỘI-BỘ-AN', 'aaaaaaaa-0000']) assert.ok(!all1.includes(bad), 'prompt lộ ' + bad)
+  assert.ok(!/(?<![\p{L}\p{N}])An(?![\p{L}\p{N}])/u.test(all1) && all1.includes('[Học viên]'), 'prompt còn tên thật của học viên: ' + all1.slice(0, 300))
   ok('Mira nhận đúng ngữ cảnh bài của An (bài nộp + đề + Student 360), KHÔNG có bài của Bình, KHÔNG lộ con trỏ nội bộ/user_id; store=false, không công cụ')
   await D.page.screenshot({ path: path.join(SHOTS, 'mira-desktop-an.png') })
 
@@ -221,6 +222,33 @@ try {
   assert.equal(await P.page.evaluate(() => getComputedStyle(document.querySelector('.mira-dock-panel')).display), 'none'); ok('điện thoại: đóng ngăn → trở về đúng màn chấm bài')
   await P.page.click('.mira-dock-fab'); await sleep(500)
   assert.match(await fText(P.page), /Gợi ý nhận xét giúp Thầy/); ok('điện thoại: mở lại → lịch sử còn nguyên')
+
+  // ── H. Thầy xoá sớm đúng phiên của bài đang mở ──
+  const countBy = sid => Number(psql('mira', `select count(*) from conversations where session_id = '${sid}'`))
+  const sessions = psql('mira', "select id from chat_sessions order by created_at").split('\n').filter(Boolean)
+  assert.equal(sessions.length, 2); const before = sessions.map(countBy); assert.ok(before.every(n => n > 0), 'cả hai phiên phải có tin: ' + before)
+  const clearFrame = curFrame(P.page)
+  await clearFrame.click('footer button'); await sleep(200)
+  assert.match(await clearFrame.evaluate(() => document.querySelector('footer button').textContent), /Bấm lần nữa/); ok('xoá sớm: cần bấm hai lần (không xoá nhầm)')
+  await clearFrame.click('footer button'); await sleep(1200)
+  const after = sessions.map(countBy)
+  assert.equal(after.filter(n => n === 0).length, 1, 'đúng MỘT phiên được xoá: ' + after); assert.equal(after.filter(n => n === before[sessions.indexOf(sessions.find((x, i) => after[i] > 0))]).length >= 1, true)
+  ok(`xoá sớm: chỉ phiên của bài đang mở bị xoá (${before.join('+')} → ${after.join('+')} tin); phiên của bài kia còn nguyên`)
+
+  // ── I. Dọn 90 ngày: route đòi Bearer; xoá đúng phạm vi ──
+  const miraC = psql('mira', "select id from chat_conversations where channel = 'class-grading' limit 1")
+  const oldSes = '99999999-9999-4999-8999-999999999999'
+  psql('mira', `insert into chat_sessions (id, conversation_id, created_at) values ('${oldSes}', '${miraC}', now() - interval '120 days')`)
+  psql('mira', `insert into conversations (role, channel, content, conversation_id, session_id, created_at) values ('guest', 'class-grading', 'tin-cũ-120-ngày', '${miraC}', '${oldSes}', now() - interval '120 days'), ('guest', 'shop', 'tin-shop-cũ', null, null, now() - interval '120 days'), ('me', 'studio', 'tin-studio-cũ', null, null, now() - interval '120 days')`)
+  const purge = (hdr) => fetch(`http://127.0.0.1:${MP}/api/grading/purge`, { method: 'POST', headers: hdr })
+  assert.equal((await purge({})).status, 401); assert.equal((await purge({ authorization: 'Bearer sai' })).status, 401)
+  assert.equal(Number(psql('mira', "select count(*) from conversations where content = 'tin-cũ-120-ngày'")), 1); ok('dọn 90 ngày: không token / sai token → 401, chưa xoá gì')
+  const res = await purge({ authorization: 'Bearer e2e-purge-token' }); const out = await res.json()
+  assert.equal(res.status, 200); assert.equal(out.days, 90); assert.deepEqual([out.messages, out.sessions], [1, 1])
+  assert.equal(psql('mira', "select count(*) from conversations where content = 'tin-cũ-120-ngày'"), '0'); assert.equal(psql('mira', `select count(*) from chat_sessions where id = '${oldSes}'`), '0')
+  assert.equal(psql('mira', "select count(*) from conversations where content in ('tin-shop-cũ', 'tin-studio-cũ')"), '2')
+  assert.equal(psql('mira', 'select count(*) from people'), '1'); assert.equal(psql('mira', 'select count(*) from memories'), '1')
+  ok('dọn 90 ngày: xoá đúng tin + phiên rỗng quá hạn của class-grading; tin shop/studio cũ, people, memories còn nguyên')
 
   assert.deepEqual(errors, [], 'lỗi trình duyệt: ' + errors.join(' | ')); ok('không có lỗi script/console trong cả phiên')
   console.log(`XONG: Mira E2E — ${pass} kiểm tra đạt. Ảnh: ${SHOTS}`)
