@@ -118,6 +118,8 @@ echo "── Stack: PostgREST :$API_PORT · proxy :$PROXY_PORT · vite :$VITE_PO
 
 # Cho kịch bản Chrome thao tác DB tạm giữa chừng (vd. gỡ thành viên Band): socket + cổng + thư mục bin của cluster này
 export E2E_PG_SOCK="$TMP" E2E_PG_PORT="$PORT" E2E_PG_BIN="$PGBIN"
+# Cho kịch bản cần dựng thêm dịch vụ cạnh stack (vd. Mira E2E): cổng proxy Supabase giả + secret JWT local
+export E2E_PROXY_PORT="$PROXY_PORT" E2E_API_PORT="$API_PORT" E2E_JWT_SECRET="$SECRET"
 set +e
 # E2E_SKIP_BASE=1 (chỉ khi gỡ lỗi kịch bản thêm): bỏ qua run.mjs / run-checkpoints.mjs
 if [ -n "${E2E_SKIP_BASE:-}" ] || [ -n "${E2E_ONLY_CHECKPOINTS:-}" ]; then RC=0; else

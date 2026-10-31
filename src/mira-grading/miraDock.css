@@ -1,0 +1,32 @@
+/* Khung Mira cạnh màn chấm bài. Desktop ≥1200px: hai cột (chấm bài trái, Mira phải). Nhỏ hơn: nút nổi + ngăn trượt từ dưới lên. */
+.mira-dock-wrap { display: block; }
+.mira-dock-main { min-width: 0; }
+.mira-dock-panel { display: none; background: #fff; border: 1px solid #E4DED4; border-radius: 12px; overflow: hidden; flex-direction: column; }
+.mira-dock-panel.is-open { display: flex; }
+.mira-dock-head { display: flex; align-items: center; gap: 8px; padding: 6px 8px 6px 12px; border-bottom: 1px solid #E4DED4; font-size: 13px; background: #FAF8F4; }
+.mira-dock-head b { flex: 1; }
+.mira-dock-head button { min-height: 36px; min-width: 36px; border: 0; background: none; cursor: pointer; font: inherit; color: #4338CA; border-radius: 8px; }
+.mira-dock-frame { flex: 1; width: 100%; border: 0; min-height: 0; background: #fff; }
+.mira-dock-status { margin: 0; padding: 6px 12px; font-size: 12.5px; color: #8A4B0E; background: #FBF1E4; }
+.mira-dock-fab { position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 40; min-height: 48px; padding: 0 18px; border-radius: 99px; border: 0; background: #4338CA; color: #fff; font: inherit; font-weight: 600; box-shadow: 0 6px 20px rgba(33, 28, 50, .28); cursor: pointer; }
+.mira-dock-fab[hidden] { display: none; }
+.mira-dock-backdrop { display: none; }
+
+/* Nhỏ: ngăn trượt từ dưới lên, KHÔNG phủ kín — phần trên của màn chấm bài vẫn thấy; đóng lại là trở về đúng chỗ đang chấm. */
+@media (max-width: 1199px) {
+  .mira-dock-collapse { display: none; }
+  .mira-dock-panel { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; height: min(72dvh, 640px); border-radius: 16px 16px 0 0; border-bottom: 0; box-shadow: 0 -8px 28px rgba(33, 28, 50, .25); padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .mira-dock-panel.is-open { animation: mira-dock-up .18s ease-out; }
+  .mira-dock-backdrop.is-open { display: block; position: fixed; inset: 0; z-index: 45; background: rgba(33, 28, 50, .25); }
+}
+@media (min-width: 1200px) {
+  .mira-dock-wrap { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 16px; align-items: start; }
+  .mira-dock-panel { display: flex; position: sticky; top: 12px; height: calc(100dvh - 24px); }
+  .mira-dock-panel.is-collapsed { display: none; }
+  .mira-dock-close { display: none; }
+  .mira-dock-wrap.is-collapsed { grid-template-columns: minmax(0, 1fr); }
+  .mira-dock-fab.desktop-hide { display: none; }
+  .mira-dock-fab.is-desktop-collapsed { display: inline-block; }
+}
+@keyframes mira-dock-up { from { transform: translateY(24px); opacity: .6; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .mira-dock-panel.is-open { animation: none; } }
