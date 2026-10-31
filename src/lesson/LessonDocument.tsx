@@ -10,6 +10,7 @@ import { exportLessonPdf } from './lessonPdf'
 import FretboardMap from './FretboardMap'
 import ZoomFrame from './ZoomFrame'
 import LessonScore from './LessonScore'
+import YouTubeLesson from '../video/YouTubeLesson'
 import { StrumSectionBlock, FlowSectionBlock } from './StrumSections'
 
 const P = {
@@ -126,6 +127,14 @@ function renderSection(s: LessonSection, i: number) {
             </div>
           )}
           {s.guidance && <ul className="lsn-guide">{s.guidance.map((g, k) => <li key={k}>{g}</li>)}</ul>}
+        </Block>
+      )
+
+    case 'video':
+      return (
+        <Block key={i} label={s.duration ? `Ôn nhanh · ${s.duration}` : 'Ôn nhanh'} title={s.title} sub={s.note}>
+          {/* Bản in/PDF bỏ player và KHÔNG in link: PDF có thể được chuyển tay, link Unlisted không được lộ theo */}
+          <div className="no-print"><YouTubeLesson url={s.url} title={s.title} style={{ width: '100%' }} /></div>
         </Block>
       )
 

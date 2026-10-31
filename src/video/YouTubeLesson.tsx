@@ -31,7 +31,8 @@ const YT_ALLOW = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyr
 // không phải https). Giải pháp chung: nhúng trang player hosted /ytplayer của web app
 // (origin https hợp lệ); trang đó forward nguyên sự kiện YouTube lên parent nên
 // onReady/onEnded/watchdog phía dưới chạy y hệt. Trên web thường → embed trực tiếp.
-const NATIVE = !!(window as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.()
+// typeof window: module còn được nạp khi render phía test/node (LessonDocument nhúng player) — không có window thì là web thường.
+const NATIVE = typeof window !== 'undefined' && !!(window as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.()
 const HOSTED_PLAYER_ORIGIN = 'https://timming.vananhaudio.com'
 function playerSrc(id: string): string {
   // nofail=1: trong WKWebView, sự kiện widget postMessage không truyền tin cậy giữa các tầng
