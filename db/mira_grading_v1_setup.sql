@@ -18,7 +18,13 @@
 do $$ begin
   if to_regclass('public.learning_threads') is null or to_regclass('public.learning_thread_events') is null
      or to_regclass('public.class_lesson_content') is null or to_regclass('public.class_sessions') is null
-     or to_regclass('public.student_360_facts') is null or to_regprocedure('public.class_public_identity(uuid)') is null then
+     or to_regclass('public.student_360_facts') is null or to_regprocedure('public.class_public_identity(uuid)') is null
+     or (select count(*) from information_schema.columns where table_schema = 'public' and (table_name, column_name) in (
+          ('class_lesson_content','updated_at'), ('class_lesson_content','blocks'), ('class_lesson_content','status'), ('class_lesson_content','session_id'),
+          ('class_sessions','session_number'), ('class_sessions','event_type'), ('class_sessions','title'), ('class_sessions','class_id'),
+          ('learning_threads','identity'), ('learning_threads','class_schedule_id'), ('learning_threads','checkpoint_id'), ('learning_threads','session_no'),
+          ('learning_thread_events','hidden_at'), ('learning_thread_events','seq'), ('learning_thread_events','media_url'),
+          ('app_users','name'), ('app_users','role'), ('edu_students','level'), ('student_360_facts','status'))) <> 19 then
     raise exception 'mira_grading_v1: thiếu bảng/hàm nền (learning_threads, class_lesson_content, student_360_facts, class_public_identity) — dừng';
   end if;
 end $$;
