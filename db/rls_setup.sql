@@ -145,6 +145,9 @@ DECLARE
     -- Student 360 P1 (db/student_360_p1_setup.sql): KHÔNG policy, REVOKE hết — chỉ qua RPC student_360_*.
     -- Áp policy rộng = học viên đọc/sửa hồ sơ chắt lọc (kể cả mục chỉ-cho-Thầy) của nhau.
     'student_360_facts', 'student_360_fact_log',
+    -- Mira cạnh màn chấm bài V1 (db/mira_grading_v1_setup.sql): băm khoá Mira + băm vé — KHÔNG policy, REVOKE hết, chỉ qua RPC mira_grading_*.
+    -- Áp policy rộng = học viên đọc/ghi vé hay khoá của Thầy.
+    'mira_grading_keys', 'mira_grading_tickets', 'mira_grading_pilot',
     -- Lớp của tôi V1 (db/class_checkpoints_v1_setup.sql): tiến độ buổi — KHÔNG policy, chỉ qua RPC.
     -- Áp policy rộng = học sinh tự ghi opened_at/completed_at (tự mở buổi, sửa lịch sử).
     'learning_session_progress',

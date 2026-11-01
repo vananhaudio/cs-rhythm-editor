@@ -102,7 +102,7 @@ server-host = "127.0.0.1"
 EOF
 postgrest "$TMP/pgrst.conf" >"$TMP/pgrst.log" 2>&1 & PIDS+=($!)
 
-USERS='{"a@test.local":"aaaaaaaa-0000-4000-8000-00000000000a","b@test.local":"bbbbbbbb-0000-4000-8000-00000000000b","c@test.local":"cccccccc-0000-4000-8000-00000000000c","t@test.local":"dddddddd-0000-4000-8000-00000000000d","n@test.local":"eeeeeeee-0000-4000-8000-00000000000e"}'
+USERS='{"a@test.local":"aaaaaaaa-0000-4000-8000-00000000000a","b@test.local":"bbbbbbbb-0000-4000-8000-00000000000b","c@test.local":"cccccccc-0000-4000-8000-00000000000c","t@test.local":"dddddddd-0000-4000-8000-00000000000d","n@test.local":"eeeeeeee-0000-4000-8000-00000000000e","t2@test.local":"ffffffff-0000-4000-8000-00000000000f"}'
 PROXY_PORT=$PROXY_PORT PGRST_URL="http://127.0.0.1:$API_PORT" JWT_SECRET="$SECRET" E2E_USERS="$USERS" \
   node "$ROOT/scripts/e2e-learning-thread-proxy.mjs" >"$TMP/proxy.log" 2>&1 & PIDS+=($!)
 ANON_KEY="$(JWT_SECRET="$SECRET" node -e '
@@ -118,6 +118,8 @@ echo "── Stack: PostgREST :$API_PORT · proxy :$PROXY_PORT · vite :$VITE_PO
 
 # Cho kịch bản Chrome thao tác DB tạm giữa chừng (vd. gỡ thành viên Band): socket + cổng + thư mục bin của cluster này
 export E2E_PG_SOCK="$TMP" E2E_PG_PORT="$PORT" E2E_PG_BIN="$PGBIN"
+# Cho kịch bản cần dựng thêm dịch vụ cạnh stack (vd. Mira E2E): cổng proxy Supabase giả + secret JWT local
+export E2E_PROXY_PORT="$PROXY_PORT" E2E_API_PORT="$API_PORT" E2E_JWT_SECRET="$SECRET"
 set +e
 # E2E_SKIP_BASE=1 (chỉ khi gỡ lỗi kịch bản thêm): bỏ qua run.mjs / run-checkpoints.mjs
 if [ -n "${E2E_SKIP_BASE:-}" ] || [ -n "${E2E_ONLY_CHECKPOINTS:-}" ]; then RC=0; else
