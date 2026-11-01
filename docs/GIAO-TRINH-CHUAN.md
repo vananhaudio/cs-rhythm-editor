@@ -27,7 +27,7 @@
 | `recap` | Ôn lại: buổi trước có gì, buổi này chồng thêm gì — viền mật ong |
 | `layers` | Cùng một đoạn nhạc qua nhiều tầng (nhìn ra tiến bộ) |
 | `note` | Ghi chú ngắn nền mật ong |
-| `video` | Video ôn nhanh (clip ngắn cắt từ bài giảng): `title`, `url` YouTube (thường Unlisted), `duration?`, `note?`. Phát bằng `YouTubeLesson`; bản in/PDF bỏ player và không in link. Thêm 31/10/2026 (Owner duyệt G1). Link chỉ nằm trong `class_lesson_content` → chỉ học viên có quyền giáo trình của đúng lớp đọc được |
+| `video` | Video ôn nhanh (clip ngắn cắt từ bài giảng): `title`, `url` YouTube (thường Unlisted), `duration?`, `note?`, `added_at?` (ISO UTC `…Z`, công cụ chèn ghi một lần — thẻ "Ôn nhanh" trên Feed /me, xem `LESSON-CLIP-CARD-V1.md`). Phát bằng `YouTubeLesson`; bản in/PDF bỏ player và không in link. Thêm 31/10/2026 (Owner duyệt G1). Link chỉ nằm trong `class_lesson_content` → chỉ học viên có quyền giáo trình của đúng lớp đọc được |
 | `fretboard` | Sơ đồ cần đàn (vùng + nốt) |
 | `score` | Bản nhạc alphaTex (khuông + TAB), tempo, gạch đầu dòng hướng dẫn, mốc chuyển vùng |
 | `repertoire` | Tác phẩm (alphaTex sinh từ MusicXML bằng `scripts/musicxml-to-alphatex.mjs` → `works.ts`, KHÔNG sửa tay) |

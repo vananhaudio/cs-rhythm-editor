@@ -50,6 +50,8 @@ test("khối video ôn nhanh: hợp lệ với mọi dạng link YouTube, bắt 
   const cp: LessonSection = { kind: "checkpoint", id: "5.1", title: "Bài trả" };
   const video = (url: string): LessonSection => ({ kind: "video", title: "Bản độc tấu gồm 3 lớp", url, duration: "3:52" });
   assert.ok(KNOWN_SECTION_KINDS.includes("video"));
+  // added_at (G3) là trường tuỳ chọn: có hay không, bộ kiểm chuẩn đều coi khối hợp lệ
+  assert.deepEqual(solo01Problems([...base.slice(0, 3), cp, ({ kind: "video", title: "Bản độc tấu gồm 3 lớp", url: "https://youtu.be/dQw4w9WgXcQ", added_at: "2026-11-01T05:30:12.123Z" } as LessonSection), ...base.slice(3)], 5), []);
   // chèn giữa mạch học (trước đuôi) với ID thật của clip A / B, ở cả dạng youtu.be, watch?v=, ID trần
   for (const url of ["https://youtu.be/dQw4w9WgXcQ", "https://www.youtube.com/watch?v=aBcDeFgHiJk", "dQw4w9WgXcQ"]) {
     assert.deepEqual(solo01Problems([...base.slice(0, 3), cp, video(url), ...base.slice(3)], 5), [], url);
