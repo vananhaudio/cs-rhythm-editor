@@ -36,7 +36,9 @@ const KEY = `select set_config('request.headers', '{"x-mira-grading-key":"e2e-mi
 const ctx = (tk, src, key = KEY) => { const r = tryPsql(`${key} select public.mira_grading_context('${tk}', '${src}')::text;`); return r.ok ? { ok: true, j: JSON.parse(r.out.split('\n').pop()) } : r }
 const strip = (j) => { const c = JSON.parse(JSON.stringify(j)); delete c.as_of; return c }
 
+const gate = (file, swap = true) => { let q = readFileSync(path.join(ROOT, file), 'utf8'); if (swap) q = q.replaceAll('c9828885-8593-4377-9196-19b43dae90bc', 'b1000000-0000-4000-8000-000000000001'); const o = execFileSync(path.join(PGBIN, 'psql'), [...base, '-F', '|', '-c', q], { encoding: 'utf8' }); return o }
 const tk11 = ticket(th11), tk43 = ticket(th43)
+const pre = gate('db/mira_grading_curriculum_v2_preflight.sql'); assert.match(pre, /GATE\|PASS/, pre); ok('preflight (chỉ đọc) trên bản V1.1: GATE PASS')
 assert.equal(ctxMd5(), OLD_MD5, 'cluster tạm phải đang ở thân V1.1 như production'); ok('trước migration: thân mira_grading_context = V1.1 production (md5 485339e8…)')
 
 // ── TRƯỚC: hình dạng cũ ──
@@ -48,6 +50,8 @@ const beforeThread = ctx(tk11, 'thread'), before360 = ctx(tk11, 'student360'), b
 // ── ÁP DỤNG ──
 psqlFile(SETUP); const NEW_MD5 = ctxMd5(); assert.notEqual(NEW_MD5, OLD_MD5); ok('áp dụng setup V2 (một lần): ' + NEW_MD5.slice(0, 8) + '…')
 psqlFile(SETUP); assert.equal(ctxMd5(), NEW_MD5); ok('áp dụng lại setup V2: idempotent, cùng md5')
+assert.match(gate('db/mira_grading_curriculum_v2_preflight.sql'), /GATE\|STOP/); ok('preflight sau khi đã áp dụng: GATE STOP (không chạy lại nhầm)')
+const post = gate('db/mira_grading_curriculum_v2_postflight.sql'); assert.match(post, /GATE\|PASS/, post); assert.doesNotMatch(post, /FAIL/); ok('postflight (chỉ đọc, đọc blocks published thật): GATE PASS, mọi mục OK')
 mkdirSync(OUT, { recursive: true })
 for (const [name, tk, cp] of [['1.1', tk11, '1.1'], ['4.3', tk43, '4.3']]) {
   const r = ctx(tk, 'curriculum'); assert.ok(r.ok, JSON.stringify(r)); const d = r.j.data

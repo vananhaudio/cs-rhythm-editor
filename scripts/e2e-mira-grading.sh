@@ -9,5 +9,5 @@ export MIRA_DIR="${MIRA_DIR:-$HOME/App/mira-grading}"
 export MIRA_PORT="${MIRA_PORT:-$((57900 + RANDOM % 80))}"
 export VITE_MIRA_GRADING_URL="http://mira.localhost:$MIRA_PORT/grading"   # bật tính năng ở build Vite của lần chạy này
 export E2E_CHECKPOINTS=1 E2E_SKIP_BASE=1
-export E2E_EXTRA_SQL="$ROOT/tests/e2e-mira-grading/extra.sql" E2E_EXTRA_RUNNER="$ROOT/tests/e2e-mira-grading/run.mjs"
+export E2E_EXTRA_SQL="${E2E_EXTRA_SQL:-$ROOT/tests/e2e-mira-grading/extra.sql}" E2E_EXTRA_RUNNER="$ROOT/tests/e2e-mira-grading/run.mjs"
 exec bash "$ROOT/scripts/e2e-learning-thread.sh"
