@@ -212,4 +212,13 @@ EXTRAS=0 baseline tva_dm; mig tva_dm "$ROOT/db/chat_list_v2_setup.sql" >/dev/nul
 PGOPTIONS="-c client_min_messages=notice" "$PGBIN/psql" -X -q -h "$TMP" -p "$PORT" -U postgres -d tva_dm -v ON_ERROR_STOP=1 \
   -f "$ROOT/db/tests/dm_v1_test.sql" 2>&1 | sed -E 's/^psql:[^:]*:[0-9]*: (NOTICE|ERROR):  //' > "$TMP/dm.out" || { tail -5 "$TMP/dm.out"; fail "dm_v1_test"; }
 grep -q '^FAIL' "$TMP/dm.out" && fail "dm_v1_test có FAIL" || ok "dm_v1_test: $(grep -c '^PASS' "$TMP/dm.out") PASS, 0 FAIL (chat cá nhân không bị ảnh hưởng)"
+echo "── Hồi quy: bộ test Band Chat V1.2 + V1.3 trên DB ĐÃ cài Chat List V2"
+for V in 1_2 1_3; do
+  EXTRAS=1 baseline "tva_bcr$V"; mig "tva_bcr$V" "$ROOT/db/chat_list_v2_setup.sql" >/dev/null
+  { echo '\set ON_ERROR_STOP on'; echo 'create schema t;'; sed -n '/^grant usage on schema t/,/^grant execute on all functions in schema t/p' "$ROOT/db/tests/band_chat_v1_test.sql"; \
+    grep -v '^\\set ON_ERROR_STOP' "$ROOT/db/tests/band_chat_v${V}_test.sql"; } > "$TMP/bcr$V.sql"
+  PGOPTIONS="-c client_min_messages=notice" "$PGBIN/psql" -X -q -h "$TMP" -p "$PORT" -U postgres -d "tva_bcr$V" -v ON_ERROR_STOP=1 \
+    -f "$TMP/bcr$V.sql" 2>&1 | sed -E 's/^psql:[^:]*:[0-9]*: (NOTICE|ERROR):  //' > "$TMP/bcr$V.out" || { tail -8 "$TMP/bcr$V.out"; fail "band_chat_v${V}_test"; }
+  grep -q '^FAIL' "$TMP/bcr$V.out" && { grep '^FAIL' "$TMP/bcr$V.out"; fail "band_chat_v${V}_test có FAIL"; } || ok "band_chat_v${V}_test: $(grep -c '^PASS' "$TMP/bcr$V.out") PASS, 0 FAIL (Band Chat không bị ảnh hưởng)"
+done
 echo "ALL CHAT LIST V2 DB TESTS PASSED"

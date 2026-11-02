@@ -181,6 +181,9 @@ do $$ declare i int; b uuid; n int; begin
   perform t.as_user('A');
   perform t.ok(not exists (select 1 from public.chat_inbox(p_pinned => 'any') where name = 'Bulk 10'), 'f5 mất quyền → hội thoại đã ghim không còn trong danh sách');
   perform t.ok(t.err($q$select public.chat_pin_set('band:22222222-0000-4000-8000-000000000010', true)$q$) like 'P0002:%', 'f6 mất quyền → không ghim lại được');
+  perform t.ok((select pinned_total from public.chat_inbox_summary()) = 9, 'f7 summary chỉ đếm ghim còn thấy được (9)');
+  perform t.ok(public.chat_pin_set('band:22222222-0000-4000-8000-000000000011', true) >= 10, 'f8 ghim "ma" không chiếm chỗ: vẫn ghim thêm được khi chỉ có 9 ghim thấy được');
+  perform t.ok(t.err($q$select public.chat_pin_set('band:22222222-0000-4000-8000-000000000012', true)$q$) like '54000:%', 'f9 đủ 10 ghim thấy được → ghim thứ 11 bị từ chối');
   perform t.reset();
 end $$;
 
