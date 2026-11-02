@@ -9,7 +9,7 @@
 --   • scope 'mine' = DM + Band mình là thành viên (hoặc từng là lúc lưu trữ). scope 'support' = Band mình KHÔNG thuộc, chỉ Thầy/Admin (người khác → rỗng).
 --   • Phân trang keyset theo (sort_at giảm dần, conv_key tăng dần): ổn định khi có tin mới, không bỏ sót/lặp, không trần 50/100.
 --   • Tìm kiếm theo tên hội thoại (tên bạn / tên Band), không phân biệt hoa-thường và dấu tiếng Việt (chat_fold).
---   • Ghim: tối đa 10 hội thoại/người; chỉ ghim được hội thoại mình đang thấy; bỏ ghim luôn được.
+--   • Ghim: tối đa 10 hội thoại/người (chỉ đếm ghim còn thấy được — hội thoại đã mất quyền không chiếm chỗ); chỉ ghim được hội thoại mình đang thấy; bỏ ghim luôn được.
 --   • conv_key: DM = uuid hội thoại · Band = 'band:<uuid>' (khớp id hội thoại ở frontend) · chỗ sẵn cho 'class:<uuid>' (chưa dùng).
 
 -- 0) Cổng drift
@@ -201,7 +201,7 @@ begin
     end if;
     perform pg_advisory_xact_lock(hashtextextended('chat_pins:' || v_me::text, 0));
     if not exists (select 1 from public.chat_pins where user_id = v_me and conv_key = p_key)
-       and (select count(*) from public.chat_pins where user_id = v_me) >= 10 then
+       and (select count(*) from public.chat_pins pp join public.chat_inbox_base('mine') bb on bb.conv_key = pp.conv_key where pp.user_id = v_me) >= 10 then
       raise exception 'Chỉ ghim tối đa 10 cuộc trò chuyện' using errcode = '54000';
     end if;
     insert into public.chat_pins (user_id, conv_key, pinned_at) values (v_me, p_key, clock_timestamp()) on conflict do nothing;
