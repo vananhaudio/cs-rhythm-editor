@@ -2,8 +2,11 @@
 // Dùng lại hạ tầng notation sẵn có của dự án: alphaTab (@coderline/alphatab) + font Bravura
 // ở public/font/, nạp nội dung bằng alphaTex (giống src/components/ScoreTabViewerAlpha.tsx).
 // KHÔNG thêm thư viện notation mới. Nội dung nhạc đi vào từ props dưới dạng chuỗi alphaTex.
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useContext, useEffect, useRef, useState } from 'react'
 import ZoomFrame from './ZoomFrame'
+import ScoreShareLayer from './ScoreShareLayer'
+import { ScoreShareSlot } from './scoreShareSlot'
+import type { ScoreKey } from '../share/shareNoteApi'
 
 interface Props {
   tex: string
@@ -11,9 +14,17 @@ interface Props {
   barsPerRow?: number
   /** cho phép mở chế độ xem lớn (mobile) */
   zoomable?: boolean
+  /** Vị trí bản nhạc trong buổi (khối + đường dẫn) — chỉ dùng khi trang cấp ScoreShareSlot ("Khoanh để hỏi") */
+  shareKey?: ScoreKey
 }
 
-export default function LessonScore({ tex, barsPerRow = 4, zoomable = true }: Props) {
+export default function LessonScore({ tex, barsPerRow = 4, zoomable = true, shareKey }: Props) {
+  const share = useContext(ScoreShareSlot)
+  const [tick, setTick] = useState(0)   // tăng sau MỖI lần alphaTab khắc xong → lớp khoanh tính lại vùng tô
+  // Lớp khoanh cần api + khung qua STATE (không đọc ref lúc render)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [shareApi, setShareApi] = useState<any>(null)
+  const [shareHost, setShareHost] = useState<HTMLDivElement | null>(null)
   const hostRef = useRef<HTMLDivElement>(null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const apiRef = useRef<any>(null)
@@ -93,6 +104,7 @@ const LYRIC_BAR = 395     // px/ô nhịp ở cỡ 1 cho ô 8 âm tiết — dư
 
         const api = new AlphaTabApi(hostRef.current, s)
         apiRef.current = api
+        setShareApi(api)
 
         const hideAttribution = () => {
           hostRef.current?.querySelectorAll<SVGTextElement>('text').forEach(t => {
@@ -103,7 +115,7 @@ const LYRIC_BAR = 395     // px/ô nhịp ở cỡ 1 cho ô 8 âm tiết — dư
         mo.observe(hostRef.current, { childList: true, subtree: true })
         moRef.current = mo
 
-        api.postRenderFinished.on(() => { if (!dead) { hideAttribution(); setState('ready') } })
+        api.postRenderFinished.on(() => { if (!dead) { hideAttribution(); setState('ready'); setTick(t => t + 1) } })
         api.error.on((e: unknown) => { if (!dead) { setState('error'); setErr((e as Error)?.message ?? String(e)) } })
         api.tex(tex)
       } catch (e) {
@@ -182,13 +194,16 @@ const LYRIC_BAR = 395     // px/ô nhịp ở cỡ 1 cho ô 8 âm tiết — dư
   // Định danh ổn định để nhớ vị trí đọc: đường dẫn bài + dấu vân tay nội dung bản nhạc (sửa nhạc thì vị trí cũ tự bỏ)
   const memoryKey = `${location.pathname}#${tex.split('').reduce((h, c) => (Math.imul(h ^ c.charCodeAt(0), 16777619) >>> 0), 2166136261).toString(36)}`
 
+  const hostCallback = useCallback((el: HTMLDivElement | null) => { hostRef.current = el; setShareHost(el) }, [])
   return (
     <ZoomFrame onZoom={onZoom} enabled={zoomable} memoryKey={memoryKey}
                hint={zoomable ? 'Bản nhạc dài — bấm “Xem lớn” để đọc toàn màn hình.' : undefined}>
       <div className="lsn-score">
         {state === 'loading' && <div className="lsn-score-msg">Đang dựng bản nhạc…</div>}
         {state === 'error' && <div className="lsn-score-msg err">Chưa hiển thị được bản nhạc ({err})</div>}
-        <div ref={hostRef} className="lsn-score-host" />
+        {share && shareKey
+          ? <ScoreShareLayer api={shareApi} host={shareHost} tick={tick} tex={tex} shareKey={shareKey}><div ref={hostCallback} className="lsn-score-host" /></ScoreShareLayer>
+          : <div ref={hostRef} className="lsn-score-host" />}
       </div>
     </ZoomFrame>
   )

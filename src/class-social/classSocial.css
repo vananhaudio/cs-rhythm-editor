@@ -1747,3 +1747,9 @@ button.cs-subs-title:hover { color: var(--cs-accent); }
 .cs-nr-markall { align-self: flex-end; margin: 2px 10px 4px; padding: 6px 10px; border: none; border-radius: 8px; background: none; color: var(--cs-p-strong); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; flex: none; }
 .cs-nr-markall:hover { background: var(--cs-neutral-soft); }
 .cs-nr-markall:focus-visible { outline: 2px solid var(--cs-p-strong); outline-offset: 2px; }
+
+/* Share Note V1 — câu hỏi về đoạn nhạc mở từ liên kết chia sẻ (?note=) trên trang Buổi */
+.cs-share-note-panel { border-left: 4px solid #EA580C; }
+.cs-share-note-text { margin: 6px 0 4px; font-size: 16px; font-weight: 700; overflow-wrap: anywhere; white-space: pre-wrap; }
+.cs-share-note-status { margin: 0 0 8px; font-size: 14px; color: #5b5b66; overflow-wrap: anywhere; }
+.cs-share-note-actions { display: flex; flex-wrap: wrap; gap: 8px; }

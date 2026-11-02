@@ -53,6 +53,8 @@ DECLARE
     'edu_groups', 'edu_group_members', 'edu_group_claim_tokens',
     -- Bản tin hôm nay (db/home_feed_v2.sql): anon/auth chỉ ĐỌC item published; teacher mới ghi.
     'home_feed_items',
+    -- Share Note V1 (db/share_note_v1_setup.sql): bảng ĐÓNG, chỉ RPC share_note_* (SECURITY DEFINER) đọc/ghi — áp policy rộng = lộ câu hỏi của học viên.
+    'share_notes',
     -- Server-driven learning state (db/learning_state_setup.sql): cấu hình hành trình/tiên quyết —
     -- mọi người đọc, chỉ teacher ghi. ĐỪNG áp policy rộng (học viên sẽ sửa được hành trình).
     'journey_tracks', 'journey_curriculum', 'course_prereqs',

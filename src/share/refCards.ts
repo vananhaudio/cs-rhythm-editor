@@ -3,9 +3,10 @@
 // Không đọc được (đã xoá / không có quyền / dữ liệu hỏng) → null = "Nội dung này không còn khả dụng" (không phân biệt lý do).
 // Card dùng lại ToolShareView + describeToolShare của Tool Share. supabase nạp ĐỘNG: component lá test được trên Node.
 import { useEffect, useSyncExternalStore } from 'react'
-import { BookOpen, GraduationCap } from 'lucide-react'
+import { BookOpen, GraduationCap, MessageCircleQuestion } from 'lucide-react'
 import { describeToolShare, type ToolShareView } from '../class-social/toolshare/registry'
 import { classPath, sessionPath } from '../class-social/resolveMeRoute'
+import { shareNoteHref } from './shareNoteLink'
 import { refId, type ShareRef, type ShareRefType } from './shareRef'
 
 export const UNAVAILABLE_TEXT = 'Nội dung này không còn khả dụng'
@@ -71,6 +72,19 @@ export function chordCardView(row: ChordCardRow | null | undefined): ToolShareVi
   return describeToolShare({ v: 1, tool: 'chord_sheet', kind: 'chord_sheet', version_id: row.version_id, title: row.title ?? '', composer: row.composer ?? '', meter: row.meter ?? null, bpm: row.bpm ?? null })
 }
 
+// ── Khoanh ô nhịp (Share Note V1): lời nhắn + buổi + dải ô qua RPC share_note_card (quyền THẤY) — mở bản nhạc do trang Buổi + RPC open quyết ──
+export type ShareNoteCardView = { id: string; note: string; class_id: string; session_no: number | string | null; bar_from: number | string | null; bar_to: number | string | null }
+export function shareNoteCardView(row: ShareNoteCardView | null | undefined): ToolShareView | null {
+  const n = Number(row?.session_no), a = Number(row?.bar_from), b = Number(row?.bar_to)
+  const note = (row?.note ?? '').trim()
+  if (!row || !note || note.length > 500 || !Number.isInteger(n) || n < 0 || !Number.isInteger(a) || !Number.isInteger(b) || a < 1 || b < a) return null
+  return {
+    tool: 'share_note', toolLabel: 'Bản nhạc', icon: MessageCircleQuestion, kindLabel: `Buổi ${n}`, headline: note,
+    detail: a === b ? `Ô ${a}` : `Ô ${a}–${b}`, thumbnail: null, note: null,
+    action: { label: 'Mở đúng đoạn', href: shareNoteHref(row.class_id, n, row.id) },
+  }
+}
+
 // ── Resolver theo loại: keys[] → Map<key, view | null>. Lỗi mạng ném ra (KHÔNG coi là "đã xoá") ───────────────
 type Resolver = (keys: string[]) => Promise<Map<string, ToolShareView | null>>
 type Db = { from: (t: string) => { select: (c: string) => { in: (col: string, v: string[]) => PromiseLike<{ data: unknown[] | null; error: { code?: string; message?: string } | null }> } } }
@@ -102,6 +116,14 @@ export const REF_RESOLVERS: Record<ShareRefType, Resolver> = {
     const { fetchChordCards } = await import('./chordShareApi')
     for (let i = 0; i < keys.length; i += 50) {
       for (const r of await fetchChordCards(keys.slice(i, i + 50))) m.set(r.version_id.toLowerCase(), chordCardView(r))
+    }
+    return m
+  },
+  share_note: async keys => {
+    const m = new Map<string, ToolShareView | null>(keys.map(k => [k, null]))
+    const { fetchShareNoteCards } = await import('./shareNoteApi')
+    for (let i = 0; i < keys.length; i += 50) {
+      for (const r of await fetchShareNoteCards(keys.slice(i, i + 50))) m.set(r.id.toLowerCase(), shareNoteCardView(r))
     }
     return m
   },
