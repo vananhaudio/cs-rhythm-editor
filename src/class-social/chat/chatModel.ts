@@ -16,8 +16,8 @@ export const bandIdOf = (id: string): string => id.slice(BAND_PREFIX.length)
 
 export type ConversationItem = {
   id: string
-  /** 'band' = nhóm chat của Band (tên + ảnh lấy từ Band). Mặc định (hội thoại cá nhân) = 'dm'. */
-  kind?: 'dm' | 'band'
+  /** 'band' = nhóm chat của Band (tên + ảnh lấy từ Band). 'class' = nhóm lớp học (chỗ sẵn, CHƯA có dữ liệu). Mặc định (hội thoại cá nhân) = 'dm'. */
+  kind?: 'dm' | 'band' | 'class'
   /** Nhóm Band chỉ đọc: 'archived' (Band lưu trữ) | 'support' (Thầy/Admin xem để hỗ trợ, không phải thành viên) */
   readOnly?: 'archived' | 'support' | null
   /** Chỉ nhóm Band: tên người gửi tin cuối (rỗng nếu chưa có tin) và số thành viên */
@@ -37,6 +37,10 @@ export type ConversationItem = {
   unread: number
   /** DB báo MÌNH còn gửi được cho người này không (hết bạn → chỉ đọc) */
   canSend: boolean
+  /** Chat List V2: người dùng đã ghim (server quyết, đồng bộ theo tài khoản) */
+  pinned?: boolean
+  /** Chat List V2: khoá sắp xếp của server (con trỏ phân trang) */
+  sortAt?: string
 }
 
 /** Màn đang chọn trong /me/chat: chưa chọn · một hội thoại có sẵn · bắt đầu với một người (hội thoại tạo khi gửi tin đầu) */
@@ -202,11 +206,11 @@ export const canSendBody = (s: string): boolean => {
 }
 
 /** Một dòng xem trước trong danh sách: "Bạn: …" khi tin cuối là của mình; xuống dòng → khoảng trắng */
-export function previewText(c: Pick<ConversationItem, 'lastBody' | 'lastMine'> & { kind?: 'dm' | 'band'; lastSender?: string; readOnly?: 'archived' | 'support' | null }): string {
+export function previewText(c: Pick<ConversationItem, 'lastBody' | 'lastMine'> & { kind?: 'dm' | 'band' | 'class'; lastSender?: string; readOnly?: 'archived' | 'support' | null }): string {
   const one = c.lastBody.replace(/\s+/g, ' ').trim()
   // Nhóm chỉ đọc (hỗ trợ/lưu trữ): không mời "chào cả nhóm" vì người xem không gửi được
-  if (c.kind === 'band' && !one) return c.readOnly ? 'Chưa có tin nhắn' : 'Chưa có tin nhắn — hãy chào cả nhóm'
-  const who = c.lastMine ? 'Bạn: ' : c.kind === 'band' && c.lastSender ? c.lastSender + ': ' : ''
+  if ((c.kind === 'band' || c.kind === 'class') && !one) return c.readOnly ? 'Chưa có tin nhắn' : 'Chưa có tin nhắn — hãy chào cả nhóm'
+  const who = c.lastMine ? 'Bạn: ' : (c.kind === 'band' || c.kind === 'class') && c.lastSender ? c.lastSender + ': ' : ''
   return who + one
 }
 
@@ -244,7 +248,7 @@ export function dividerLabel(prevIso: string | null, curIso: string, now = new D
 export const unreadLabel = (n: number) => `${n} cuộc trò chuyện chưa đọc`
 
 /** Lỗi RPC → câu tiếng Việt, KHÔNG lộ chi tiết (mọi "không thuộc về mình" đều là "không tìm thấy") */
-export function chatErrorText(err: { code?: string; message?: string; status?: number } | null | undefined, offline: boolean, ctx?: 'share'): string {
+export function chatErrorText(err: { code?: string; message?: string; status?: number } | null | undefined, offline: boolean, ctx?: 'share' | 'pin'): string {
   const ugc = mapUgcError(err)
   if (ugc) return ugc
   const msg = (err?.message ?? '').toLowerCase()
@@ -255,6 +259,7 @@ export function chatErrorText(err: { code?: string; message?: string; status?: n
     return 'Phiên đăng nhập đã hết hạn. Hãy tải lại trang và đăng nhập lại.'
   }
   if (err?.code === 'P0002') return 'Không tìm thấy cuộc trò chuyện.'
+  if (err?.code === '54000' && ctx === 'pin') return 'Chỉ ghim tối đa 10 cuộc trò chuyện. Hãy bỏ ghim một cuộc trước.'
   if (err?.code === '54000') return 'Bạn gửi quá nhanh. Hãy chờ một chút rồi gửi tiếp.'
   if (ctx === 'share' && err?.code === '22023') return 'Nội dung này không thể chia sẻ nữa.'
   if (err?.code === '22023') return err.message && /quá dài|trống/i.test(err.message) ? err.message : 'Tin nhắn chưa hợp lệ.'

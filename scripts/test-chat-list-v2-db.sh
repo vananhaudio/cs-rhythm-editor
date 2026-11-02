@@ -3,7 +3,7 @@
 #   bash scripts/test-chat-list-v2-db.sh
 # Phủ: preflight · migration ×2 · khoá · test SQL theo identity (quyền, rò rỉ qua tìm kiếm, ghim, con trỏ, Thầy/Admin) · tương thích RPC cũ ·
 #      dữ liệu LỚN (hàng nghìn hội thoại: duyệt hết bằng con trỏ, tìm hội thoại chưa tải, thời gian) · postflight · rollback ×2 + cài lại ·
-#      cổng va chạm tên · hồi quy dm_v1_test + band_chat_v1_test trên DB đã có Chat List V2 (chat cá nhân/Band không đổi).
+#      cổng va chạm tên · hồi quy dm_v1_test trên DB đã có Chat List V2 + md5 hàm dm_*/bandchat_* không đổi (chat cá nhân/Band không đổi).
 set -euo pipefail
 export LC_ALL=C LANG=C
 
@@ -207,7 +207,7 @@ grep -q "không rollback" "$TMP/c2.err" && ok "rollback từ chối xoá bảng 
 mig tva_nob "$ROOT/db/chat_list_v2_setup.sql" >/dev/null 2>"$TMP/n.err" && fail "migration chạy được khi thiếu nền"
 grep -q "thiếu nền" "$TMP/n.err" && ok "thiếu nền (dm/Band Chat) → migration DỪNG" || fail "cổng thiếu nền"
 
-echo "── Hồi quy: dm_v1_test + band_chat_v1_test trên DB ĐÃ cài Chat List V2"
+echo "── Hồi quy: dm_v1_test trên DB ĐÃ cài Chat List V2"
 EXTRAS=0 baseline tva_dm; mig tva_dm "$ROOT/db/chat_list_v2_setup.sql" >/dev/null
 PGOPTIONS="-c client_min_messages=notice" "$PGBIN/psql" -X -q -h "$TMP" -p "$PORT" -U postgres -d tva_dm -v ON_ERROR_STOP=1 \
   -f "$ROOT/db/tests/dm_v1_test.sql" 2>&1 | sed -E 's/^psql:[^:]*:[0-9]*: (NOTICE|ERROR):  //' > "$TMP/dm.out" || { tail -5 "$TMP/dm.out"; fail "dm_v1_test"; }

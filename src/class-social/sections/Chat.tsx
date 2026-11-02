@@ -3,11 +3,13 @@
 import { useCallback, useEffect, useState } from 'react'
 import { MessagesSquare } from 'lucide-react'
 import { EmptyState } from '../ui'
-import ConversationList from '../chat/ConversationList'
+import InboxList from '../chat/InboxList'
 import ConversationView, { type Peer } from '../chat/ConversationView'
 import NewConversationView from '../chat/NewConversationView'
-import { useConversationList, useNoticeSound } from '../chat/useChat'
-import { type ChatSelection } from '../chat/chatModel'
+import { useNoticeSound } from '../chat/useChat'
+import { useInbox } from '../chat/useInbox'
+import { defaultInboxSource, type InboxSource } from '../chat/inboxApi'
+import { type ChatSelection, type ConversationItem } from '../chat/chatModel'
 
 /** Điện thoại: khi mở một hội thoại, khung phủ toàn màn hình → theo chiều cao THẬT khi bàn phím mở (iOS không co 100dvh) */
 function useOpenPaneViewport(open: boolean) {
@@ -34,7 +36,7 @@ function useOpenPaneViewport(open: boolean) {
   }, [open])
 }
 
-export default function Chat({ meId, selection, onOpenConversation, onBackToList, onOpenProfile, onOpenFriends, onUnreadChanged, soundToggle = false }: {
+export default function Chat({ meId, selection, onOpenConversation, onBackToList, onOpenProfile, onOpenFriends, onUnreadChanged, soundToggle = false, source = defaultInboxSource }: {
   meId: string
   selection: ChatSelection
   onOpenConversation: (id: string, opts?: { replace?: boolean }) => void
@@ -45,23 +47,36 @@ export default function Chat({ meId, selection, onOpenConversation, onBackToList
   onUnreadChanged: () => void
   /** Hiện công tắc "Âm thanh thông báo" (tiếng ting cho tin nhắn mới và thông báo hệ thống). Thông báo KHÔNG nằm trong danh sách Trò chuyện. */
   soundToggle?: boolean
+  /** Nguồn danh sách (mặc định RPC chat_inbox*; Preview/test thay bằng dữ liệu mẫu) */
+  source?: InboxSource
 }) {
-  const list = useConversationList()
+  const inbox = useInbox(source)
   const sound = useNoticeSound()
-  const { reload } = list
+  const { reload } = inbox
   const [hint, setHint] = useState<(Peer & { conversationId: string }) | null>(null)
   const open = selection.kind !== 'none'
   useOpenPaneViewport(open)
 
   const activity = useCallback(() => { void reload(); onUnreadChanged() }, [reload, onUnreadChanged])
-  const items = list.state.status === 'ready' ? list.state.items : []
+  const items = inbox.state.status === 'ready' ? [...inbox.state.pinned, ...inbox.state.items] : []
   const selectedId = selection.kind === 'conversation' ? selection.id : null
+
+  // Hội thoại đang mở có thể nằm NGOÀI các trang đã tải (liên kết trực tiếp, Band ở khu Quản lý): hỏi server đúng một hội thoại đó
+  const [remote, setRemote] = useState<ConversationItem | null>(null)
+  const loaded = selectedId ? items.find(c => c.id === selectedId) : undefined
+  useEffect(() => {
+    if (!selectedId || loaded || inbox.state.status !== 'ready') return
+    let alive = true
+    void source.info(selectedId).then(r => { if (alive && r.ok) setRemote(r.value) })
+    return () => { alive = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId, !!loaded, inbox.state.status])
 
   let peer: Peer | null = null
   let canSend: boolean | undefined
   if (selection.kind === 'conversation') {
-    const hit = items.find(c => c.id === selection.id)
-    if (hit) { peer = { id: hit.peerId, name: hit.name, avatarUrl: hit.avatarUrl, isTeacher: hit.isTeacher, kind: hit.kind, memberCount: hit.memberCount, readOnly: hit.readOnly, projectId: hit.projectId }; canSend = hit.canSend }
+    const hit = loaded ?? (remote && remote.id === selection.id ? remote : undefined)
+    if (hit) { peer = { id: hit.peerId, name: hit.name, avatarUrl: hit.avatarUrl, isTeacher: hit.isTeacher, kind: hit.kind === 'class' ? undefined : hit.kind, memberCount: hit.memberCount, readOnly: hit.readOnly, projectId: hit.projectId }; canSend = hit.canSend }
     else if (hint?.conversationId === selection.id) peer = hint
   }
 
@@ -86,8 +101,7 @@ export default function Chat({ meId, selection, onOpenConversation, onBackToList
         </div>
       )}
       <section className="cs-card cs-chat">
-        <ConversationList state={list.state} selectedId={selectedId} onSelect={id => onOpenConversation(id)}
-          onRetry={list.retry} onOpenFriends={onOpenFriends} />
+        <InboxList inbox={inbox} source={source} selectedId={selectedId} onSelect={id => onOpenConversation(id)} onOpenFriends={onOpenFriends} />
         <div className={'cs-chat-pane' + (open ? ' is-open' : '')}>
           {selection.kind === 'none' && (
             <div className="cs-chat-pane-empty">
