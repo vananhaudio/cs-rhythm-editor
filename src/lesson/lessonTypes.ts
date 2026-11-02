@@ -64,7 +64,10 @@ export type LessonSection =
   | { kind: 'note'; title?: string; text: string }
   /** Video ôn nhanh (clip ngắn cắt từ bài giảng) — phát bằng YouTubeLesson. `url` là link YouTube bất kỳ dạng
    *  (thường Unlisted): link chỉ nằm trong class_lesson_content nên chỉ học viên có quyền giáo trình của lớp đọc được. */
-  | { kind: 'video'; title: string; url: string; duration?: string; note?: string }
+  | { kind: 'video'; title: string; url: string; duration?: string; note?: string
+      /** Thời điểm khối được thêm (ISO UTC 'Z', vd. 2026-11-01T05:30:12.123Z) — công cụ chèn ghi MỘT lần. Thẻ "Ôn nhanh" trên Feed /me (G3)
+       *  sắp theo trường này; thiếu/sai định dạng ⇒ thẻ không hiện (khối vẫn phát bình thường trong buổi học). Không dùng để hiển thị. */
+      added_at?: string }
   /** Một cách đệm có ký âm trực quan (dùng lại bộ vẽ của /dieudemhat) — thêm 10/2026 cho CB2.T3 Buổi 01. */
   | {
       kind: 'strum'
