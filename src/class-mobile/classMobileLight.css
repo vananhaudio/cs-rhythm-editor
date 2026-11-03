@@ -106,7 +106,7 @@
 
 /* Trò chuyện: danh sách nằm trực tiếp trên nền, không thẻ + tiêu đề thứ hai ("Đoạn chat") */
 .cm-root .cs-chat-list-head { display: none; }
-.cm-root .cs-chat { border-radius: 12px; overflow: hidden; }
+.cm-root .cs-chat { border-radius: 12px; overflow: hidden; overflow: clip; }   /* clip: không tạo vùng cuộn → thanh tìm kiếm của danh sách dính (sticky) theo trang */
 .cm-root .cs-chat-list { border-right: 0; }
 
 /* Phân đoạn "Lớp của tôi" đã nêu tên nhóm → bỏ tiêu đề lặp */
@@ -125,3 +125,10 @@ body:has(.cm-root) #root { border: 0; width: 100%; max-width: none; }
 @media (prefers-color-scheme: dark) {
   .cm-root .cm-embed { margin: 0; background: #f2f2f7; border-radius: 14px; padding: 8px 0 12px; overflow: hidden; }
 }
+
+/* Chat List V2 trong khung mobile: nền trắng, đường kẻ 0,5px, tìm kiếm/phân loại kiểu iOS */
+.cm-root .cs-inbox-head { padding: 8px 16px 6px; top: calc(var(--cm-top-h) + env(safe-area-inset-top, 0px)); border-radius: 12px 12px 0 0; }
+.cm-root .cs-inbox-li + .cs-inbox-li::before { height: 0.5px; }
+.cm-root .cs-inbox-row:hover { background: transparent; }
+.cm-root .cs-inbox-row:active { background: var(--cs-neutral-soft); }
+.cm-root .cs-inbox-row.is-active { background: transparent; }
