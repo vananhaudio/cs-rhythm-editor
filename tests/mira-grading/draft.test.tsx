@@ -88,7 +88,7 @@ test('sai origin / sai cửa sổ / rỗng / vượt 4000 / mã bài lạ: ô kh
   await fromChild(cw, draftMsg(A, 'x'.repeat(4001)))
   await fromChild(cw, draftMsg('không-phải-uuid', 'mã hỏng'))
   assert.equal(box().value, ''); assert.equal(r.queryByRole('alertdialog'), null); assert.equal(r.queryByText(/chưa gửi cho học viên/), null)
-  assert.deepEqual(out.map(o => o.data.status), ['rejected'].slice(1))   // tin không hợp lệ: im lặng, không có phản hồi nào (đặc biệt không có 'applied')
+  assert.deepEqual(out.map(o => o.data.status), [])   // tin không hợp lệ: im lặng, không có phản hồi nào (đặc biệt không có 'applied')
 })
 test('sai thread: nháp mang mã bài khác (Mira chưa kịp đổi bài) bị bỏ và Mira nhận "rejected"', async () => {
   const { cw, box, out } = setup(A)
@@ -131,7 +131,7 @@ test('nháp thứ hai khi ô đang chờ xác nhận: lấy nháp mới nhất; 
   assert.equal(box().value, 'N2 đã sửa')
 })
 
-test('không có ô nhận (bài không cho phản hồi): hết hạn → Mira nhận \"unavailable\", nháp bị bỏ, KHÔNG điền muộn', async () => {
+test('không có ô nhận (bài không cho phản hồi): hết hạn → Mira nhận "unavailable", nháp bị bỏ, KHÔNG điền muộn', async () => {
   const { r, cw, results } = setup(A, 40, false)
   await fromChild(cw, draftMsg(A, 'nháp không có chỗ nhận'))
   assert.deepEqual(results(), [])
@@ -148,7 +148,7 @@ test('đổi bài khi nháp đang chờ Thầy xác nhận: không có xác nh�
   assert.equal(box().value, ''); assert.equal(r.queryByRole('alertdialog'), null)
   assert.deepEqual(results(), [])                    // không gửi 'applied'/'declined' của bài A sang lúc đang ở bài B
 })
-test('nháp mới thay nháp đang chờ xác nhận: nháp cũ nhận \"declined\", nháp mới được hỏi', async () => {
+test('nháp mới thay nháp đang chờ xác nhận: nháp cũ nhận "declined", nháp mới được hỏi', async () => {
   const { r, cw, box, out } = setup(A, 50)
   fireEvent.change(box(), { target: { value: 'Chữ Thầy' } })
   await fromChild(cw, draftMsg(A, 'N1', 'rid-11111111')); await fromChild(cw, draftMsg(A, 'N2', 'rid-22222222'))
@@ -157,7 +157,7 @@ test('nháp mới thay nháp đang chờ xác nhận: nháp cũ nhận \"decline
   assert.equal(box().value, 'N2')
   assert.deepEqual(out.map(o => [o.data.rid, o.data.status]), [['rid-11111111', 'declined'], ['rid-22222222', 'applied']])
 })
-test('xác nhận chỉ gửi tới đúng origin Mira (không \"*\")', async () => {
+test('xác nhận chỉ gửi tới đúng origin Mira (không "*")', async () => {
   const { cw, out } = setup()
   await fromChild(cw, draftMsg(A, 'x'))
   await waitFor(() => assert.equal(out.length, 1))
