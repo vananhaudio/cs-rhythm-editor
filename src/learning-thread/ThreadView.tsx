@@ -3,7 +3,7 @@
 // Thân: dòng thời gian mọi lượt Trả bài / Hỏi bài / Thầy phản hồi theo đúng thứ tự.
 // Nội dung là plain text (React escape); video chỉ qua ExternalMediaView (tự dựng embed từ ID đã kiểm).
 // CSS nạp ở container (./styles) — file này không import CSS để test render được bằng Node.
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import ExternalMediaView from '../class-social/media/ExternalMediaView'
 import { parseExternalMedia } from '../class-social/media/parseExternalMedia'
 import ResourceCard from '../class-social/sections/comments/ResourceCard'
@@ -159,10 +159,13 @@ export default function ThreadView(props: {
   /** Social (/me/t/<id>): nhãn danh tính HIỆN TẠI của người học cạnh tên — tách khỏi danh tính lịch sử của bài */
   showIdentity?: boolean
   focus?: 'ket-qua' | 'bai-moi'
+  /** Chèn giữa phần đầu và dòng thời gian (vd. thẻ Đề bài cho Thầy) */
+  aside?: ReactNode
 }) {
   return (
     <div className="lt-page">
       <section className="lt-card"><ThreadHeader thread={props.thread} onOpenProfile={props.onOpenProfile} showIdentity={props.showIdentity} /></section>
+      {props.aside}
       <section className="lt-card"><ThreadTimeline {...props} /></section>
     </div>
   )

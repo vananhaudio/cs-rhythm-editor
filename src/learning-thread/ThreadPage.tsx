@@ -12,6 +12,7 @@ import { VISIBILITY_LABEL, canAsk, canSubmit, otherVisibility, visibilityChoices
 import ThreadView from './ThreadView'
 import StudentComposer from './StudentComposer'
 import TeacherComposer from './TeacherComposer'
+import CheckpointPromptCard from './CheckpointPromptCard'
 
 type Load = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; thread: ThreadDetail }
 
@@ -98,8 +99,9 @@ export default function ThreadPage({ threadId, isTeacher, onBack, onOpenQueue, o
   return (
     <div className="cs-col cs-home lt-page">
       {back}
-      <ThreadView thread={t} canModerate={isTeacher} onModerate={moderateEvent} onOpenProfile={onOpenProfile} focus={focus} showIdentity />
-      {cp?.classId && (onOpenSession || onOpenClass) && (t.isMine || !isTeacher) && (
+      <ThreadView thread={t} canModerate={isTeacher} onModerate={moderateEvent} onOpenProfile={onOpenProfile} focus={focus}
+        aside={isTeacher && cp?.classId ? <CheckpointPromptCard classId={cp.classId} sessionNo={cp.sessionNo} checkpointId={cp.checkpointId} /> : undefined} showIdentity />
+      {cp?.classId && (onOpenSession || onOpenClass) && (
         <div className="lt-actions">
           <button type="button" className="lt-btn is-ghost"
             onClick={() => (onOpenSession ? onOpenSession(cp.classId!, cp.sessionNo) : onOpenClass!(cp.classId!))}>
