@@ -73,6 +73,14 @@ export async function openShareNote(id: string): Promise<ShareNoteOpen> {
   return parseShareNoteOpen(data)
 }
 
+/** Buổi chứa note có đang MỞ cho tôi không (RPC chỉ đọc; không đổi tiến độ). Lỗi mạng / hàm vắng ném ra → client KHÔNG vẽ nhạc. */
+export async function isShareNoteSessionOpen(id: string): Promise<boolean> {
+  const { supabase } = await import('../supabase')
+  const { data, error } = await supabase.rpc('share_note_session_open', { p_note: id })
+  if (error) throw new Error(error.message ?? 'session_open')
+  return data === true
+}
+
 export type ShareNoteCardRow = { id: string; note: string; author_id: string; class_id: string; session_no: number; bar_from: number; bar_to: number; created_at: string }
 /** Thẻ Chat theo lô (≤ 50). Note không thấy được không có trong kết quả. Lỗi mạng ném ra. */
 export async function fetchShareNoteCards(ids: string[]): Promise<ShareNoteCardRow[]> {

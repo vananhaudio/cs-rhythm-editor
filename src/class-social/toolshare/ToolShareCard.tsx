@@ -6,6 +6,7 @@ import { useToolSharePayload } from './toolShareApi'
 
 const ShareToFriendSheet = lazy(() => import('../../share/ShareToFriendSheet'))
 const ChordSheetPost = lazy(() => import('./ChordSheetPost'))
+const ShareNotePost = lazy(() => import('./ShareNotePost'))   // xem trước trích đoạn bản nhạc (Share Note): chỉ tải khi Feed có bài loại này
 
 export function ToolShareBodyView({ view, onShareToFriend }: { view: ToolShareView | null; onShareToFriend?: (ref: NonNullable<ToolShareView['shareRef']>, title: string) => void }) {
   if (!view) return <p className="cs-tool-share-missing">Kết quả này không còn hiển thị được.</p>
@@ -33,6 +34,10 @@ export default function ToolShareBody({ postId }: { postId: string }) {
   const view = describeToolShare(raw)
   // Hợp âm (Play Scroll): xem trước + chạy ngay trong bài đăng (V2); các công cụ khác giữ thẻ như cũ.
   const chordVersion = view?.tool === 'chord_sheet' && view.shareRef?.type === 'chord_sheet' ? view.shareRef.key : null
+  // Bản nhạc (Share Note): câu hỏi + trích đoạn vẽ trực tiếp (tối đa 4 ô); thẻ Chat/DM dùng renderer khác, không đổi
+  if (view?.tool === 'share_note' && view.sharedNote) {
+    return <Suspense fallback={<ToolShareBodyView view={view} />}><ShareNotePost view={view} /></Suspense>
+  }
   return (
     <>
       {chordVersion
