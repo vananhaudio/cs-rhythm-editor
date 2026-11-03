@@ -12,3 +12,15 @@ export function pickCheckpointPrompt(sections: LessonSection[], checkpointId: st
   const prompt = typeof cp.prompt === 'string' && cp.prompt.trim() ? cp.prompt.trim() : null
   return { id: cp.id, title: cp.title, prompt }
 }
+
+export type PromptState = { status: 'loading' } | { status: 'missing' } | { status: 'unpublished' } | { status: 'ready'; cp: CheckpointPrompt }
+/** Một hàng class_lesson_content: trạng thái + các khối. */
+export type SessionBlocks = { status: string; sections: LessonSection[] }
+
+/** Hàng giáo trình → trạng thái thẻ. Chỉ 'published' mới cho ra đề. */
+export function promptStateOf(content: SessionBlocks | null, checkpointId: string): PromptState {
+  if (!content) return { status: 'missing' }
+  if (content.status !== 'published') return { status: 'unpublished' }
+  const cp = pickCheckpointPrompt(content.sections, checkpointId)
+  return cp ? { status: 'ready', cp } : { status: 'missing' }
+}

@@ -5,7 +5,7 @@ import fs from 'node:fs'
 import React from 'react'
 import { render, cleanup, waitFor } from '@testing-library/react'
 import CheckpointPromptCard from '../../src/learning-thread/CheckpointPromptCard'
-import { pickCheckpointPrompt } from '../../src/learning-thread/checkpointPrompt'
+import { pickCheckpointPrompt, promptStateOf } from '../../src/learning-thread/checkpointPrompt'
 import ThreadView from '../../src/learning-thread/ThreadView'
 import type { LessonSection } from '../../src/lesson/lessonTypes'
 import type { ThreadDetail } from '../../src/learning-thread/ltModel'
@@ -20,6 +20,9 @@ const sections = [
   { kind: 'checkpoint', id: '4.3', title: 'Yêu cầu trống', prompt: '   ' },
 ] as unknown as LessonSection[]
 
+const PUB = { status: 'published', sections } as never
+const DRAFT = { status: 'draft', sections } as never
+
 test('pickCheckpointPrompt: đúng id → tiêu đề + đề (cắt khoảng trắng đầu/cuối, giữ xuống dòng)', () => {
   assert.deepEqual(pickCheckpointPrompt(sections, '4.1'), { id: '4.1', title: 'Đệm hát điệu Bolero', prompt: 'Quay video đệm 8 ô nhịp.\nNêu rõ tốc độ.' })
 })
@@ -32,7 +35,7 @@ test('pickCheckpointPrompt: không có yêu cầu / yêu cầu trống → promp
 
 test('thẻ Đề bài: tải đúng lớp + buổi, hiện tiêu đề và đề', async () => {
   const calls: [string, number][] = []
-  const load = async (c: string, n: number) => { calls.push([c, n]); return sections }
+  const load = async (c: string, n: number) => { calls.push([c, n]); return PUB }
   const v = render(<CheckpointPromptCard classId="class-1" sessionNo={4} checkpointId="4.1" load={load} />)
   assert.ok(v.container.querySelector('[aria-busy="true"]'))
   await waitFor(() => assert.match(v.container.textContent ?? '', /Đệm hát điệu Bolero/))
@@ -41,27 +44,43 @@ test('thẻ Đề bài: tải đúng lớp + buổi, hiện tiêu đề và đ�
   assert.deepEqual(calls, [['class-1', 4]])
 })
 test('thẻ Đề bài: bài không có yêu cầu → báo gọn, không bịa đề', async () => {
-  const v = render(<CheckpointPromptCard classId="c" sessionNo={4} checkpointId="4.2" load={async () => sections} />)
+  const v = render(<CheckpointPromptCard classId="c" sessionNo={4} checkpointId="4.2" load={async () => PUB} />)
   await waitFor(() => assert.match(v.container.textContent ?? '', /Bài không có yêu cầu/))
   assert.match(v.container.textContent ?? '', /chưa có phần yêu cầu cụ thể/)
 })
 test('thẻ Đề bài: không đọc được giáo trình / bài trả không tồn tại / lỗi → báo "mở giáo trình", không văng lỗi', async () => {
-  for (const load of [async () => null, async () => sections, async () => { throw new Error('rls') }]) {
-    const v = render(<CheckpointPromptCard classId="c" sessionNo={4} checkpointId={load.toString().includes('sections') ? '7.7' : '4.1'} load={load} />)
+  for (const load of [async () => null, async () => PUB, async () => { throw new Error('rls') }]) {
+    const v = render(<CheckpointPromptCard classId="c" sessionNo={4} checkpointId={load.toString().includes('PUB') ? '7.7' : '4.1'} load={load} />)
     await waitFor(() => assert.match(v.container.textContent ?? '', /mở giáo trình để xem/))
     v.unmount()
   }
 })
 test('thẻ Đề bài: đổi bài trả → không hiện đề của bài cũ trong lúc tải bài mới', async () => {
-  let release: (s: LessonSection[]) => void = () => {}
-  const slow = () => new Promise<LessonSection[] | null>(r => { release = r })
-  const v = render(<CheckpointPromptCard classId="c" sessionNo={4} checkpointId="4.1" load={async () => sections} />)
+  let release: (s: never) => void = () => {}
+  const slow = () => new Promise<never>(r => { release = r })
+  const v = render(<CheckpointPromptCard classId="c" sessionNo={4} checkpointId="4.1" load={async () => PUB} />)
   await waitFor(() => assert.match(v.container.textContent ?? '', /Bolero/))
   v.rerender(<CheckpointPromptCard classId="c" sessionNo={4} checkpointId="4.2" load={slow} />)
   assert.doesNotMatch(v.container.textContent ?? '', /Bolero/)
   assert.ok(v.container.querySelector('[aria-busy="true"]'))
-  release(sections)
+  release(PUB)
   await waitFor(() => assert.match(v.container.textContent ?? '', /Bài không có yêu cầu/))
+})
+
+test('đề bài CHỈ lấy từ bản đã xuất bản: published → hiện đề', async () => {
+  assert.equal(promptStateOf(PUB, '4.1').status, 'ready')
+})
+test('bản nháp KHÔNG thành đề chính thức: báo chưa xuất bản, không lộ nội dung nháp', async () => {
+  assert.deepEqual(promptStateOf(DRAFT, '4.1'), { status: 'unpublished' })
+  assert.deepEqual(promptStateOf({ status: 'archived', sections } as never, '4.1'), { status: 'unpublished' })
+  const v = render(<CheckpointPromptCard classId="c" sessionNo={4} checkpointId="4.1" load={async () => DRAFT} />)
+  await waitFor(() => assert.match(v.container.textContent ?? '', /chưa xuất bản/))
+  assert.doesNotMatch(v.container.textContent ?? '', /Quay video đệm|Bolero/)
+  assert.match(v.container.textContent ?? '', /Mira cũng chưa thấy đề/)
+})
+test('không có dữ liệu giáo trình → missing (không bịa); bản xuất bản nhưng thiếu bài trả → missing', () => {
+  assert.deepEqual(promptStateOf(null, '4.1'), { status: 'missing' })
+  assert.deepEqual(promptStateOf(PUB, '9.9'), { status: 'missing' })
 })
 
 const thread = {
