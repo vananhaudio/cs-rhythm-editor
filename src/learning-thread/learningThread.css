@@ -235,3 +235,11 @@ textarea.lt-input { resize: vertical; min-height: 88px; line-height: 1.5; }
 .cs-root .lt-list + .lt-empty, .cs-root p.lt-card.lt-empty { background: transparent; border: none; }
 .lt-ms-times { font-weight: 700; color: var(--lt-t2, #52525b); }
 .lt-ev.is-focus .lt-ev-bubble { box-shadow: 0 0 0 2px #c4b5fd; }
+
+/* ── Thẻ Đề bài (màn chấm của Thầy) ── */
+.lt-prompt { display: flex; flex-direction: column; gap: 6px; }
+.lt-prompt-sum { cursor: pointer; display: flex; flex-direction: column; gap: 2px; list-style: none; }
+.lt-prompt-sum::-webkit-details-marker { display: none; }
+.lt-prompt-kicker { font-size: 11.5px; font-weight: 800; color: var(--lt-p); text-transform: uppercase; letter-spacing: .02em; }
+.lt-prompt-title { font-weight: 800; font-size: 15px; overflow-wrap: anywhere; }
+.lt-prompt-body { margin: 8px 0 0; font-size: 14.5px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
