@@ -1827,5 +1827,15 @@ button.cs-subs-title:hover { color: var(--cs-accent); }
 .cs-nr-markall:hover { background: var(--cs-neutral-soft); }
 .cs-nr-markall:focus-visible { outline: 2px solid var(--cs-p-strong); outline-offset: 2px; }
 
-/* G3 thẻ "Ôn nhanh" (LessonClipCard): nút mở Trang Buổi đủ vùng chạm iOS (≥ 44px) */
+/* G3 thẻ "Ôn nhanh" (LessonClipCard): nút "Xem clip" + liên kết phụ "Xem bài học" đủ vùng chạm iOS (≥ 44px) */
 .cs-clip-card .cs-clip-open { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; text-decoration: none; }
+.cs-clip-card .cs-pub-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; }
+.cs-clip-lesson { display: inline-flex; align-items: center; min-height: 44px; padding: 0 4px; color: var(--cs-p-strong); font-weight: 700; text-decoration: none; }
+/* Trình phát Ôn nhanh (LessonClipPlayer): hộp giữa màn hình, rộng hơn hộp hỏi lại; điện thoại gần kín chiều ngang */
+.cs-dialog.cs-clip-modal { width: min(760px, calc(100vw - 16px)); max-height: calc(100dvh - 16px); overflow-y: auto; text-align: left; padding: 14px 14px 10px; }
+.cs-clip-modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.cs-dialog.cs-clip-modal h2 { margin: 0; font-size: 16px; line-height: 1.35; }
+.cs-dialog .cs-clip-close { width: auto; min-height: 44px; min-width: 64px; flex: none; }
+.cs-clip-stage { min-height: 120px; }
+.cs-clip-stage .cs-clip-msg { margin: 0; padding: 28px 8px; text-align: center; }
+.cs-dialog.cs-clip-modal .cs-clip-lesson { margin-top: 6px; }
