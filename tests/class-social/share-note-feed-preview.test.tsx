@@ -73,6 +73,7 @@ test('Thẻ Feed chưa gần khung nhìn: chỉ câu hỏi + nút mở, KHÔNG n
 
 test('Thông báo theo trạng thái: no_access / stale / unavailable / lỗi mạng; ok không có thông báo', () => {
   assert.match(shareNoteMessage({ status: 'no_access', note: 'x' })!, /chưa có quyền xem bản nhạc/)
+  assert.match(shareNoteMessage({ status: 'locked', note: 'x' })!, /chưa mở cho bạn/)
   assert.match(shareNoteMessage({ status: 'stale', note: 'x' })!, /đã được cập nhật/)
   assert.match(shareNoteMessage({ status: 'unavailable' })!, /không còn khả dụng/)
   assert.match(shareNoteMessage({ status: 'error' })!, /Chưa tải được/)

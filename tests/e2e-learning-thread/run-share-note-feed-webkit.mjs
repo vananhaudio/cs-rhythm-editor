@@ -31,7 +31,7 @@ for (const [name, vp] of [['iPhone 390', { viewport: { width: 390, height: 844 }
   await B.evaluate(() => document.querySelector('[data-testid="share-note-post"]').scrollIntoView({ block: 'center' }))
   await B.waitForSelector('[data-testid="share-note-preview"][data-live="1"] .at-surface svg', { timeout: 40000 }); await B.waitForTimeout(900)
   const p = await printed(B)
-  const m = p.q.match(/FEED-(\d) Ô (\d+)–(\d+)/); assert.ok(m, p.q.slice(0, 80))
+  const m = p.q.match(/(?:FEED|LYR)-\d Ô (\d+)(?:–(\d+))?/); assert.ok(m, p.q.slice(0, 80)); m.splice(1, 0, null)   // m[2] = ô đầu
   assert.ok(p.bars.length > 0 && Math.min(...p.bars) === Number(m[2]), `số ô in ra bắt đầu ĐÚNG ô ${m[2]}: ${p.bars}`)
   assert.ok(p.sw, 'không tràn ngang')
   let maxLive = 0, maxSurf = 0
@@ -39,6 +39,35 @@ for (const [name, vp] of [['iPhone 390', { viewport: { width: 390, height: 844 }
   for (let k = 0; k < 2; k++) for (let i = 0; i < total; i++) { await B.evaluate(i => document.querySelectorAll('[data-testid="share-note-post"]')[i].scrollIntoView({ block: 'center' }), i); await B.waitForTimeout(800); const s = await surfaces(B); maxLive = Math.max(maxLive, s.live); maxSurf = Math.max(maxSurf, s.surfaces) }
   assert.ok(maxLive <= 2 && maxSurf <= 2, `renderer sống tối đa 2: ${maxLive}/${maxSurf}`)
   await B.screenshot({ path: `${SHOTS}/fp-wk-${name.startsWith('iPhone') ? 'iphone' : 'desktop'}-feed.png` })
+
+  if (name.startsWith('iPhone')) {
+    // Bản nhạc CÓ LỜI (Buổi 2 · Diễm xưa) trên WebKit 390: đúng 2 dòng, ô 5–6, đủ lời, không tràn ngang, khoảng trắng đáy gọn
+    const li = await B.evaluate(() => [...document.querySelectorAll('[data-testid="share-note-post"]')].findIndex(e => e.textContent.includes('LYR-1')))
+    assert.ok(li >= 0, 'có thẻ LYR-1')
+    await B.evaluate(i => document.querySelectorAll('[data-testid="share-note-post"]')[i].scrollIntoView({ block: 'center' }), li)
+    await B.waitForFunction(i => document.querySelectorAll('[data-testid="share-note-post"]')[i].querySelector('[data-live="1"] .at-surface svg') && !document.querySelectorAll('[data-testid="share-note-post"]')[i].querySelector('.lsn-score-msg'), li, { timeout: 40000 }); await B.waitForTimeout(900)
+    const info = await B.evaluate(async i => {
+      const card = document.querySelectorAll('[data-testid="share-note-post"]')[i]
+      const texts = [...card.querySelectorAll('svg text')].map(t => t.textContent.trim())
+      const bars = [...card.querySelectorAll('svg text')].filter(t => /^\d+$/.test(t.textContent.trim()) && /c80000|rgb\(200, ?0, ?0\)/i.test(t.getAttribute('fill') || '')).map(t => Number(t.textContent.trim()))
+      return { rows: texts.filter(x => x.includes('\uE050')).length, bars, texts, sw: document.documentElement.scrollWidth <= innerWidth + 1, label: card.querySelector('.cs-tool-share-detail').textContent }
+    }, li)
+    assert.equal(info.rows, 2, `2 dòng (có ${info.rows})`); assert.deepEqual(info.bars, [5, 6]); assert.ok(info.sw)
+    for (const w of ['Nghe', 'lá', 'thu', 'mưa', 'reo', 'mòn', 'gót', 'nhỏ']) assert.ok(info.texts.includes(w), `đủ lời: thiếu "${w}"`)
+    assert.ok(!info.texts.includes('Đường')); assert.match(info.label, /hiện 2 ô đầu/)
+    const host = B.locator('[data-testid="share-note-post"]').nth(li).locator('.cs-sn-preview .lsn-score-host')
+    const png = await host.screenshot()
+    const gap = await B.evaluate(async b64 => {
+      const img = new Image(); img.src = 'data:image/png;base64,' + b64; await img.decode()
+      const c = document.createElement('canvas'); c.width = img.width; c.height = img.height; const x = c.getContext('2d'); x.drawImage(img, 0, 0)
+      const d = x.getImageData(0, 0, c.width, c.height).data; const dpr = devicePixelRatio || 1; let last = -1
+      for (let y = c.height - 1; y >= 0 && last < 0; y--) for (let xx = 0; xx < c.width; xx++) { const k = (y * c.width + xx) * 4; if (d[k + 3] > 0 && (d[k] < 225 || d[k + 1] < 225 || d[k + 2] < 225)) { last = y; break } }
+      return { h: c.height / dpr, ink: (last + 1) / dpr, dpr }
+    }, png.toString('base64'))
+    assert.ok(gap.h - gap.ink <= 22 && gap.h - gap.ink >= 3, `trắng đáy gọn mà không cắt: ${gap.h - gap.ink}px`)
+    await B.screenshot({ path: `${SHOTS}/fp-wk-iphone-co-loi.png` })
+    ok(`iPhone 390 bản CÓ LỜI: đúng 2 dòng, ô ${info.bars}, đủ lời, không tràn ngang, trắng đáy ${Math.round(gap.h - gap.ink)}px`)
+  }
   await B.evaluate(() => { const els = [...document.querySelectorAll('[data-testid="share-note-post"]')]; els.find(e => e.querySelector('.cs-sn-preview'))?.scrollIntoView({ block: 'center' }) }); await B.waitForTimeout(700)
   await Promise.all([B.waitForURL(/note=/, { timeout: 30000 }), B.locator('.cs-sn-preview').first().click()])
   await B.waitForSelector('.lsn-share-hl.is-focus', { timeout: 40000 })

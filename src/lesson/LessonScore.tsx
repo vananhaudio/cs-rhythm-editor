@@ -23,6 +23,19 @@ interface Props {
   onExcerpt?: (plan: ExcerptPlan) => void
 }
 
+/** Trích đoạn: alphaTab chừa ~50px dưới dòng nhạc cuối (lề + dòng bản quyền đã ẩn). Đo bằng điểm ảnh (03/11, Chrome + WebKit, 2 bản nhạc, 2 khổ): nét mực cuối
+ *  luôn ≤ đáy realBounds của dòng cuối ⇒ cắt khung ở max(real, visual) + 6px không mất lời / TAB / ký hiệu. Chỉ chạm khung chứa, không đổi cách khắc. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function trimExcerptBottom(api: any, host: HTMLElement | null) {
+  const sys = api?.renderer?.boundsLookup?.staffSystems
+  if (!host || !sys?.length) return
+  const last = sys[sys.length - 1]
+  const real = last.realBounds.y + last.realBounds.h
+  const visual = last.visualBounds ? last.visualBounds.y + last.visualBounds.h : 0
+  host.style.height = `${Math.ceil(Math.max(real, visual)) + 6}px`
+  host.style.overflow = 'hidden'
+}
+
 export default function LessonScore({ tex, barsPerRow = 4, zoomable = true, shareKey, excerpt, onExcerpt }: Props) {
   const share = useContext(ScoreShareSlot)
   const [tick, setTick] = useState(0)   // tăng sau MỖI lần alphaTab khắc xong → lớp khoanh tính lại vùng tô
@@ -136,6 +149,7 @@ const LYRIC_BAR = 395     // px/ô nhịp ở cỡ 1 cho ô 8 âm tiết — dư
           hideAttribution()
           // Trích đoạn nằm ngoài bản nhạc hiện tại → không có ô nào: báo lỗi nhẹ thay vì khung trống
           if (excerpt && !(api.renderer?.boundsLookup?.staffSystems?.length)) { setState('error'); setErr('Không có đoạn nhạc này'); return }
+          if (excerpt) trimExcerptBottom(api, hostRef.current)
           setState('ready'); setTick(t => t + 1)
         })
         api.error.on((e: unknown) => { if (!dead) { setState('error'); setErr((e as Error)?.message ?? String(e)) } })

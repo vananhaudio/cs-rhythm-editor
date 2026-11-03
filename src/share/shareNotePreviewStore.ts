@@ -3,19 +3,20 @@
 // - Hàng đợi: MỘT yêu cầu một lúc (không bắn hàng loạt khi Feed có nhiều thẻ).
 // - Cache theo NGƯỜI XEM (uid trong khoá): đổi tài khoản không dùng lại kết quả của người khác; hết hạn sau TTL để thấy bản nhạc Thầy sửa.
 // - Lỗi mạng KHÔNG cache (lần sau thử lại). supabase nạp ĐỘNG để component lá test được trên Node.
-import { openShareNote, type BarRange, type ScoreKey } from './shareNoteApi'
+import { isShareNoteSessionOpen, openShareNote, type BarRange, type ScoreKey } from './shareNoteApi'
 import { scoreTexAt } from './scoreExcerpt'
 import { UNAVAILABLE_TEXT } from './refCards'
 
 export type PreviewLoad =
   | { status: 'ok'; note: string; tex: string; bars: BarRange; score: ScoreKey }
-  | { status: 'stale' | 'no_access'; note: string }
+  | { status: 'stale' | 'no_access' | 'locked'; note: string }
   | { status: 'unavailable' }
   | { status: 'error' }
 
 export function shareNoteMessage(load: PreviewLoad | null): string | null {
   if (!load) return null
   if (load.status === 'no_access') return 'Bạn chưa có quyền xem bản nhạc này.'
+  if (load.status === 'locked') return 'Buổi này chưa mở cho bạn nên chưa xem được bản nhạc.'
   if (load.status === 'stale') return 'Bản nhạc đã được cập nhật nên chưa hiển thị đoạn này.'
   if (load.status === 'unavailable') return UNAVAILABLE_TEXT
   if (load.status === 'error') return 'Chưa tải được bản nhạc. Cuộn lại để thử lại.'
@@ -62,6 +63,7 @@ async function run(noteId: string, uid: string): Promise<PreviewLoad> {
     let out: PreviewLoad
     if (open.status === 'unavailable') out = { status: 'unavailable' }
     else if (open.status !== 'ok') out = { status: open.status, note: open.note }   // stale / no_access: KHÔNG đọc giáo trình
+    else if (!(await isShareNoteSessionOpen(noteId))) out = { status: 'locked', note: open.note }   // buổi khoá: KHÔNG tải giáo trình
     else {
       const sid = await sessionIdOf(open.classId, open.sessionNo)
       let sections = sid ? fresh(contents, `${uid}:${sid}`)?.v : null
@@ -76,7 +78,7 @@ async function run(noteId: string, uid: string): Promise<PreviewLoad> {
       // Không đọc được giáo trình / không thấy khối nhạc → coi như không có quyền xem nhạc (không đoán, không vẽ)
       out = tex ? { status: 'ok', note: open.note, tex, bars: open.bars, score: open.score } : { status: 'no_access', note: open.note }
     }
-    notes.set(key, { at: clock(), v: out })
+    if (out.status !== 'locked') notes.set(key, { at: clock(), v: out })   // khoá buổi KHÔNG cache: mở khoá xong thẻ cập nhật ở lần nạp kế
     return out
   } catch {
     return { status: 'error' }
