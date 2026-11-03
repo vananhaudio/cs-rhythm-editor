@@ -7,6 +7,7 @@ import { ArrowLeft, ListChecks } from 'lucide-react'
 import './styles'
 import { fetchLessonStates, fetchThread, moderate, setVisibility } from './ltApi'
 import { submitCheckpoint } from '../classLearning/progressApi'
+import { useMiraDraftFor } from '../mira-grading/draftContext'
 import { VISIBILITY_LABEL, canAsk, canSubmit, otherVisibility, visibilityChoices, type LessonThreadState, type StudentKind, type ThreadDetail, type ThreadEvent } from './ltModel'
 import ThreadView from './ThreadView'
 import StudentComposer from './StudentComposer'
@@ -32,6 +33,7 @@ export default function ThreadPage({ threadId, isTeacher, onBack, onOpenQueue, o
   const [compose, setCompose] = useState<StudentKind | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const { draft: miraDraft, report: reportMiraDraft } = useMiraDraftFor(threadId)   // nháp từ Mira cho ĐÚNG bài này (bài khác → null)
 
   // Tải thread (+ cấu hình bài nếu là chính chủ: để biết được Trả lại / Hỏi tiếp không). rev++ → tải lại.
   const [rev, setRev] = useState(0)
@@ -133,7 +135,7 @@ export default function ThreadPage({ threadId, isTeacher, onBack, onOpenQueue, o
         ))}
 
       {t.canRespond && !t.isHidden && (
-        <TeacherComposer threadId={t.id} events={t.events} allowKho onSent={reload} isCheckpoint={!!t.checkpoint} />
+        <TeacherComposer threadId={t.id} events={t.events} allowKho onSent={reload} isCheckpoint={!!t.checkpoint} miraDraft={miraDraft} onMiraDraft={reportMiraDraft} />
       )}
       {isTeacher && (
         <div className="lt-actions">

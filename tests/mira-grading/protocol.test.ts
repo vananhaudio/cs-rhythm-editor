@@ -53,3 +53,26 @@ test('API: gọi đúng RPC với đúng tham số; chưa có migration → unav
   const boom = createMiraGradingApi((async () => { throw new Error('mạng') }) as RpcFn)
   assert.deepEqual(await boom.ticket(ID), { ok: false, reason: 'error' }); await boom.end(ID); assert.equal(await boom.pilotEnabled(), false) // không ném
 })
+
+test('nháp từ iframe: chỉ nhận khi đúng cửa sổ + origin + mã bài + chữ 1–4000; chữ được cắt khoảng trắng đầu/cuối', async () => {
+  const { MAX_DRAFT_CHARS } = await import('../../src/mira-grading/protocol')
+  const { MAX_EVENT_BODY } = await import('../../src/learning-thread/ltModel')
+  assert.equal(MAX_DRAFT_CHARS, MAX_EVENT_BODY)   // giữ hai giới hạn khớp nhau
+  const child = {}; const ctx = { child, origin: 'https://m.example' }
+  const mk = (data: unknown, extra: object = {}) => ({ origin: 'https://m.example', source: child, data, ...extra })
+  const d = (over: object = {}) => ({ v: 1, type: 'mira-grading-draft', id: ID, rid: 'rid-12345678', text: '  Nháp nhận xét  ', ...over })
+  assert.deepEqual(acceptChildMessage(mk(d()), ctx), { v: 1, type: 'mira-grading-draft', id: ID, rid: 'rid-12345678', text: 'Nháp nhận xét' })
+  assert.equal(acceptChildMessage(mk(d(), { origin: 'https://evil.example' }), ctx), null)       // sai origin
+  assert.equal(acceptChildMessage(mk(d(), { source: {} }), ctx), null)                            // sai cửa sổ
+  assert.equal(acceptChildMessage(mk(d({ id: 'x' })), ctx), null)                                 // mã bài hỏng
+  assert.equal(acceptChildMessage(mk(d({ text: '' })), ctx), null)                                // rỗng
+  assert.equal(acceptChildMessage(mk(d({ text: ' \n\t ' })), ctx), null)                          // chỉ khoảng trắng
+  assert.equal(acceptChildMessage(mk(d({ text: 123 })), ctx), null)                               // không phải chuỗi
+  assert.equal(acceptChildMessage(mk(d({ text: 'a'.repeat(4000) })), ctx)?.type, 'mira-grading-draft')   // đúng 4000: nhận
+  assert.equal(acceptChildMessage(mk(d({ text: 'a'.repeat(4001) })), ctx), null)                  // vượt: bỏ, không cắt ngầm
+  assert.equal(acceptChildMessage(mk(d({ rid: 'x' })), ctx), null)                                // thiếu/hỏng mã yêu cầu
+  assert.equal(acceptChildMessage(mk(d({ rid: undefined })), ctx), null)
+  assert.equal(acceptChildMessage(mk(d({ v: 2 })), ctx), null)
+  // tin nháp không mang quyền nào khác: chỉ có đúng 5 trường
+  assert.deepEqual(Object.keys(acceptChildMessage(mk(d({ verdict: 'pass', send: true })), ctx)!).sort(), ['id', 'rid', 'text', 'type', 'v'])
+})
