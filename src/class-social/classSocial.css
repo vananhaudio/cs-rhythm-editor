@@ -1830,7 +1830,10 @@ button.cs-subs-title:hover { color: var(--cs-accent); }
 /* G3 thẻ "Ôn nhanh" (LessonClipCard): nút "Xem clip" + liên kết phụ "Xem bài học" đủ vùng chạm iOS (≥ 44px) */
 .cs-clip-card .cs-clip-open { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; text-decoration: none; }
 .cs-clip-card .cs-pub-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; }
-.cs-clip-thumb { position: relative; display: block; width: 100%; aspect-ratio: 16 / 9; margin: 0 0 10px; padding: 0; border: 0; border-radius: 12px; overflow: hidden; cursor: pointer;
+.cs-clip-frame { position: relative; width: 100%; aspect-ratio: 16 / 9; margin: 0 0 10px; border-radius: 12px; overflow: hidden; background: #000; }
+.cs-clip-frame iframe { position: absolute; inset: 0; }
+.cs-clip-frame .cs-clip-msg { position: absolute; inset: 0; margin: 0; padding: 12px; display: grid; align-content: center; justify-items: center; gap: 10px; text-align: center; color: #fff; }
+.cs-clip-thumb { position: absolute; inset: 0; display: block; width: 100%; height: 100%; margin: 0; padding: 0; border: 0; cursor: pointer;
   background: linear-gradient(135deg, var(--cs-p-strong, #5b21b6), var(--cs-p, #6d28d9) 60%, #1f1147); }
 .cs-clip-thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .cs-clip-thumb::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,.35), rgba(0,0,0,0) 45%); pointer-events: none; }
@@ -1842,10 +1845,3 @@ button.cs-subs-title:hover { color: var(--cs-accent); }
 @media (prefers-reduced-motion: reduce) { .cs-clip-play { transition: none; } }
 .cs-clip-lesson { display: inline-flex; align-items: center; min-height: 44px; padding: 0 4px; color: var(--cs-p-strong); font-weight: 700; text-decoration: none; }
 /* Trình phát Ôn nhanh (LessonClipPlayer): hộp giữa màn hình, rộng hơn hộp hỏi lại; điện thoại gần kín chiều ngang */
-.cs-dialog.cs-clip-modal { width: min(760px, calc(100vw - 16px)); max-height: calc(100dvh - 16px); overflow-y: auto; text-align: left; padding: 14px 14px 10px; }
-.cs-clip-modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
-.cs-dialog.cs-clip-modal h2 { margin: 0; font-size: 16px; line-height: 1.35; }
-.cs-dialog .cs-clip-close { width: auto; min-height: 44px; min-width: 64px; flex: none; }
-.cs-clip-stage { min-height: 120px; }
-.cs-clip-stage .cs-clip-msg { margin: 0; padding: 28px 8px; text-align: center; }
-.cs-dialog.cs-clip-modal .cs-clip-lesson { margin-top: 6px; }

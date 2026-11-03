@@ -52,3 +52,10 @@ Không phải object mới: clip là một **khối `video` trong giáo trình**
 - Thẻ có khung 16:9 + nút Play + thời lượng; bấm khung hoặc "Xem clip" mở hộp phát (không tự phát khi cuộn). Giữ tên lớp, Buổi, tiêu đề, "Xem bài học".
 - Ảnh bìa lấy từ `https://i.ytimg.com/vi/<id>/hqdefault.jpg`, với `<id>` suy ra từ khối video trong giáo trình CỦA CHÍNH NGƯỜI XEM (RLS quyết quyền), đọc khi thẻ sắp vào khung nhìn (IntersectionObserver, lề 300px), nhớ 60 giây theo buổi, dùng chung với hộp phát. Payload Feed vẫn KHÔNG có URL/video id; không quyền / lỗi / ảnh không tải được → nền gradient của Class.
 - Không bảng/RPC/migration/asset mới; không đổi phân quyền.
+
+## Phát trực tiếp trong thẻ (G3-4, thay hộp phát)
+- Bấm Play/ảnh bìa hoặc "Xem clip" → ảnh bìa chuyển thành player NGAY TRONG thẻ (cùng vị trí/kích thước 16:9), không modal. Điều khiển là của YouTube (phát/tạm dừng, âm lượng, tua, toàn màn hình). Nút "Xem clip" đổi thành "Đóng video".
+- Không tự phát khi cuộn: chỉ khi người xem bấm. `YouTubeLesson` có thêm prop tuỳ chọn `autoplay` (mặc định tắt); `/ytplayer` đọc `?autoplay=1` (cộng thêm, không đổi hành vi cũ).
+- Một thẻ phát tại một thời điểm: thẻ bắt đầu phát phát sự kiện `cs-clip-activate`, thẻ khác tự dừng; tháo thẻ khỏi giao diện (đổi tab, rời trang) gỡ iframe → giải phóng player.
+- Mã: `sections/lessonClipSource.ts` (đọc nguồn video theo quyền người xem, ảnh bìa, điều phối một-thẻ-phát), `sections/LessonClipCard.tsx`. Đã bỏ `LessonClipPlayer.tsx` (hộp phát) và CSS modal.
+- Chưa kiểm: Safari/iPhone thật, Capacitor (iOS/Android) — autoplay trong iframe lồng nhau của WKWebView có thể cần chạm Play lần nữa.
