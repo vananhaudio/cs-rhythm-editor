@@ -33,7 +33,7 @@ export default function ThreadPage({ threadId, isTeacher, onBack, onOpenQueue, o
   const [compose, setCompose] = useState<StudentKind | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  const { draft: miraDraft, handled: miraDraftHandled } = useMiraDraftFor(threadId)   // nháp từ Mira cho ĐÚNG bài này (bài khác → null)
+  const { draft: miraDraft, report: reportMiraDraft } = useMiraDraftFor(threadId)   // nháp từ Mira cho ĐÚNG bài này (bài khác → null)
 
   // Tải thread (+ cấu hình bài nếu là chính chủ: để biết được Trả lại / Hỏi tiếp không). rev++ → tải lại.
   const [rev, setRev] = useState(0)
@@ -135,7 +135,7 @@ export default function ThreadPage({ threadId, isTeacher, onBack, onOpenQueue, o
         ))}
 
       {t.canRespond && !t.isHidden && (
-        <TeacherComposer threadId={t.id} events={t.events} allowKho onSent={reload} isCheckpoint={!!t.checkpoint} miraDraft={miraDraft} onMiraDraftHandled={miraDraftHandled} />
+        <TeacherComposer threadId={t.id} events={t.events} allowKho onSent={reload} isCheckpoint={!!t.checkpoint} miraDraft={miraDraft} onMiraDraft={reportMiraDraft} />
       )}
       {isTeacher && (
         <div className="lt-actions">

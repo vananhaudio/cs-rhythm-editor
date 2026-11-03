@@ -11,7 +11,7 @@ import { MEDIA_ERROR_TEXT, parseExternalMedia } from '../class-social/media/pars
 import { respondAsTeacher } from './ltApi'
 import { MAX_EVENT_BODY, checkBody, teacherKind, type ThreadEvent, type Verdict } from './ltModel'
 
-export default function TeacherComposer({ threadId, events, allowKho, onSent, respond = respondAsTeacher, isCheckpoint = false, miraDraft = null, onMiraDraftHandled }: {
+export default function TeacherComposer({ threadId, events, allowKho, onSent, respond = respondAsTeacher, isCheckpoint = false, miraDraft = null, onMiraDraft }: {
   threadId: string
   events: Pick<ThreadEvent, 'authorRole' | 'kind'>[]
   allowKho: boolean
@@ -21,8 +21,8 @@ export default function TeacherComposer({ threadId, events, allowKho, onSent, re
   isCheckpoint?: boolean
   /** Nháp từ Mira (đã kiểm ở khung Mira). CHỈ điền vào ô soạn; không tự gửi. n đổi = có nháp mới. */
   miraDraft?: { n: number; text: string } | null
-  /** Ô soạn đã nhận nháp n (điền hoặc đang chờ xác nhận) → nơi giữ nháp bỏ nó đi, remount không điền lại */
-  onMiraDraftHandled?: (n: number) => void
+  /** Báo số phận nháp n cho khung Mira: received (chờ Thầy xác nhận) · applied (ĐÃ điền vào ô) · declined (không điền). Mira chỉ báo thành công khi nhận 'applied'. */
+  onMiraDraft?: (n: number, outcome: 'received' | 'applied' | 'declined') => void
 }) {
   const [body, setBody] = useState('')
   const [url, setUrl] = useState('')
@@ -33,7 +33,9 @@ export default function TeacherComposer({ threadId, events, allowKho, onSent, re
   const [error, setError] = useState<string | null>(null)
   const inFlight = useRef(false)
   // Nháp Mira: ô trống → điền ngay; ô đã có chữ → hỏi xác nhận (Giữ nguyên / Thay). Không bao giờ gọi respond().
-  const [pending, setPending] = useState<string | null>(null)
+  const [pending, setPending] = useState<{ n: number; text: string } | null>(null)
+  const pendingRef = useRef<{ n: number; text: string } | null>(null)
+  useEffect(() => { pendingRef.current = pending }, [pending])
   const [fromMira, setFromMira] = useState(false)
   const bodyRef = useRef(body)
   useEffect(() => { bodyRef.current = body }, [body])
@@ -44,14 +46,16 @@ export default function TeacherComposer({ threadId, events, allowKho, onSent, re
     boxRef.current?.scrollIntoView?.({ block: 'center', behavior: 'smooth' })
     taRef.current?.focus({ preventScroll: true })
   }
-  const applyDraft = (text: string) => { setBody(text); setError(null); setPending(null); setFromMira(true); show() }
+  const applyDraft = (d: { n: number; text: string }) => { setBody(d.text); setError(null); setPending(null); setFromMira(true); show(); onMiraDraft?.(d.n, 'applied') }
+  const keepMine = (d: { n: number }) => { setPending(null); taRef.current?.focus({ preventScroll: true }); onMiraDraft?.(d.n, 'declined') }
   useEffect(() => {
     if (!miraDraft || miraDraft.n === seenDraft.current) return
     seenDraft.current = miraDraft.n
-    if (inFlight.current) { onMiraDraftHandled?.(miraDraft.n); return }   // đang gửi: không đụng vào ô
-    onMiraDraftHandled?.(miraDraft.n)
-    if (!bodyRef.current.trim()) applyDraft(miraDraft.text)
-    else { setPending(miraDraft.text); show() }
+    const prev = pendingRef.current
+    if (prev) { setPending(null); onMiraDraft?.(prev.n, 'declined') }                    // nháp mới thay nháp đang chờ xác nhận
+    if (inFlight.current) { onMiraDraft?.(miraDraft.n, 'declined'); return }            // đang gửi: không đụng vào ô
+    if (!bodyRef.current.trim()) applyDraft(miraDraft)
+    else { setPending(miraDraft); onMiraDraft?.(miraDraft.n, 'received'); show() }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [miraDraft])
 
@@ -68,7 +72,8 @@ export default function TeacherComposer({ threadId, events, allowKho, onSent, re
     })
     inFlight.current = false; setSending(null)
     if (!r.ok) { setError(r.message); return }
-    setBody(''); setUrl(''); setTags([]); setResources([]); setPicker(null); setPending(null); setFromMira(false)
+    setBody(''); setUrl(''); setTags([]); setResources([]); setPicker(null); setFromMira(false)
+    if (pendingRef.current) { onMiraDraft?.(pendingRef.current.n, 'declined'); setPending(null) }   // đã gửi bản của Thầy: nháp đang chờ không còn áp dụng
     onSent()
   }
 
@@ -87,7 +92,7 @@ export default function TeacherComposer({ threadId, events, allowKho, onSent, re
           <p style={{ margin: '0 0 6px' }}>Ô phản hồi đang có chữ. Thay bằng nháp vừa nhận từ Mira?</p>
           <div className="lt-actions">
             <button type="button" className="lt-btn is-primary" onClick={() => applyDraft(pending)}>Thay bằng nháp của Mira</button>
-            <button type="button" className="lt-btn is-ghost" onClick={() => { setPending(null); taRef.current?.focus({ preventScroll: true }) }}>Giữ nguyên</button>
+            <button type="button" className="lt-btn is-ghost" onClick={() => keepMine(pending)}>Giữ nguyên</button>
           </div>
         </div>
       )}

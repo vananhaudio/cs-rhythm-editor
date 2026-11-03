@@ -5,7 +5,12 @@ export const PROTOCOL_VERSION = 1 as const
 export type ContextMessage = { v: 1; type: 'mira-context'; kind: 'learning_thread'; id: string; ticket: string; expiresAt?: string; seq: number }
 export type ClearMessage = { v: 1; type: 'mira-context-clear'; seq: number }
 /** Nháp nhận xét Mira → ô "Thầy phản hồi". CHỈ là chữ để điền vào ô soạn; không có quyền gửi hay đổi trạng thái. */
-export type DraftMessage = { v: 1; type: 'mira-grading-draft'; id: string; text: string }
+export type DraftMessage = { v: 1; type: 'mira-grading-draft'; id: string; rid: string; text: string }
+/** Class → Mira: kết quả của MỘT yêu cầu nháp (rid). Mira chỉ báo "đã chuyển" khi nhận 'applied'. */
+export type DraftStatus = 'applied' | 'declined' | 'unavailable' | 'rejected'
+export type DraftResultMessage = { v: 1; type: 'mira-draft-result'; id: string; rid: string; status: DraftStatus }
+const RID = /^[A-Za-z0-9-]{8,64}$/
+export const isRid = (s: unknown): s is string => typeof s === 'string' && RID.test(s)
 export type ChildMessage = { v: 1; type: 'mira-grading-ready' } | { v: 1; type: 'mira-grading-need-ticket'; id: string } | DraftMessage
 
 /** = MAX_EVENT_BODY (learning-thread/ltModel) — giới hạn nội dung một lượt phản hồi; có test giữ hai số khớp. */
@@ -31,10 +36,10 @@ export function acceptChildMessage(ev: { origin: string; source: unknown; data: 
   if (d.type === 'mira-grading-ready') return { v: 1, type: 'mira-grading-ready' }
   if (d.type === 'mira-grading-need-ticket' && isUuid(d.id)) return { v: 1, type: 'mira-grading-need-ticket', id: d.id }
   if (d.type === 'mira-grading-draft') {
-    if (!isUuid(d.id) || typeof d.text !== 'string') return null
+    if (!isUuid(d.id) || !isRid(d.rid) || typeof d.text !== 'string') return null
     const text = d.text.trim()
     if (!text || text.length > MAX_DRAFT_CHARS) return null   // rỗng / quá dài → bỏ, không cắt ngầm
-    return { v: 1, type: 'mira-grading-draft', id: d.id, text }
+    return { v: 1, type: 'mira-grading-draft', id: d.id, rid: d.rid, text }
   }
   return null
 }
