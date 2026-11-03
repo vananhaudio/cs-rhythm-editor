@@ -35,6 +35,8 @@ const clips = page => page.$$eval('.cs-clip-card', els => els.map(e => ({
   text: e.textContent, href: e.querySelector('a.cs-clip-lesson')?.getAttribute('href'), h: Math.round(e.querySelector('button.cs-clip-open')?.getBoundingClientRect().height ?? 0),
   h2: Math.round(e.querySelector('a.cs-clip-lesson')?.getBoundingClientRect().height ?? 0), anchorOpen: e.querySelectorAll('a.cs-clip-open').length,
   likebar: e.querySelectorAll('.cs-likebar').length,
+  ratio: (r => r ? +(r.width / r.height).toFixed(2) : 0)(e.querySelector('.cs-clip-thumb')?.getBoundingClientRect()),
+  play: !!e.querySelector('.cs-clip-thumb .cs-clip-play'), iframes: e.querySelectorAll('iframe').length,
 })))
 
 try {
@@ -49,6 +51,9 @@ try {
   assert.ok(list.every(x => x.h >= 44 && x.h2 >= 44), 'nút "Xem clip" và liên kết "Xem bài học" cao ≥ 44px: ' + list.map(x => x.h + '/' + x.h2))
   assert.ok(list.every(x => x.anchorOpen === 0), '"Xem clip" là nút, không còn liên kết điều hướng')
   assert.ok(list.every(x => x.likebar === 0), 'thẻ không có Thích/Bình luận')
+  assert.ok(list.every(x => Math.abs(x.ratio - 16 / 9) < 0.03 && x.play), 'khung ảnh bìa 16:9 có nút Play: ' + list.map(x => x.ratio))
+  assert.ok(list.every(x => x.iframes === 0), 'cuộn qua Feed KHÔNG tự phát (không iframe)')
+  ok('ảnh bìa 16:9 + nút Play; không tự phát khi cuộn')
   ok('liên kết đúng Trang Buổi gốc; nút ≥ 44px; không có Thích/Bình luận')
   const html = await a.page.content()
   // video id GIẢ + ghi chú: không được có ở BẤT KỲ đâu trong DOM; "youtu" (head tĩnh của trang có thể nhắc nguồn nhúng) kiểm trong vùng Feed
@@ -73,7 +78,13 @@ try {
   await a.page.evaluate(() => { for (const c of document.querySelectorAll('.cs-clip-card')) if (/CLIP-TH01-S1/.test(c.textContent)) c.querySelector('button.cs-clip-open').scrollIntoView({ block: 'center' }) })
   // chờ cuộn + nạp thêm Feed ổn định (scrollY không đổi qua 2 lần đo cách 400ms)
   for (let i = 0, last = -1; i < 20; i++) { const y = await a.page.evaluate(() => scrollY); if (y === last) break; last = y; await new Promise(r => setTimeout(r, 400)) }
+  // ảnh của bài khác trong Feed (404 trong DB tạm → thu gọn khi lỗi) có thể đổi chiều cao SAU lúc đo → chờ mọi ảnh xong rồi mới đo lại
+  await a.page.waitForFunction(() => [...document.querySelectorAll('article.cs-post img')].every(i => i.complete), { timeout: 15000 })
+  await new Promise(r => setTimeout(r, 600))
+  await a.page.evaluate(() => { for (const c of document.querySelectorAll('.cs-clip-card')) if (/CLIP-TH01-S1/.test(c.textContent)) c.querySelector('button.cs-clip-open').scrollIntoView({ block: 'center' }) })
+  await new Promise(r => setTimeout(r, 300))
   const y0 = await a.page.evaluate(() => scrollY)
+  const dbg0 = await a.page.evaluate(() => ({ sh: document.documentElement.scrollHeight, ih: innerHeight, cards: document.querySelectorAll('article.cs-post').length, hs: [...document.querySelectorAll('article.cs-post')].map(e => Math.round(e.getBoundingClientRect().height) + (e.classList.contains('cs-clip-card') ? 'c' : '')).join(',') }))
   const path0 = await a.page.evaluate(() => location.pathname + location.search)
   const pages0 = (await browser.pages()).length
   await openClip()
@@ -92,7 +103,7 @@ try {
   await a.page.click('.cs-clip-modal .cs-clip-close')
   await a.page.waitForFunction(() => !document.querySelector('.cs-clip-modal'), { timeout: 5000 })
   const y1 = await a.page.evaluate(() => scrollY)
-  assert.ok(Math.abs(y1 - y0) <= 2, `giữ vị trí cuộn Feed (${y0} → ${y1})`)
+  assert.ok(Math.abs(y1 - y0) <= 2, `giữ vị trí cuộn Feed (${y0} → ${y1}) ${JSON.stringify(dbg0)} sau=${JSON.stringify(await a.page.evaluate(() => ({ sh: document.documentElement.scrollHeight, hs: [...document.querySelectorAll('article.cs-post')].map(e => Math.round(e.getBoundingClientRect().height) + (e.classList.contains('cs-clip-card') ? 'c' : '')).join(',') })))}`)
   assert.equal(await a.page.evaluate(() => location.pathname + location.search), path0)
   assert.equal(await a.page.evaluate(() => document.activeElement?.classList.contains('cs-clip-open')), true, 'focus trả về nút Xem clip')
   ok('Đóng bằng nút → về Feed đúng vị trí cuộn, URL không đổi, focus trả về nút Xem clip')

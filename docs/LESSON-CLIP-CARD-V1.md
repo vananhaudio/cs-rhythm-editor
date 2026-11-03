@@ -47,3 +47,8 @@ Không phải object mới: clip là một **khối `video` trong giáo trình**
 | tsc / build | `npx tsc -p tsconfig.app.json --noEmit` · `npm run build` |
 
 **Chưa nghiệm thu (cần tài khoản thật / thiết bị thật):** WebKit/iPhone thật, Class Mobile/TVA Guitar bản native, tài khoản thử đúng lớp + khác lớp trên production, đo md5 ngay trước migrate.
+
+## Ảnh bìa 16:9 trên thẻ (G3-3)
+- Thẻ có khung 16:9 + nút Play + thời lượng; bấm khung hoặc "Xem clip" mở hộp phát (không tự phát khi cuộn). Giữ tên lớp, Buổi, tiêu đề, "Xem bài học".
+- Ảnh bìa lấy từ `https://i.ytimg.com/vi/<id>/hqdefault.jpg`, với `<id>` suy ra từ khối video trong giáo trình CỦA CHÍNH NGƯỜI XEM (RLS quyết quyền), đọc khi thẻ sắp vào khung nhìn (IntersectionObserver, lề 300px), nhớ 60 giây theo buổi, dùng chung với hộp phát. Payload Feed vẫn KHÔNG có URL/video id; không quyền / lỗi / ảnh không tải được → nền gradient của Class.
+- Không bảng/RPC/migration/asset mới; không đổi phân quyền.

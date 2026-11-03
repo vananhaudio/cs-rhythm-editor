@@ -5,12 +5,15 @@ import { useRef, useState } from 'react'
 import { relativeTime, type LessonClipEntry } from '../posts/postModel'
 import { sessionPath } from '../resolveMeRoute'
 import { Avatar } from '../ui'
-import LessonClipPlayer from './LessonClipPlayer'
+import LessonClipPlayer, { useClipThumb } from './LessonClipPlayer'
 
 export default function LessonClipCard({ entry, now }: { entry: LessonClipEntry; now?: Date }) {
   const href = sessionPath(entry.classId, entry.sessionNo)
   const [open, setOpen] = useState(false)
-  const openerRef = useRef<HTMLButtonElement>(null)
+  const openerRef = useRef<HTMLButtonElement>(null)      // nút "Xem clip" (đích trả focus)
+  const stageRef = useRef<HTMLButtonElement>(null)
+  const thumb = useClipThumb(entry, stageRef)
+  const [thumbBad, setThumbBad] = useState(false)
   const close = () => { setOpen(false); openerRef.current?.focus({ preventScroll: true }) }
   return (
     <article className="cs-card cs-post lt-feed-card cs-pub-card cs-clip-card" aria-label={`Ôn nhanh ${entry.className} buổi ${entry.sessionNo}: ${entry.title}`}>
@@ -25,6 +28,12 @@ export default function LessonClipCard({ entry, now }: { entry: LessonClipEntry;
         </div>
       </header>
       <div className="lt-feed-body">
+        {/* Ảnh bìa 16:9 + nút Play: chỉ mở hộp phát khi bấm (không tự phát). Trùng chức năng với nút "Xem clip" nên bỏ khỏi thứ tự Tab. */}
+        <button ref={stageRef} type="button" className="cs-clip-thumb" tabIndex={-1} aria-hidden="true" onClick={() => setOpen(true)}>
+          {thumb && !thumbBad && <img src={thumb} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={() => setThumbBad(true)} />}
+          <span className="cs-clip-play" aria-hidden="true"><svg viewBox="0 0 24 24" width="28" height="28"><path d="M8 5.5v13l11-6.5z" fill="currentColor" /></svg></span>
+          {entry.duration && <span className="cs-clip-dur">{entry.duration}</span>}
+        </button>
         <div className="lt-feed-kind">Ôn nhanh{entry.duration ? ` · ${entry.duration}` : ''}</div>
         <div className="lt-feed-lesson">{entry.title}</div>
         <div className="lt-feed-foot cs-pub-actions">

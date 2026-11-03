@@ -1830,6 +1830,16 @@ button.cs-subs-title:hover { color: var(--cs-accent); }
 /* G3 thẻ "Ôn nhanh" (LessonClipCard): nút "Xem clip" + liên kết phụ "Xem bài học" đủ vùng chạm iOS (≥ 44px) */
 .cs-clip-card .cs-clip-open { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; text-decoration: none; }
 .cs-clip-card .cs-pub-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; }
+.cs-clip-thumb { position: relative; display: block; width: 100%; aspect-ratio: 16 / 9; margin: 0 0 10px; padding: 0; border: 0; border-radius: 12px; overflow: hidden; cursor: pointer;
+  background: linear-gradient(135deg, var(--cs-p-strong, #5b21b6), var(--cs-p, #6d28d9) 60%, #1f1147); }
+.cs-clip-thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.cs-clip-thumb::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,.35), rgba(0,0,0,0) 45%); pointer-events: none; }
+.cs-clip-play { position: absolute; z-index: 1; left: 50%; top: 50%; width: 64px; height: 64px; margin: -32px 0 0 -32px; border-radius: 50%; display: grid; place-items: center;
+  background: rgba(255,255,255,.94); color: var(--cs-p-strong, #5b21b6); box-shadow: 0 4px 16px rgba(0,0,0,.35); transition: transform .15s; }
+.cs-clip-play svg { margin-left: 3px; }
+.cs-clip-thumb:hover .cs-clip-play { transform: scale(1.06); }
+.cs-clip-dur { position: absolute; z-index: 1; right: 8px; bottom: 8px; padding: 2px 7px; border-radius: 6px; background: rgba(0,0,0,.75); color: #fff; font-size: 12px; font-weight: 700; line-height: 1.5; }
+@media (prefers-reduced-motion: reduce) { .cs-clip-play { transition: none; } }
 .cs-clip-lesson { display: inline-flex; align-items: center; min-height: 44px; padding: 0 4px; color: var(--cs-p-strong); font-weight: 700; text-decoration: none; }
 /* Trình phát Ôn nhanh (LessonClipPlayer): hộp giữa màn hình, rộng hơn hộp hỏi lại; điện thoại gần kín chiều ngang */
 .cs-dialog.cs-clip-modal { width: min(760px, calc(100vw - 16px)); max-height: calc(100dvh - 16px); overflow-y: auto; text-align: left; padding: 14px 14px 10px; }

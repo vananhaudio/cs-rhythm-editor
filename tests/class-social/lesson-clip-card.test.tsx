@@ -7,7 +7,7 @@ import {
 } from "../../src/class-social/posts/postModel";
 import FeedEntryCard from "../../src/class-social/sections/FeedEntryCard";
 import LessonClipCard from "../../src/class-social/sections/LessonClipCard";
-import { ClipPlayerView, clipSessionId, pickClipVideo, type ClipState } from "../../src/class-social/sections/LessonClipPlayer";
+import { ClipPlayerView, clipSessionId, clipThumbUrl, pickClipVideo, type ClipState } from "../../src/class-social/sections/LessonClipPlayer";
 void React;
 
 // ID giả — KHÔNG phải video / lớp thật.
@@ -70,6 +70,18 @@ test("thẻ: nút 'Xem clip' là NÚT mở trình phát tại Feed; liên kết 
   assert.match(html, new RegExp(`<a[^>]*href="/me/classes/${CLASS}/sessions/6"[^>]*>Xem bài học<`));
   assert.doesNotMatch(html, /youtu|https?:|iframe|<video|v=/i);
   assert.doesNotMatch(html, /role="dialog"/, "chưa bấm thì chưa có hộp phát");
+  assert.match(html, /<button[^>]*class="cs-clip-thumb"[^>]*aria-hidden="true"/, "khung ảnh bìa 16:9 là nút mở hộp phát, ẩn khỏi trình đọc/Tab (đã có nút Xem clip)");
+  assert.match(html, /cs-clip-play/, "có nút Play nổi bật");
+  assert.match(html, /<span class="cs-clip-dur">2:07<\/span>/, "thời lượng trên ảnh bìa");
+  assert.doesNotMatch(html, /<img|ytimg/, "ảnh bìa chỉ dựng SAU khi đọc giáo trình theo quyền người xem — không có trong thẻ ban đầu");
+});
+
+test("clipThumbUrl: dựng ảnh bìa từ mọi dạng link YouTube; link lạ/rỗng → null (thẻ dùng nền mặc định)", () => {
+  assert.equal(clipThumbUrl("https://youtu.be/ZZfakeUT001"), "https://i.ytimg.com/vi/ZZfakeUT001/hqdefault.jpg");
+  assert.equal(clipThumbUrl("https://www.youtube.com/watch?v=ZZfakeUT001&t=3"), "https://i.ytimg.com/vi/ZZfakeUT001/hqdefault.jpg");
+  assert.equal(clipThumbUrl("https://example.com/x.mp4"), null);
+  assert.equal(clipThumbUrl(""), null);
+  assert.equal(clipThumbUrl(null), null);
 });
 
 const sec = (over: Record<string, unknown>) => ({ kind: "video", title: "Ôn nhanh · Bản độc tấu", url: "https://youtu.be/ZZfakeUT001", duration: "2:07", ...over }) as never;
