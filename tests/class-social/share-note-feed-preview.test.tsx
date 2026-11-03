@@ -3,25 +3,36 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { EXCERPT_MAX_BARS, planExcerpt, scoreTexAt } from '../../src/share/scoreExcerpt.ts'
 
-test('planExcerpt: tối đa 4 ô và tối đa 2 dòng theo khổ', () => {
-  // desktop 4 ô/dòng: dải 10 ô → 4 ô
-  assert.deepEqual(planExcerpt({ from: 5, to: 14 }, 4), { start: 5, count: EXCERPT_MAX_BARS, total: 10, truncated: true })
-  // điện thoại có lời 1 ô/dòng → 2 ô (≤ 2 dòng)
-  assert.deepEqual(planExcerpt({ from: 5, to: 8 }, 1), { start: 5, count: 2, total: 4, truncated: true })
-  // điện thoại không lời 2 ô/dòng → 4 ô
-  assert.deepEqual(planExcerpt({ from: 1, to: 4 }, 2), { start: 1, count: 4, total: 4, truncated: false })
-  // dải ngắn hơn giới hạn → hiện đủ, không cắt
-  assert.deepEqual(planExcerpt({ from: 9, to: 9 }, 1), { start: 9, count: 1, total: 1, truncated: false })
-  assert.deepEqual(planExcerpt({ from: 9, to: 10 }, 3), { start: 9, count: 2, total: 2, truncated: false })
-  // dải server tối đa 64 ô vẫn chỉ vẽ ≤ 4
-  assert.equal(planExcerpt({ from: 1, to: 64 }, 8)!.count, 4)
+test('planExcerpt: vùng khoanh ưu tiên, ngữ cảnh ≤ 2 ô mỗi phía lấp chỗ trống, thiếu chỗ thì giảm ngữ cảnh trước', () => {
+  const P = (r: { from: number; to: number }, perRow: number, rows = 2, ctx = true) => { const p = planExcerpt(r, perRow, rows, ctx)!; return [p.start, p.count, p.focusFrom, p.focusTo, p.before, p.after, p.truncated] }
+  // desktop 4 ô/dòng × 2 dòng = 8 chỗ: vùng 2 ô giữa bài → 2 trước + 2 sau (tổng 6)
+  assert.deepEqual(P({ from: 5, to: 6 }, 4), [3, 6, 5, 6, 2, 2, false])
+  // vùng 4 ô → còn 4 chỗ → 2 + 2
+  assert.deepEqual(P({ from: 5, to: 8 }, 4), [3, 8, 5, 8, 2, 2, false])
+  // đầu bài (ô 1): không có ô trước → chỉ 2 ô sau
+  assert.deepEqual(P({ from: 1, to: 2 }, 4), [1, 4, 1, 2, 0, 2, false])
+  // điện thoại có lời 1 ô/dòng × 2 dòng = 2 chỗ: vùng 1 ô → 1 ô ngữ cảnh (đối xứng: giảm trước rồi sau)
+  assert.deepEqual(P({ from: 9, to: 9 }, 1), [9, 2, 9, 9, 0, 1, false])
+  // vùng 2 ô trên 2 chỗ → KHÔNG có ngữ cảnh (không lấn vùng khoanh)
+  assert.deepEqual(P({ from: 5, to: 6 }, 1), [5, 2, 5, 6, 0, 0, false])
+  // điện thoại không lời 2 ô/dòng × 3 dòng = 6 chỗ: vùng 2 ô → 2 + 2
+  assert.deepEqual(P({ from: 5, to: 6 }, 2, 3), [3, 6, 5, 6, 2, 2, false])
+  // vùng dài: cắt ở 4 ô, KHÔNG có ngữ cảnh sau; ngữ cảnh trước chỉ khi còn chỗ
+  assert.deepEqual(P({ from: 5, to: 14 }, 4), [3, 6, 5, 8, 2, 0, true])
+  assert.deepEqual(P({ from: 5, to: 14 }, 1), [5, 2, 5, 6, 0, 0, true])
+  // bản nhạc có 64 ô tối đa vẫn chỉ vẽ ≤ 4 ô khoanh
+  assert.equal(planExcerpt({ from: 1, to: 64 }, 8)!.focusTo, 4)
+  // tắt ngữ cảnh → như V1
+  assert.deepEqual(P({ from: 5, to: 6 }, 4, 2, false), [5, 2, 5, 6, 0, 0, false])
+  // tổng ô vẽ không bao giờ vượt chỗ có (perRow × dòng)
+  for (let perRow = 1; perRow <= 4; perRow++) for (let rows = 1; rows <= 3; rows++) for (const r of [{ from: 1, to: 1 }, { from: 3, to: 4 }, { from: 7, to: 20 }]) assert.ok(planExcerpt(r, perRow, rows)!.count <= perRow * rows)
 })
 
 test('planExcerpt: dải hỏng → null (không vẽ gì)', () => {
   for (const r of [{ from: 0, to: 3 }, { from: -1, to: 2 }, { from: 5, to: 4 }, { from: 1.5, to: 3 }, { from: NaN, to: 3 }, { from: 1, to: Infinity }]) {
     assert.equal(planExcerpt(r, 4), null, JSON.stringify(r))
   }
-  assert.equal(planExcerpt({ from: 1, to: 2 }, 0)!.count, 2, 'số dòng 0 → coi như 1 ô/dòng, tối thiểu vẫn vẽ')
+  assert.equal(planExcerpt({ from: 1, to: 2 }, 0)!.focusTo, 2, 'số ô/dòng 0 → coi như 1, vùng khoanh vẫn vẽ đủ')
 })
 
 test('scoreTexAt: ba dạng đường dẫn như LessonDocument; sai → null', () => {

@@ -1858,7 +1858,9 @@ button.cs-subs-title:hover { color: var(--cs-accent); }
 .cs-sn-slot { width: 100%; margin-top: 8px; }
 .cs-sn-wait { padding: 8px 0; }
 .cs-sn-preview { display: block; position: relative; border-radius: 12px; border: 2px solid #EA580C; background: #fff; overflow: hidden; color: inherit; text-decoration: none; }
-.cs-sn-preview::after { content: ''; position: absolute; inset: 0; background: rgba(234, 88, 12, 0.07); pointer-events: none; }
+/* V1.1: nền cam chỉ phủ VÙNG KHOANH (.lsn-excerpt-hl); ô ngữ cảnh để nguyên */
+.cs-sn-preview .lsn-excerpt-focus { position: absolute; inset: 0; pointer-events: none; }
+.cs-sn-preview .lsn-excerpt-hl { position: absolute; background: rgba(234, 88, 12, 0.09); box-shadow: inset 0 0 0 1.5px rgba(234, 88, 12, 0.5); border-radius: 6px; }
 .cs-sn-preview:focus-visible { outline: 3px solid var(--cs-p-strong); outline-offset: 2px; }
 .cs-sn-preview .lsn-score { position: relative; padding: 6px 4px; }
 .cs-sn-preview .lsn-score-host { overflow: hidden; }

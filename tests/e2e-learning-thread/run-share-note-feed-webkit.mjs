@@ -32,7 +32,12 @@ for (const [name, vp] of [['iPhone 390', { viewport: { width: 390, height: 844 }
   await B.waitForSelector('[data-testid="share-note-preview"][data-live="1"] .at-surface svg', { timeout: 40000 }); await B.waitForTimeout(900)
   const p = await printed(B)
   const m = p.q.match(/(?:FEED|LYR)-\d Ô (\d+)(?:–(\d+))?/); assert.ok(m, p.q.slice(0, 80)); m.splice(1, 0, null)   // m[2] = ô đầu
-  assert.ok(p.bars.length > 0 && Math.min(...p.bars) === Number(m[2]), `số ô in ra bắt đầu ĐÚNG ô ${m[2]}: ${p.bars}`)
+  // V1.1: ô in ra đầu tiên = ô bắt đầu vẽ = vùng khoanh lùi ≤ 2 ô ngữ cảnh (không lùi quá ô 1); vùng tô cam có mặt và kế hoạch khớp
+  const plan = await B.evaluate(() => { const pv = [...document.querySelectorAll('[data-testid="share-note-preview"][data-live="1"]')][0]; return { plan: (pv.getAttribute('data-plan') || '').split(',').map(Number), hl: pv.querySelectorAll('.lsn-excerpt-hl').length } })
+  assert.equal(plan.plan[2], Number(m[2]), `vùng khoanh bắt đầu ĐÚNG ô ${m[2]}: ${plan.plan}`)
+  assert.equal(Math.min(...p.bars), plan.plan[0], `ô in ra đầu tiên = ô bắt đầu vẽ ${plan.plan[0]}: ${p.bars}`)
+  assert.ok(plan.plan[2] - plan.plan[0] >= 0 && plan.plan[2] - plan.plan[0] <= 2, `ngữ cảnh trước ≤ 2 ô (${plan.plan})`)
+  assert.ok(plan.hl >= 1, 'có vùng tô cam cho ô khoanh')
   assert.ok(p.sw, 'không tràn ngang')
   let maxLive = 0, maxSurf = 0
   const total = await B.evaluate(() => document.querySelectorAll('[data-testid="share-note-post"]').length)

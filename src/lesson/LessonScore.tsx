@@ -8,6 +8,7 @@ import ScoreShareLayer from './ScoreShareLayer'
 import { ScoreShareSlot } from './scoreShareSlot'
 import type { BarRange, ScoreKey } from '../share/shareNoteApi'
 import { planExcerpt, type ExcerptPlan } from '../share/scoreExcerpt'
+import { rectsForBars, type BoundsLike } from './scoreShare'
 
 interface Props {
   tex: string
@@ -19,7 +20,7 @@ interface Props {
   shareKey?: ScoreKey
   /** Chỉ vẽ trích đoạn (Share Note trên Feed): dải ô 1-based; số ô vẽ do planExcerpt giới hạn (≤ 4 ô, ≤ 2 dòng). Không dùng chung với shareKey. */
   excerpt?: BarRange
-  /** Báo số ô thực sự vẽ (đổi khi khổ đổi) — để thẻ ghi "hiện N ô đầu" */
+  /** Báo kế hoạch vẽ (đổi khi khổ đổi) — để thẻ ghi "hiện N ô đầu"; ô ngữ cảnh (trước/sau vùng khoanh) vẽ bình thường, chỉ vùng khoanh được tô */
   onExcerpt?: (plan: ExcerptPlan) => void
 }
 
@@ -50,6 +51,9 @@ export default function LessonScore({ tex, barsPerRow = 4, zoomable = true, shar
   const bigRef = useRef(false)
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading')
   const [err, setErr] = useState('')
+  const [focus, setFocus] = useState<BarRange | null>(null)   // trích đoạn: vùng khoanh đang vẽ (để tô)
+  const focusRef = useRef<HTMLDivElement>(null)
+  const [focusBoxes, setFocusBoxes] = useState<Array<{ left: number; top: number; width: number; height: number; key: string }>>([])
 
   // Cách khắc theo bề rộng KHUNG CHỨA (không phải cửa sổ): lúc xuất PDF khung được kéo về
   // khổ A4 nên bản nhạc phải khắc lại cho đủ ô mỗi dòng.
@@ -81,9 +85,11 @@ const LYRIC_BAR = 395     // px/ô nhịp ở cỡ 1 cho ô 8 âm tiết — dư
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const applyExcerpt = (st: any, rows: number): boolean => {
     if (!excerpt) return true
+    // ≤ 2 dòng khuông (EXCERPT_MAX_ROWS) ở mọi khổ: đo 04/11 — 3 dòng trên iPhone cao ~976px (> màn hình 844), 2 dòng ~480px
     const plan = planExcerpt(excerpt, rows)
     if (!plan) return false
     st.display.startBar = plan.start; st.display.barCount = plan.count
+    setFocus({ from: plan.focusFrom, to: plan.focusTo })
     onExcerpt?.(plan)
     return true
   }
@@ -164,6 +170,20 @@ const LYRIC_BAR = 395     // px/ô nhịp ở cỡ 1 cho ô 8 âm tiết — dư
 
   useEffect(() => { if (apiRef.current) { try { apiRef.current.tex(tex) } catch { /* */ } } }, [tex])
 
+  // Trích đoạn: tô riêng vùng khoanh (ô ngữ cảnh để nguyên). Toạ độ boundsLookup gốc = góc trên-trái .at-surface (SVG có thể bị CSS co → hệ số k).
+  useEffect(() => {
+    const ov = focusRef.current, host = hostRef.current, api = apiRef.current
+    const surface = host?.querySelector('.at-surface') as HTMLElement | null
+    if (!excerpt || !focus || !ov || !surface || !api) { setFocusBoxes([]); return }
+    const sr = surface.getBoundingClientRect(), or = ov.getBoundingClientRect()
+    const svg = surface.querySelector('svg'), w = svg ? parseFloat(svg.getAttribute('width') || '') : NaN
+    const k = svg && w > 0 ? svg.getBoundingClientRect().width / w : 1
+    const kk = Number.isFinite(k) && k > 0 ? k : 1
+    const rects = rectsForBars((api.renderer?.boundsLookup ?? null) as BoundsLike | null, focus.from - 1, focus.to - 1)
+    setFocusBoxes(rects.map(r => ({ left: sr.left - or.left + r.x * kk, top: sr.top - or.top + r.y * kk, width: r.w * kk, height: r.h * kk, key: `${r.first}-${r.last}` })))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tick, focus?.from, focus?.to, excerpt])
+
   // Khung đổi bề rộng (xoay máy, hoặc lúc tạo PDF) → khắc lại với số ô nhịp phù hợp
   useEffect(() => {
     const host = hostRef.current
@@ -241,6 +261,9 @@ const LYRIC_BAR = 395     // px/ô nhịp ở cỡ 1 cho ô 8 âm tiết — dư
         {share && shareKey
           ? <ScoreShareLayer api={shareApi} host={shareHost} tick={tick} tex={tex} shareKey={shareKey}><div ref={hostCallback} className="lsn-score-host" /></ScoreShareLayer>
           : <div ref={hostRef} className="lsn-score-host" />}
+        {excerpt && <div ref={focusRef} className="lsn-excerpt-focus" aria-hidden="true">
+          {focusBoxes.map(b => <div key={b.key} className="lsn-excerpt-hl" style={{ left: b.left, top: b.top, width: b.width, height: b.height }} />)}
+        </div>}
       </div>
     </ZoomFrame>
   )
