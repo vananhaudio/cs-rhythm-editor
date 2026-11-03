@@ -1,6 +1,6 @@
 # Thẻ "Ôn nhanh" trên Feed /me (G3) — lesson_clip_card_v1
 
-Trạng thái: **code + migration + test PASS trên DB/stack tạm. CHƯA migration production, CHƯA merge, CHƯA deploy. Chờ Owner duyệt.**
+Trạng thái (03/11/2026): **G3 triển khai hoàn tất (web + DB + dữ liệu). Nghiệm thu giao diện production có đăng nhập: CÒN MỞ.** Xem "Biên bản bàn giao G3" ở cuối tài liệu. (Dòng trạng thái cũ "chưa migration/merge/deploy" đã lỗi thời.)
 
 Context cần nó: học viên vắng/quên buổi, hoặc muốn ôn 2 phút trước buổi sau → thấy ngay trên `/me` rằng buổi của lớp mình có clip ôn nhanh và mở đúng chỗ.
 Không phải object mới: clip là một **khối `video` trong giáo trình** (`class_lesson_content.blocks`, đã có RLS theo lớp — xem `GIAO-TRINH-CHUAN.md`). Video chỉ có MỘT bản (YouTube + khối giáo trình); thẻ chỉ **tham chiếu buổi học**.
@@ -47,6 +47,53 @@ Không phải object mới: clip là một **khối `video` trong giáo trình**
 | tsc / build | `npx tsc -p tsconfig.app.json --noEmit` · `npm run build` |
 
 **Chưa nghiệm thu (cần tài khoản thật / thiết bị thật):** WebKit/iPhone thật, Class Mobile/TVA Guitar bản native, tài khoản thử đúng lớp + khác lớp trên production, đo md5 ngay trước migrate.
+
+---
+
+## Biên bản bàn giao G3 (lập 03/11/2026)
+
+**Kết luận: G3 triển khai hoàn tất. Nghiệm thu giao diện production có đăng nhập CÒN MỞ (CHƯA NGHIỆM THU — không ghi PASS).**
+Biên bản này không chứa id lớp/buổi, UID, id video hay thông tin đăng nhập (tài liệu nằm trong repo công khai).
+
+### 1. Web production — ĐÃ DEPLOY (bằng chứng đọc từ GitHub/Netlify/bundle công khai)
+| Mục | Giá trị |
+|---|---|
+| PR | #49, MERGED vào `main` lúc 2026-11-02 07:08:29 UTC (14:08 VN), tài khoản merge của Owner |
+| Commit merge / đầu nhánh | `4d2d2604` / `a830d0ab` |
+| Netlify production | deploy `6ae836eef4`, state ready, nhánh `main`, commit `4d2d2604`, xuất bản 07:09:24 UTC (tự động ~1 phút sau merge); deploy trước đó `6ae80b1aa8` (commit `f1f75c78`) |
+| Bundle live | `/assets/index-gQneXC6T.js` chứa nhánh `lesson_clip` (×3) và chuỗi "Ôn nhanh" (×2); CSS chứa `.cs-clip-card .cs-clip-open{…min-height:44px…}`. `class.vananhaudio.com/me` và `timming.vananhaudio.com/me` cùng bundle |
+| Giới hạn | App native (iOS/Android) đóng gói sẵn → KHÔNG nhận thẻ cho tới khi build lại + nộp store |
+
+### 2. Database production — GATE = PASS (đọc bằng `prod-db.py query`, giao dịch READ ONLY, 03/11/2026; `identity` PASS, PostgreSQL 17.6)
+- md5 `social_feed` = `91e32e8ba809cda3b28c6a8964d43efa` (bản G3); md5 `social_feed_scoped` = `f79d95d5d7ce80a7a044513b2d1e086d` (bản G3); mỗi hàm đúng một định nghĩa.
+- Hàm nội bộ `social_feed_clip_items(uuid[])`, `social_clip_added_at(text)`: anon/authenticated đều không EXECUTE (`false/false · false/false`).
+- Hàm Feed: authenticated EXECUTE, anon không (`true/false`, `scoped true/false`).
+- `social_feed`, `social_feed_scoped`, `social_feed_clip_items` đều SECURITY DEFINER với `search_path` rỗng (đọc bằng mắt từ CHECK 5; `GATE` không gom mục này).
+- Dòng `GATE` = **PASS**.
+
+### 3. Dữ liệu — backfill HT2027.TH01 Buổi 7 ĐÃ COMMIT, kiểm lại ĐẠT
+- Nhật ký `prod-db`: `migrate` tệp `db/lesson_clip_card_v1_backfill_added_at.sql` (sha256 `71c382dd…`) `end=COMMIT exit=0` lúc 2026-11-02 14:02:09 VN. Lần chạy trước (11:44) exit=3: bản cũ tự huỷ do trigger `class_lesson_content_touch` ghi đè `updated_at/updated_by`, đã sửa ở `a830d0ab`.
+- Truy vấn B7 chỉ đọc (03/11): đúng 1 dòng, lớp HT2027.TH01, Buổi 7, `published`, `blocks` là mảng, 1 khối video, 1/1 `added_at` hợp lệ (`2026-10-31T18:07:35.830Z`: quá khứ, trong 90 ngày), tổng 13 khối, `updated_at` = 2026-11-02 07:02:06 UTC (khớp thời điểm COMMIT).
+- Chưa chứng minh được `added_at` = `updated_at` cũ trước backfill (không có ảnh chụp trước); giá trị hợp lý theo thiết kế.
+
+### 4. Kiểm thử đã PASS (DB/stack tạm — KHÔNG phải production)
+- DB (PG17 tạm) `bash scripts/test-lesson-clip-card-db.sh`: 94 PASS, gồm ma trận quyền (cùng lớp có quyền ✔ · quyền bị thu hồi ✘ · lớp khác ✘ · không thành viên ✘ · anon ✘ · nháp/gỡ xuất bản ✘ · buổi break ✘ · lớp huỷ ✘), phạm vi `for_you` / `my_classes` / `friends`, payload không lộ URL/id, sắp xếp ổn định, keyset, hồi quy loại Feed cũ, backfill, rollback ×2 và cổng drift md5.
+- Unit/render `npm run test:class-social`: 452/452. `tsc`, `build`, `eslint`: đạt.
+- E2E Chrome 390px `scripts/e2e-lesson-clip.sh`: 8/8 (thẻ đúng lớp, không URL/id, mở đúng Trang Buổi, tab "Lớp" không đổi). `e2e-feed-likes` 8, `e2e-feed-comments` 18: đạt.
+- Hiệu năng trên production (chỉ đọc): Q2 = 26,045 ms (lần 1) → 4,284 ms (lần 2), shared hit 124, 0 read, 1 clip mô phỏng; V1, V2, Q1, Q0a: đạt. Q0b/Q3/Q4 (giả lập học viên) CHƯA chạy.
+- Lỗi có sẵn, ngoài phạm vi G3: `e2e-universal-share` 1 FAIL tại `.cs-tool-share`, giống hệt trên `origin/main`.
+- Phân quyền cùng lớp/khác lớp đã chứng minh trên DB tạm bằng hàm `_safe` thật; CHƯA kiểm bằng tài khoản thật trên production.
+
+### 5. Giao diện production có đăng nhập — CHƯA NGHIỆM THU
+Chưa có kiểm tra nào bằng tài khoản thật: thẻ "Ôn nhanh" Buổi 7 hiện ở "Dành cho bạn" với học viên thuộc lớp, không hiện với người ngoài lớp, bấm mở đúng buổi/video, không thẻ trùng; desktop và mobile. Không có bằng chứng PASS cho các mục này.
+
+### 6. Giới hạn còn lại và điều kiện tối thiểu để nghiệm thu sau này
+- Cần ít nhất hai danh tính độc lập do Owner cấp/đăng nhập: một thành viên lớp có quyền giáo trình, một người ngoài lớp (Claude không tạo tài khoản hay nhập mật khẩu production).
+- iPhone/WebKit thật; app native cần build lại và nộp store mới có thẻ.
+- Tab "Lớp" không hiện thẻ (phạm vi Owner đã duyệt); muốn có cần thay đổi riêng.
+- Đo Feed bằng hàm thật với tài khoản học viên (Q3/Q4) chưa làm.
+- Hai id video thật cũ vẫn nằm trong lịch sử git công khai và PR #46 (ngoài phạm vi G3, đã ghi nhận).
+- PR #49 được merge ngoài phiên làm việc khi còn đang HOLD; DB đã được migrate và backfill trước thời điểm đó (theo nhật ký `prod-db`).
 
 ## Ảnh bìa 16:9 trên thẻ (G3-3)
 - Thẻ có khung 16:9 + nút Play + thời lượng; bấm khung hoặc "Xem clip" mở hộp phát (không tự phát khi cuộn). Giữ tên lớp, Buổi, tiêu đề, "Xem bài học".
