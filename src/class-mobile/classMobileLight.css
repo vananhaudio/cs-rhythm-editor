@@ -129,6 +129,18 @@ body:has(.cm-root) #root { border: 0; width: 100%; max-width: none; }
 /* Chat List V2 trong khung mobile: nền trắng, đường kẻ 0,5px, tìm kiếm/phân loại kiểu iOS */
 .cm-root .cs-inbox-head { padding: 8px 16px 6px; top: calc(var(--cm-top-h) + env(safe-area-inset-top, 0px)); border-radius: 12px 12px 0 0; }
 .cm-root .cs-inbox-li + .cs-inbox-li::before { height: 0.5px; }
+
+/* Trò chuyện (một cột: điện thoại / iPad dọc): danh sách PHẲNG, tràn mép — không thẻ nổi, không lề cộng dồn.
+   Trước: lề .cs-main 16px + padding .cs-col-wide 16px = 32pt mỗi bên, thẻ bo góc + bóng đổ chứa thanh tìm kiếm riêng → cảm giác "app lồng app".
+   Lề âm bù đúng padding của .cs-main (8px 16px 28px) để danh sách chạm hai mép, ngay dưới TopBar và trên TabBar. Chỉ nhắm .cs-chat-wrap → các tab khác không đổi.
+   Hội thoại đang mở (.cs-chat-pane.is-open: fixed toàn màn hình) không bị ảnh hưởng. Desktop/iPad ngang (≥1024px, hai cột) giữ thẻ như cũ. */
+@media (max-width: 1023px) {
+  .cm-root .cs-main > .cs-chat-wrap { max-width: none; padding-left: 0; padding-right: 0; margin: -8px -16px -28px; }
+  .cm-root .cs-chat-wrap .cs-chat { border-radius: 0; box-shadow: none; }
+  .cm-root .cs-chat-wrap .cs-inbox-head { border-radius: 0; }
+  /* hai khối nằm NGOÀI thẻ vẫn cần lề 16px */
+  .cm-root .cs-chat-wrap > .cs-page-title, .cm-root .cs-chat-wrap > .cs-chat-sound { margin: 0; padding: 10px 16px 8px; }
+}
 .cm-root .cs-inbox-row:hover { background: transparent; }
 .cm-root .cs-inbox-row:active { background: var(--cs-neutral-soft); }
 .cm-root .cs-inbox-row.is-active { background: transparent; }
