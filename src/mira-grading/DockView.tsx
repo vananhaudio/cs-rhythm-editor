@@ -1,7 +1,8 @@
 // Khung Mira cạnh màn chấm bài (chỉ Thầy/admin, chỉ web, chỉ khi build bật VITE_MIRA_GRADING_URL).
 // Class chỉ nói cho Mira "Thầy đang mở bài trả này" — Mira tự tra ngữ cảnh. Chạy hỏng/chưa bật thì màn chấm bài vẫn y nguyên.
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { acceptChildMessage, PROTOCOL_VERSION, type ClearMessage, type ContextMessage } from './protocol'
+import { MiraDraftContext, type MiraDraft } from './draftContext'
 import { createDockController, type DockStatus } from './controller'
 import type { MiraGradingApi } from './api'
 
@@ -33,6 +34,9 @@ function Dock({ url, origin, api, threadId, children }: { url: string; origin: s
   const [status, setStatus] = useState<DockStatus>('idle')
   const wide = useSyncExternalStore(subscribeWide, isWide, () => true)
   const ctl = useRef<ReturnType<typeof createDockController> | null>(null)
+  const [draft, setDraft] = useState<MiraDraft | null>(null)
+  const threadRef = useRef(threadId)
+  const nRef = useRef(0)
   // Màn rộng: nạp Mira ngay. Màn nhỏ: CHỈ nạp sau khi Thầy bấm nút Mira (không tốn mạng, không mở cuộc trao đổi khi chưa cần).
   const denied = status === 'denied'                   // server từ chối (không/không còn trong pilot): ẩn hẳn, không nạp Mira
   const active = !denied && ((wide && !collapsed) || everOpened)
@@ -46,13 +50,25 @@ function Dock({ url, origin, api, threadId, children }: { url: string; origin: s
     ctl.current = c
     const onMsg = (ev: MessageEvent) => {
       const m = acceptChildMessage(ev, { child: frameRef.current?.contentWindow ?? null, origin })
-      if (m) c.onChild(m)
+      if (!m) return
+      if (m.type === 'mira-grading-draft') {
+        // Chỉ nhận nháp của ĐÚNG bài đang mở ở Class; nháp mang mã bài khác (Mira chưa kịp đổi bài) bị bỏ.
+        if (m.id.toLowerCase() !== threadRef.current.toLowerCase()) return
+        setDraft({ threadId: threadRef.current, text: m.text, n: ++nRef.current })
+        setOpen(false)   // màn nhỏ: đóng ngăn Mira để Thầy về lại ô phản hồi (màn rộng: không có ngăn)
+        return
+      }
+      c.onChild(m)
     }
     window.addEventListener('message', onMsg)
     return () => { window.removeEventListener('message', onMsg); c.dispose(); ctl.current = null }
   }, [post, origin, api])
 
   useEffect(() => { ctl.current?.setThread(threadId) }, [threadId])
+  // Đổi bài: huỷ nháp chưa dùng của bài cũ (không điền sang bài mới, kể cả khi quay lại bài cũ).
+  useEffect(() => { threadRef.current = threadId }, [threadId])
+  const [draftThread, setDraftThread] = useState(threadId)
+  if (draftThread !== threadId) { setDraftThread(threadId); setDraft(null) }   // đổi bài ngay trong lúc render: nháp cũ không tồn tại ở bài mới
 
   const toggleCollapse = () => {
     const next = !collapsed
@@ -61,8 +77,11 @@ function Dock({ url, origin, api, threadId, children }: { url: string; origin: s
   }
   const openSheet = () => { setEverOpened(true); setOpen(true) }
   const statusText = STATUS_TEXT[status]
+  const handled = useCallback((n: number) => setDraft(d => (d && d.n === n ? null : d)), [])
+  const ctxValue = useMemo(() => ({ draft, handled }), [draft, handled])
 
   return (
+    <MiraDraftContext.Provider value={ctxValue}>
     <div className={'mira-dock-wrap' + (collapsed ? ' is-collapsed' : '') + (denied ? ' is-denied' : '')} data-protocol={PROTOCOL_VERSION}>
       <div className="mira-dock-main">{children}</div>
       <div className={'mira-dock-backdrop' + (open ? ' is-open' : '')} onClick={() => setOpen(false)} aria-hidden="true" />
@@ -79,5 +98,6 @@ function Dock({ url, origin, api, threadId, children }: { url: string; origin: s
       <button type="button" className={'mira-dock-fab' + (collapsed ? ' is-desktop-collapsed' : ' desktop-hide')} hidden={open}
         onClick={() => { if (collapsed && wide) toggleCollapse(); else openSheet() }}>Mira</button>
     </div>
+    </MiraDraftContext.Provider>
   )
 }
