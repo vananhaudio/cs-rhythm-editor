@@ -8,7 +8,7 @@ Không phải object mới: clip là một **khối `video` trong giáo trình**
 ## Hành vi
 - Mỗi khối `kind:'video'` của giáo trình **đã xuất bản** (buổi `lesson`) có `added_at` hợp lệ = một thẻ `lesson_clip` trong `social_feed` ("Dành cho bạn").
 - Payload CHỈ: `session_id, class_id, class_code, class_name, session_no, title (≤120), duration (≤20), added_at`. **Không** url / video id / note / blocks. Test quét payload + DOM + phản hồi RPC.
-- Bấm "Xem clip" → `/me/classes/<class_id>/sessions/<session_no>` (Trang Buổi); video phát ở đó theo RLS giáo trình như cũ.
+- Bấm "Xem clip" → **hộp phát ngay trong Class** (`LessonClipPlayer`, tái dùng `YouTubeLesson` + lớp `.cs-dialog-*`): thẻ vẫn KHÔNG mang URL/video id; lúc bấm mới đọc khối video từ giáo trình của chính người xem (`fetchSessionContent`, RLS giáo trình quyết quyền; không quyền/khối đã gỡ → thông báo, không phát). Không đổi trang, không mở YouTube ngoài; Đóng/Esc/bấm nền → về Feed đúng vị trí cuộn, focus trả về nút. Liên kết phụ "Xem bài học" → `/me/classes/<class_id>/sessions/<session_no>`. Khớp khối theo tiêu đề (+ thời lượng nếu trùng tiêu đề). Không DB/migration mới.
 - Không Thích / Bình luận / Báo cáo: nội dung của Thầy, không tác giả, không UGC (`social_feed_safe` cho qua như `teamlab_publication`; Apple 1.2 không có bề mặt UGC mới). `feed_likes`/`feed_comments` KHÔNG thêm kind này.
 
 ## Quyền (kiểm từng dòng — hai hàm Feed là SECURITY DEFINER, cổng `is_class_member()` là toàn cục)
@@ -47,3 +47,15 @@ Không phải object mới: clip là một **khối `video` trong giáo trình**
 | tsc / build | `npx tsc -p tsconfig.app.json --noEmit` · `npm run build` |
 
 **Chưa nghiệm thu (cần tài khoản thật / thiết bị thật):** WebKit/iPhone thật, Class Mobile/TVA Guitar bản native, tài khoản thử đúng lớp + khác lớp trên production, đo md5 ngay trước migrate.
+
+## Ảnh bìa 16:9 trên thẻ (G3-3)
+- Thẻ có khung 16:9 + nút Play + thời lượng; bấm khung hoặc "Xem clip" mở hộp phát (không tự phát khi cuộn). Giữ tên lớp, Buổi, tiêu đề, "Xem bài học".
+- Ảnh bìa lấy từ `https://i.ytimg.com/vi/<id>/hqdefault.jpg`, với `<id>` suy ra từ khối video trong giáo trình CỦA CHÍNH NGƯỜI XEM (RLS quyết quyền), đọc khi thẻ sắp vào khung nhìn (IntersectionObserver, lề 300px), nhớ 60 giây theo buổi, dùng chung với hộp phát. Payload Feed vẫn KHÔNG có URL/video id; không quyền / lỗi / ảnh không tải được → nền gradient của Class.
+- Không bảng/RPC/migration/asset mới; không đổi phân quyền.
+
+## Phát trực tiếp trong thẻ (G3-4, thay hộp phát)
+- Bấm Play/ảnh bìa hoặc "Xem clip" → ảnh bìa chuyển thành player NGAY TRONG thẻ (cùng vị trí/kích thước 16:9), không modal. Điều khiển là của YouTube (phát/tạm dừng, âm lượng, tua, toàn màn hình). Nút "Xem clip" đổi thành "Đóng video".
+- Không tự phát khi cuộn: chỉ khi người xem bấm. `YouTubeLesson` có thêm prop tuỳ chọn `autoplay` (mặc định tắt); `/ytplayer` đọc `?autoplay=1` (cộng thêm, không đổi hành vi cũ).
+- Một thẻ phát tại một thời điểm: thẻ bắt đầu phát phát sự kiện `cs-clip-activate`, thẻ khác tự dừng; tháo thẻ khỏi giao diện (đổi tab, rời trang) gỡ iframe → giải phóng player.
+- Mã: `sections/lessonClipSource.ts` (đọc nguồn video theo quyền người xem, ảnh bìa, điều phối một-thẻ-phát), `sections/LessonClipCard.tsx`. Đã bỏ `LessonClipPlayer.tsx` (hộp phát) và CSS modal.
+- Chưa kiểm: Safari/iPhone thật, Capacitor (iOS/Android) — autoplay trong iframe lồng nhau của WKWebView có thể cần chạm Play lần nữa.

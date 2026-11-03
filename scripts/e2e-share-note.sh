@@ -30,6 +30,21 @@ TEX="$(cd "$ROOT" && node --experimental-strip-types --no-warnings -e "import('.
   cat "$ROOT/db/tests/local/social_feed_safe_stub.sql" "$ROOT/db/tests/local/chat_safe_stub.sql"
   cat "$ROOT/db/class_system_chat_v1_setup.sql" "$ROOT/db/feed_likes_v1_setup.sql" "$ROOT/db/feed_comments_v2_setup.sql" \
       "$ROOT/db/tests/local/ugc_safety_min_fixture.sql" "$ROOT/db/feed_comments_safety_v1_setup.sql"
+  # ── Chat List V2 (tái dùng nền có sẵn: Band Chat V1.x + UGC Safety V1 thật + chat_list_v2_setup thật) ──
+  cat <<'SQL2'
+drop function if exists public.bandchat_rooms(int); drop function if exists public.bandchat_unread_count();
+alter table public.teamlab_bands add column if not exists project_id uuid, add column if not exists cover_path text;
+create table if not exists public.teamlab_band_members (band_id uuid not null references public.teamlab_bands(id), user_id uuid not null references auth.users(id),
+  created_at timestamptz not null default now(), primary key (band_id, user_id));
+create table if not exists public.teamlab_band_roles (band_id uuid not null references public.teamlab_bands(id), project_id uuid not null, user_id uuid not null,
+  role text not null check (role in ('leader','deputy','music_editor')), granted_by uuid, created_at timestamptz not null default now(),
+  primary key (band_id, user_id, role));
+SQL2
+  for f in band_chat_v1_setup band_chat_v1_1_roles_setup band_chat_v1_2_support_list_setup band_chat_v1_3_companion_setup; do cat "$ROOT/db/$f.sql"; done
+  echo "drop function if exists public.dm_conversations_safe(int); drop function if exists public.dm_messages_safe(uuid, bigint, bigint, int);"
+  sed -n '/^create or replace function public.dm_conversations_safe/,/^grant execute on function public.dm_conversations_safe/p' "$ROOT/db/class_ugc_safety_v1_setup.sql"
+  sed -n '/^create or replace function public.dm_messages_safe/,/^grant execute on function public.dm_messages_safe/p' "$ROOT/db/class_ugc_safety_v1_setup.sql"
+  cat "$ROOT/db/chat_list_v2_setup.sql"
   cat <<SQL
 delete from public.friendships;
 insert into public.friendships (requester_id, addressee_id, status, responded_at) values

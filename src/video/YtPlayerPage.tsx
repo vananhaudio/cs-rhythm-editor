@@ -10,6 +10,7 @@ export default function YtPlayerPage() {
   const params = new URLSearchParams(window.location.search)
   const id = params.get('v') ?? ''
   const noFail = params.get('nofail') === '1'
+  const autoplay = params.get('autoplay') === '1'   // chỉ khi trang cha (app) vừa có cử chỉ bấm Play
 
   useEffect(() => {
     if (window.parent === window) return  // mở trực tiếp, không ai để forward
@@ -31,7 +32,7 @@ export default function YtPlayerPage() {
         // của player thường ít gắt hơn khi tổ tiên trên cùng là scheme app (capacitor://).
         <div style={{ position: 'relative', aspectRatio: '16/9', background: '#000', width: '100%' }}>
           <iframe
-            src={`https://www.youtube-nocookie.com/embed/${id}?playsinline=1&rel=0`}
+            src={`https://www.youtube-nocookie.com/embed/${id}?playsinline=1&rel=0${autoplay ? '&autoplay=1' : ''}`}
             title="Video"
             style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
             allow="fullscreen; autoplay; encrypted-media"
@@ -39,7 +40,7 @@ export default function YtPlayerPage() {
           />
         </div>
       ) : (
-        <YouTubeLesson videoId={id} style={{ width: '100%' }} />
+        <YouTubeLesson videoId={id} autoplay={autoplay} style={{ width: '100%' }} />
       )}
     </div>
   )

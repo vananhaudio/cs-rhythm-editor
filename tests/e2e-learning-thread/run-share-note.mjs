@@ -148,8 +148,8 @@ try {
 
   // 4. Bình (desktop) thấy thẻ trong Trò chuyện → mở đúng đoạn
   await B.goto(`${ME}/chat`, { waitUntil: 'networkidle0' })
-  await B.waitForSelector('.cs-chat-item', { timeout: 15000 })
-  await B.evaluate(() => [...document.querySelectorAll('.cs-chat-item')].find(e => ['An', 'Nguyễn An'].includes(e.querySelector('.cs-chat-item-name').textContent.trim())).click())
+  await B.waitForSelector('[data-testid="inbox-row"]', { timeout: 15000 })
+  await B.evaluate(() => [...document.querySelectorAll('[data-testid="inbox-row"]')].find(e => ['An', 'Nguyễn An'].includes(e.querySelector('.cs-inbox-name').textContent.trim())).click())
   await waitFor(B, () => document.querySelector('.cs-chat-scroll .cs-share-card:not(.is-loading)'))
   const card = await B.$eval('.cs-chat-scroll .cs-share-card', e => ({ t: e.textContent.replace(/\s+/g, ' '), href: e.getAttribute('href') }))
   assert.match(card.t, /Bản nhạc · Buổi 1/); assert.ok(card.t.includes(NOTE1), card.t); assert.ok(card.t.includes(range), card.t); assert.match(card.t, /Mở đúng đoạn/)
@@ -184,8 +184,8 @@ try {
   await B.click('.cs-chat-input'); await B.type('.cs-chat-input', REPLY); await B.click('.cs-chat-send')
   await waitFor(B, t => document.querySelector('.cs-chat-scroll')?.textContent.includes(t), REPLY)
   await A.goto(`${ME}/chat`, { waitUntil: 'networkidle0' })
-  await A.waitForSelector('.cs-chat-item', { timeout: 15000 })
-  await A.evaluate(() => [...document.querySelectorAll('.cs-chat-item')].find(e => e.querySelector('.cs-chat-item-name').textContent.trim() === 'Bình').click())
+  await A.waitForSelector('[data-testid="inbox-row"]', { timeout: 15000 })
+  await A.evaluate(() => [...document.querySelectorAll('[data-testid="inbox-row"]')].find(e => e.querySelector('.cs-inbox-name').textContent.trim() === 'Bình').click())
   await waitFor(A, t => document.querySelector('.cs-chat-scroll')?.textContent.includes(t), REPLY)
   await A.screenshot({ path: `${SHOTS}/sn-6-a-nhan-tra-loi.png` })
   ok('6 Bình bấm "Trả lời trong Trò chuyện" → đúng hội thoại với An → gửi trả lời → An thấy câu trả lời ngay dưới thẻ câu hỏi')
@@ -256,8 +256,8 @@ try {
   ok('10 Thầy sửa bản nhạc → mở liên kết cũ: câu hỏi còn nguyên, báo "bản nhạc đã được cập nhật", KHÔNG tô vùng cũ')
 
   // 11. Trang không cấp slot (Admin/xem trước) không có lớp khoanh — đã kiểm unit; ở đây: thẻ Trò chuyện vẫn hiện sau khi bản nhạc đổi
-  await B.goto(`${ME}/chat`, { waitUntil: 'networkidle0' }); await B.waitForSelector('.cs-chat-item', { timeout: 15000 })
-  await B.evaluate(() => [...document.querySelectorAll('.cs-chat-item')].find(e => ['An', 'Nguyễn An'].includes(e.querySelector('.cs-chat-item-name').textContent.trim())).click())
+  await B.goto(`${ME}/chat`, { waitUntil: 'networkidle0' }); await B.waitForSelector('[data-testid="inbox-row"]', { timeout: 15000 })
+  await B.evaluate(() => [...document.querySelectorAll('[data-testid="inbox-row"]')].find(e => ['An', 'Nguyễn An'].includes(e.querySelector('.cs-inbox-name').textContent.trim())).click())
   await waitFor(B, () => document.querySelector('.cs-chat-scroll .cs-share-card:not(.is-loading)'))
   assert.ok((await B.$eval('.cs-chat-scroll .cs-share-card', e => e.textContent)).includes(NOTE1))
   ok('11 sau khi bản nhạc đổi: lịch sử câu hỏi trong Trò chuyện vẫn còn')

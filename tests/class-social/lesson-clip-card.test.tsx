@@ -7,6 +7,8 @@ import {
 } from "../../src/class-social/posts/postModel";
 import FeedEntryCard from "../../src/class-social/sections/FeedEntryCard";
 import LessonClipCard from "../../src/class-social/sections/LessonClipCard";
+import { announceClipPlaying, clipSessionId, clipThumbUrl, onOtherClipPlaying, pickClipVideo } from "../../src/class-social/sections/lessonClipSource";
+import { buildEmbedUrl } from "../../src/video/YouTubeLesson";
 void React;
 
 // ID giả — KHÔNG phải video / lớp thật.
@@ -58,14 +60,72 @@ test("toLessonClipEntry: payload hoặc khoá hỏng → null (không vỡ Feed)
   assert.equal(ok.className, "Lớp học", "thiếu tên lớp → nhãn mặc định");
 });
 
-test("thẻ: chỉ tham chiếu buổi học — liên kết /me/classes/<lớp>/sessions/<buổi>; KHÔNG URL, KHÔNG video id, KHÔNG iframe", () => {
+test("thẻ: nút 'Xem clip' là NÚT mở trình phát tại Feed; liên kết phụ 'Xem bài học' → /me/classes/<lớp>/sessions/<buổi>; KHÔNG URL, KHÔNG video id, KHÔNG iframe trong thẻ", () => {
   const e = toLessonClipEntry(payload(), "2026-11-01T09:00:00Z", KEY)!;
   const html = renderToStaticMarkup(<FeedEntryCard entry={e} now={NOW} />);
   assert.match(html, /Ôn nhanh · 2:07/);
   assert.match(html, /Ôn nhanh · Bản độc tấu/);
   assert.match(html, /Solo Guitar Căn Bản/);
-  assert.match(html, new RegExp(`href="/me/classes/${CLASS}/sessions/6"[^>]*>Xem clip<`));
+  assert.match(html, /<button[^>]*type="button"[^>]*cs-clip-open[^>]*>Xem clip<\/button>/, "Xem clip là nút, không chuyển trang");
+  assert.doesNotMatch(html, /<a[^>]*>Xem clip</, "không còn liên kết điều hướng ở nút Xem clip");
+  assert.match(html, new RegExp(`<a[^>]*href="/me/classes/${CLASS}/sessions/6"[^>]*>Xem bài học<`));
   assert.doesNotMatch(html, /youtu|https?:|iframe|<video|v=/i);
+  assert.match(html, /<div class="cs-clip-frame">/, "khung 16:9 chứa ảnh bìa / player trực tiếp");
+  assert.match(html, /aria-pressed="false"[^>]*>Xem clip<\/button>/, "chưa phát: nút ghi Xem clip");
+  assert.doesNotMatch(html, /role="dialog"|cs-dialog/, "không còn modal");
+  assert.match(html, /<button[^>]*class="cs-clip-thumb"[^>]*aria-hidden="true"/, "khung ảnh bìa 16:9 là nút mở hộp phát, ẩn khỏi trình đọc/Tab (đã có nút Xem clip)");
+  assert.match(html, /cs-clip-play/, "có nút Play nổi bật");
+  assert.match(html, /<span class="cs-clip-dur">2:07<\/span>/, "thời lượng trên ảnh bìa");
+  assert.doesNotMatch(html, /<img|ytimg/, "ảnh bìa chỉ dựng SAU khi đọc giáo trình theo quyền người xem — không có trong thẻ ban đầu");
+});
+
+test("clipThumbUrl: dựng ảnh bìa từ mọi dạng link YouTube; link lạ/rỗng → null (thẻ dùng nền mặc định)", () => {
+  assert.equal(clipThumbUrl("https://youtu.be/ZZfakeUT001"), "https://i.ytimg.com/vi/ZZfakeUT001/hqdefault.jpg");
+  assert.equal(clipThumbUrl("https://www.youtube.com/watch?v=ZZfakeUT001&t=3"), "https://i.ytimg.com/vi/ZZfakeUT001/hqdefault.jpg");
+  assert.equal(clipThumbUrl("https://example.com/x.mp4"), null);
+  assert.equal(clipThumbUrl(""), null);
+  assert.equal(clipThumbUrl(null), null);
+});
+
+const sec = (over: Record<string, unknown>) => ({ kind: "video", title: "Ôn nhanh · Bản độc tấu", url: "https://youtu.be/ZZfakeUT001", duration: "2:07", ...over }) as never;
+
+test("pickClipVideo: khớp tiêu đề; trùng tiêu đề → ưu tiên cùng thời lượng; khác/thiếu → null; bỏ khối không phải video", () => {
+  const study = { kind: "study", title: "Ôn nhanh · Bản độc tấu", blocks: [] } as never;
+  assert.equal(pickClipVideo([study, sec({})], "Ôn nhanh · Bản độc tấu", "2:07")?.url, "https://youtu.be/ZZfakeUT001");
+  assert.equal(pickClipVideo([sec({ url: "https://youtu.be/ZZfakeUT002", duration: "9:99" }), sec({})], "Ôn nhanh · Bản độc tấu", "2:07")?.url, "https://youtu.be/ZZfakeUT001");
+  assert.equal(pickClipVideo([sec({ title: "  Ôn nhanh · Bản độc tấu " })], "Ôn nhanh · Bản độc tấu", null)?.url, "https://youtu.be/ZZfakeUT001", "cắt khoảng trắng như payload");
+  assert.equal(pickClipVideo([sec({ title: "Khác" })], "Ôn nhanh · Bản độc tấu", "2:07"), null);
+  assert.equal(pickClipVideo([sec({ url: "" })], "Ôn nhanh · Bản độc tấu", "2:07"), null, "khối thiếu url");
+  assert.equal(pickClipVideo([], "x", null), null);
+});
+
+test("clipSessionId: lấy session_id từ id thẻ", () => {
+  const e = toLessonClipEntry(payload(), "t", KEY)!;
+  assert.equal(clipSessionId(e), "51000000-0000-4000-8000-000000000002");
+});
+
+test("player trực tiếp: buildEmbedUrl chỉ autoplay khi được yêu cầu (mặc định KHÔNG autoplay)", () => {
+  assert.doesNotMatch(buildEmbedUrl("ZZfakeUT001"), /autoplay/);
+  assert.match(buildEmbedUrl("ZZfakeUT001", true), /autoplay=1/);
+  assert.match(buildEmbedUrl("ZZfakeUT001", true), /playsinline=1/);
+});
+
+test("một thẻ phát tại một thời điểm: thẻ khác phát → thẻ này nhận lệnh dừng; thẻ phát chính nó thì không; gỡ lắng nghe sau khi tháo", () => {
+  const g = globalThis as unknown as { window?: EventTarget };
+  const had = g.window; g.window = new EventTarget();
+  try {
+    let stopsA = 0, stopsB = 0;
+    const offA = onOtherClipPlaying("A", () => { stopsA++; });
+    const offB = onOtherClipPlaying("B", () => { stopsB++; });
+    announceClipPlaying("A");
+    assert.deepEqual([stopsA, stopsB], [0, 1], "A phát → chỉ B dừng");
+    announceClipPlaying("B");
+    assert.deepEqual([stopsA, stopsB], [1, 1], "B phát → chỉ A dừng");
+    offA();   // thẻ A bị tháo khỏi giao diện
+    announceClipPlaying("B"); announceClipPlaying("C");
+    assert.equal(stopsA, 1, "đã gỡ lắng nghe thì không còn nhận lệnh");
+    offB();
+  } finally { g.window = had; }
 });
 
 test("thẻ KHÔNG hiển thị gì ngoài trường tham chiếu: payload cố nhét url/note/video_id vẫn không lọt ra HTML", () => {
