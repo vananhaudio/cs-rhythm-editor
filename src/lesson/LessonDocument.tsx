@@ -71,7 +71,7 @@ function renderSection(s: LessonSection, i: number) {
                 </div>
                 {/* mỗi dòng MỘT ô nhịp: ba tầng xếp thẳng hàng nhau, và ô nhịp dày nốt
                     cũng không bị bóp đến mức lời chồng lên chữ */}
-                <LessonScore tex={ly.tex} barsPerRow={1} zoomable={false} />
+                <LessonScore tex={ly.tex} barsPerRow={1} zoomable={false} shareKey={{ section: i, path: ['layers', String(k), 'tex'] }} />
               </div>
             ))}
           </div>
@@ -118,7 +118,7 @@ function renderSection(s: LessonSection, i: number) {
       return (
         <Block key={i} label={s.subtitle} title={s.title} sub={s.lead}>
           {s.tempo && <div className="lsn-tempo">{s.tempo}</div>}
-          <LessonScore tex={s.tex} />
+          <LessonScore tex={s.tex} shareKey={{ section: i, path: ['tex'] }} />
           {s.marks && s.marks.length > 0 && (
             <div className="lsn-marks">
               {s.marks.map((m, k) => (
@@ -153,7 +153,7 @@ function renderSection(s: LessonSection, i: number) {
                 </div>
                 {w.note && <p className="lsn-piece-note">{w.note}</p>}
                 {w.tempo && <div className="lsn-tempo">{w.tempo}</div>}
-                <LessonScore tex={w.tex} barsPerRow={w.barsPerRow ?? 4} />
+                <LessonScore tex={w.tex} barsPerRow={w.barsPerRow ?? 4} shareKey={{ section: i, path: ['pieces', String(k), 'tex'] }} />
                 {w.marks && w.marks.length > 0 && (
                   <div className="lsn-marks">
                     {w.marks.map((mk, j) => <span key={j} className="lsn-mark"><b>{mk.at}</b> {mk.text}</span>)}
@@ -509,6 +509,20 @@ const CSS = `
 .lsn-score-host{overflow-x:auto;}
 .lsn-score-host svg{max-width:100%;height:auto;}
 .lsn-score-msg{font-size:13.5px;color:${P.inkFaint};padding:10px;}
+/* Khoanh để hỏi (Share Note V1) — chỉ khi trang Buổi /me cấp ScoreShareSlot. Lớp phủ nhận chạm CHỈ khi bật chế độ. */
+.lsn-score-wrap{position:relative;}
+.lsn-share-bar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:2px 4px 6px;}
+.lsn-share-btn{display:inline-flex;align-items:center;gap:5px;min-height:34px;padding:0 12px;border:1px solid ${P.line};border-radius:999px;background:#fff;color:${P.purple};font-weight:600;font-size:13.5px;line-height:1;font-family:inherit;cursor:pointer;}
+.lsn-share-btn[aria-pressed="true"]{background:${P.purpleTint};}
+.lsn-share-btn.is-primary{background:${P.purple};border-color:${P.purple};color:#fff;}
+.lsn-share-icon{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border:1px solid ${P.line};border-radius:50%;background:#fff;color:${P.inkSoft};cursor:pointer;}
+.lsn-share-range{font-weight:800;color:${P.ink};font-size:14px;padding:0 4px;}
+.lsn-share-hint{font-size:13px;color:${P.inkFaint};overflow-wrap:anywhere;}
+.lsn-share-overlay{position:absolute;inset:0;z-index:2;pointer-events:none;overflow:hidden;}
+.lsn-share-overlay.is-on{pointer-events:auto;touch-action:none;cursor:crosshair;}
+.lsn-share-hl{position:absolute;border-radius:6px;pointer-events:none;background:rgba(67,56,202,.14);outline:2px solid ${P.purple};}
+.lsn-share-hl.is-draft{outline-style:dashed;}
+.lsn-share-hl.is-focus{background:rgba(234,88,12,.14);outline:2px solid #EA580C;}
 .lsn-score-msg.err{color:#B91C1C;}
 .lsn-marks{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
 .lsn-mark{font-size:12.5px;color:${P.inkSoft};background:${P.purpleTint};border-radius:8px;padding:4px 9px;}
