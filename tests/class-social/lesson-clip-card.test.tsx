@@ -7,6 +7,7 @@ import {
 } from "../../src/class-social/posts/postModel";
 import FeedEntryCard from "../../src/class-social/sections/FeedEntryCard";
 import LessonClipCard from "../../src/class-social/sections/LessonClipCard";
+import { ClipPlayerView, clipSessionId, pickClipVideo, type ClipState } from "../../src/class-social/sections/LessonClipPlayer";
 void React;
 
 // ID giả — KHÔNG phải video / lớp thật.
@@ -58,14 +59,51 @@ test("toLessonClipEntry: payload hoặc khoá hỏng → null (không vỡ Feed)
   assert.equal(ok.className, "Lớp học", "thiếu tên lớp → nhãn mặc định");
 });
 
-test("thẻ: chỉ tham chiếu buổi học — liên kết /me/classes/<lớp>/sessions/<buổi>; KHÔNG URL, KHÔNG video id, KHÔNG iframe", () => {
+test("thẻ: nút 'Xem clip' là NÚT mở trình phát tại Feed; liên kết phụ 'Xem bài học' → /me/classes/<lớp>/sessions/<buổi>; KHÔNG URL, KHÔNG video id, KHÔNG iframe trong thẻ", () => {
   const e = toLessonClipEntry(payload(), "2026-11-01T09:00:00Z", KEY)!;
   const html = renderToStaticMarkup(<FeedEntryCard entry={e} now={NOW} />);
   assert.match(html, /Ôn nhanh · 2:07/);
   assert.match(html, /Ôn nhanh · Bản độc tấu/);
   assert.match(html, /Solo Guitar Căn Bản/);
-  assert.match(html, new RegExp(`href="/me/classes/${CLASS}/sessions/6"[^>]*>Xem clip<`));
+  assert.match(html, /<button[^>]*type="button"[^>]*cs-clip-open[^>]*>Xem clip<\/button>/, "Xem clip là nút, không chuyển trang");
+  assert.doesNotMatch(html, /<a[^>]*>Xem clip</, "không còn liên kết điều hướng ở nút Xem clip");
+  assert.match(html, new RegExp(`<a[^>]*href="/me/classes/${CLASS}/sessions/6"[^>]*>Xem bài học<`));
   assert.doesNotMatch(html, /youtu|https?:|iframe|<video|v=/i);
+  assert.doesNotMatch(html, /role="dialog"/, "chưa bấm thì chưa có hộp phát");
+});
+
+const sec = (over: Record<string, unknown>) => ({ kind: "video", title: "Ôn nhanh · Bản độc tấu", url: "https://youtu.be/ZZfakeUT001", duration: "2:07", ...over }) as never;
+
+test("pickClipVideo: khớp tiêu đề; trùng tiêu đề → ưu tiên cùng thời lượng; khác/thiếu → null; bỏ khối không phải video", () => {
+  const study = { kind: "study", title: "Ôn nhanh · Bản độc tấu", blocks: [] } as never;
+  assert.equal(pickClipVideo([study, sec({})], "Ôn nhanh · Bản độc tấu", "2:07")?.url, "https://youtu.be/ZZfakeUT001");
+  assert.equal(pickClipVideo([sec({ url: "https://youtu.be/ZZfakeUT002", duration: "9:99" }), sec({})], "Ôn nhanh · Bản độc tấu", "2:07")?.url, "https://youtu.be/ZZfakeUT001");
+  assert.equal(pickClipVideo([sec({ title: "  Ôn nhanh · Bản độc tấu " })], "Ôn nhanh · Bản độc tấu", null)?.url, "https://youtu.be/ZZfakeUT001", "cắt khoảng trắng như payload");
+  assert.equal(pickClipVideo([sec({ title: "Khác" })], "Ôn nhanh · Bản độc tấu", "2:07"), null);
+  assert.equal(pickClipVideo([sec({ url: "" })], "Ôn nhanh · Bản độc tấu", "2:07"), null, "khối thiếu url");
+  assert.equal(pickClipVideo([], "x", null), null);
+});
+
+test("clipSessionId: lấy session_id từ id thẻ", () => {
+  const e = toLessonClipEntry(payload(), "t", KEY)!;
+  assert.equal(clipSessionId(e), "51000000-0000-4000-8000-000000000002");
+});
+
+test("ClipPlayerView: hộp thoại có nhãn, nút Đóng, liên kết 'Xem bài học'; mỗi trạng thái đúng nội dung; chỉ 'ready' mới có iframe", () => {
+  const e = toLessonClipEntry(payload(), "2026-11-01T09:00:00Z", KEY)!;
+  const v = (state: ClipState) => renderToStaticMarkup(<ClipPlayerView entry={e} state={state} onClose={() => {}} titleId="t1" />);
+  const loading = v({ status: "loading" });
+  assert.match(loading, /role="dialog"[^>]*aria-modal="true"[^>]*aria-labelledby="t1"/);
+  assert.match(loading, /Đang mở video/);
+  assert.match(loading, />Đóng</);
+  assert.match(loading, new RegExp(`href="/me/classes/${CLASS}/sessions/6"[^>]*>Xem bài học<`));
+  assert.doesNotMatch(loading, /iframe/);
+  const ready = v({ status: "ready", url: "https://youtu.be/ZZfakeUT001" });
+  assert.match(ready, /<iframe[^>]*youtube\.com\/embed\/ZZfakeUT001/);
+  assert.doesNotMatch(ready, /target="_blank"|<a[^>]*youtu/, "không mở YouTube bên ngoài");
+  assert.match(v({ status: "missing" }), /không còn trong giáo trình hoặc bạn chưa có quyền/);
+  assert.doesNotMatch(v({ status: "missing" }), /iframe/);
+  assert.match(v({ status: "error" }), /role="alert"/);
 });
 
 test("thẻ KHÔNG hiển thị gì ngoài trường tham chiếu: payload cố nhét url/note/video_id vẫn không lọt ra HTML", () => {
