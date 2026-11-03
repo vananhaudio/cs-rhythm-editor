@@ -211,12 +211,19 @@ export type PublicationEntry = {
   /** Slug công khai của Team (trang /teamlab/band/<slug>); null = chưa có → không hiện "Khám phá Band". */
   projectSlug: string | null
 }
-export type FeedEntry = FeedPost | ThreadEntry | PublicationEntry
+/** Thẻ "Ôn nhanh" (G3): MỘT khối video của giáo trình đã xuất bản. CHỈ tham chiếu buổi học gốc — server không gửi URL/video id;
+ *  video phát ở trang Buổi theo quyền giáo trình. id = phần sau 'c:' của sort_key = '<session_id>:<khoá khối>'. */
+export type LessonClipEntry = {
+  entry: 'lesson_clip'; id: string; createdAt: string
+  classId: string; sessionNo: number; classCode: string; className: string; title: string; duration: string | null
+}
+export type FeedEntry = FeedPost | ThreadEntry | PublicationEntry | LessonClipEntry
 export const isThreadEntry = (e: FeedEntry): e is ThreadEntry => (e as ThreadEntry).entry === 'learning_thread'
 export const isPublicationEntry = (e: FeedEntry): e is PublicationEntry => (e as PublicationEntry).entry === 'teamlab_publication'
-export const isPostEntry = (e: FeedEntry): e is FeedPost => !isThreadEntry(e) && !isPublicationEntry(e)
-/** Khoá phân trang ổn định (khớp sort_key của server): 'p:<id>' | 't:<id>' | 'u:<id>' */
-export const entryKey = (e: FeedEntry): string => (isThreadEntry(e) ? 't:' : isPublicationEntry(e) ? 'u:' : 'p:') + e.id
+export const isLessonClipEntry = (e: FeedEntry): e is LessonClipEntry => (e as LessonClipEntry).entry === 'lesson_clip'
+export const isPostEntry = (e: FeedEntry): e is FeedPost => !isThreadEntry(e) && !isPublicationEntry(e) && !isLessonClipEntry(e)
+/** Khoá phân trang ổn định (khớp sort_key của server): 'p:<id>' | 't:<id>' | 'u:<id>' | 'c:<id>' */
+export const entryKey = (e: FeedEntry): string => (isThreadEntry(e) ? 't:' : isPublicationEntry(e) ? 'u:' : isLessonClipEntry(e) ? 'c:' : 'p:') + e.id
 
 // Ảnh Team nằm ở bucket CÔNG KHAI teamlab-team-avatars (projects.*_path là khoá object). Chỉ dựng URL khi khoá đúng dạng
 // và thuộc đúng project — sai → null (không ảnh, không lỗi). Không mở thêm quyền storage.
@@ -247,6 +254,24 @@ export function toPublicationEntry(raw: unknown, sortAt: string): PublicationEnt
   }
 }
 
+const CLIP_ID_RE = new RegExp(`^${UUID_RE}:[0-9a-f]{10}$`)
+const CLIP_UUID = new RegExp(`^${UUID_RE}$`, 'i')
+/** Hàng lesson_clip → thẻ; payload hỏng / khoá lạ → null (bỏ qua, không vỡ Feed). Không đọc url/video id (server không gửi). */
+export function toLessonClipEntry(raw: unknown, sortAt: string, sortKey: string): LessonClipEntry | null {
+  if (!raw || typeof raw !== 'object' || typeof sortKey !== 'string' || !sortKey.startsWith('c:')) return null
+  const id = sortKey.slice(2)
+  if (!CLIP_ID_RE.test(id)) return null
+  const o = raw as Record<string, unknown>
+  const classId = o.class_id, no = o.session_no, title = o.title
+  if (typeof classId !== 'string' || !CLIP_UUID.test(classId)) return null
+  if (typeof no !== 'number' || !Number.isInteger(no) || no < 1 || no > 9999) return null
+  if (typeof title !== 'string' || !title.trim()) return null
+  const code = typeof o.class_code === 'string' ? o.class_code.trim().slice(0, 40) : ''
+  const name = typeof o.class_name === 'string' ? o.class_name.trim().slice(0, 80) : ''
+  const dur = typeof o.duration === 'string' && o.duration.trim() ? o.duration.trim().slice(0, 20) : null
+  return { entry: 'lesson_clip', id, createdAt: sortAt, classId: classId.toLowerCase(), sessionNo: no, classCode: code, className: name || code || 'Lớp học', title: title.trim().slice(0, 120), duration: dur }
+}
+
 export type MixedRow = { kind: string; sort_at: string; sort_key: string; post: unknown; thread: unknown }
 
 /** Hàng social_feed / user_wall → mục hiển thị. Thứ tự GIỮ theo server (sort_at, sort_key giảm dần). */
@@ -262,6 +287,9 @@ export function toFeedEntries(rows: MixedRow[]): FeedEntry[] {
     } else if (r.kind === 'teamlab_publication') {
       const u = toPublicationEntry(r.post, r.sort_at)
       if (u) out.push(u)
+    } else if (r.kind === 'lesson_clip') {
+      const c = toLessonClipEntry(r.post, r.sort_at, r.sort_key)
+      if (c) out.push(c)
     }
   }
   return out
