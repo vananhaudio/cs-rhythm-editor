@@ -1851,3 +1851,17 @@ button.cs-subs-title:hover { color: var(--cs-accent); }
 @media (prefers-reduced-motion: reduce) { .cs-clip-play { transition: none; } }
 .cs-clip-lesson { display: inline-flex; align-items: center; min-height: 44px; padding: 0 4px; color: var(--cs-p-strong); font-weight: 700; text-decoration: none; }
 /* Trình phát Ôn nhanh (LessonClipPlayer): hộp giữa màn hình, rộng hơn hộp hỏi lại; điện thoại gần kín chiều ngang */
+
+/* Share Note trên Feed: xem trước trích đoạn bản nhạc (ShareNotePost). LessonScore dùng style của LessonDocument — ở Feed chỉ khai báo phần cần. */
+.cs-sn-post { width: 100%; }
+.cs-sn-msg { margin: 6px 0 0; font-size: 14px; color: var(--cs-muted); overflow-wrap: anywhere; }
+.cs-sn-slot { width: 100%; margin-top: 8px; }
+.cs-sn-wait { padding: 8px 0; }
+.cs-sn-preview { display: block; position: relative; border-radius: 12px; border: 2px solid #EA580C; background: #fff; overflow: hidden; color: inherit; text-decoration: none; }
+.cs-sn-preview::after { content: ''; position: absolute; inset: 0; background: rgba(234, 88, 12, 0.07); pointer-events: none; }
+.cs-sn-preview:focus-visible { outline: 3px solid var(--cs-p-strong); outline-offset: 2px; }
+.cs-sn-preview .lsn-score { position: relative; padding: 6px 4px; }
+.cs-sn-preview .lsn-score-host { overflow: hidden; }
+.cs-sn-preview .lsn-score-host svg { max-width: 100%; height: auto; }
+.cs-sn-preview .lsn-score-msg { font-size: 13.5px; color: var(--cs-muted); padding: 10px; }
+.cs-sn-preview .lsn-score-msg.err { color: #B91C1C; }

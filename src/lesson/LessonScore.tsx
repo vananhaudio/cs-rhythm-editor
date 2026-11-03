@@ -6,7 +6,8 @@ import { useCallback, useContext, useEffect, useRef, useState } from 'react'
 import ZoomFrame from './ZoomFrame'
 import ScoreShareLayer from './ScoreShareLayer'
 import { ScoreShareSlot } from './scoreShareSlot'
-import type { ScoreKey } from '../share/shareNoteApi'
+import type { BarRange, ScoreKey } from '../share/shareNoteApi'
+import { planExcerpt, type ExcerptPlan } from '../share/scoreExcerpt'
 
 interface Props {
   tex: string
@@ -16,9 +17,13 @@ interface Props {
   zoomable?: boolean
   /** Vị trí bản nhạc trong buổi (khối + đường dẫn) — chỉ dùng khi trang cấp ScoreShareSlot ("Khoanh để hỏi") */
   shareKey?: ScoreKey
+  /** Chỉ vẽ trích đoạn (Share Note trên Feed): dải ô 1-based; số ô vẽ do planExcerpt giới hạn (≤ 4 ô, ≤ 2 dòng). Không dùng chung với shareKey. */
+  excerpt?: BarRange
+  /** Báo số ô thực sự vẽ (đổi khi khổ đổi) — để thẻ ghi "hiện N ô đầu" */
+  onExcerpt?: (plan: ExcerptPlan) => void
 }
 
-export default function LessonScore({ tex, barsPerRow = 4, zoomable = true, shareKey }: Props) {
+export default function LessonScore({ tex, barsPerRow = 4, zoomable = true, shareKey, excerpt, onExcerpt }: Props) {
   const share = useContext(ScoreShareSlot)
   const [tick, setTick] = useState(0)   // tăng sau MỖI lần alphaTab khắc xong → lớp khoanh tính lại vùng tô
   // Lớp khoanh cần api + khung qua STATE (không đọc ref lúc render)
@@ -59,6 +64,16 @@ const LYRIC_BAR = 395     // px/ô nhịp ở cỡ 1 cho ô 8 âm tiết — dư
     return { rows: Math.min(3, barsPerRow), scale: 1.1 }
   }
   const hasLyrics = tex.includes('\\lyrics')
+  // Trích đoạn: startBar/barCount (alphaTab 1.8.3, 1-based; số ô in ra và chỉ số boundsLookup giữ số gốc). Dải hỏng → false (không vẽ cả bản nhạc).
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const applyExcerpt = (st: any, rows: number): boolean => {
+    if (!excerpt) return true
+    const plan = planExcerpt(excerpt, rows)
+    if (!plan) return false
+    st.display.startBar = plan.start; st.display.barCount = plan.count
+    onExcerpt?.(plan)
+    return true
+  }
   const hostWidth = () => hostRef.current?.clientWidth || window.innerWidth
 
   useEffect(() => {
@@ -87,6 +102,7 @@ const LYRIC_BAR = 395     // px/ô nhịp ở cỡ 1 cho ô 8 âm tiết — dư
         const first = layoutFor(hostWidth())
         s.display.scale = first.scale
         s.display.barsPerRow = first.rows
+        if (!applyExcerpt(s, first.rows)) { setState('error'); setErr('Đoạn nhạc không hợp lệ'); return }
         // alphaTab chừa mặc định 35px mỗi bên TRONG SVG ⇒ khuông hẹp hơn khung 70px. Điện thoại: lề trái/phải nhỏ lại
         // (khóa Sol/số nhịp vẫn có chỗ riêng bên trong khuông). Bản in/PDF và máy tính giữ nguyên.
         if (!printingNow() && Math.min(window.innerWidth, window.innerHeight) < 500) s.display.padding = [PHONE_PAD, 35]
@@ -115,7 +131,13 @@ const LYRIC_BAR = 395     // px/ô nhịp ở cỡ 1 cho ô 8 âm tiết — dư
         mo.observe(hostRef.current, { childList: true, subtree: true })
         moRef.current = mo
 
-        api.postRenderFinished.on(() => { if (!dead) { hideAttribution(); setState('ready'); setTick(t => t + 1) } })
+        api.postRenderFinished.on(() => {
+          if (dead) return
+          hideAttribution()
+          // Trích đoạn nằm ngoài bản nhạc hiện tại → không có ô nào: báo lỗi nhẹ thay vì khung trống
+          if (excerpt && !(api.renderer?.boundsLookup?.staffSystems?.length)) { setState('error'); setErr('Không có đoạn nhạc này'); return }
+          setState('ready'); setTick(t => t + 1)
+        })
         api.error.on((e: unknown) => { if (!dead) { setState('error'); setErr((e as Error)?.message ?? String(e)) } })
         api.tex(tex)
       } catch (e) {
@@ -146,6 +168,7 @@ const LYRIC_BAR = 395     // px/ô nhịp ở cỡ 1 cho ô 8 âm tiết — dư
       try {
         api.settings.display.barsPerRow = want
         api.settings.display.scale = wantScale
+        applyExcerpt(api.settings, want)
         api.updateSettings()
         api.render()
       } catch { /* */ }

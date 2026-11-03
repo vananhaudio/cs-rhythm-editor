@@ -19,6 +19,8 @@ export type ToolShareView = {
   action: { label: string; href: string } | null   // "Thử ở 80 BPM" → /metronome?tempo=80
   /** Có = object gốc chia sẻ được cho bạn bè trong Chat (artifact: BMS, Nhịp & Phách) */
   shareRef?: ShareRef | null
+  /** Share Note: tham chiếu để Feed vẽ xem trước trích đoạn (KHÔNG có nội dung nhạc — nhạc chỉ nạp sau khi server cho phép) */
+  sharedNote?: { noteId: string; classId: string; sessionNo: number; from: number; to: number }
 }
 
 type ToolDef = { describe: (raw: Record<string, unknown>) => ToolShareView | null }
@@ -141,6 +143,7 @@ TOOL_REGISTRY.share_note = {
       headline: note.trim(), detail: a === b ? `Ô ${a}` : `Ô ${a}–${b}`, thumbnail: null, note: null,
       action: { label: 'Mở đúng đoạn', href: shareNoteHref(cls, n, id) },
       shareRef: null,
+      sharedNote: { noteId: id.toLowerCase(), classId: cls, sessionNo: n, from: a, to: b },
     }
   },
 }
