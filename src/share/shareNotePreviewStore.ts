@@ -8,7 +8,7 @@ import { scoreTexAt } from './scoreExcerpt'
 import { UNAVAILABLE_TEXT } from './refCards'
 
 export type PreviewLoad =
-  | { status: 'ok'; note: string; tex: string; bars: BarRange; score: ScoreKey }
+  | { status: 'ok'; note: string; tex: string; bars: BarRange; score: ScoreKey; section?: unknown }   // section = khối giáo trình chứa bản nhạc (khung ngữ cảnh)
   | { status: 'stale' | 'no_access' | 'locked'; note: string }
   | { status: 'unavailable' }
   | { status: 'error' }
@@ -76,7 +76,7 @@ async function run(noteId: string, uid: string): Promise<PreviewLoad> {
       }
       const tex = sections ? scoreTexAt(sections, open.score) : null
       // Không đọc được giáo trình / không thấy khối nhạc → coi như không có quyền xem nhạc (không đoán, không vẽ)
-      out = tex ? { status: 'ok', note: open.note, tex, bars: open.bars, score: open.score } : { status: 'no_access', note: open.note }
+      out = tex ? { status: 'ok', note: open.note, tex, bars: open.bars, score: open.score, section: Array.isArray(sections) ? sections[open.score.section] : undefined } : { status: 'no_access', note: open.note }
     }
     if (out.status !== 'locked') notes.set(key, { at: clock(), v: out })   // khoá buổi KHÔNG cache: mở khoá xong thẻ cập nhật ở lần nạp kế
     return out

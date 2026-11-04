@@ -2,7 +2,8 @@
 // Nhận một LessonDoc (dữ liệu) → dựng trang giáo trình: web/app + in A4.
 // Nhận diện Class: cream #F7F5FC, indigo #4338CA, Be Vietnam Pro (index.html đã nạp font).
 // Section nào không có trong doc.sections thì đơn giản là không hiện.
-import { useContext, useRef, useState } from 'react'
+import { useContext, useRef, useState, type ReactNode } from 'react'
+import type { ScoreKey } from '../share/shareNoteApi'
 import type { CheckpointQuiz, CheckpointSection, LessonDoc, LessonSection, StudyBlock } from './lessonTypes'
 import { checkpointAcceptsLabel, quizOf } from './checkpoint'
 import { CheckpointSlot } from './checkpointSlot'
@@ -33,7 +34,11 @@ function Block({ label, title, children, sub }:
   )
 }
 
-function renderSection(s: LessonSection, i: number) {
+/** Chế độ KHUNG NGỮ CẢNH (Contextual Share): cùng renderer, chỉ thay LessonScore của đúng bản nhạc đã chia sẻ bằng `node` và lược các phần không thuộc khung. */
+export type ContextRender = { key: ScoreKey; node: ReactNode }
+const ctxHit = (c: ContextRender | undefined, i: number, path: ScoreKey['path']) => !!c && c.key.section === i && c.key.path.join('.') === path.join('.')
+
+function renderSection(s: LessonSection, i: number, ctx?: ContextRender) {
   switch (s.kind) {
     case 'objectives':
       return (
@@ -63,7 +68,7 @@ function renderSection(s: LessonSection, i: number) {
       return (
         <Block key={i} label="Chồng lớp" title={s.title} sub={s.lead}>
           <div className="lsn-layers">
-            {s.layers.map((ly, k) => (
+            {s.layers.map((ly, k) => (ctx && !ctxHit(ctx, i, ['layers', String(k), 'tex'])) ? null : (
               <div key={k} className={`lsn-layer${ly.current ? ' is-current' : ''}`}>
                 <div className="lsn-layer-h">
                   <span className="lsn-layer-no">{ly.label}</span>
@@ -71,11 +76,11 @@ function renderSection(s: LessonSection, i: number) {
                 </div>
                 {/* mỗi dòng MỘT ô nhịp: ba tầng xếp thẳng hàng nhau, và ô nhịp dày nốt
                     cũng không bị bóp đến mức lời chồng lên chữ */}
-                <LessonScore tex={ly.tex} barsPerRow={1} zoomable={false} shareKey={{ section: i, path: ['layers', String(k), 'tex'] }} />
+                {ctx ? ctx.node : <LessonScore tex={ly.tex} barsPerRow={1} zoomable={false} shareKey={{ section: i, path: ['layers', String(k), 'tex'] }} />}
               </div>
             ))}
           </div>
-          {s.note && <p className="lsn-legend">{s.note}</p>}
+          {!ctx && s.note && <p className="lsn-legend">{s.note}</p>}
         </Block>
       )
 
@@ -118,15 +123,15 @@ function renderSection(s: LessonSection, i: number) {
       return (
         <Block key={i} label={s.subtitle} title={s.title} sub={s.lead}>
           {s.tempo && <div className="lsn-tempo">{s.tempo}</div>}
-          <LessonScore tex={s.tex} shareKey={{ section: i, path: ['tex'] }} />
-          {s.marks && s.marks.length > 0 && (
+          {ctx ? ctx.node : <LessonScore tex={s.tex} shareKey={{ section: i, path: ['tex'] }} />}
+          {!ctx && s.marks && s.marks.length > 0 && (
             <div className="lsn-marks">
               {s.marks.map((m, k) => (
                 <span key={k} className="lsn-mark"><b>{m.at}</b> {m.text}</span>
               ))}
             </div>
           )}
-          {s.guidance && <ul className="lsn-guide">{s.guidance.map((g, k) => <li key={k}>{g}</li>)}</ul>}
+          {!ctx && s.guidance && <ul className="lsn-guide">{s.guidance.map((g, k) => <li key={k}>{g}</li>)}</ul>}
         </Block>
       )
 
@@ -145,7 +150,7 @@ function renderSection(s: LessonSection, i: number) {
             <div className="lsn-rep-list">
               <b>Dự kiến:</b> {s.candidates.join(' · ')}
             </div>
-            {s.pieces?.map((w, k) => (
+            {s.pieces?.map((w, k) => (ctx && !ctxHit(ctx, i, ['pieces', String(k), 'tex'])) ? null : (
               <div key={k} className="lsn-piece">
                 <div className="lsn-piece-h">
                   <h3>{w.title}</h3>
@@ -153,16 +158,16 @@ function renderSection(s: LessonSection, i: number) {
                 </div>
                 {w.note && <p className="lsn-piece-note">{w.note}</p>}
                 {w.tempo && <div className="lsn-tempo">{w.tempo}</div>}
-                <LessonScore tex={w.tex} barsPerRow={w.barsPerRow ?? 4} shareKey={{ section: i, path: ['pieces', String(k), 'tex'] }} />
-                {w.marks && w.marks.length > 0 && (
+                {ctx ? ctx.node : <LessonScore tex={w.tex} barsPerRow={w.barsPerRow ?? 4} shareKey={{ section: i, path: ['pieces', String(k), 'tex'] }} />}
+                {!ctx && w.marks && w.marks.length > 0 && (
                   <div className="lsn-marks">
                     {w.marks.map((mk, j) => <span key={j} className="lsn-mark"><b>{mk.at}</b> {mk.text}</span>)}
                   </div>
                 )}
-                {w.guidance && <ul className="lsn-guide">{w.guidance.map((g, j) => <li key={j}>{g}</li>)}</ul>}
+                {!ctx && w.guidance && <ul className="lsn-guide">{w.guidance.map((g, j) => <li key={j}>{g}</li>)}</ul>}
               </div>
             ))}
-            {s.status === 'pending' ? (
+            {ctx ? null : s.status === 'pending' ? (
               <div className="lsn-pending">
                 {s.pendingText ?? 'Tác phẩm Buổi 01 – chờ giáo viên cung cấp MusicXML/PDF/TAB.'}
               </div>
@@ -173,7 +178,7 @@ function renderSection(s: LessonSection, i: number) {
                 ))}
               </div>
             )}
-            {s.annotationTypes && (
+            {!ctx && s.annotationTypes && (
               <div className="lsn-annot">
                 <b>Khi có bản nhạc, đánh dấu trực tiếp trên bản:</b>
                 <div className="lsn-annot-chips">
@@ -281,9 +286,9 @@ function UnsupportedSection() {
 }
 
 // Nội dung từ DB không qua kiểm tra kiểu lúc biên dịch: một phần hỏng không được làm trắng cả buổi.
-function safeRenderSection(s: LessonSection, i: number) {
+function safeRenderSection(s: LessonSection, i: number, ctx?: ContextRender) {
   try {
-    return renderSection(s, i)
+    return renderSection(s, i, ctx)
   } catch {
     return <UnsupportedSection key={i} />
   }
@@ -371,12 +376,23 @@ export default function LessonDocument({ doc, onBack, embedded = false }: { doc:
           {m.stageLabel && <p className="lsn-head-stage">{m.stageLabel}</p>}
         </header>
 
-        {doc.sections.map(safeRenderSection)}
+        {doc.sections.map((s, i) => safeRenderSection(s, i))}
 
         <footer className="lsn-foot">
           {m.programCode} · Buổi {String(m.sessionNo).padStart(2, '0')} — Thầy Văn Anh Guitar
         </footer>
       </article>
+    </div>
+  )
+}
+
+/** Khung ngữ cảnh giáo trình (Universal Contextual Share): dựng ĐÚNG khối gốc bằng chính renderer + CSS của LessonDocument, chỉ thay phần bản nhạc bằng `node`
+ *  (trích đoạn + vùng chú ý). Dữ liệu `section` là khối ĐÃ qua kiểm quyền ở server/RLS; mọi văn bản đi qua React (không HTML thô). */
+export function ContextSectionView({ section, index, scoreKey, node }: { section: unknown; index: number; scoreKey: ScoreKey; node: ReactNode }) {
+  return (
+    <div className="lsn is-embedded lsn-ctx" data-testid="context-section">
+      <style>{CSS}</style>
+      <article className="lsn-paper">{safeRenderSection(section as LessonSection, index, { key: scoreKey, node })}</article>
     </div>
   )
 }

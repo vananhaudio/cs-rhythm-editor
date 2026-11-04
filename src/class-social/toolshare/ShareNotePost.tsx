@@ -5,6 +5,7 @@
 // - Mỗi thẻ có error boundary: một thẻ lỗi không làm hỏng Feed. Thích / bình luận nằm ở chân bài (FeedEntryCard), không đổi.
 import { Component, useEffect, useRef, useState, type ReactNode } from 'react'
 import LessonScore from '../../lesson/LessonScore'
+import { ContextSectionView } from '../../lesson/LessonDocument'
 import type { ExcerptPlan } from '../../share/scoreExcerpt'
 import { loadSharePreview, requestRenderSlot, shareNoteMessage, type PreviewLoad } from '../../share/shareNotePreviewStore'
 import type { ToolShareView } from './registry'
@@ -89,7 +90,11 @@ export default function ShareNotePost({ view }: { view: ToolShareView }) {
           {live
             ? <PreviewBoundary fallback={<p className="cs-sn-msg">Chưa hiển thị được bản nhạc. Bấm “Mở đúng đoạn”.</p>}>
                 <a className="cs-sn-preview" href={view.action.href} aria-label={`Mở đúng đoạn ${view.detail ?? ''} trong bản nhạc`}>
-                  <LessonScore tex={load.tex} excerpt={load.bars} onExcerpt={setPlan} zoomable={false} barsPerRow={4} />
+                  {(() => {
+                    const score = <LessonScore tex={load.tex} excerpt={load.bars} onExcerpt={setPlan} zoomable={false} barsPerRow={4} />
+                    // Khung ngữ cảnh = khối giáo trình GỐC (tiêu đề, mô tả, nhịp độ, tên tác phẩm) dựng bằng chính renderer của LessonDocument; thiếu khối → chỉ trích đoạn như V1.1
+                    return load.section ? <ContextSectionView section={load.section} index={load.score.section} scoreKey={load.score} node={score} /> : score
+                  })()}
                 </a>
               </PreviewBoundary>
             : near && <div className="cs-sn-wait"><span className="cs-skeleton" style={{ width: '60%', height: 14 }} /></div>}

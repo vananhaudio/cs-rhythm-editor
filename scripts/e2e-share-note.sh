@@ -55,11 +55,20 @@ insert into public.friendships (requester_id, addressee_id, status, responded_at
   ('$A', '$B', 'accepted', now()), ('$A', '$C', 'accepted', now()), ('$B', '$C', 'accepted', now());
 -- Buổi 1 lớp SOLO01.TH01 (A, B có quyền giáo trình; C thuộc TH02): thêm MỘT khối bản nhạc THẬT ở cuối (kind 'score')
 update public.class_lesson_content
-   set blocks = blocks || jsonb_build_array(jsonb_build_object('kind', 'score', 'subtitle', 'Tác phẩm', 'title', 'Thành phố buồn', 'tex', \$tex\$$TEX\$tex\$::text))
+   set blocks = blocks || jsonb_build_array(
+     jsonb_build_object('kind', 'score', 'subtitle', 'Tác phẩm', 'title', 'Thành phố buồn', 'lead', 'Đoạn dẫn nguyên văn của Thầy cho bản nhạc này.', 'tempo', '♩ = 66', 'tex', \$tex\$$TEX\$tex\$::text))
  where session_id = '51000000-0000-4000-8000-000000000001';
 -- Buổi 2 (cùng lớp TH01): MỘT khối bản nhạc CÓ LỜI hát (Diễm xưa) cho E2E Feed Preview trên điện thoại (bản có lời: 1 ô/dòng)
 update public.class_lesson_content
-   set blocks = blocks || jsonb_build_array(jsonb_build_object('kind', 'score', 'subtitle', 'Tác phẩm', 'title', 'Diễm xưa', 'tex', \$tex\$$TEX_LY\$tex\$::text))
+   set blocks = blocks || jsonb_build_array(
+     jsonb_build_object('kind', 'score', 'subtitle', 'Tác phẩm', 'title', 'Diễm xưa', 'tex', \$tex\$$TEX_LY\$tex\$::text),
+     -- Khối hỗn hợp (Contextual Share): đúng dạng Owner nêu — Tác phẩm + Dự kiến + tên/tác giả/ghi chú/nhịp độ + bản nhạc
+     jsonb_build_object('kind', 'repertoire', 'title', 'Tác phẩm thực hành', 'status', 'ready',
+       'candidates', jsonb_build_array('Thành Phố Buồn – Lam Phương (Am)', 'Diễm Xưa – Trịnh Công Sơn (Am)'),
+       'pieces', jsonb_build_array(
+         jsonb_build_object('title', 'Thành Phố Buồn', 'composer', 'Lam Phương · chuyển về Am', 'note', 'Đoạn mô tả nguyên văn của tác phẩm thực hành.', 'tempo', 'Slow rock · chậm, đủ chỗ cho nhịp chùm ba', 'tex', \$tex\$$TEX\$tex\$::text),
+         jsonb_build_object('title', 'Diễm Xưa', 'composer', 'Trịnh Công Sơn', 'note', 'TÁC PHẨM KHÁC KHÔNG ĐƯỢC KÉO VÀO KHUNG', 'tex', \$tex\$$TEX_LY\$tex\$::text)))
+   )
  where session_id = '51000000-0000-4000-8000-000000000002';
 -- Buổi 2 đang KHOÁ với học viên (phải trả bài Buổi 1 — server class_learning_state quyết). Mở sẵn Buổi 2 cho An và Bình (dòng tiến độ thật, như
 -- khi đã trả bài) để E2E bản có lời đo trên buổi MỞ. Buổi 3 vẫn KHOÁ với Bình: có khối nhạc để E2E chứng minh Feed không tải/vẽ nhạc buổi khoá.
