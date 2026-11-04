@@ -75,7 +75,7 @@ export default function ShareNotePost({ view }: { view: ToolShareView }) {
   const Icon = view.icon
   const msg = shareNoteMessage(load)
   const live = wantRender && slot && load?.status === 'ok'
-  const label = plan?.truncated ? `${view.detail ?? ''} · hiện ${plan.count} ô đầu` : view.detail
+  const label = plan?.truncated ? `${view.detail ?? ''} · hiện ${plan.focusTo - plan.focusFrom + 1} ô đầu — bấm để xem đủ` : view.detail
   const open = <a className="cs-btn cs-btn-soft cs-tool-share-cta" href={view.action.href}>{view.action.label}</a>
 
   return (
@@ -85,7 +85,7 @@ export default function ShareNotePost({ view }: { view: ToolShareView }) {
       {label && <div className="cs-tool-share-detail">{label}</div>}
       {msg && <p className="cs-sn-msg" role="status">{msg}</p>}
       {load?.status === 'ok' && (
-        <div className="cs-sn-slot" style={{ minHeight: live ? undefined : height || 120 }} ref={prev} data-testid="share-note-preview" data-live={live ? '1' : '0'}>
+        <div className="cs-sn-slot" style={{ minHeight: live ? undefined : height || 120 }} ref={prev} data-testid="share-note-preview" data-live={live ? '1' : '0'} data-plan={plan ? `${plan.start},${plan.count},${plan.focusFrom},${plan.focusTo}` : undefined}>
           {live
             ? <PreviewBoundary fallback={<p className="cs-sn-msg">Chưa hiển thị được bản nhạc. Bấm “Mở đúng đoạn”.</p>}>
                 <a className="cs-sn-preview" href={view.action.href} aria-label={`Mở đúng đoạn ${view.detail ?? ''} trong bản nhạc`}>

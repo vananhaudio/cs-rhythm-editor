@@ -3,29 +3,45 @@
 // số ô in ra và chỉ số ô trong boundsLookup GIỮ NGUYÊN số gốc; nốt / TAB / hợp âm / lời hát khớp bản khắc đủ.
 import type { BarRange, ScoreKey } from './shareNoteApi'
 
-/** Feed chỉ hiện tối đa 4 ô (Owner chốt 03/11) và tối đa 2 dòng nhạc (điện thoại + bản có lời chỉ 1 ô/dòng → 2 ô). */
+/** Feed chỉ hiện tối đa 4 ô của VÙNG ĐÃ KHOANH (Owner chốt 03/11) và tối đa EXCERPT_MAX_ROWS dòng nhạc. V1.1 (04/11): thêm tối đa 2 ô ngữ cảnh mỗi phía
+ *  vào chỗ còn trống của các dòng đó — ngữ cảnh KHÔNG bao giờ lấn chỗ của vùng khoanh. */
 export const EXCERPT_MAX_BARS = 4
 export const EXCERPT_MAX_ROWS = 2
+export const EXCERPT_CONTEXT_BARS = 2
 
 export type ExcerptPlan = {
-  /** ô bắt đầu (1-based) cho alphaTab display.startBar */
+  /** ô bắt đầu VẼ (1-based, gồm ngữ cảnh trước) cho alphaTab display.startBar */
   start: number
-  /** số ô vẽ cho display.barCount */
+  /** số ô vẽ (gồm ngữ cảnh) cho display.barCount; ô vượt cuối bản nhạc alphaTab tự bỏ */
   count: number
+  /** vùng khoanh THỰC SỰ được vẽ (1-based, gồm hai đầu) — chỉ phần này được tô */
+  focusFrom: number
+  focusTo: number
+  /** số ô ngữ cảnh yêu cầu trước / sau (sau có thể ít hơn nếu bản nhạc hết) */
+  before: number
+  after: number
   /** tổng số ô trong dải đã chia sẻ */
   total: number
-  /** true = còn ô chưa hiện (hiện N ô đầu) */
+  /** true = còn ô của vùng khoanh chưa hiện (hiện N ô đầu) */
   truncated: boolean
 }
 
-/** Dải ô đã chia sẻ + số ô mỗi dòng của khổ hiện tại → ô cần vẽ. Dải hỏng → null (không vẽ). */
-export function planExcerpt(range: BarRange, rowsPerSystem: number, maxRows: number = EXCERPT_MAX_ROWS): ExcerptPlan | null {
+/** Dải ô đã chia sẻ + số ô mỗi dòng + số dòng tối đa → ô cần vẽ. Dải hỏng → null (không vẽ).
+ *  Ưu tiên: (1) vùng khoanh đủ trong giới hạn → (2) ngữ cảnh hai phía ≤ 2 ô → thiếu chỗ thì GIẢM ngữ cảnh trước khi cắt vùng khoanh.
+ *  Vùng khoanh bị cắt (dài) → chỉ giữ ngữ cảnh trước, không có ngữ cảnh sau (ô sau vùng hiện ra sẽ không phải ô liền kề). */
+export function planExcerpt(range: BarRange, barsPerRow: number, maxRows: number = EXCERPT_MAX_ROWS, withContext = true): ExcerptPlan | null {
   const { from, to } = range
   if (!Number.isInteger(from) || !Number.isInteger(to) || from < 1 || to < from) return null
-  const rows = Number.isFinite(rowsPerSystem) ? Math.max(1, Math.floor(rowsPerSystem)) : 1
+  const perRow = Number.isFinite(barsPerRow) ? Math.max(1, Math.floor(barsPerRow)) : 1
+  const capacity = perRow * Math.max(1, Math.floor(maxRows))
   const total = to - from + 1
-  const count = Math.min(total, EXCERPT_MAX_BARS, rows * Math.max(1, Math.floor(maxRows)))
-  return { start: from, count, total, truncated: count < total }
+  const focus = Math.min(total, EXCERPT_MAX_BARS, capacity)
+  const truncated = focus < total
+  let before = withContext ? Math.min(EXCERPT_CONTEXT_BARS, from - 1) : 0
+  let after = withContext && !truncated ? EXCERPT_CONTEXT_BARS : 0
+  const room = capacity - focus
+  while (before + after > room) { if (before >= after && before > 0) before--; else if (after > 0) after--; else break }
+  return { start: from - before, count: before + focus + after, focusFrom: from, focusTo: from + focus - 1, before, after, total, truncated }
 }
 
 const obj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v)

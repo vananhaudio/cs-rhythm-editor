@@ -68,6 +68,38 @@ const assertTrim = (g, tag) => { assert.ok(g.h - g.ink <= 22, `${tag}: trắng �
 // Số dòng nhạc trong thẻ i = số khóa Sol (U+E050 của font nhạc) — mỗi dòng nhạc có đúng một
 const rowsOf = (page, i) => page.evaluate(i => [...document.querySelectorAll('[data-testid="share-note-post"]')[i].querySelectorAll('svg text')].filter(t => t.textContent.includes('\uE050')).length, i)
 const cardText = (page, i) => page.evaluate(i => [...document.querySelectorAll('[data-testid="share-note-post"]')[i].querySelectorAll('svg text')].map(t => t.textContent.trim()), i)
+// ── V1.1: ngữ cảnh quanh vùng khoanh. Kế hoạch (data-plan = ô bắt đầu vẽ, số ô vẽ, ô khoanh đầu, ô khoanh cuối) so với bảng TÍNH TAY theo luật Owner:
+//    ≤ 2 ô trước + ≤ 2 ô sau vào chỗ còn trống (thẻ Feed desktop rộng ~560px → 2 ô/dòng × 2 dòng = 4; iPhone không lời 2 ô/dòng × 2 dòng = 4), thiếu chỗ giảm ngữ cảnh trước khi cắt vùng khoanh.
+const EXPECT = { // RANGES[i] → [start, focusFrom, focusTo]
+  desktop: [[2, 3, 4], [1, 1, 4], [6, 7, 7], [12, 12, 14], [20, 20, 23], [4, 5, 6]],
+  iphone: [[2, 3, 4], [1, 1, 4], [6, 7, 7], [12, 12, 14], [20, 20, 23], [4, 5, 6]],
+}
+const planOf = (page, i) => page.evaluate(i => (document.querySelectorAll('[data-testid="share-note-post"]')[i].querySelector('[data-testid="share-note-preview"]').getAttribute('data-plan') || '').split(',').map(Number), i)
+// Tô cam CHỈ ở vùng khoanh: (a) có ô tô, nằm gọn trong khung; (b) trong ô tô nền ngả cam, nốt vẫn ĐẬM (không mờ); (c) ngay ngoài ô tô (ô ngữ cảnh) trắng sạch
+const tintCheck = async (page, i, { before, after }, tag) => {
+  const card = (await page.$$('[data-testid="share-note-post"]'))[i]; const prev = await card.$('.cs-sn-preview')
+  const boxes = await page.evaluate(i => { const pv = document.querySelectorAll('[data-testid="share-note-post"]')[i].querySelector('.cs-sn-preview'); const r0 = pv.getBoundingClientRect()
+    return [...pv.querySelectorAll('.lsn-excerpt-hl')].map(e => { const r = e.getBoundingClientRect(); return { l: r.left - r0.left, t: r.top - r0.top, w: r.width, h: r.height } }) }, i)
+  assert.ok(boxes.length >= 1, `${tag}: có vùng tô cam`)
+  const b64 = await prev.screenshot({ encoding: 'base64' })
+  const res = await page.evaluate(async (b64, boxes) => {
+    const img = new Image(); img.src = 'data:image/png;base64,' + b64; await img.decode()
+    const c = document.createElement('canvas'); c.width = img.width; c.height = img.height; const x = c.getContext('2d'); x.drawImage(img, 0, 0)
+    const k = img.width / (document.querySelector('.cs-sn-preview')?.getBoundingClientRect().width || img.width)
+    const px = (X, Y) => { const d = x.getImageData(Math.round(X * k), Math.round(Y * k), 1, 1).data; return [d[0], d[1], d[2]] }
+    const out = { inside: [], outsideL: null, outsideR: null, minLum: 255 }
+    const first = boxes[0], last = boxes[boxes.length - 1]
+    for (const b of boxes) out.inside.push(px(b.l + 6, b.t + 3))
+    out.outsideL = px(first.l - 8, first.t + 3); out.outsideR = px(last.l + last.w + 8, last.t + 3)
+    for (const b of boxes) { const d = x.getImageData(Math.round(b.l * k), Math.round(b.t * k), Math.max(1, Math.round(b.w * k)), Math.max(1, Math.round(b.h * k))).data; for (let n = 0; n < d.length; n += 4) out.minLum = Math.min(out.minLum, (d[n] + d[n + 1] + d[n + 2]) / 3) }
+    return out
+  }, b64, boxes)
+  for (const p of res.inside) assert.ok(p[2] < 248 && p[0] > p[2], `${tag}: nền ô khoanh ngả cam (${p})`)
+  assert.ok(res.minLum < 110, `${tag}: nốt / TAB trong vùng tô vẫn đậm, không mờ (sáng nhất-tối nhất ${Math.round(res.minLum)})`)
+  if (before > 0) assert.ok(res.outsideL.every(v => v >= 250), `${tag}: ô ngữ cảnh TRƯỚC không tô (${res.outsideL})`)
+  if (after > 0) assert.ok(res.outsideR.every(v => v >= 250), `${tag}: ô ngữ cảnh SAU không tô (${res.outsideR})`)
+  return boxes.length
+}
 const noHScroll = page => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)
 
 // ── Dựng dữ liệu: An tạo + đăng 6 bài ──
@@ -102,10 +134,14 @@ let firstIdx = (await B.evaluate(() => { const els = [...document.querySelectorA
 assert.ok(firstIdx >= 0)
 let q = order[firstIdx], [fa, fb] = RANGES[q]
 const bars0 = await printedBars(B, firstIdx)
-assert.ok(bars0.length > 0 && Math.min(...bars0) === fa, `số ô in ra bắt đầu ĐÚNG ô ${fa}: ${bars0}`)
+const plan0 = await planOf(B, firstIdx), [es0, ef0, et0] = EXPECT.desktop[q]
+assert.deepEqual([plan0[0], plan0[2], plan0[3]], [es0, ef0, et0], `kế hoạch vẽ (bắt đầu, khoanh từ, khoanh đến) = bảng tính tay: ${plan0}`)
+assert.equal(Math.min(...bars0), es0, `số ô in ra bắt đầu ĐÚNG ô ${es0} (gồm ngữ cảnh trước): ${bars0}`)
+assert.ok(plan0[1] <= 4, `tổng ô vẽ ≤ 4 (2 ô/dòng × 2 dòng): ${plan0[1]}`)
+assert.ok((await rowsOf(B, firstIdx)) <= 2, 'desktop ≤ 2 dòng khuông nhạc')
 const label0 = await B.evaluate(i => document.querySelectorAll('[data-testid="share-note-post"]')[i].querySelector('.cs-tool-share-detail').textContent, firstIdx)
-const want0 = Math.min(fb - fa + 1, 4)
-assert.ok(bars0.every(n => n >= fa && n <= fa + want0 - 1), `không vẽ ô ngoài dải đã chọn (${bars0})`)
+const ctx0 = { before: fa - es0, after: plan0[1] - (fa - es0) - (et0 - ef0 + 1) }
+const tint0 = await tintCheck(B, firstIdx, ctx0, 'desktop')
 assert.equal(label0.includes('hiện 4 ô đầu'), fb - fa + 1 > 4, label0)
 assert.ok(await noHScroll(B), 'không tràn ngang')
 const gap1 = await inkGap(B, firstIdx); assertTrim(gap1, 'desktop')
@@ -163,10 +199,14 @@ await waitFor(B3, () => document.querySelector('[data-testid="share-note-preview
 const idx3 = await B3.evaluate(() => [...document.querySelectorAll('[data-testid="share-note-post"]')].findIndex(e => e.querySelector('[data-live="1"] .at-surface svg')))
 const q3 = (await cardOrder(B3))[idx3], [a3, b3] = RANGES[q3]
 const bars3 = await printedBars(B3, idx3)
-assert.ok(bars3.length > 0 && Math.min(...bars3) === a3, `mobile: số ô bắt đầu đúng ${a3}: ${bars3}`)
+const plan3 = await planOf(B3, idx3), [es3, ef3, et3] = EXPECT.iphone[q3]
+assert.deepEqual([plan3[0], plan3[2], plan3[3]], [es3, ef3, et3], `mobile: kế hoạch vẽ = bảng tính tay: ${plan3}`)
+assert.equal(Math.min(...bars3), es3, `mobile: số ô in ra bắt đầu đúng ${es3}: ${bars3}`)
+assert.ok(plan3[1] <= 4 && (await rowsOf(B3, idx3)) <= 2, `mobile ≤ 2 dòng, ≤ 4 ô (${plan3[1]} ô, ${await rowsOf(B3, idx3)} dòng)`)
+await tintCheck(B3, idx3, { before: a3 - es3, after: plan3[1] - (a3 - es3) - (et3 - ef3 + 1) }, 'iphone')
 assert.ok(await noHScroll(B3), 'mobile không tràn ngang')
 const h3 = await B3.evaluate(i => document.querySelectorAll('[data-testid="share-note-post"]')[i].getBoundingClientRect().height, idx3)
-assert.ok(h3 < 700, `thẻ gọn trên điện thoại (cao ${Math.round(h3)}px)`)
+assert.ok(h3 < 760, `thẻ không dài hơn mức tối đa của V1 (2 dòng ≈ 720px) trên điện thoại (cao ${Math.round(h3)}px)`)
 const gap3 = await inkGap(B3, idx3); assertTrim(gap3, 'iPhone')
 await B3.screenshot({ path: `${SHOTS}/fp-5-b-iphone-feed.png` })
 ok(`5 Bình (iPhone 390): trích đoạn từ ô ${a3} (in ra ${bars3}), thẻ cao ${Math.round(h3)}px, không tràn ngang`)
@@ -235,6 +275,8 @@ const labelL = await L.evaluate(i => document.querySelectorAll('[data-testid="sh
 assert.match(labelL, /Ô 5–8 · hiện 2 ô đầu/)
 assert.ok(await noHScroll(L), 'không tràn ngang')
 const gapL = await inkGap(L, lyrIdx); assertTrim(gapL, 'có lời')
+assert.deepEqual(await planOf(L, lyrIdx), [5, 2, 5, 6], 'Ô 5–8 có lời @390: vùng khoanh chiếm đủ 2 chỗ → KHÔNG ngữ cảnh (không lấn vùng khoanh)')
+await tintCheck(L, lyrIdx, { before: 0, after: 0 }, 'có lời')
 const hL = await L.evaluate(i => document.querySelectorAll('[data-testid="share-note-post"]')[i].getBoundingClientRect().height, lyrIdx)
 await L.screenshot({ path: `${SHOTS}/fp-8-b-iphone-co-loi.png` })
 ok(`8a Bản nhạc CÓ LỜI @390: đúng 2 dòng, ô in ra ${barsL}, đủ lời "Nghe lá thu mưa reo mòn gót nhỏ", không có lời ô 7, nhãn "${labelL}", không tràn ngang, trắng đáy ${Math.round(gapL.h - gapL.ink)}px, thẻ cao ${Math.round(hL)}px`)
@@ -242,9 +284,12 @@ ok(`8a Bản nhạc CÓ LỜI @390: đúng 2 dòng, ô in ra ${barsL}, đủ l�
 const lyr2 = await L.evaluate(q => [...document.querySelectorAll('[data-testid="share-note-post"]')].findIndex(e => e.textContent.includes(q)), LQ[1])
 await L.evaluate(i => document.querySelectorAll('[data-testid="share-note-post"]')[i].scrollIntoView({ block: 'center' }), lyr2)
 await waitFor(L, i => document.querySelectorAll('[data-testid="share-note-post"]')[i].querySelector('[data-live="1"] .at-surface svg'), lyr2); await sleep(900)
-assert.deepEqual(await printedBars(L, lyr2), [9]); assert.equal(await rowsOf(L, lyr2), 1)
+assert.deepEqual(await planOf(L, lyr2), [9, 2, 9, 9], 'Ô 9 có lời @390: 2 chỗ → vùng khoanh 1 ô + 1 ô ngữ cảnh SAU (ô 10), không ngữ cảnh trước')
+assert.deepEqual(await printedBars(L, lyr2), [9, 10]); assert.equal(await rowsOf(L, lyr2), 2)
+await tintCheck(L, lyr2, { before: 0, after: 1 }, 'có lời 1 ô')
 assertTrim(await inkGap(L, lyr2), 'có lời 1 ô')
-ok('8b Dải 1 ô có lời (Ô 9): 1 dòng, đúng ô 9, trắng đáy gọn')
+await L.screenshot({ path: `${SHOTS}/fp-8-b-iphone-co-loi-1o.png` })
+ok('8b Dải 1 ô có lời (Ô 9) @390: 2 dòng (ô 9 tô cam + ô 10 ngữ cảnh không tô), trắng đáy gọn')
 // Chạm xem trước → mở đúng đoạn (buổi 2, ô 5–8)
 await L.evaluate(i => document.querySelectorAll('[data-testid="share-note-post"]')[i].scrollIntoView({ block: 'center' }), lyrIdx); await sleep(700)
 await Promise.all([L.waitForNavigation({ waitUntil: 'networkidle0' }).catch(() => null), L.evaluate(i => document.querySelectorAll('[data-testid="share-note-post"]')[i].querySelector('.cs-sn-preview').click(), lyrIdx)])
