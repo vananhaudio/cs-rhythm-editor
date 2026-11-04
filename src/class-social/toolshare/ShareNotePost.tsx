@@ -6,6 +6,7 @@
 import { Component, useEffect, useRef, useState, type ReactNode } from 'react'
 import LessonScore from '../../lesson/LessonScore'
 import { ContextSectionView } from '../../lesson/LessonDocument'
+import { contextHasMore } from '../../share/contextShare'
 import type { ExcerptPlan } from '../../share/scoreExcerpt'
 import { loadSharePreview, requestRenderSlot, shareNoteMessage, type PreviewLoad } from '../../share/shareNotePreviewStore'
 import type { ToolShareView } from './registry'
@@ -39,6 +40,7 @@ export default function ShareNotePost({ view }: { view: ToolShareView }) {
   const [load, setLoad] = useState<PreviewLoad | null>(null)
   const [slot, setSlot] = useState(false)
   const [plan, setPlan] = useState<ExcerptPlan | null>(null)
+  const [expanded, setExpanded] = useState(false)   // "Xem thêm ngữ cảnh": mở thêm phần sư phạm của khối gốc ngay trong Feed (không đổi vùng khoanh)
   const [height, setHeight] = useState(0)   // chiều cao lần dựng trước: giữ chỗ khi huỷ renderer (Feed không nhảy)
   const noteId = note?.noteId
 
@@ -93,11 +95,16 @@ export default function ShareNotePost({ view }: { view: ToolShareView }) {
                   {(() => {
                     const score = <LessonScore tex={load.tex} excerpt={load.bars} onExcerpt={setPlan} zoomable={false} barsPerRow={4} />
                     // Khung ngữ cảnh = khối giáo trình GỐC (tiêu đề, mô tả, nhịp độ, tên tác phẩm) dựng bằng chính renderer của LessonDocument; thiếu khối → chỉ trích đoạn như V1.1
-                    return load.section ? <ContextSectionView section={load.section} index={load.score.section} scoreKey={load.score} node={score} /> : score
+                    return load.section ? <ContextSectionView section={load.section} index={load.score.section} scoreKey={load.score} node={score} expanded={expanded} /> : score
                   })()}
                 </a>
               </PreviewBoundary>
             : near && <div className="cs-sn-wait"><span className="cs-skeleton" style={{ width: '60%', height: 14 }} /></div>}
+          {live && load.section !== undefined && contextHasMore([load.section], { ...load.score, section: 0 }) && (
+            <button type="button" className="cs-sn-more" data-testid="share-note-more" aria-expanded={expanded} onClick={() => setExpanded(v => !v)}>
+              {expanded ? 'Thu gọn ngữ cảnh' : 'Xem thêm ngữ cảnh'}
+            </button>
+          )}
         </div>
       )}
       {!load && near && <span className="cs-skeleton" style={{ width: '70%', height: 14 }} />}

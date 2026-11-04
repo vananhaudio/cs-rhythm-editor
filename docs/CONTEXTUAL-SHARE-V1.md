@@ -46,7 +46,7 @@
 ### Quy tắc ngữ cảnh (xác định, kiểm chứng được)
 1. Vùng chú ý luôn nguyên vẹn (ưu tiên số 1); ≤ 4 ô vẽ, dài hơn thì "hiện N ô đầu".
 2. **Tôn trọng ranh giới khối:** khung = cả khối chứa bản nhạc (tiêu đề, nhãn, mô tả `lead`, danh sách "Dự kiến", tên tác phẩm/tác giả/ghi chú, nhịp độ) → rồi đến trích đoạn. Với `repertoire`/`layers` chỉ kéo đúng tác phẩm/tầng được chia sẻ (không kéo tác phẩm khác, không kéo tệp tải về `assets`).
-3. Lược khỏi khung (nằm SAU bản nhạc đầy đủ, không giúp hiểu vùng khoanh và làm dài thẻ): chú thích `marks`, gạch đầu dòng `guidance`, ghi chú cuối `note`, nút tải tệp, trạng thái "chờ giáo viên".
+3. **Hai chế độ, cùng renderer, cùng thứ tự gốc (lượt hoàn thiện):** *Mặc định gọn* = nhãn, tiêu đề, mô tả `lead`, tên tác phẩm/tác giả/ghi chú, nhịp độ + trích đoạn. *"Xem thêm ngữ cảnh"* (mở ngay trong Feed, không dựng lại bản nhạc, không đổi vùng khoanh) = thêm danh sách "Dự kiến", chú thích `marks`, `guidance`, ghi chú `note` của tầng, trạng thái chờ giáo viên — đúng thứ tự như trang giáo trình. Nút chỉ hiện khi thật sự có phần bị ẩn (`contextHasMore`). Tệp tải về (`assets`) không đưa vào khung ở cả hai chế độ; đường về nguồn = "Mở đúng đoạn". Khung trong Feed dùng CSS thu gọn cỡ chữ/khoảng đệm (`.cs-sn-preview .lsn-ctx`), không ẩn/cắt nội dung.
 4. Ngữ cảnh ô nhạc: ≤ 2 ô mỗi phía, thiếu chỗ thì giảm ngữ cảnh trước khi cắt vùng khoanh (V1.1, không đổi).
 5. Văn bản (hợp đồng, có test, **chưa nối vào Feed**): `studyContext` = tiêu đề mục gần nhất phía trên + khối được chọn + khối phụ thuộc liền sau (list/callout sau đoạn văn).
 
@@ -71,7 +71,7 @@ Không migration / RPC mới. Văn bản giáo trình đi qua React (không HTML
 `src/share/contextShare.ts` (lõi thuần) · `ContextSectionView` + chế độ `ctx` của `renderSection` · `shareNotePreviewStore` mang thêm `section` · `ShareNotePost` dựng khung · test thuần (`tests/class-social/contextual-share.test.tsx`) · E2E bước 10 (`run-share-note-feed.mjs`) trên khối hỗn hợp "Tác phẩm" đúng dạng Owner nêu.
 
 ## 7. Chưa làm (không báo là hỗ trợ)
-Neo văn bản / hình / bảng / ô bài tập (cần cột neo mới hoặc bảng `share_anchors` — migration, chờ Owner); chọn vùng văn bản & hình ở phía người gửi; "Xem thêm ngữ cảnh" trong thẻ; Chat / Band Chat dựng khung (hiện chỉ thẻ tham chiếu).
+Neo văn bản / hình / bảng / ô bài tập (cần cột neo mới hoặc bảng `share_anchors` — migration, chờ Owner); chọn vùng văn bản & hình ở phía người gửi; Chat / Band Chat dựng khung (hiện chỉ thẻ tham chiếu).
 
 ## 8. Lộ trình
 1. **Neo ngữ nghĩa bất biến:** `share_anchors(kind, section_id, selector jsonb, content_sha)` + id khối bất biến trong blocks (hiện chỉ chỉ số mảng).

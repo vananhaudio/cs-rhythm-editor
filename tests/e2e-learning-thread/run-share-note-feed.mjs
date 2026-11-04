@@ -350,6 +350,11 @@ const CQ = 'CTX-1 Ô 2–3 trong Thành Phố Buồn: đếm phách chỗ này t
   assert.equal(c.status, 200, `tạo ghi chú ngữ cảnh: ${JSON.stringify(c.body)}`)
   const p = await rpc(A, 'social_share_share_note', { p_note: c.body }); assert.equal(p.status, 200, `đăng Feed: ${JSON.stringify(p.body)}`)
 }
+// E2E_HOLD=1: STAGING cục bộ cho Owner nghiệm thu — dừng sau khi dựng dữ liệu giả (DB tạm, KHÔNG production), giữ stack chạy; Ctrl-C / kill để dọn.
+if (process.env.E2E_HOLD) {
+  console.log(`\nSTAGING_READY ${ME}\n  Đăng nhập: b@test.local (Bình — học viên, thấy khung đầy đủ) · c@test.local (Chi — lớp khác, KHÔNG có quyền) · a@test.local (An — người gửi); mật khẩu bất kỳ\n  Thẻ cần xem: "${CQ}"`)
+  await browser.close().catch(() => {}); setInterval(() => {}, 1 << 30); await new Promise(() => {})   // timer giữ tiến trình sống
+}
 const ctxIdx = page => page.evaluate(q => [...document.querySelectorAll('[data-testid="share-note-post"]')].findIndex(e => e.textContent.includes(q)), CQ)
 const ctxCard = async (page, tag) => {
   await page.goto(ME, { waitUntil: 'networkidle0' })
@@ -373,7 +378,8 @@ const WANT = { tag: 'Tác phẩm', h2: 'Tác phẩm thực hành', h3: 'Thành P
 const assertCtx = (f, tag) => {
   assert.ok(f.has, `${tag}: có khung ngữ cảnh`)
   for (const [k, v] of Object.entries(WANT)) assert.equal(f[k], v, `${tag}: ${k} nguyên văn`)
-  assert.match(f.list, /Dự kiến:\s*Thành Phố Buồn – Lam Phương \(Am\) · Diễm Xưa – Trịnh Công Sơn \(Am\)/, `${tag}: danh sách dự kiến nguyên văn`)
+  assert.equal(f.list, null, `${tag}: khung MẶC ĐỊNH gọn — danh sách "Dự kiến" nằm sau "Xem thêm ngữ cảnh"`)
+  assert.ok(!f.text.includes('vào nhịp chùm ba') && !f.text.includes('Giữ nhịp chùm ba'), `${tag}: marks / guidance nằm sau "Xem thêm ngữ cảnh"`)
   assert.equal(f.pieces, 1, `${tag}: chỉ MỘT tác phẩm (đúng tác phẩm được chia sẻ)`); assert.ok(!f.text.includes('TÁC PHẨM KHÁC'), `${tag}: tác phẩm khác không bị kéo vào`)
   assert.equal(f.surfaces, 1, `${tag}: đúng 1 bề mặt nhạc`); assert.ok(f.headerBeforeScore && f.scoreInsidePiece, `${tag}: thứ tự gốc (tiêu đề → tác phẩm → nhạc) và nhạc nằm trong khối tác phẩm`)
 }
@@ -392,7 +398,7 @@ await Promise.all([D10.waitForNavigation({ waitUntil: 'networkidle0' }).catch(()
 await D10.waitForSelector('.lsn-share-hl.is-focus', { timeout: 40000 })
 const orig10 = await D10.evaluate(() => { const q = (r, s) => r?.querySelector(s)?.textContent?.trim() ?? null; const rep = [...document.querySelectorAll('.lsn-block')].find(b => b.querySelector('.lsn-rep')); const p = rep?.querySelector('.lsn-piece')
   return { tag: q(rep, '.lsn-tag'), h2: q(rep, 'h2'), list: q(rep, '.lsn-rep-list'), h3: q(p, '.lsn-piece-h h3'), by: q(p, '.lsn-piece-by'), note: q(p, '.lsn-piece-note'), tempo: q(p, '.lsn-tempo') } })
-for (const k of ['tag', 'h2', 'list', 'h3', 'by', 'note', 'tempo']) assert.equal(df[k], orig10[k], `10b: "${k}" trên Feed GIỐNG HỆT trang Buổi gốc`)
+for (const k of ['tag', 'h2', 'h3', 'by', 'note', 'tempo']) assert.equal(df[k], orig10[k], `10b: "${k}" trên Feed GIỐNG HỆT trang Buổi gốc`)
 assert.match(href10, /\/sessions\/2\?note=/)
 assert.ok(await D10.evaluate(() => document.querySelectorAll('.lsn-share-hl.is-focus').length >= 1), 'mở đúng nguồn, vùng chọn tô')
 ok('10b Văn bản khung trên Feed GIỐNG HỆT trang Buổi gốc (nhãn, tiêu đề, dự kiến, tác phẩm, tác giả, ghi chú, nhịp độ); bấm → mở đúng nguồn + tô đúng vùng chọn')
@@ -407,6 +413,42 @@ assert.ok(cardOverflow, 'iPhone: thẻ không tràn ngang')
 const gap10 = await inkGap(P10, pi); assertTrim(gap10, 'ngữ cảnh iphone')
 await (await P10.$$('[data-testid="share-note-post"]'))[pi].screenshot({ path: `${SHOTS}/ctx-10c-iphone.png` })
 ok(`10c iPhone 390: cùng khung gốc, không tràn ngang, không cắt nhạc, thẻ cao ${pf.h}px`)
+// 10g. "Xem thêm ngữ cảnh" (iPhone): mở rộng ngay trong Feed, KHÔNG dựng lại bản nhạc, KHÔNG đổi vùng khoanh, giữ thứ tự + renderer gốc
+{
+  const compactH = pf.h
+  const info = () => P10.evaluate(i => {
+    const c = document.querySelectorAll('[data-testid="share-note-post"]')[i], x = c.querySelector('[data-testid="context-section"]')
+    const surf = c.querySelector('.at-surface'), btn = c.querySelector('[data-testid="share-note-more"]')
+    const pos = (a, b) => !!(a && b && (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING))
+    const list = x?.querySelector('.lsn-rep-list'), marks = x?.querySelector('.lsn-marks'), guide = x?.querySelector('.lsn-guide')
+    return { h: Math.round(c.getBoundingClientRect().height), btn: btn?.textContent?.trim() ?? null, exp: btn?.getAttribute('aria-expanded') ?? null, btnInsideA: !!btn?.closest('a'),
+      plan: c.querySelector('[data-testid="share-note-preview"]').getAttribute('data-plan'), hl: c.querySelectorAll('.lsn-excerpt-hl').length, surfaces: c.querySelectorAll('.at-surface').length, mark: surf?.dataset.mk ?? null,
+      list: list?.textContent?.trim() ?? null, marksTxt: marks?.textContent?.trim() ?? null, guideTxt: guide?.textContent?.trim() ?? null,
+      order: pos(list, surf) && pos(surf, marks) && pos(marks, guide), assets: c.querySelectorAll('.lsn-assets,.lsn-asset').length, links: [...c.querySelectorAll('a')].map(a => a.className) }
+  }, pi)
+  const b0 = await info()
+  assert.equal(b0.btn, 'Xem thêm ngữ cảnh'); assert.equal(b0.exp, 'false'); assert.ok(!b0.btnInsideA, 'nút không nằm trong liên kết (không lồng tương tác)')
+  await P10.evaluate(i => { document.querySelectorAll('[data-testid="share-note-post"]')[i].querySelector('.at-surface').dataset.mk = 'same-surface' }, pi)
+  await P10.evaluate(i => document.querySelectorAll('[data-testid="share-note-post"]')[i].querySelector('[data-testid="share-note-more"]').click(), pi)
+  await sleep(900)
+  const b1 = await info()
+  assert.equal(b1.btn, 'Thu gọn ngữ cảnh'); assert.equal(b1.exp, 'true')
+  assert.equal(b1.mark, 'same-surface', 'mở rộng KHÔNG dựng lại bản nhạc (cùng một bề mặt alphaTab)')
+  assert.equal(b1.plan, b0.plan, 'vùng khoanh + trích đoạn không đổi'); assert.equal(b1.hl, b0.hl); assert.equal(b1.surfaces, 1)
+  assert.equal(b1.list, orig10.list, 'Dự kiến nguyên văn như trang Buổi gốc')
+  assert.match(b1.marksTxt, /Ô 2\s*vào nhịp chùm ba/); assert.match(b1.guideTxt, /Giữ nhịp chùm ba thật đều tay\./)
+  assert.ok(b1.order, 'thứ tự gốc: Dự kiến → bản nhạc → marks → guidance'); assert.equal(b1.assets, 0, 'không có tệp tải về trong khung')
+  assert.deepEqual(b1.links, ['cs-sn-preview', 'cs-btn cs-btn-soft cs-tool-share-cta'], 'chỉ còn đường mở nguồn (không thêm thao tác tương tác)')
+  assert.ok(await noHScroll(P10), 'iPhone mở rộng: không tràn ngang')
+  const gapX = await inkGap(P10, pi); assertTrim(gapX, 'ngữ cảnh iphone mở rộng')
+  await tintCheck(P10, pi, { before: 0, after: 0 }, 'ngữ cảnh iphone mở rộng')
+  await (await P10.$$('[data-testid="share-note-post"]'))[pi].screenshot({ path: `${SHOTS}/ctx-10g-iphone-expanded.png` })
+  await P10.evaluate(i => document.querySelectorAll('[data-testid="share-note-post"]')[i].querySelector('[data-testid="share-note-more"]').click(), pi)
+  await sleep(600)
+  const b2 = await info()
+  assert.equal(b2.btn, 'Xem thêm ngữ cảnh'); assert.equal(b2.list, null); assert.equal(b2.plan, b0.plan); assert.equal(b2.mark, 'same-surface')
+  ok(`10g iPhone: mặc định ${compactH}px → "Xem thêm ngữ cảnh" ${b1.h}px → thu gọn ${b2.h}px; cùng bề mặt nhạc, cùng vùng khoanh (${b1.plan}), Dự kiến/marks/guidance nguyên văn + đúng thứ tự, không tệp tải về, không tràn ngang`)
+}
 // 10d. Khối score có mô tả + nhịp độ (lead / tempo nguyên văn)
 {
   const i1 = await P10.evaluate(q => [...document.querySelectorAll('[data-testid="share-note-post"]')].findIndex(e => e.textContent.includes(q)), QS[0])

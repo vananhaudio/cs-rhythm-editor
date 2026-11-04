@@ -35,7 +35,9 @@ function Block({ label, title, children, sub }:
 }
 
 /** Chế độ KHUNG NGỮ CẢNH (Contextual Share): cùng renderer, chỉ thay LessonScore của đúng bản nhạc đã chia sẻ bằng `node` và lược các phần không thuộc khung. */
-export type ContextRender = { key: ScoreKey; node: ReactNode }
+export type ContextRender = { key: ScoreKey; node: ReactNode; expanded?: boolean }
+/** Phần ngữ cảnh sư phạm ĐI SAU / BÊN CẠNH bản nhạc (chú thích marks, guidance, ghi chú, danh sách dự kiến, trạng thái chờ): hiện ở trang giáo trình gốc, ẩn ở khung mặc định, hiện khi "Xem thêm ngữ cảnh". */
+const showMore = (c: ContextRender | undefined) => !c || !!c.expanded
 const ctxHit = (c: ContextRender | undefined, i: number, path: ScoreKey['path']) => !!c && c.key.section === i && c.key.path.join('.') === path.join('.')
 
 function renderSection(s: LessonSection, i: number, ctx?: ContextRender) {
@@ -80,7 +82,7 @@ function renderSection(s: LessonSection, i: number, ctx?: ContextRender) {
               </div>
             ))}
           </div>
-          {!ctx && s.note && <p className="lsn-legend">{s.note}</p>}
+          {showMore(ctx) && s.note && <p className="lsn-legend">{s.note}</p>}
         </Block>
       )
 
@@ -124,14 +126,14 @@ function renderSection(s: LessonSection, i: number, ctx?: ContextRender) {
         <Block key={i} label={s.subtitle} title={s.title} sub={s.lead}>
           {s.tempo && <div className="lsn-tempo">{s.tempo}</div>}
           {ctx ? ctx.node : <LessonScore tex={s.tex} shareKey={{ section: i, path: ['tex'] }} />}
-          {!ctx && s.marks && s.marks.length > 0 && (
+          {showMore(ctx) && s.marks && s.marks.length > 0 && (
             <div className="lsn-marks">
               {s.marks.map((m, k) => (
                 <span key={k} className="lsn-mark"><b>{m.at}</b> {m.text}</span>
               ))}
             </div>
           )}
-          {!ctx && s.guidance && <ul className="lsn-guide">{s.guidance.map((g, k) => <li key={k}>{g}</li>)}</ul>}
+          {showMore(ctx) && s.guidance && <ul className="lsn-guide">{s.guidance.map((g, k) => <li key={k}>{g}</li>)}</ul>}
         </Block>
       )
 
@@ -147,9 +149,11 @@ function renderSection(s: LessonSection, i: number, ctx?: ContextRender) {
       return (
         <Block key={i} label="Tác phẩm" title={s.title}>
           <div className="lsn-rep">
-            <div className="lsn-rep-list">
-              <b>Dự kiến:</b> {s.candidates.join(' · ')}
-            </div>
+            {showMore(ctx) && (
+              <div className="lsn-rep-list">
+                <b>Dự kiến:</b> {s.candidates.join(' · ')}
+              </div>
+            )}
             {s.pieces?.map((w, k) => (ctx && !ctxHit(ctx, i, ['pieces', String(k), 'tex'])) ? null : (
               <div key={k} className="lsn-piece">
                 <div className="lsn-piece-h">
@@ -159,15 +163,20 @@ function renderSection(s: LessonSection, i: number, ctx?: ContextRender) {
                 {w.note && <p className="lsn-piece-note">{w.note}</p>}
                 {w.tempo && <div className="lsn-tempo">{w.tempo}</div>}
                 {ctx ? ctx.node : <LessonScore tex={w.tex} barsPerRow={w.barsPerRow ?? 4} shareKey={{ section: i, path: ['pieces', String(k), 'tex'] }} />}
-                {!ctx && w.marks && w.marks.length > 0 && (
+                {showMore(ctx) && w.marks && w.marks.length > 0 && (
                   <div className="lsn-marks">
                     {w.marks.map((mk, j) => <span key={j} className="lsn-mark"><b>{mk.at}</b> {mk.text}</span>)}
                   </div>
                 )}
-                {!ctx && w.guidance && <ul className="lsn-guide">{w.guidance.map((g, j) => <li key={j}>{g}</li>)}</ul>}
+                {showMore(ctx) && w.guidance && <ul className="lsn-guide">{w.guidance.map((g, j) => <li key={j}>{g}</li>)}</ul>}
               </div>
             ))}
-            {ctx ? null : s.status === 'pending' ? (
+            {/* tệp tải về (assets) là thao tác tương tác: KHÔNG đưa vào khung; đường về nguồn = nút "Mở đúng đoạn" */}
+            {ctx ? (!ctx.expanded || s.status !== 'pending' ? null : (
+              <div className="lsn-pending">
+                {s.pendingText ?? 'Tác phẩm Buổi 01 – chờ giáo viên cung cấp MusicXML/PDF/TAB.'}
+              </div>
+            )) : s.status === 'pending' ? (
               <div className="lsn-pending">
                 {s.pendingText ?? 'Tác phẩm Buổi 01 – chờ giáo viên cung cấp MusicXML/PDF/TAB.'}
               </div>
@@ -178,7 +187,7 @@ function renderSection(s: LessonSection, i: number, ctx?: ContextRender) {
                 ))}
               </div>
             )}
-            {!ctx && s.annotationTypes && (
+            {showMore(ctx) && s.annotationTypes && (
               <div className="lsn-annot">
                 <b>Khi có bản nhạc, đánh dấu trực tiếp trên bản:</b>
                 <div className="lsn-annot-chips">
@@ -388,11 +397,11 @@ export default function LessonDocument({ doc, onBack, embedded = false }: { doc:
 
 /** Khung ngữ cảnh giáo trình (Universal Contextual Share): dựng ĐÚNG khối gốc bằng chính renderer + CSS của LessonDocument, chỉ thay phần bản nhạc bằng `node`
  *  (trích đoạn + vùng chú ý). Dữ liệu `section` là khối ĐÃ qua kiểm quyền ở server/RLS; mọi văn bản đi qua React (không HTML thô). */
-export function ContextSectionView({ section, index, scoreKey, node }: { section: unknown; index: number; scoreKey: ScoreKey; node: ReactNode }) {
+export function ContextSectionView({ section, index, scoreKey, node, expanded = false }: { section: unknown; index: number; scoreKey: ScoreKey; node: ReactNode; expanded?: boolean }) {
   return (
     <div className="lsn is-embedded lsn-ctx" data-testid="context-section">
       <style>{CSS}</style>
-      <article className="lsn-paper">{safeRenderSection(section as LessonSection, index, { key: scoreKey, node })}</article>
+      <article className="lsn-paper">{safeRenderSection(section as LessonSection, index, { key: scoreKey, node, expanded })}</article>
     </div>
   )
 }

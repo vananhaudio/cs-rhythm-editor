@@ -43,6 +43,20 @@ export function contextFrameForBars(sections: unknown, key: ScoreKey): ContextFr
   return { sectionIndex: at.index, kind: String(at.section.kind ?? ''), child: key.path.length === 3 ? Number(key.path[1]) : null }
 }
 
+/** Khối chứa bản nhạc có phần ngữ cảnh sư phạm bổ sung (marks / guidance / ghi chú / danh sách dự kiến / trạng thái chờ) mà khung MẶC ĐỊNH không hiện?
+ *  Quyết định có hiện nút "Xem thêm ngữ cảnh" hay không — khớp đúng các phần LessonDocument.renderSection ẩn khi expanded=false. */
+export function contextHasMore(sections: unknown, key: ScoreKey): boolean {
+  const at = locateScore(sections, key)
+  if (!at) return false
+  const s = at.section
+  const arr = (v: unknown) => Array.isArray(v) && v.length > 0
+  const own = at.child ?? s   // tác phẩm / tầng được chia sẻ (hoặc chính khối nhạc)
+  if (arr(own.marks) || arr(own.guidance)) return true
+  if (s.kind === 'repertoire') return arr(s.candidates) || s.status === 'pending' || arr(s.annotationTypes)
+  if (s.kind === 'layers') return typeof s.note === 'string' && s.note.length > 0
+  return false
+}
+
 // ── Văn bản (khối 'study'): HỢP ĐỒNG ngữ cảnh, kiểm chứng bằng test. Chưa có chỗ lưu neo văn bản ⇒ chưa nối vào Feed. ──
 export type StudyBlockLike = { b: string }
 /** Neo là một khối con của 'study': ngữ cảnh = tiêu đề mục gần nhất phía trên (nếu có) + khối đó + khối liền sau nếu nó là phần phụ thuộc (callout/list).
