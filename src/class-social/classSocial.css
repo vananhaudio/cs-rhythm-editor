@@ -1917,3 +1917,12 @@ button.cs-subs-title:hover { color: var(--cs-accent); }
 .cs-sound-btn.is-on { color: var(--cs-p); }
 .cs-sound-btn:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--cs-p-soft), 0 0 0 3.5px var(--cs-p); }
 @media (min-width: 701px) { .cs-chat { height: clamp(480px, calc(100dvh - var(--cs-topbar-h) - 72px), 820px); } }
+
+/* Mira V1.3 — dòng thông tin AI gọn dưới đầu hội thoại (mở rộng được, không lấn nội dung) */
+.cs-mira-info { border-bottom: 1px solid var(--cs-border, #E4E4E7); font-size: 12px; color: var(--cs-muted, #71717A); }
+.cs-mira-info > summary { list-style: none; cursor: pointer; padding: 6px 16px; display: flex; align-items: center; gap: 4px; min-height: 32px; }
+.cs-mira-info > summary::-webkit-details-marker { display: none; }
+.cs-mira-info-more { text-decoration: underline; }
+.cs-mira-info-body { padding: 0 16px 10px; display: grid; gap: 6px; font-size: 13px; color: var(--cs-text, #18181B); max-height: 40vh; overflow: auto; }
+.cs-mira-info-body p { margin: 0; }
+.cs-mira-info-data { display: grid; gap: 6px; padding-top: 6px; border-top: 1px dashed var(--cs-border, #E4E4E7); }

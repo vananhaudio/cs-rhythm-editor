@@ -6,17 +6,21 @@ import { askMira, MIRA_MAX_CHARS, type MiraAction, type MiraTurn } from './miraA
 export interface MiraMessage { id: number; role: 'user' | 'assistant'; text: string; kind?: 'error' | 'notice'; actions?: MiraAction[] }
 const KEEP = 40, HIST = 6, HIST_CHARS = 500
 
-/** Lời chào (Owner duyệt): các đoạn cách nhau bằng dòng trống; đoạn đầu in đậm khi hiển thị. */
+/** Lời chào ngắn (V1.3): các đoạn cách nhau bằng dòng trống; đoạn đầu in đậm. Thông tin AI chi tiết ở MiraInfo. */
 export const MIRA_GREETING = [
   'Chào bạn, mình là Mira!',
-  'Mình là trợ lý AI của Thầy Văn Anh, đồng hành cùng bạn trong quá trình học guitar tại TVA Guitar.',
-  'Bạn có thể hỏi mình về bài học, giáo trình, cách luyện tập hoặc những điều còn chưa rõ.',
-  'Mình sẽ giúp bạn hiểu bài, luyện tập hiệu quả và từng bước tự học tốt hơn. Mình không thay Thầy chấm bài và không lưu lịch sử trò chuyện lâu dài trong ứng dụng.',
+  'Trợ lý AI của Thầy Văn Anh. Bạn cứ hỏi mình về hợp âm, bài học hay cách luyện tập nhé.',
 ].join('\n\n')
+/** Thông báo minh bạch về AI (hiện gọn trong MiraInfo). */
+export const MIRA_AI_NOTICE = [
+  'Mira là trợ lý AI (trí tuệ nhân tạo), không phải người thật, và có thể trả lời sai. Mira không thay Thầy chấm bài.',
+  'Câu bạn gõ được gửi tới nhà cung cấp AI (Anthropic) để tạo câu trả lời. Đừng gõ thông tin cá nhân nhạy cảm.',
+  'Class không lưu cuộc trò chuyện: rời màn hình là mất.',
+]
 const STATUS_TEXT: Record<string, string> = {
   rate_limit: 'Bạn đã hỏi Mira khá nhiều trong thời gian ngắn. Nghỉ một lát rồi hỏi tiếp nhé.',
   forbidden: 'Mira chưa mở cho tài khoản của bạn.',
-  consent_required: 'Bạn cần đồng ý tham gia trước khi hỏi Mira.',
+  consent_required: 'Mira không còn quyền dùng hồ sơ học tập của bạn. Bạn hỏi lại nhé — Mira vẫn trả lời câu hỏi chung.',
   unauthorized: 'Phiên đăng nhập đã hết hạn. Bạn đăng nhập lại để hỏi Mira nhé.',
   context_unavailable: 'Mira tạm thời chưa đọc được dữ liệu học tập của bạn. Bạn thử lại sau nhé.',
   model_error: 'Mira đang bận. Bạn thử lại sau ít phút nhé.',
@@ -42,7 +46,7 @@ export function useMiraChat({ onConsentRequired }: { onConsentRequired?: () => v
     push({ role: 'user', text: t })
     const r = await askMira({ message: t, history: hist.current, historyFp: fp.current })
     inflight.current = false; setBusy(false)
-    if (r.status === 'consent_required') onConsentRequired?.()   // server báo thiếu/hết hiệu lực đồng ý → giao diện quay về màn đồng ý
+    if (r.status === 'consent_required') onConsentRequired?.()   // đồng ý vừa hết hiệu lực (rút ở thiết bị khác): làm mới trạng thái; trò chuyện phổ thông vẫn dùng được
     if (r.status === 'ok' && r.reply) {
       push({ role: 'assistant', text: r.reply, actions: r.actions })
       hist.current = [...hist.current, { role: 'user' as const, text: t.slice(0, HIST_CHARS) }, { role: 'assistant' as const, text: r.reply.slice(0, HIST_CHARS) }].slice(-HIST)
