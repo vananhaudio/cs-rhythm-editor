@@ -1,19 +1,23 @@
 // Danh sách hội thoại (mới nhất trước): avatar · tên · xem trước tin cuối · giờ · badge chưa đọc.
+import type { ReactNode } from 'react'
 import { MessagesSquare, Users } from 'lucide-react'
 import { Avatar, EmptyState } from '../ui'
 import { previewText, shortTime, type ConversationItem } from './chatModel'
 import type { ListState } from './useChat'
 
-export default function ConversationList({ state, selectedId, onSelect, onRetry, onOpenFriends }: {
+export default function ConversationList({ state, selectedId, onSelect, onRetry, onOpenFriends, top }: {
   state: ListState
   selectedId: string | null
   onSelect: (id: string) => void
   onRetry: () => void
   onOpenFriends: () => void
+  /** Mục hệ thống ghim đầu danh sách (vd. Mira) */
+  top?: ReactNode
 }) {
   return (
     <div className="cs-chat-list">
       <div className="cs-chat-list-head">Đoạn chat</div>
+      {top}
       {state.status === 'loading' && (
         <div className="cs-chat-list-skel" aria-label="Đang tải">
           {[0, 1, 2].map(i => <div key={i} className="cs-skeleton" style={{ height: 52, marginBottom: 10 }} />)}

@@ -27,7 +27,7 @@ void (async () => {
   function App() {
     const [sel, setSel] = React.useState<{ kind: 'none' } | { kind: 'conversation'; id: string }>(q.get('sel') ? { kind: 'conversation', id: q.get('sel')! } : { kind: 'none' })
     const chat = (
-      <Chat meId="me" selection={sel} source={source} soundToggle={false}
+      <Chat meId="me" selection={sel} source={source} soundToggle={false} isAdmin={q.get('admin') === '1'}
         onOpenConversation={id => setSel({ kind: 'conversation', id })} onBackToList={() => setSel({ kind: 'none' })}
         onOpenProfile={() => {}} onOpenFriends={() => { (window as unknown as { __friends?: number }).__friends = 1; document.title = 'Mở Bạn bè' }} onUnreadChanged={() => {}} />
     )
