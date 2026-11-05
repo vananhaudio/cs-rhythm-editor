@@ -50,3 +50,6 @@ export function refreshLearningIdentity(userId: string) {
   listeners.forEach(l => l())
   request(userId)
 }
+
+/** Chỉ cho test: đặt danh tính một người vào cache (không gọi mạng). */
+export function __seedIdentity(userId: string, ids: LearningIdentities) { cache.set(userId, ids); listeners.forEach(l => l()) }

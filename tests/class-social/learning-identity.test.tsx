@@ -121,12 +121,14 @@ test("kiến trúc: MỘT helper + MỘT renderer; nạp theo lô (không N+1); 
   const store = readFileSync("src/class-social/identity/identityStore.ts", "utf8");
   assert.match(store, /rpc\('social_learning_identities', \{ p_users: chunk \}\)/);
   assert.match(store, /setTimeout\(\(\) => void flush\(\), 0\)/, "gom user_id cùng nhịp");
-  for (const f of ["src/class-social/sections/PostCard.tsx", "src/learning-thread/LearningThreadCard.tsx", "src/class-social/sections/comments/CommentItem.tsx",
+  for (const f of ["src/class-social/sections/PostCard.tsx", "src/learning-thread/LearningThreadCard.tsx", "src/class-social/sections/comments/CommentAuthorLine.tsx",
                    "src/class-social/sections/Friends.tsx", "src/class-social/classes/ClassParts.tsx"]) {
     const s = readFileSync(f, "utf8");
     assert.match(s, /<IdentityBadges userId=/, f);
     assert.equal(/Đệm hát \d|Hành trình 20|programOf\(/.test(s), false, `${f} không tự đặt tên nhãn`);
   }
+  // Bình luận Social (CommentItem) và thread/TeamLab (TargetComments) cùng dùng MỘT dòng tên (CommentAuthorLine) → cùng nhãn
+  for (const f of ["CommentItem", "TargetComments"]) assert.match(readFileSync(`src/class-social/sections/comments/${f}.tsx`, "utf8"), /<CommentAuthorLine /, f);
   const card = readFileSync("src/learning-thread/LearningThreadCard.tsx", "utf8");
   assert.match(card, /identityLine\(card\.identity\)/, "thẻ vẫn giữ danh tính LỊCH SỬ của bài");
   assert.match(readFileSync("src/learning-thread/ThreadPage.tsx", "utf8"), /showIdentity \/>/);

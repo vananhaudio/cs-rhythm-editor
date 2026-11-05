@@ -3,8 +3,8 @@
 import type { Comment } from '../../comments/commentModel'
 import { relativeTime } from '../../posts/postModel'
 import { Avatar, MoreMenu, PersonLink } from '../../ui'
+import CommentAuthorLine from './CommentAuthorLine'
 import ResourceCard from './ResourceCard'
-import { IdentityBadges } from '../../identity/IdentityBadges'
 import ExpandableText from '../ExpandableText'
 import { Composer } from './TargetComments'
 import SafetyMenu from '../../../class-safety/SafetyMenu'
@@ -41,13 +41,7 @@ export default function CommentItem({ c, canModerate, now, onDelete, onModerate,
             onSubmit={async b => { const e = await saveEdit(b); if (!e) onEditDone?.(); return e }} onCancel={onEditDone} />
         ) : (
         <div className="cs-cmt-bubble">
-          <div className="cs-cmt-head">
-            <PersonLink userId={c.author.userId} onOpen={onOpenProfile} label={`Trang cá nhân của ${c.author.name}`} className="cs-cmt-author">
-              {c.author.name}
-            </PersonLink>
-            {teacher ? <span className="cs-cmt-badge" title="Nhận xét của giáo viên">Thầy</span> : <IdentityBadges userId={c.author.userId} max={1} />}
-            {c.isHidden && <span className="cs-cmt-hidden">Đã ẩn · học sinh không thấy</span>}
-          </div>
+          <CommentAuthorLine userId={c.author.userId} name={c.author.name} isTeacher={teacher} hidden={c.isHidden} onOpenProfile={onOpenProfile} />
           <ExpandableText text={c.body} className="cs-cmt-body" lines={4} />
           {c.tags.length > 0 && (
             <ul className="cs-tags" aria-label="Tag kiến thức">

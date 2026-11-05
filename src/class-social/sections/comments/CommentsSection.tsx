@@ -6,6 +6,7 @@ import type { PostComments } from '../../comments/useFeedComments'
 import type { ClassIdentity } from '../../useClassSession'
 import CommentComposer from './CommentComposer'
 import CommentItem from './CommentItem'
+import DeleteCommentConfirm from './DeleteCommentConfirm'
 
 const COMMENTS_BATCH = 10   // mỗi lần "Xem thêm bình luận" mở thêm tối đa 10
 
@@ -32,11 +33,13 @@ export default function CommentsSection({ postId, total, state, me, now, onRefre
     if (canFetchMore) void onExpand(postId)
   }
 
-  const onDelete = async (c: Comment) => {
-    if (!window.confirm('Xoá bình luận này?')) return
-    const r = await (await loadCommentsApi()).deleteComment(c.id)
-    if (!r.ok) { setActionError(r.message); return }
-    setActionError(null); await onRefresh(postId)
+  // Xoá: hộp xác nhận chung — thất bại giữ hộp mở + báo lý do; thành công tải lại
+  const [deleting, setDeleting] = useState<Comment | null>(null)
+  const confirmDelete = async (): Promise<string | null> => {
+    if (!deleting) return null
+    const r = await (await loadCommentsApi()).deleteComment(deleting.id)
+    if (!r.ok) return r.message
+    setActionError(null); await onRefresh(postId); return null
   }
   const saveEdit = (c: Comment) => async (body: string): Promise<string | null> => {
     const { supabaseTargetCommentsApi } = await import('../../comments/targetCommentsApi')
@@ -64,11 +67,12 @@ export default function CommentsSection({ postId, total, state, me, now, onRefre
           {items.map(c => (
             <CommentItem key={c.id} c={c} now={now} canModerate={!!me?.isTeacher} onOpenProfile={onOpenProfile}
               editing={editing === c.id} onEdit={() => setEditing(c.id)} onEditDone={() => setEditing(null)} saveEdit={saveEdit(c)}
-              onDelete={c2 => void onDelete(c2)} onModerate={(c2, h) => void onModerate(c2, h)} />
+              onDelete={c2 => setDeleting(c2)} onModerate={(c2, h) => void onModerate(c2, h)} />
           ))}
         </ul>
       )}
       {actionError && <p className="cs-cmts-error" role="alert">{actionError}</p>}
+      {deleting && <DeleteCommentConfirm isReply={false} onConfirm={confirmDelete} onClose={() => setDeleting(null)} />}
       {me && <CommentComposer postId={postId} me={me} onSent={() => onRefresh(postId)} />}
     </section>
   )

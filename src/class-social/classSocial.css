@@ -1917,3 +1917,16 @@ button.cs-subs-title:hover { color: var(--cs-accent); }
 .cs-sound-btn.is-on { color: var(--cs-p); }
 .cs-sound-btn:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--cs-p-soft), 0 0 0 3.5px var(--cs-p); }
 @media (min-width: 701px) { .cs-chat { height: clamp(480px, calc(100dvh - var(--cs-topbar-h) - 72px), 820px); } }
+
+/* ── Feed Comments Lát B: hộp xoá · vùng chạm 44px (mở rộng vô hình) · tên dài · phân biệt trả lời ── */
+.cs-confirm-err { display: block; margin-top: 10px; color: #b42318; font-size: 14px; font-weight: 600; }
+.cs-cmt.is-deleting { opacity: 0.5; }
+.cs-cmt-head { min-width: 0; }
+.cs-cmt-author { min-width: 0; max-width: 100%; overflow-wrap: anywhere; text-align: left; }
+.cs-cmt-meta { gap: 14px; flex-wrap: wrap; }
+.cs-cmt-reply, .cs-cmt-cancel { position: relative; }
+.cs-cmt-reply::after, .cs-cmt-cancel::after { content: ''; position: absolute; left: -6px; right: -6px; top: 50%; height: 44px; transform: translateY(-50%); }
+.cs-target-cmts .cs-cmt-replies { margin-left: 16px; padding-left: 12px; border-left: 2px solid var(--cs-border); }
+@media (max-width: 1023px) {
+  .cs-cmts .cs-more-item { display: flex; align-items: center; min-height: 44px; padding: 10px 12px; font-size: 15px; }
+}
