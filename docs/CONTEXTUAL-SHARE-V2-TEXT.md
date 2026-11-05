@@ -335,3 +335,81 @@ Nguyên tắc: **không sửa hàm V1** (`share_note_create/open/card/session_op
 7. **`Intl.Segmenter` / `SubtleCrypto`** vắng mặt trên trình duyệt rất cũ: đã có đường lùi (cảnh báo/không gửi; tô theo kiểm tra số học).
 8. **Tối thiểu/tối đa độ dài** và cấu hình ngân sách (60k cửa sổ, 300 lá, 4.000 điểm mã/lá, 8 khối) là tham số thiết kế — Owner/ChatGPT có thể chỉnh trước khi cài.
 
+
+---
+
+# 20. TRIỂN KHAI V2 TRÊN NHÁNH — trạng thái nghiệm thu (CHƯA phát hành)
+
+Nhánh `feat/contextual-share-v2`. **Chưa chạy migration production · chưa merge · chưa deploy.** Mọi bằng chứng dưới đây chạy trên cụm PostgreSQL + PostgREST + Vite **tạm, dữ liệu giả** (`scripts/e2e-share-note.sh` với `E2E_SHARE_TEXT=1`).
+
+## 20.1 Đã làm
+| Lớp | Nội dung |
+|---|---|
+| DB (cộng thêm) | `db/share_text_v2_setup.sql` (+ `preflight` / `postflight` / `rollback`): 7 cột neo + `CHECK` theo loại neo; hàm mới `share_text_create`, `share_note_open_v2`, `share_note_card_v2`, `social_share_share_text` + 9 hàm nội bộ `share_text_*` (không grant). **Hàm V1 không sửa** (md5 bất biến, gate trong pre/postflight). Không ghi `class_lesson_content` / `dm_messages`. |
+| Lõi client | `src/share/textAnchor.ts` (điểm mã, biên grapheme, lá hợp lệ, phân loại vùng chọn, kiểm băm, cửa sổ ngữ cảnh). |
+| Chọn văn bản | `src/lesson/TextSelectionLayer.tsx`: chọn văn bản tự nhiên; thanh đáy (trích + "Hỏi / Chia sẻ" + "Cả đoạn" + "Bỏ chọn"); chọn vượt phạm vi ⇒ cảnh báo + khoá nút + giữ nguyên vùng chọn (§14). |
+| Render | `LessonDocument`: mọi lá văn bản qua `T` (gắn `data-tp` khi có chọn; `<mark>` khi tô); khối `study` dựng cửa sổ (gọn / tiểu mục) + dấu ⋯. Không có provider ⇒ HTML y như cũ (bản in / trang công khai không đổi). |
+| Composer / Feed / Chat | `ShareNoteComposer` nhận `text` (hiện trích); `ShareNotePost` nhánh văn bản **không dùng alphaTab**; `registry`/`refCards` dựng thẻ "Giáo trình · Buổi N · Đoạn văn bản"; Chat vẫn thẻ tham chiếu. |
+| Trang Buổi | `?note=` → `open_v2` → kiểm băm trên giáo trình đã tải → `<mark>` + cuộn (giữ ổn định ≤ 3 giây khi trang dài thêm, dừng khi người dùng chạm/cuộn) → panel trạng thái (ok / moved / stale / không quyền). |
+| Cụm nút Feed | Nút phụ "Xem đầy đủ / Thu gọn": nút chữ nhẹ (không nền/viền, chevron). Nút chính "Mở trong giáo trình": nền đặc, biểu tượng **BookOpen**. Hàng nút `flex-wrap`: đủ rộng ⇒ một hàng (phụ trái, chính phải); iPhone ⇒ nút phụ một dòng, nút chính rộng hết hàng ở dưới (**chữ không bị ép**). ≥ 44px, cách nhau ≥ 8px. Áp cho cả thẻ ô nhịp. |
+| Tương thích RPC chưa cài | `openShareNote` / `fetchShareNoteCards` thử v2, rơi về V1 nếu hàm v2 chưa có (FE deploy trước DB / sau rollback DB). |
+
+## 20.2 Điểm khác / bổ sung so với thiết kế đã duyệt (cần Owner biết)
+1. **Bước 2 tìm lại có thêm điều kiện `block_fp`** — phát hiện khi E2E: khối cũ bị xoá, khối KHÁC chứa cùng cụm từ trượt vào đúng chỉ số ⇒ bản đầu báo `moved` sang khối lạ. Nay: chỉ quét khối ở chỉ số gợi ý nếu khối đó vẫn cùng `block_fp`; không thì `stale`. Hệ quả: *đổi tiêu đề khối VÀ chèn đoạn trong cùng khối cùng lúc* ⇒ `stale` (an toàn).
+2. **Cụm nút trên iPhone xếp hai dòng** (nút phụ trên, nút chính rộng hết hàng dưới) thay vì ép một hàng — hai nút không đủ chỗ ở 390px (cần ≥ 321px, thẻ chỉ còn 282px). Hệ quả: thẻ ô nhịp V1.3 ở iPhone 390 cao **797px** (trước 741px, +56px). Muốn giữ một hàng thì phải bỏ chevron và thu nhỏ chữ — chưa làm, chờ Owner quyết.
+3. **Lối tắt "nhấn một đoạn" không làm**; thay bằng nút **"Cả đoạn"** trong thanh đáy (một chạm chọn nguyên lá đang chọn). Cảm ứng dùng chọn văn bản hệ thống (nhấn giữ + kéo).
+4. **Chat/Band Chat**: chỉ thẻ tham chiếu (đúng quyết định).
+5. **Phiên bản app iOS đóng gói**: không bắt buộc cập nhật (xem ma trận §17, đã kiểm thực nghiệm §20.4).
+
+## 20.3 Kết quả kiểm thử (cùng một lần chạy cuối, trên nhánh)
+| Bộ | Kết quả |
+|---|---|
+| `tsc -b` · `eslint` (file đã đổi) · `npm run build` | sạch |
+| `test:class-social` | **525/525** (gồm spec 16 + FE V2 14) · `test:og` 68/68 |
+| DB: vòng đời migration (preflight → setup → postflight → idempotent → rollback → áp lại; hàm V1 md5 + dấu vân tay ô nhịp bất biến; dữ liệu V1 trước/sau; `share_note_delete` V1 sau migration) | **32 PASS** |
+| DB: test SQL (`db/tests/share_text_v2_test.sql`) | **86 PASS, 0 FAIL** — ràng buộc, tạo (6 loại khối), từ chối (một thông báo chung), NFD/ZWJ, quyền (A/B/C/ẩn danh), `ok/moved/stale/no_access`, khối giống hệt, câu lặp + ctx, ngân sách, bản nháp, tần suất, hồi quy ô nhịp V1 (V1 ≡ v2), quyền thực thi |
+| E2E Chrome V2 (`run-share-text.mjs`) | **16 PASS**: chọn / cảnh báo / "Cả đoạn" / kéo chuột thật / Feed 390 + 320 / Mở trong giáo trình / Chi không quyền / Chat / NFD + emoji vòng JS→PG→Feed / chèn · sửa · di chuyển · xoá khối / buổi khoá |
+| E2E WebKit V2 | **6 PASS** (iPhone 390, iPhone 320, desktop 1280, Chi) |
+| Hồi quy V1.3 trên DB đã migrate: Feed Chrome / Feed WebKit / Share Note Chrome / Share Note WebKit | **24 / 5 / 11 / 4 PASS** (đã cập nhật kỳ vọng nút theo thiết kế mới; kịch bản "sửa nhạc" tìm khối NHẠC cuối thay vì khối cuối) |
+| Bundle cũ V1.3 (`060715fc`) trên DB đã migrate (`run-old-bundle-compat.mjs`) | **5 PASS**: Feed không vỡ, ô nhịp V1 nguyên vẹn, liên kết văn bản báo "Bản nhạc đã được cập nhật" vô hại, Chat "không còn khả dụng", 0 lỗi JS |
+
+Cách chạy lại: `PUPPETEER_DIR=… PLAYWRIGHT_DIR=… SHOTS=… E2E_SHARE_TEXT=1 bash scripts/e2e-share-note.sh` (thêm `E2E_HOLD=1` để giữ stack làm staging; `E2E_TEXT_ONLY=1` bỏ phần hồi quy V1.3). Bundle cũ: `git worktree add --detach <dir> 060715fc` + `vite` với `VITE_SUPABASE_URL/KEY` của cùng stack rồi `OLD_PORT=… node tests/e2e-learning-thread/run-old-bundle-compat.mjs`.
+
+## 20.4 Hiệu năng (điều kiện đo)
+**Dữ liệu thật, đọc-chỉ** — `prod-db.py query` (`BEGIN READ ONLY … ROLLBACK`, `statement_timeout 20s`, `lock_timeout 2s`, một lần chạy, **chỉ số tổng hợp, không in nội dung/tiêu đề/id**; đích xác minh qua `identity`, `read_only = on`):
+| Chỉ số | Giá trị |
+|---|---|
+| Buổi đã xuất bản · khối · khối có lá văn bản · lá · tổng ký tự | 27 · 414 · 254 · 3.149 · 100.216 |
+| Lá theo loại khối (study / note / assignment / objectives / checklist / recap) | 2.732 / 67 / 82 / 91 / 109 / 68 |
+| Số lá mỗi khối: lớn nhất · trung bình · p95 | 95 · 12,4 · 39 (**0 khối > 300 lá**) |
+| Cửa sổ băm mỗi khối (đoạn chọn 20 điểm mã): lớn nhất · p95 | **796** · 585 (trần 60.000; **0 khối vượt**) |
+| Lá dài nhất | **338 ký tự** (0 lá > 500, 0 lá > 4.000 ⇒ mọi lá đều chọn được "Cả đoạn") |
+| Trùng nhận dạng khối (cùng buổi, cùng `kind`+tiêu đề) | **0** (tối đa 1 khối/nhận dạng; 0 nhóm > 8) |
+| Thời gian: liệt kê toàn bộ lá của cả 27 buổi + quét 3.811 cửa sổ băm của 5 khối nặng nhất | **85 ms** (gồm cả lập kế hoạch + gom toàn bộ dữ liệu) |
+
+Kết luận: với dữ liệu hiện có, một lần `open_v2` ở trường hợp xấu chỉ quét ≤ ~800 cửa sổ (≪ 60.000); đường thường (bước 1) chỉ một lần băm.
+**Tổng hợp, trường hợp xấu cố ý** (DB tạm, locale C, 200 lá × ~290 ký tự ≈ 54.200 cửa sổ, không tìm thấy): 74 – 399 ms tuỳ tải máy (ba lần đo: 74 / 116 / 117 / 399 ms) — đây là **chặn trên cấu hình** (trần 60.000), chỉ xảy ra khi bước 1 thất bại; vượt trần ⇒ `stale` trong vài ms.
+Thẻ văn bản **không dùng alphaTab** ⇒ không tính vào `MAX_LIVE_RENDERERS`; Feed vẫn tối đa 2 bản nhạc sống (kiểm lại bởi hồi quy V1.3).
+
+## 20.5 Chiều cao thẻ & giao diện (iPhone 390, mẫu thử)
+| Thẻ | Gọn | Mở rộng |
+|---|---|---|
+| Văn bản (V2; Chrome / WebKit) | 578px / 525px | 876px |
+| Ô nhịp (V1.3; trước → sau cụm nút mới) | 741 → **797px** | 1247 → 1303px |
+Ảnh: xem báo cáo (thư mục `_local/share-contextual-20261031/v2-shots-final/`, ảnh "trước" của cụm nút = `v2-shots/compat-old-feed.png`).
+
+## 20.6 Thứ tự phát hành đề xuất (khi Owner duyệt từng bước)
+1. `prod-db.py query db/share_text_v2_preflight.sql` → GATE phải PASS (gate khoá md5 10 hàm V1).
+2. `dryrun` rồi `migrate db/share_text_v2_setup.sql` (một transaction, khoá ngắn trên bảng nhỏ) → `postflight` PASS → dấu vân tay ô nhịp không đổi.
+3. Deploy FE (FE có đường lùi V1 nên thứ tự DB→FE an toàn; FE→DB cũng không vỡ, chỉ chưa có văn bản).
+4. Smoke production không tài khoản giả + Owner thử bằng tài khoản thật (chọn văn bản, Feed, Chat, mở trong giáo trình, iPhone thật).
+Rollback: FE revert merge · DB `db/share_text_v2_rollback.sql` (xoá hàng/bài Feed văn bản trước khi khôi phục `NOT NULL`; ô nhịp V1 không bị chạm — đã kiểm).
+
+## 20.7 Rủi ro còn lại
+1. **Chưa thử iPhone / Safari thật** (chỉ Chrome + WebKit giả lập): chọn văn bản bằng nhấn giữ + kéo trên iOS thật, vị trí thanh đáy cạnh menu hệ thống, bàn phím — cần Owner thử.
+2. **Giới hạn thiết kế**: sửa đúng câu được chọn / NFC↔NFD / đổi tiêu đề khối đồng thời chèn đoạn ⇒ `stale`; hai khối giống hệt sau khi dịch ⇒ `stale`; đoạn chọn rất ngắn dễ trùng.
+3. **Cờ (regional indicator)** không kiểm được ở server (dựa client).
+4. **Cụm nút làm thẻ ô nhịp iPhone 390 cao thêm 56px** (xem §20.2-2).
+5. **Bundle/app cũ**: ghi chú văn bản báo "Bản nhạc đã được cập nhật" khi mở link (đã chấp nhận, không sửa hàm V1); bài Feed văn bản không hiện thẻ ở bản cũ.
+6. **Migration chạm bảng đang LIVE** (nới `NOT NULL`, thêm `CHECK`): đã có preflight/postflight/rollback + kiểm trên DB tạm; production cần dryrun + duyệt riêng.
+7. **Chưa đo bộ nhớ / thời gian dựng Feed nhiều bài** ngoài kiểm "tối đa 2 bản nhạc sống" của V1.3; thẻ văn bản nhẹ hơn nên rủi ro thấp.
