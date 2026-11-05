@@ -1,7 +1,6 @@
 // Khu bình luận của thẻ Learning Thread / bài TeamLab (Feed Comments V2): tải khi mở, gốc + trả lời MỘT cấp, sửa/xoá của mình,
 // Thầy ẩn/bỏ ẩn. Lỗi → GIỮ nguyên chữ đang gõ; chống gửi đúp. Một tay trên iPhone: ô nhập + nút gửi ≥ 44px, không che trình phát (nằm dưới thẻ).
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { SendHorizontal } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
 import { MAX_COMMENT } from '../../comments/commentModel'
 import { setCommentCount } from '../../comments/commentCountStore'
 import { checkTargetBody, countComments, type CommentKind, type CommentNode, type TargetComment } from '../../comments/targetCommentModel'
@@ -10,6 +9,7 @@ import { relativeTime } from '../../posts/postModel'
 import type { ClassIdentity } from '../../useClassSession'
 import { Avatar, MoreMenu, PersonLink } from '../../ui'
 import ExpandableText from '../ExpandableText'
+import { CommentInputBox, revealComment, useCommentSubmit } from './ComposerInput'
 import SafetyMenu from '../../../class-safety/SafetyMenu'
 import { useIsBlocked } from '../../../class-safety/blockedStore'
 
@@ -19,35 +19,15 @@ export function Composer({ idBase, placeholder, initial = '', submitLabel, me, a
   idBase: string; placeholder: string; initial?: string; submitLabel: string; me: ClassIdentity | null; autoFocus?: boolean
   onSubmit: (body: string) => Promise<string | null>; onCancel?: () => void
 }) {
-  const [body, setBody] = useState(initial)
-  const [sending, setSending] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const inFlight = useRef(false)
-  const submit = async () => {
-    if (inFlight.current) return
-    const chk = checkTargetBody(body)
-    if (!chk.ok) { setError(chk.error); return }
-    inFlight.current = true; setSending(true); setError(null)
-    const err = await onSubmit(chk.body)
-    inFlight.current = false; setSending(false)
-    if (err) { setError(err); return }                 // giữ nguyên nội dung để gửi lại
-    setBody('')
-  }
+  // Hành vi gửi dùng chung với ô bình luận bài Social (ComposerInput): giữ focus, chống gửi trùng, Gửi lại khi lỗi.
+  const state = useCommentSubmit({ initial, check: checkTargetBody, run: onSubmit })
   return (
     <div className="cs-cmt-composer">
       {me && <Avatar name={me.name} url={me.avatarUrl} size={32} />}
-      <form className="cs-cmt-form" onSubmit={e => { e.preventDefault(); void submit() }}>
+      <form className="cs-cmt-form" onSubmit={e => { e.preventDefault(); void state.submit() }}>
         <label htmlFor={idBase} className="cs-sr-only">{submitLabel}</label>
-        <div className="cs-cmt-inputwrap">
-          <textarea id={idBase} className="cs-cmt-input" rows={1} maxLength={MAX_COMMENT} placeholder={placeholder} value={body}
-            disabled={sending} autoFocus={autoFocus}
-            onChange={e => { setBody(e.target.value); if (error) setError(null) }}
-            onInput={e => { const t = e.currentTarget; t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight, 180) + 'px' }}
-            onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); void submit() } }} />
-          <button type="submit" className="cs-cmt-send" disabled={sending || !body.trim()} aria-label={submitLabel}><SendHorizontal size={18} /></button>
-        </div>
+        <CommentInputBox id={idBase} label={submitLabel} placeholder={placeholder} maxLength={MAX_COMMENT} state={state} autoFocus={autoFocus} />
         {onCancel && <button type="button" className="cs-link-btn cs-cmt-cancel" onClick={onCancel}>Huỷ</button>}
-        {error && <p className="cs-form-error" role="alert">{error}</p>}
       </form>
     </div>
   )
@@ -121,7 +101,7 @@ export default function TargetComments({ kind, id, me, now, onOpenProfile }: {
   const send = (parent: string | null) => async (body: string): Promise<string | null> => {
     const r = await api.add(kind, id, body, parent)
     if (!r.ok) return r.message
-    setReplyTo(null); await reload(); return null
+    setReplyTo(null); await reload(); revealComment(r.value); return null
   }
   const del = async (c: TargetComment) => {
     if (!window.confirm(c.parentId ? 'Xoá trả lời này?' : 'Xoá bình luận này? Các trả lời của nó cũng bị xoá.')) return

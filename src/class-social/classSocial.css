@@ -1887,3 +1887,10 @@ button.cs-subs-title:hover { color: var(--cs-accent); }
 .cs-sn-preview .lsn-score-host svg { max-width: 100%; height: auto; }
 .cs-sn-preview .lsn-score-msg { font-size: 13.5px; color: var(--cs-muted); padding: 10px; }
 .cs-sn-preview .lsn-score-msg.err { color: #B91C1C; }
+
+/* ── Feed Composer Lát A: đang gửi (biểu tượng xoay, không đổi kích thước nút) + nút Gửi lại ── */
+.cs-cmt-send.is-sending:disabled { background: var(--cs-p); cursor: progress; }
+.cs-spin { animation: cs-spin 0.9s linear infinite; }
+@keyframes cs-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .cs-spin { animation-duration: 2.4s; } }
+.cs-cmt-retry { min-height: 44px; padding: 0 8px; font-weight: 700; }
