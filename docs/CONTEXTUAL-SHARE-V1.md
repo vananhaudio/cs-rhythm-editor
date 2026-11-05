@@ -84,3 +84,19 @@ Không migration / RPC mới. Văn bản giáo trình đi qua React (không HTML
 3. **Hình / bảng:** vùng chuẩn hoá 0..1; ô bảng kèm tiêu đề hàng/cột.
 4. **Chat / Band Chat:** thẻ tham chiếu mở rộng dùng lại `ContextSectionView` (không thêm cơ chế lưu).
 5. ~~"Xem thêm ngữ cảnh"~~ → đã làm ở V1.3 dưới tên **"Xem đầy đủ" / "Thu gọn"**.
+
+## 9. Kế hoạch lát cắt 2 (chưa triển khai — chờ Owner duyệt thiết kế)
+Nền: V1.3 đã nghiệm thu ĐẠT trên production (main `060715fc`). Lát cắt 2 = **chia sẻ vùng văn bản giáo trình**. Thứ tự: (1) khảo sát + thiết kế (neo văn bản, id khối bất biến, mô hình lưu) → Owner duyệt → (2) mới migration / mã. Chưa migration, chưa đổi production khi chưa duyệt.
+
+**Hạng mục UI đi cùng đợt (Owner bổ sung, cùng một lượt deploy, không deploy riêng): làm đẹp cụm nút thao tác trên thẻ chia sẻ Feed**
+Hiện "Mở trong giáo trình" nằm sát "Thu gọn", chữ chưa cân đối. Yêu cầu:
+1. Bố cục hai nút có khoảng cách rõ ràng, không chồng lấn.
+2. "Xem đầy đủ" / "Thu gọn" = thao tác phụ, kiểu nút nhẹ.
+3. "Mở trong giáo trình" = thao tác điều hướng chính, dễ nhận biết; có thể dùng biểu tượng mở tài liệu hoặc mũi tên.
+4. Vùng bấm ≥ 44px.
+5. Đẹp trên iPhone 390px và desktop; chữ không bị ép hoặc tràn.
+6. Hợp iOS HIG Light và giao diện Class hiện hành.
+7. Giữ nguyên logic điều hướng, phân quyền, tham chiếu giáo trình.
+8. Kiểm cả trạng thái thu gọn và mở rộng.
+Phạm vi: chỉ CSS + markup `.cs-sn-actions` trong `ShareNotePost.tsx`; không migration, không đổi kiến trúc. Nghiệm thu bằng ảnh trước/sau (iPhone 390 + desktop, cả hai trạng thái).
+
