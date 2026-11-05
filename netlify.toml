@@ -15,7 +15,8 @@
 [context.deploy-preview.environment]
   VITE_CHORD_LIBRARY_BACKEND = "rpc"
 
-# Mira (trợ lý AI học tập) — chế độ XEM TRƯỚC: chỉ tài khoản admin THẤY mục Mira ở trạng thái "đang chuẩn bị hoạt động".
-# KHÔNG bật AI (không có VITE_MIRA_STUDENT_ENABLED): không gọi function/RPC nào, không ô soạn. Gỡ dòng này = UI về y như cũ.
+# Mira (trợ lý AI học tập): admin THẤY mục Mira; AI thật chỉ khi server cho (pilot owner_test + đồng ý + hạn mức). Người khác: không gọi RPC/function nào.
 [context.production.environment]
   VITE_MIRA_STUDENT_PREVIEW = "1"
+  # Mira thử nghiệm nội bộ (V1.2): bật đường thật, nhưng CHỈ admin mới hỏi server và server chỉ cho tài khoản Owner trong pilot. Tắt nhanh: xoá dòng này (về "đang chuẩn bị") hoặc đặt MIRA_STUDENT_ENABLED≠true ở Supabase.
+  VITE_MIRA_STUDENT_ENABLED = "1"

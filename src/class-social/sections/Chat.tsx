@@ -60,7 +60,8 @@ export default function Chat({ meId, selection, onOpenConversation, onBackToList
   /** admin (app_users.role) — chỉ để hiện Mira ở chế độ xem trước khi build có cờ PREVIEW */
   isAdmin?: boolean
 }) {
-  const miraOn = useMiraEnabled()
+  // Production (Owner-only): build có cờ PREVIEW → chỉ admin mới hỏi server "tôi có trong pilot không". Build thường (không PREVIEW): như cũ.
+  const miraOn = useMiraEnabled(!previewBuild() || isAdmin === true)
   const miraPreview = !miraOn && miraPreviewVisible(previewBuild(), isAdmin)   // chế độ thật (pilot) luôn thắng
   const isMira = selection.kind === 'conversation' && selection.id === MIRA_CONVERSATION_ID
   const openClass = onOpenClass ?? ((id: string) => window.location.assign(classPath(id)))
