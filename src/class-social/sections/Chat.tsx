@@ -10,6 +10,11 @@ import { useNoticeSound } from '../chat/useChat'
 import { useInbox } from '../chat/useInbox'
 import { defaultInboxSource, type InboxSource } from '../chat/inboxApi'
 import { type ChatSelection, type ConversationItem } from '../chat/chatModel'
+import MiraChatView from '../chat/MiraChatView'
+import MiraListItem from '../chat/MiraListItem'
+import MiraPreparingView from '../chat/MiraPreparingView'
+import { MIRA_CONVERSATION_ID, miraPreviewVisible, previewBuild, useMiraEnabled } from '../chat/miraApi'
+import { classPath } from '../resolveMeRoute'
 
 /** Điện thoại: khi mở một hội thoại, khung phủ toàn màn hình → theo chiều cao THẬT khi bàn phím mở (iOS không co 100dvh) */
 function useOpenPaneViewport(open: boolean) {
@@ -36,7 +41,7 @@ function useOpenPaneViewport(open: boolean) {
   }, [open])
 }
 
-export default function Chat({ meId, selection, onOpenConversation, onBackToList, onOpenProfile, onOpenFriends, onUnreadChanged, soundToggle = false, source = defaultInboxSource }: {
+export default function Chat({ meId, selection, onOpenConversation, onBackToList, onOpenProfile, onOpenFriends, onUnreadChanged, soundToggle = false, source = defaultInboxSource, onOpenClass, isAdmin }: {
   meId: string
   selection: ChatSelection
   onOpenConversation: (id: string, opts?: { replace?: boolean }) => void
@@ -49,7 +54,15 @@ export default function Chat({ meId, selection, onOpenConversation, onBackToList
   soundToggle?: boolean
   /** Nguồn danh sách (mặc định RPC chat_inbox*; Preview/test thay bằng dữ liệu mẫu) */
   source?: InboxSource
+  /** Mở một lớp từ nút hành động của Mira (mặc định: điều hướng thẳng tới /me/classes/<id>) */
+  onOpenClass?: (classId: string) => void
+  /** admin (app_users.role) — chỉ để hiện Mira ở chế độ xem trước khi build có cờ PREVIEW */
+  isAdmin?: boolean
 }) {
+  const miraOn = useMiraEnabled()
+  const miraPreview = !miraOn && miraPreviewVisible(previewBuild(), isAdmin)   // chế độ thật (pilot) luôn thắng
+  const isMira = selection.kind === 'conversation' && selection.id === MIRA_CONVERSATION_ID
+  const openClass = onOpenClass ?? ((id: string) => window.location.assign(classPath(id)))
   const inbox = useInbox(source)
   const sound = useNoticeSound()
   const { reload } = inbox
@@ -101,14 +114,20 @@ export default function Chat({ meId, selection, onOpenConversation, onBackToList
         </div>
       )}
       <section className="cs-card cs-chat">
-        <InboxList inbox={inbox} source={source} selectedId={selectedId} onSelect={id => onOpenConversation(id)} onOpenFriends={onOpenFriends} />
+        <InboxList inbox={inbox} source={source} selectedId={selectedId} onSelect={id => onOpenConversation(id)} onOpenFriends={onOpenFriends}
+          top={miraOn || miraPreview ? <MiraListItem active={isMira} onSelect={() => onOpenConversation(MIRA_CONVERSATION_ID)} /> : undefined} />
         <div className={'cs-chat-pane' + (open ? ' is-open' : '')}>
           {selection.kind === 'none' && (
             <div className="cs-chat-pane-empty">
               <EmptyState icon={MessagesSquare} title="Tin nhắn của bạn">Chọn một cuộc trò chuyện ở bên trái.</EmptyState>
             </div>
           )}
-          {selection.kind === 'conversation' && (
+          {isMira && miraOn && <MiraChatView onBack={onBackToList} onOpenClass={openClass} />}
+          {isMira && !miraOn && miraPreview && <MiraPreparingView onBack={onBackToList} />}
+          {isMira && !miraOn && !miraPreview && (
+            <div className="cs-chat-pane-empty"><EmptyState icon={MessagesSquare} title="Mira chưa sẵn sàng">Mục này chưa mở cho tài khoản của bạn.</EmptyState></div>
+          )}
+          {selection.kind === 'conversation' && !isMira && (
             <ConversationView key={selection.id} id={selection.id} peer={peer} canSend={canSend}
               onBack={onBackToList} onOpenProfile={onOpenProfile} onActivity={activity} />
           )}

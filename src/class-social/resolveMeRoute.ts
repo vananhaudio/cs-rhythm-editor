@@ -174,6 +174,7 @@ export function chatConversationIdFromPath(pathname: string): string | null {
   }
   if (!p.startsWith(CHAT_PREFIX) || p.startsWith(CHAT_WITH_PREFIX)) return null
   const id = p.slice(CHAT_PREFIX.length)
+  if (id === 'mira') return 'mira'   // mục hệ thống "Hỏi Mira" (không phải hội thoại dm_*)
   return UUID_RE.test(id) ? id.toLowerCase() : null
 }
 export function chatWithUserIdFromPath(pathname: string): string | null {

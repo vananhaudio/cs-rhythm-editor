@@ -18,6 +18,8 @@ export type ClassIdentity = {
   htMember: boolean
   /** teacher|admin theo app_users.role — CHỈ để hiện công cụ của Thầy; quyền thật do server kiểm */
   isTeacher: boolean
+  /** app_users.role = 'admin' (chỉ để quyết định HIỂN THỊ xem trước Mira; không cấp quyền gì) */
+  isAdmin?: boolean
   /** Ảnh bìa (profile_media) — null → ảnh bìa mặc định */
   coverUrl: string | null
 }
@@ -61,6 +63,7 @@ async function loadSession(): Promise<ClassSession> {
 
   const appUser = await fetchAppUser(user.id)
   const isTeacher = appUser?.role === 'teacher' || appUser?.role === 'admin'
+  const isAdmin = appUser?.role === 'admin'
   const coverUrl = await fetchCover(user.id)
 
   const { data: stu } = await supabase
@@ -77,7 +80,7 @@ async function loadSession(): Promise<ClassSession> {
         role: 'student', userId: user.id, studentId: stu.id,
         name: displayNameOf(stu), email: stu.email ?? user.email ?? null,
         avatarUrl: stu.avatar_url, level: stu.level, enrolledAt: stu.enrolled_at,
-        htMember: !!stu.ht_member, isTeacher, coverUrl,
+        htMember: !!stu.ht_member, isTeacher, isAdmin, coverUrl,
       },
     }
   }
@@ -90,7 +93,7 @@ async function loadSession(): Promise<ClassSession> {
       me: {
         role: 'teacher', userId: user.id, studentId: null,
         name: meta.full_name?.trim() || 'Thầy Văn Anh', email: user.email ?? null,
-        avatarUrl: appUser?.avatar_url ?? null, level: null, enrolledAt: null, htMember: false, isTeacher: true, coverUrl,
+        avatarUrl: appUser?.avatar_url ?? null, level: null, enrolledAt: null, htMember: false, isTeacher: true, isAdmin, coverUrl,
       },
     }
   }

@@ -110,6 +110,8 @@
   background: var(--cs-p-soft); color: var(--cs-p-strong); font-weight: 800;
 }
 .cs-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* Mira (trợ lý AI): nhận diện riêng, kích thước do component quyết định */
+.cs-mira-avatar { background: #4338CA; color: #fff; font-weight: 800; }
 
 /* ── Khung chính: sidebar + nội dung ─────────────────────────────────────── */
 .cs-body { display: flex; align-items: flex-start; }

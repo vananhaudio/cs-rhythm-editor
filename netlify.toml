@@ -14,3 +14,8 @@
 # Thiếu dòng này, build preview rơi vào chế độ "disabled" (biến chỉ đặt cho context production trên Netlify).
 [context.deploy-preview.environment]
   VITE_CHORD_LIBRARY_BACKEND = "rpc"
+
+# Mira (trợ lý AI học tập) — chế độ XEM TRƯỚC: chỉ tài khoản admin THẤY mục Mira ở trạng thái "đang chuẩn bị hoạt động".
+# KHÔNG bật AI (không có VITE_MIRA_STUDENT_ENABLED): không gọi function/RPC nào, không ô soạn. Gỡ dòng này = UI về y như cũ.
+[context.production.environment]
+  VITE_MIRA_STUDENT_PREVIEW = "1"

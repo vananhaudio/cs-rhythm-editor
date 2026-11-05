@@ -11,12 +11,14 @@ import { useInbox } from './useInbox'
 
 type Inbox = ReturnType<typeof useInbox>
 
-export default function InboxList({ inbox, source, selectedId, onSelect, onOpenFriends }: {
+export default function InboxList({ inbox, source, selectedId, onSelect, onOpenFriends, top }: {
   inbox: Inbox
   source: InboxSource
   selectedId: string | null
   onSelect: (id: string) => void
   onOpenFriends: () => void
+  /** Mục hệ thống ghim đầu danh sách (vd. Mira); không truyền thì không hiển thị gì */
+  top?: ReactNode
 }) {
   const { state, filter, busy } = inbox
   const [manager, setManager] = useState(false)
@@ -52,6 +54,7 @@ export default function InboxList({ inbox, source, selectedId, onSelect, onOpenF
       )}
 
       <div className={'cs-inbox-scroll' + (busy ? ' is-busy' : '')} aria-busy={busy}>
+        {top}
         {state.status === 'loading' && <Skeleton />}
         {state.status === 'error' && (
           <div className="cs-feed-error" role="alert"><p>{state.error}</p>
