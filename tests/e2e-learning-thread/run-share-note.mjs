@@ -242,7 +242,7 @@ try {
   const patched = await T.evaluate(async ({ api, S }) => {
     const h = { apikey: api.apikey, Authorization: api.auth, 'Content-Type': 'application/json', Prefer: 'return=representation' }
     const cur = await (await fetch(`${api.origin}/rest/v1/class_lesson_content?session_id=eq.${S}&select=blocks`, { headers: h })).json()
-    const blocks = cur[0].blocks; const last = blocks[blocks.length - 1]; last.tex = last.tex + ' | r.1'
+    const blocks = cur[0].blocks; const last = [...blocks].reverse().find(b => typeof b.tex === 'string'); last.tex = last.tex + ' | r.1'   // khối NHẠC cuối buổi (V2 nối thêm khối văn bản phía sau)
     const res = await fetch(`${api.origin}/rest/v1/class_lesson_content?session_id=eq.${S}`, { method: 'PATCH', headers: h, body: JSON.stringify({ blocks }) })
     return res.status
   }, { api: T.api, S: S1 })

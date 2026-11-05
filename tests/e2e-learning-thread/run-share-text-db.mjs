@@ -102,5 +102,9 @@ r = psql(['-1', '-f', path.join(ROOT, 'db/share_text_v2_rollback.sql')]); ok(r.c
 // 7) áp lại setup → để DB đã migrate cho trình duyệt
 r = psql(['-1', '-f', path.join(ROOT, 'db/share_text_v2_setup.sql')]); ok(r.code === 0, 'áp lại setup sau rollback')
 ok(gateOf(gate('share_text_v2_postflight.sql', md0)) === 'PASS' && barsFp() === fp0, 'sau áp lại: postflight PASS + ô nhịp V1 nguyên vẹn')
+// 8) dọn dữ liệu của chính bước này bằng hàm V1 (share_note_delete — xoá mềm ghi chú + gỡ bài Feed): chứng minh hàm V1 vẫn chạy trên ghi chú ô nhịp SAU migration,
+//    và để Feed không còn bài ngoài 6 bài mà kịch bản hồi quy V1.3 dựng
+asUser(A, `select public.share_note_delete('${v1id}')`); asUser(A, `select public.share_note_delete('${v1id2}')`)
+ok(q(`select count(*) from public.class_posts where tool_share ->> 'tool' = 'share_note'`) === '0' && q(`select count(*) from public.share_notes where deleted_at is null`) === '0', 'share_note_delete (V1) xoá được ghi chú ô nhịp tạo TRƯỚC migration + gỡ bài Feed của nó')
 console.log(fails ? `\nFAIL: ${fails} kiểm tra DB/migration` : '\nPASS: vòng đời migration + test DB V2')
 process.exit(fails ? 1 : 0)

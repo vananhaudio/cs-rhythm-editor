@@ -128,7 +128,7 @@ returns text language sql stable security definer set search_path = '' as $$
    where c.session_id = p_session and c.status = 'published' and jsonb_typeof(c.blocks) = 'array' and l.path = p_path $$;
 
 -- 4) TÌM LẠI (fail-closed). 0 hàng = stale. Ngân sách cứng: ≤ 300 lá/khối · ≤ 60.000 cửa sổ băm cho CẢ lần tìm · ≤ 8 khối cùng block_fp.
---    Bước 1 đúng vị trí → ok · bước 2 cùng khối → moved (duy nhất, hoặc duy nhất sau lọc ctx) · bước 3 khối khác cùng block_fp (duy nhất) → moved · còn lại stale.
+--    Bước 1 đúng vị trí → ok · bước 2 cùng khối (chỉ khi khối ở chỉ số gợi ý vẫn cùng block_fp) → moved (duy nhất, hoặc duy nhất sau lọc ctx) · bước 3 khối khác cùng block_fp (duy nhất) → moved · còn lại stale.
 create or replace function public.share_text_resolve(p_session uuid, p_section integer, p_path text[], p_from integer, p_to integer, p_sha text, p_ctx text, p_fp text)
 returns table(sec integer, path text[], cfrom integer, cto integer, moved boolean)
 language plpgsql stable security definer set search_path = '' as $$
@@ -147,7 +147,9 @@ begin
        and public.share_text_boundary_ok(v_leaf, p_from, p_to) then
       return query select p_section, p_path, p_from, p_to, false; return;
     end if;
-    -- Bước 2 — cùng chỉ số khối, mọi lá
+    -- Bước 2 — cùng chỉ số khối, mọi lá. CHỈ khi khối ở chỉ số này VẪN là khối cũ (cùng block_fp): nếu khối cũ bị xoá và một khối KHÁC trượt vào chỉ số này
+    -- thì cụm từ trùng ở khối khác KHÔNG chứng minh được neo — bỏ qua (sang bước 3, hoặc stale).
+    if p_fp is not null and public.share_text_fp(v_sec) = p_fp then
     select (public.share_text_cost(v_sec, v_len)).leaves, (public.share_text_cost(v_sec, v_len)).windows into v_n, v_w;
     if v_n > 300 or v_w > v_budget then return; end if;
     v_budget := v_budget - v_w;
@@ -161,6 +163,7 @@ begin
       end if;
       return query select (v_h ->> 's')::integer, array(select jsonb_array_elements_text(v_h -> 'p')), (v_h ->> 'f')::integer, (v_h ->> 'f')::integer + v_len, true;
       return;
+    end if;
     end if;
   end if;
   -- Bước 3 — khối KHÁC cùng block_fp

@@ -115,8 +115,8 @@ function resolveText(sections: Section[], a: Anchor): Resolved {
   const t = getLeaf(sections, a.section, a.path)
   if (t !== undefined && a.to <= cpLen(t) && sha(cpSlice(t, a.from, a.to)) === a.sel && boundaryOk(t, a.from, a.to)) return { status: 'ok', section: a.section, path: a.path, from: a.from, to: a.to }
   const budget = { n: MAX_WINDOWS }
-  // Bước 2 — cùng chỉ số khối, mọi lá
-  if (sections[a.section]) {
+  // Bước 2 — cùng chỉ số khối, mọi lá; CHỈ khi khối ở chỉ số này vẫn là khối cũ (cùng block_fp) — khối khác trượt vào không chứng minh được neo
+  if (sections[a.section] && blockFp(sections[a.section]) === a.fp) {
     const h = scan(sections, a.section, a, budget)
     if (h === null) return { status: 'stale' }
     const u = unique(h)
@@ -197,6 +197,15 @@ test('stale: sửa đúng đoạn chọn · xoá lá · NFC↔NFD · khối đ�
   assert.equal(resolveText(nfd, a).status, 'stale')
   const renamed = [{ kind: 'note', text: 'x' } as Section, { kind: 'note', text: 'y' } as Section, study(s[1].blocks as unknown[], 'Tên khác'), s[2]]
   assert.equal(resolveText(renamed, a).status, 'stale', 'đổi tiêu đề + dịch chỉ số ⇒ không nhận ra khối ⇒ stale (an toàn)')
+})
+
+test('Khối cũ bị xoá và một khối KHÁC chứa cùng cụm từ trượt vào chỉ số cũ → stale (không "moved" sang khối lạ)', () => {
+  const { s, a } = mk()
+  const replaced = [s[0], { kind: 'note', title: 'Khối khác', text: 'Thầy nhắc: hãy nghe kỹ nhịp chùm ba mỗi ngày.' } as Section, s[2]]
+  assert.equal(resolveText(replaced, a).status, 'stale')
+  // đối chứng: cùng khối (cùng fp) chỉ thêm đoạn phía trước ⇒ vẫn moved
+  const inner = doc(); (inner[1].blocks as unknown[]).splice(1, 0, { b: 'p', text: 'Đoạn chèn thêm.' })
+  assert.equal(resolveText(inner, a).status, 'moved')
 })
 
 test('Hai khối GIỐNG HỆT (cùng fp, cùng chữ): vị trí gốc còn đúng → ok; sau khi dịch chuyển → stale, không đoán', () => {

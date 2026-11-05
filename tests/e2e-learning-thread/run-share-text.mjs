@@ -102,7 +102,8 @@ const feedCard = (page, q) => page.evaluate(q => {
     openLabelCut: lab ? lab.scrollWidth > lab.clientWidth + 1 : null, moreLabelCut: mlab ? mlab.scrollWidth > mlab.clientWidth + 1 : null, links: [...c.querySelectorAll('a')].map(a => a.className), sw: document.documentElement.scrollWidth <= innerWidth + 1,
     openBg: open ? getComputedStyle(open).backgroundColor : null, moreBg: more ? getComputedStyle(more).backgroundColor : null, moreBorder: more ? getComputedStyle(more).borderTopWidth : null }
 }, q)
-const waitCardLive = (page, q) => page.waitForFunction(q => { const c = [...document.querySelectorAll('[data-testid="share-note-post"]')].find(e => e.textContent.includes(q)); return c && (c.querySelector('[data-testid="context-section"]') || c.querySelector('.cs-sn-msg')) }, { timeout: 40000 }, q)
+const waitCardLive = (page, q) => page.waitForFunction(q => { const c = [...document.querySelectorAll('[data-testid="share-note-post"]')].find(e => e.textContent.includes(q)); if (!c) return false; c.scrollIntoView({ block: 'center' })   // thẻ nạp LƯỜI theo khung nhìn ⇒ phải cuộn tới thẻ
+  return !!(c.querySelector('[data-testid="context-section"]') || c.querySelector('.cs-sn-msg')) }, { timeout: 40000, polling: 300 }, q)
 const scrollToCard = (page, q) => page.evaluate(q => [...document.querySelectorAll('[data-testid="share-note-post"]')].find(e => e.textContent.includes(q))?.scrollIntoView({ block: 'center' }), q)
 const panel = page => page.$eval('.cs-share-note-panel', e => e.innerText.replace(/\s+/g, ' ').trim()).catch(() => null)
 const markInfo = page => page.evaluate(() => { const m = document.querySelector('mark.lsn-text-hl'); if (!m) return null; const r = m.getBoundingClientRect()
@@ -265,6 +266,36 @@ try {
   await B.screenshot({ path: `${SHOTS}/v2-b-chat-mo-dung-doan.png` })
   ok('9 Chat: thẻ tham chiếu "Giáo trình · Buổi 1 · Đoạn văn bản" (không lộ nội dung) → mở đúng trang Buổi, <mark> = đúng chữ trong callout')
 
+  // 9b. Tiếng Việt tổ hợp (NFD) và emoji đi TRỌN vòng JS → PostgreSQL → Feed: toạ độ theo điểm mã, <mark> đúng chữ, không tách dấu tổ hợp
+  await openSession(A1280)
+  const uni = await A1280.evaluate(() => { const ls = [...document.querySelectorAll('.lsn-leaf')]
+    const e = ls.find(l => l.textContent.startsWith('Đàn 🎸 hay lắm')), n = ls.find(l => /Tiếng Việt tổ hợp/.test(l.textContent.normalize('NFC')) && l.textContent !== l.textContent.normalize('NFC'))
+    return { e: e?.dataset.tp, n: n?.dataset.tp, nText: n?.textContent } })
+  assert.ok(uni.e && uni.n, JSON.stringify(uni))
+  const cases = [
+    { tp: uni.e, sel: 'Đàn 🎸 hay lắm', note: 'E2E V2 emoji: chữ có biểu tượng' },
+    { tp: uni.n, sel: 'giữ đều tay'.normalize('NFD'), note: 'E2E V2 NFD: chữ tổ hợp' },
+  ]
+  for (const c of cases) {
+    await selectIn(A1280, c.tp, c.sel); await sleep(300)
+    const bb = await bar(A1280); assert.ok(bb && bb.state === 'ok' && bb.quote === c.sel, JSON.stringify({ c: c.note, bb }))
+    await clickText(A1280, 'Hỏi / Chia sẻ'); await A1280.waitForSelector('[role=dialog][aria-label="Hỏi về đoạn văn bản"]')
+    await A1280.type('#share-note-text', c.note)
+    await A1280.evaluate(() => [...document.querySelectorAll('[role=dialog] button')].find(x => x.textContent.startsWith('Đăng lên Feed')).click())
+    await waitFor(A1280, () => document.querySelector('[role=dialog] [role=status]')?.textContent === 'Đã đăng lên Feed')
+    await A1280.evaluate(() => document.querySelector('[role=dialog] button')?.click()); await sleep(300)
+    const nid = calls(A1280, 'social_share_share_text').at(-1).body.p_note
+    const row = sql(`select char_from || '|' || char_to || '|' || (text_sha = encode(sha256(convert_to($q$${c.sel}$q$, 'UTF8')), 'hex')) from public.share_notes where id = '${nid}'`)
+    const leaf = await A1280.evaluate(tp => document.querySelector(`[data-tp="${tp}"]`).textContent, c.tp)
+    const cps = Array.from(leaf), selCps = Array.from(c.sel)
+    const at = cps.findIndex((_, i) => cps.slice(i, i + selCps.length).join('') === c.sel)
+    assert.equal(row, `${at}|${at + selCps.length}|true`, `${c.note}: toạ độ ĐIỂM MÃ (JS) = PostgreSQL`)
+    await B.goto(ME, { waitUntil: 'networkidle0' }); await waitCardLive(B, c.note); await scrollToCard(B, c.note); await sleep(300)
+    const fu = await feedCard(B, c.note); assert.deepEqual(fu.marks, [c.sel], `${c.note}: <mark> = đúng chữ`)
+    assert.ok(fu.text.includes(leaf), `${c.note}: lá in nguyên văn`)
+  }
+  ok('9b chữ có emoji (🎸 ngoài BMP) và tiếng Việt tổ hợp NFD: toạ độ điểm mã từ JS = PostgreSQL (kèm băm), Feed tô ĐÚNG chữ, không tách dấu tổ hợp')
+
   // 10. Giáo trình đổi: CHÈN khối đầu buổi → moved (Feed + liên kết vẫn tô đúng chữ, báo "sắp xếp lại"); SỬA chính đoạn → stale (không tô, không hiện khung)
   sql(`update public.class_lesson_content set blocks = jsonb_build_array(jsonb_build_object('kind','note','text','Khối mới chèn đầu buổi')) || blocks where session_id = '${S1}'`)
   const B2 = await open('B', 390)
@@ -288,6 +319,21 @@ try {
   await B3.screenshot({ path: `${SHOTS}/v2-b-stale-390.png` })
   restore(S1)
   ok('10b sửa chính đoạn được chọn: Feed báo "Giáo trình đã được cập nhật", KHÔNG khung / KHÔNG <mark> / không gọi session_open; liên kết không tô (fail-closed)')
+
+  // 10c. DI CHUYỂN khối: chuyển khối study xuống cuối buổi (chỉ số dịch xa) → vẫn tìm lại và tô đúng chữ; 10d. XOÁ khối → stale
+  sql(`update public.class_lesson_content set blocks = (select jsonb_agg(e order by (e ->> 'title' = 'Ôn tập 7 ngày'), i) from jsonb_array_elements(blocks) with ordinality t(e, i)) where session_id = '${S1}'`)
+  const B5 = await open('B', 390)
+  await B5.goto(`${SESSION}?note=${NOTE_ID}`, { waitUntil: 'networkidle0' }); await B5.waitForSelector('mark.lsn-text-hl', { timeout: 30000 }); await sleep(500)
+  assert.match(await panel(B5) ?? '', /sắp xếp lại/); assert.equal((await markInfo(B5)).text, SEL)
+  ok('10c di chuyển khối study xuống cuối buổi: liên kết vẫn tìm lại và tô ĐÚNG chữ (moved)')
+  restore(S1)
+  sql(`update public.class_lesson_content set blocks = (select jsonb_agg(e order by i) from jsonb_array_elements(blocks) with ordinality t(e, i) where e ->> 'title' is distinct from 'Ôn tập 7 ngày') where session_id = '${S1}'`)
+  const B6 = await open('B', 390)
+  await B6.goto(`${SESSION}?note=${NOTE_ID}`, { waitUntil: 'networkidle0' }); await B6.waitForSelector('.cs-share-note-panel', { timeout: 20000 })
+  await waitFor(B6, () => /không xác định chắc chắn/.test(document.querySelector('.cs-share-note-panel')?.textContent ?? '')); await sleep(400)
+  assert.match(await panel(B6) ?? '', /không xác định chắc chắn đoạn cũ và không tô/); assert.equal(await markInfo(B6), null)
+  restore(S1)
+  ok('10d xoá cả khối chứa đoạn: stale — không tô, không đoán')
 
   // 11. Buổi CHƯA MỞ KHOÁ (Buổi 3 với Bình): thẻ chỉ có câu hỏi, 0 yêu cầu đọc giáo trình
   sql(`update public.class_lesson_content set blocks = blocks || jsonb_build_array(jsonb_build_object('kind','note','text','Đoạn văn bản thuộc buổi chưa mở khoá cho học viên.')) where session_id = '${S3}'`)

@@ -431,6 +431,22 @@ begin
 end $$;
 rollback;
 
+begin;
+update public.share_notes set created_at = created_at - interval '1 hour';
+do $$
+declare
+  s uuid := '51000000-0000-4000-8000-000000000001'; sel text := 'nghe kỹ nhịp chùm ba'; nid uuid; ix integer; o record; b text := 'bbbbbbbb-0000-4000-8000-00000000000b'; n_after integer;
+begin
+  execute 'reset role'; ix := pg_temp.sec(s, 'Ôn tập 7 ngày');
+  execute 'set local role authenticated'; nid := pg_temp.mknote(sel); execute 'reset role';
+  -- D18 xoá CẢ khối chứa đoạn; một khối KHÁC có cùng cụm từ trượt vào đúng chỉ số cũ → KHÔNG được báo moved sang khối lạ (không chứng minh được neo) → stale
+  update public.class_lesson_content set blocks = jsonb_set(blocks, array[ix::text], jsonb_build_object('kind', 'note', 'title', 'Khối khác', 'text', 'Thầy nhắc: hãy nghe kỹ nhịp chùm ba mỗi ngày.')) where session_id = s;
+  perform pg_temp.who(b); execute 'set local role authenticated'; select * into o from public.share_note_open_v2(nid);
+  perform pg_temp.ok(o.status = 'stale' and o.char_from is null and o.section_idx is null, 'D18 khối cũ bị thay bằng khối KHÁC chứa cùng cụm từ → stale (không "moved" sang khối lạ): ' || o.status);
+  -- cùng tình huống nhưng khối cũ chỉ bị đổi tiêu đề và còn nguyên chữ ở đúng chỗ → ok (nhận dạng là chính đoạn chữ ở đúng vị trí)
+end $$;
+rollback;
+
 -- đo hiệu năng tìm lại trên dữ liệu tổng hợp (trường hợp xấu: đúng ngân sách) — thông tin
 begin;
 update public.share_notes set created_at = created_at - interval '1 hour';

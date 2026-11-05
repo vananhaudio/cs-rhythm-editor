@@ -435,7 +435,7 @@ ok(`10c iPhone 390: cùng khung gốc, không tràn ngang, không cắt nhạc, 
     const list = x?.querySelector('.lsn-rep-list'), marks = x?.querySelector('.lsn-marks'), guide = x?.querySelector('.lsn-guide'), note = x?.querySelector('.lsn-piece-note')
     const bb = btn?.getBoundingClientRect(), cb = cta?.getBoundingClientRect()
     return { h: Math.round(c.getBoundingClientRect().height), btn: btn?.textContent?.trim() ?? null, exp: btn?.getAttribute('aria-expanded') ?? null, btnInsideA: !!btn?.closest('a'), cta: cta?.textContent?.trim() ?? null,
-      sameRow: !!(bb && cb && Math.abs(bb.top - cb.top) < 2 && bb.right <= cb.left + 1), btnH: bb ? Math.round(bb.height) : 0, ctaH: cb ? Math.round(cb.height) : 0,
+      sameRow: !!(bb && cb && Math.abs(bb.top - cb.top) < 2 && bb.right <= cb.left + 1), overlap: !!(bb && cb && bb.left < cb.right && bb.right > cb.left && bb.top < cb.bottom && bb.bottom > cb.top), sep: bb && cb ? Math.round(Math.abs(bb.top - cb.top) < 2 ? cb.left - bb.right : cb.top - bb.bottom) : null, inCard: !!(bb && cb && cb.right <= c.getBoundingClientRect().right + 0.5 && bb.left >= c.getBoundingClientRect().left - 0.5), btnH: bb ? Math.round(bb.height) : 0, ctaH: cb ? Math.round(cb.height) : 0,
       plan: c.querySelector('[data-testid="share-note-preview"]').getAttribute('data-plan'), hl: c.querySelectorAll('.lsn-excerpt-hl').length, surfaces: c.querySelectorAll('.at-surface').length, mark: host?.dataset.mk ?? null,
       rows: [...c.querySelectorAll('svg text')].filter(t => t.textContent.includes('\uE050')).length,
       border: pv ? getComputedStyle(pv).borderTopColor : null, borderW: pv ? getComputedStyle(pv).borderTopWidth : null, hlBorder: c.querySelector('.lsn-excerpt-hl') ? getComputedStyle(c.querySelector('.lsn-excerpt-hl')).boxShadow : null,
@@ -447,7 +447,7 @@ ok(`10c iPhone 390: cùng khung gốc, không tràn ngang, không cắt nhạc, 
   // nhãn hướng tới học viên (không còn thuật ngữ nội bộ)
   assert.equal(b0.btn, 'Xem đầy đủ'); assert.equal(b0.cta, 'Mở trong giáo trình'); assert.equal(b0.exp, 'false'); assert.ok(!b0.btnInsideA, 'nút không nằm trong liên kết (không lồng tương tác)')
   assert.ok(!/Xem thêm ngữ cảnh|Thu gọn ngữ cảnh|Mở đúng đoạn/.test(b0.allText), 'không còn nhãn kỹ thuật cũ')
-  assert.ok(b0.sameRow && b0.btnH >= 44 && b0.ctaH >= 44, `hai nút cùng một hàng, đủ chạm 44px (${b0.btnH}/${b0.ctaH}px)`)
+  assert.ok(!b0.overlap && b0.sep >= 8 && b0.inCard && b0.btnH >= 44 && b0.ctaH >= 44, `cụm nút V2: không chồng lấn, cách nhau ≥ 8px (${b0.sep}px), trong thẻ, đủ chạm 44px (${b0.btnH}/${b0.ctaH}px)`)
   // phân cấp thị giác: khung ngoài TRUNG TÍNH (không cam), chỉ vùng khoanh cam
   const rgb = c => (c.match(/\d+/g) ?? []).slice(0, 3).map(Number)
   const [br, bg, bb2] = rgb(b0.border); assert.ok(Math.max(br, bg, bb2) - Math.min(br, bg, bb2) < 40 && Math.min(br, bg, bb2) > 150, `viền khung trung tính nhẹ (${b0.border})`)
@@ -482,7 +482,7 @@ ok(`10c iPhone 390: cùng khung gốc, không tràn ngang, không cắt nhạc, 
   assert.equal(b2.btn, 'Xem đầy đủ'); assert.equal(b2.list, null); assert.equal(b2.mark, 'same-host'); assert.equal(b2.rows, 1); assert.equal(b2.plan, b0.plan, 'thu gọn: trở về đúng kế hoạch gọn')
   await P10.evaluate(i => document.querySelectorAll('[data-testid="share-note-post"]')[i].scrollIntoView({ block: 'center' }), pi); await sleep(300)
   await (await P10.$$('[data-testid="share-note-post"]'))[pi].screenshot({ path: `${SHOTS}/ctx-10c-iphone.png` })
-  ok(`10g iPhone: mặc định ${compactH}px (1 dòng nhạc, mô tả rút gọn, viền trung tính, 2 nút cùng hàng) → "Xem đầy đủ" ${b1.h}px (ngữ cảnh V1.1 ${b1.rows} dòng + dự kiến/marks/guidance) → "Thu gọn" ${b2.h}px; cùng khung alphaTab, cùng vùng khoanh, không nhảy cuộn, không tràn ngang`)
+  ok(`10g iPhone: mặc định ${compactH}px (1 dòng nhạc, mô tả rút gọn, viền trung tính, cụm nút không chồng lấn) → "Xem đầy đủ" ${b1.h}px (ngữ cảnh V1.1 ${b1.rows} dòng + dự kiến/marks/guidance) → "Thu gọn" ${b2.h}px; cùng khung alphaTab, cùng vùng khoanh, không nhảy cuộn, không tràn ngang`)
 }
 // 10d. Khối score có mô tả + nhịp độ (lead / tempo nguyên văn)
 {
