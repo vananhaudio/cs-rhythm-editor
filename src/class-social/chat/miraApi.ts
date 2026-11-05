@@ -58,15 +58,15 @@ export async function askMira(args: { message: string; history: MiraTurn[]; hist
 
 let pilotCache: Promise<boolean> | null = null
 /** Mục Mira có hiện không: cờ build + pilot do server quyết. Chưa biết/lỗi/không được → false (DOM y như cũ). */
-export function useMiraEnabled(): boolean {
+export function useMiraEnabled(allow = true): boolean {
   const [on, setOn] = useState(false)
   useEffect(() => {
-    if (!buildEnabled()) return
+    if (!buildEnabled() || !allow) return
     let live = true
     pilotCache ??= fetchMiraPilot()
     void pilotCache.then(v => { if (live) setOn(v) })
     return () => { live = false }
-  }, [])
+  }, [allow])
   return on
 }
 export function resetMiraPilotCache() { pilotCache = null }

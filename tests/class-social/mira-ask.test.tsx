@@ -90,6 +90,15 @@ test('xem trước: rào chắn nguồn — màn chuẩn bị không có đườ
   assert.ok(/const isAdmin = appUser\?\.role === 'admin'/.test(code('src/class-social/useClassSession.ts')), 'admin lấy từ app_users.role')
   assert.ok(/isAdmin=\{me\.isAdmin\}/.test(code('src/class-social/ClassSocialPage.tsx')))
 })
+test('Owner V1.2: build có PREVIEW → chỉ admin mới hỏi server pilot (người khác không gọi RPC); cờ ENABLED chỉ ở production', () => {
+  const chat = readFileSync('src/class-social/sections/Chat.tsx', 'utf8'), api = readFileSync('src/class-social/chat/miraApi.ts', 'utf8'), toml = readFileSync('netlify.toml', 'utf8')
+  assert.match(chat, /useMiraEnabled\(!previewBuild\(\) \|\| isAdmin === true\)/)
+  assert.match(api, /if \(!buildEnabled\(\) \|\| !allow\) return/)
+  const prod = toml.split('[context.production.environment]')[1] ?? ''
+  assert.match(prod, /VITE_MIRA_STUDENT_ENABLED = "1"/)
+  assert.match(prod, /VITE_MIRA_STUDENT_PREVIEW = "1"/)
+  assert.ok(!(toml.split('[context.production.environment]')[0]).includes('VITE_MIRA_STUDENT_ENABLED'), 'không bật ở deploy-preview/branch')
+})
 test('route: /me/chat/mira ↔ id "mira"; id lạ vẫn bị từ chối', () => {
   assert.equal(chatConversationPath('mira'), '/me/chat/mira')
   assert.deepEqual(viewFromPath('/me/chat/mira'), { kind: 'chatConversation', conversationId: 'mira' })
