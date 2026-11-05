@@ -340,7 +340,7 @@ await waitFor(K, q => [...document.querySelectorAll('[data-testid="share-note-po
 const lockIdx = await K.evaluate(q => [...document.querySelectorAll('[data-testid="share-note-post"]')].findIndex(e => e.textContent.includes(q)), KQ)
 await K.evaluate(i => document.querySelectorAll('[data-testid="share-note-post"]')[i].scrollIntoView({ block: 'center' }), lockIdx)
 await waitFor(K, i => /chưa mở cho bạn/.test(document.querySelectorAll('[data-testid="share-note-post"]')[i].textContent), lockIdx); await sleep(900)
-const lockCard = await K.evaluate(i => { const e = document.querySelectorAll('[data-testid="share-note-post"]')[i]; return { text: e.textContent, svg: e.querySelectorAll('svg.at-surface-svg, .at-surface svg').length, prev: e.querySelectorAll('[data-testid="share-note-preview"]').length, cta: !!e.querySelector('a.cs-tool-share-cta') } }, lockIdx)
+const lockCard = await K.evaluate(i => { const e = document.querySelectorAll('[data-testid="share-note-post"]')[i]; return { text: e.textContent, svg: e.querySelectorAll('svg.at-surface-svg, .at-surface svg').length, prev: e.querySelectorAll('[data-testid="share-note-preview"]').length, cta: !!e.querySelector('a.cs-sn-open') } }, lockIdx)
 assert.ok(lockCard.text.includes(KQ), 'giữ nguyên câu hỏi'); assert.equal(lockCard.svg, 0, 'KHÔNG vẽ nhạc'); assert.equal(lockCard.prev, 0, 'không có khung xem trước'); assert.ok(lockCard.cta)
 assert.equal(K.reqs.filter(u => u.includes(S3) || /session_number=eq\.3\b/.test(decodeURIComponent(u))).length, 0, 'KHÔNG có yêu cầu nào đọc giáo trình / lịch của Buổi 3 (không tải byte nhạc)')
 assert.ok(K.reqs.some(u => /share_note_session_open/.test(u)), 'đã hỏi RPC chỉ-đọc khoá buổi')
@@ -430,7 +430,7 @@ ok(`10c iPhone 390: cùng khung gốc, không tràn ngang, không cắt nhạc, 
   const compactH = pf.h
   const info = () => P10.evaluate(i => {
     const c = document.querySelectorAll('[data-testid="share-note-post"]')[i], x = c.querySelector('[data-testid="context-section"]')
-    const host = c.querySelector('.lsn-score-host'), btn = c.querySelector('[data-testid="share-note-more"]'), cta = c.querySelector('.cs-tool-share-cta'), pv = c.querySelector('.cs-sn-preview')
+    const host = c.querySelector('.lsn-score-host'), btn = c.querySelector('[data-testid="share-note-more"]'), cta = c.querySelector('[data-testid="share-note-open"]'), pv = c.querySelector('.cs-sn-preview')
     const pos = (a, b) => !!(a && b && (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING))
     const list = x?.querySelector('.lsn-rep-list'), marks = x?.querySelector('.lsn-marks'), guide = x?.querySelector('.lsn-guide'), note = x?.querySelector('.lsn-piece-note')
     const bb = btn?.getBoundingClientRect(), cb = cta?.getBoundingClientRect()
@@ -469,7 +469,7 @@ ok(`10c iPhone 390: cùng khung gốc, không tràn ngang, không cắt nhạc, 
   assert.equal(b1.list, orig10.list, 'Dự kiến nguyên văn như trang Buổi gốc')
   assert.match(b1.marksTxt, /Ô 2\s*vào nhịp chùm ba/); assert.match(b1.guideTxt, /Giữ nhịp chùm ba thật đều tay\./)
   assert.ok(b1.order, 'thứ tự gốc: Dự kiến → bản nhạc → marks → guidance'); assert.equal(b1.assets, 0, 'không có tệp tải về trong khung')
-  assert.deepEqual(b1.links, ['cs-sn-preview', 'cs-btn cs-btn-soft cs-tool-share-cta'], 'chỉ còn đường mở nguồn (không thêm thao tác tương tác)')
+  assert.deepEqual(b1.links, ['cs-sn-preview', 'cs-sn-open'], 'chỉ còn đường mở nguồn (không thêm thao tác tương tác)')
   const y1 = await P10.evaluate(i => document.querySelectorAll('[data-testid="share-note-post"]')[i].getBoundingClientRect().top, pi)
   assert.ok(Math.abs(y1 - y0) < 2, `mở rộng không làm thẻ nhảy cuộn (đỉnh thẻ ${Math.round(y0)} → ${Math.round(y1)})`)
   assert.ok(await noHScroll(P10), 'iPhone mở rộng: không tràn ngang')

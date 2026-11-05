@@ -10,6 +10,7 @@ update public.class_lesson_content
        jsonb_build_object('b', 'callout', 'label', 'LỖI DỄ MẮC', 'text', 'Vội nhịp ở ô thứ ba, nên hãy nghe kỹ giai điệu trước khi đàn nhé.'),
        jsonb_build_object('b', 'p', 'text', 'Ghi chú cuối ngày: giữ ngón cái đều tay, đừng để cổ tay gồng cứng.'))),
      jsonb_build_object('kind', 'note', 'title', 'Ghi chú của Thầy', 'text', 'Đàn 🎸 hay lắm! Hãy giữ đều tay và nghe kỹ nhịp chùm ba mỗi ngày nhé.'),
+     jsonb_build_object('kind', 'note', 'title', 'Ghi chú dài', 'text', 'Đoạn rất dài để kiểm giới hạn năm trăm ký tự: ' || repeat('giữ đều tay, nghe kỹ nhịp chùm ba, đừng vội nhé. ', 12)),
      jsonb_build_object('kind', 'note', 'text', normalize('Tiếng Việt tổ hợp: giữ đều tay, nghe kỹ nhịp chùm ba ở ô ba.', NFD)),
      jsonb_build_object('kind', 'objectives', 'title', 'Mục tiêu tuần này', 'items', jsonb_build_array('Đàn đều tay ở tốc độ chậm', 'Nghe được nhịp chùm ba')),
      jsonb_build_object('kind', 'recap', 'title', 'Ôn lại', 'steps', jsonb_build_array(jsonb_build_object('label', 'Tuần trước', 'items', jsonb_build_array('Đã học nốt C và Am', 'Đã tập chuyển hợp âm chậm')))),

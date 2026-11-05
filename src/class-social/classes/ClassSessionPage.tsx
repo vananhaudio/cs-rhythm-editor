@@ -191,12 +191,23 @@ function SessionContent({ state, s, onReload, onOpenThread, focus, textNote, onT
   useEffect(() => {
     if (!textNote || load.status !== 'ready') return
     let alive = true
+    let stop: (() => void) | null = null
     void verifyAnchor(load.doc.sections, textNote.text, textNote.sha).then(ok => {
       if (!alive) return
       setTextFocus(ok ? textNote.text : null); onTextChecked(ok)
-      if (ok) requestAnimationFrame(() => requestAnimationFrame(() => document.querySelector('mark.lsn-text-hl')?.scrollIntoView({ block: 'center' })))
+      if (!ok) return
+      // Cuộn tới đúng chữ; các khối phía trên (bản nhạc alphaTab…) dựng muộn làm trang dài thêm ⇒ giữ <mark> ở giữa màn hình cho tới khi bố cục ổn định
+      // (tối đa 3 giây) hoặc người dùng chạm / cuộn / bấm phím — không bao giờ giằng lại cuộn của người dùng.
+      const jump = () => document.querySelector('mark.lsn-text-hl')?.scrollIntoView({ block: 'center' })
+      requestAnimationFrame(() => requestAnimationFrame(jump))
+      const iv = window.setInterval(jump, 250)                       // (không dùng ResizeObserver: chiều cao trang nằm ở <html>, không đổi kích thước <body>)
+      const ev = ['wheel', 'touchstart', 'keydown', 'pointerdown'] as const
+      const end = () => { window.clearInterval(iv); window.clearTimeout(t); for (const e of ev) window.removeEventListener(e, end) }
+      const t = window.setTimeout(end, 3000)
+      for (const e of ev) window.addEventListener(e, end, { passive: true })
+      stop = end
     })
-    return () => { alive = false }
+    return () => { alive = false; stop?.() }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [textNote?.text.section, textNote?.text.path.join('.'), textNote?.text.from, textNote?.text.to, textNote?.sha, load.status])
   // Đến từ Mục lục (bấm một bài trả chưa trả): đưa đúng khối bài trả vào màn hình, một lần

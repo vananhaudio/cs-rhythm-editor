@@ -84,7 +84,7 @@ for (const [name, vp] of [['iPhone 390', { viewport: { width: 390, height: 844 }
   const Q = 'CTX-1 Ô 2–3'
   await W.waitForFunction(q => [...document.querySelectorAll('[data-testid="share-note-post"]')].some(e => e.textContent.includes(q)), Q, { timeout: 40000 })
   const st = q => W.evaluate(q => { const c = [...document.querySelectorAll('[data-testid="share-note-post"]')].find(e => e.textContent.includes(q)); const n = c.querySelector('.lsn-piece-note'), b = c.querySelector('[data-testid="share-note-more"]')
-    return { rows: [...c.querySelectorAll('svg text')].filter(t => t.textContent.includes('\uE050')).length, btn: b?.textContent.trim() ?? null, cta: c.querySelector('.cs-tool-share-cta')?.textContent.trim(), list: !!c.querySelector('.lsn-rep-list'), marks: !!c.querySelector('.lsn-marks'),
+    return { rows: [...c.querySelectorAll('svg text')].filter(t => t.textContent.includes('\uE050')).length, btn: b?.textContent.trim() ?? null, cta: c.querySelector('[data-testid="share-note-open"]')?.textContent.trim(), list: !!c.querySelector('.lsn-rep-list'), marks: !!c.querySelector('.lsn-marks'),
       clamped: n ? n.scrollHeight > n.clientHeight + 1 : null, plan: c.querySelector('[data-testid="share-note-preview"]')?.getAttribute('data-plan'), h: Math.round(c.getBoundingClientRect().height), sw: document.documentElement.scrollWidth <= innerWidth + 1,
       busy: !!c.querySelector('.lsn-score-msg') || !c.querySelector('[data-live="1"] .at-surface svg') } }, q)
   await W.evaluate(q => [...document.querySelectorAll('[data-testid="share-note-post"]')].find(e => e.textContent.includes(q)).scrollIntoView({ block: 'center' }), Q)
