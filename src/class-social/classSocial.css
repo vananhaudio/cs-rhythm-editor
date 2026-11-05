@@ -1720,8 +1720,6 @@ button.cs-subs-title:hover { color: var(--cs-accent); }
 .cs-classspace .cs-classv2-h2 { text-transform: none; letter-spacing: 0; font-size: 15px; font-weight: 600; color: var(--cs-text); margin-bottom: var(--cs-s2); }
 .cs-classspace .cs-act-line:hover { border-radius: 0; }
 
-/* Âm thanh thông báo (Sound V1): hàng công tắc nhỏ dưới tiêu đề Trò chuyện */
-.cs-chat-sound { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: -4px 0 10px; padding: 0 4px; font-size: 14px; color: var(--cs-text-2, var(--cs-text)); }
 .cs-switch { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 2px 0 8px; border: 0; background: transparent; color: var(--cs-text); font: inherit; font-size: 14px; cursor: pointer; }
 .cs-switch-knob { position: relative; width: 51px; height: 31px; border-radius: 999px; background: var(--cs-neutral-soft, #e5e5ea); transition: background .2s; flex: none; }
 .cs-switch-knob::after { content: ''; position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.3); transition: transform .2s; }
@@ -1887,3 +1885,12 @@ button.cs-subs-title:hover { color: var(--cs-accent); }
 .cs-sn-preview .lsn-score-host svg { max-width: 100%; height: auto; }
 .cs-sn-preview .lsn-score-msg { font-size: 13.5px; color: var(--cs-muted); padding: 10px; }
 .cs-sn-preview .lsn-score-msg.err { color: #B91C1C; }
+
+/* Chat V2 tinh gọn: bỏ hàng "Âm thanh thông báo" riêng (công tắc nằm cạnh ô tìm kiếm) + tiêu đề trang chỉ còn cho trình đọc màn hình */
+.cs-inbox-searchrow { display: flex; align-items: center; gap: 4px; }
+.cs-inbox-searchrow .cs-inbox-search { flex: 1; min-width: 0; }
+.cs-chat-sound { flex: none; margin: 0; padding: 0; }
+.cs-sound-btn { display: grid; place-items: center; width: 44px; height: 44px; margin: -3px -6px -3px 0; border: 0; border-radius: 50%; background: transparent; color: var(--cs-muted); cursor: pointer; }
+.cs-sound-btn.is-on { color: var(--cs-p); }
+.cs-sound-btn:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--cs-p-soft), 0 0 0 3.5px var(--cs-p); }
+@media (min-width: 701px) { .cs-chat { height: clamp(480px, calc(100dvh - var(--cs-topbar-h) - 72px), 820px); } }

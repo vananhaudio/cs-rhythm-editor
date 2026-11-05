@@ -13,6 +13,7 @@ import { type ChatSelection, type ConversationItem } from '../chat/chatModel'
 import MiraChatView from '../chat/MiraChatView'
 import MiraListItem from '../chat/MiraListItem'
 import MiraPreparingView from '../chat/MiraPreparingView'
+import SoundSwitch from '../chat/SoundSwitch'
 import { MIRA_CONVERSATION_ID, miraPreviewVisible, previewBuild, useMiraEnabled } from '../chat/miraApi'
 import { classPath } from '../resolveMeRoute'
 
@@ -102,19 +103,9 @@ export default function Chat({ meId, selection, onOpenConversation, onBackToList
 
   return (
     <div className={'cs-col-wide cs-chat-wrap' + (open ? ' has-open' : '')}>
-      <h1 className="cs-page-title">Trò chuyện</h1>
-      {soundToggle && (
-        <div className="cs-chat-sound">
-          <span id="cs-chat-sound-label">Âm thanh thông báo</span>
-          <button type="button" role="switch" aria-checked={sound.enabled} aria-labelledby="cs-chat-sound-label"
-            className={'cs-switch' + (sound.enabled ? ' is-on' : '')} onClick={() => sound.set(!sound.enabled)}>
-            <span className="cs-switch-text">{sound.enabled ? 'Bật' : 'Tắt'}</span>
-            <span className="cs-switch-knob" aria-hidden="true" />
-          </button>
-        </div>
-      )}
+      <h1 className="cs-page-title cs-sr-only">Trò chuyện</h1>
       <section className="cs-card cs-chat">
-        <InboxList inbox={inbox} source={source} selectedId={selectedId} onSelect={id => onOpenConversation(id)} onOpenFriends={onOpenFriends}
+        <InboxList inbox={inbox} source={source} trailing={soundToggle ? <SoundSwitch enabled={sound.enabled} onChange={sound.set} /> : undefined} selectedId={selectedId} onSelect={id => onOpenConversation(id)} onOpenFriends={onOpenFriends}
           top={miraOn || miraPreview ? <MiraListItem active={isMira} onSelect={() => onOpenConversation(MIRA_CONVERSATION_ID)} /> : undefined} />
         <div className={'cs-chat-pane' + (open ? ' is-open' : '')}>
           {selection.kind === 'none' && (
