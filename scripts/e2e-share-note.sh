@@ -79,5 +79,9 @@ insert into public.learning_session_progress (learner_user_id, program_code, ses
   values ('$A', 'SOLO01', 2, 'b1000000-0000-4000-8000-000000000001'), ('$B', 'SOLO01', 2, 'b1000000-0000-4000-8000-000000000001') on conflict do nothing;
 SQL
 } > "$TMPX/extra.sql"
+# Contextual Share V2 (E2E_SHARE_TEXT=1): thêm khối VĂN BẢN vào Buổi 1; migration V2 KHÔNG nằm trong pre.sql — runner DB tự áp (vòng đời: dữ liệu V1 trước/sau,
+# idempotent, rollback, áp lại) rồi để DB ở trạng thái ĐÃ migrate cho các kịch bản trình duyệt. Mặc định (không đặt biến) = kịch bản V1.3 như cũ.
+RUNNER=run-share-note-all.mjs
+if [ -n "${E2E_SHARE_TEXT:-}" ]; then cat "$ROOT/db/tests/local/share_text_fixture.sql" >> "$TMPX/extra.sql"; RUNNER=run-share-text-all.mjs; fi
 E2E_CHECKPOINTS=1 E2E_SKIP_BASE=1 E2E_PRE_SQL="$TMPX/pre.sql" E2E_EXTRA_SQL="$TMPX/extra.sql" \
-  E2E_EXTRA_RUNNER="$ROOT/tests/e2e-learning-thread/run-share-note-all.mjs" bash "$ROOT/scripts/e2e-learning-thread.sh"
+  E2E_EXTRA_RUNNER="$ROOT/tests/e2e-learning-thread/$RUNNER" bash "$ROOT/scripts/e2e-learning-thread.sh"
