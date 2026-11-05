@@ -76,7 +76,7 @@ test('xem trước: màn "đang chuẩn bị" có lời chào + trạng thái, K
   const ui = render(<MiraPreparingView onBack={() => {}} />)
   await act(async () => { await new Promise(r => setTimeout(r, 30)) })
   const t = ui.container.textContent ?? ''
-  assert.match(t, /Chào bạn, mình là Mira!/); assert.match(t, /trợ lý AI của Thầy Văn Anh/); assert.match(t, /Mira đang chuẩn bị hoạt động/)
+  assert.match(t, /Chào bạn, mình là Mira!/); assert.match(t, /Trợ lý AI của Thầy Văn Anh/); assert.match(t, /Mira đang chuẩn bị hoạt động/)
   assert.ok(ui.getByTestId('mira-preparing'))
   assert.equal(ui.container.querySelectorAll('textarea,input,form').length, 0, 'không có ô nhập/biểu mẫu')
   assert.equal(calls.length, 0); assert.equal(rpcCalls.length, 0, 'không gọi function/RPC nào')
@@ -124,13 +124,19 @@ test('avatar Mira: chữ M, 48 ở danh sách / 40 ở đầu hội thoại; ava
   const css = readFileSync('src/class-social/classSocial.css', 'utf8')
   assert.ok(/\.cs-mira-avatar\s*\{[^}]*background:\s*#4338CA[^}]*color:\s*#fff[^}]*font-weight:\s*800/i.test(css), 'CSS đúng thông số ClassLandingPage')
 })
-test('mở màn: lời chào (Owner duyệt) nói rõ trợ lý AI, không thay Thầy chấm bài, không lưu lâu dài; nhiều đoạn, dòng đầu đậm; chưa gọi mạng', async () => {
+test('mở màn (V1.3): lời chào NGẮN + ô soạn ngay; thông tin AI gọn (đóng sẵn) có đủ: là AI, có thể sai, không chấm bài, gửi tới Anthropic, không lưu; chưa gọi Mira', async () => {
+  consentState = 'unavailable'
   const ui = render(<MiraChatView onBack={() => {}} onOpenClass={() => {}} />)
-  await waitFor(() => assert.ok(ui.getByText(/không thay Thầy chấm bài và không lưu lịch sử trò chuyện lâu dài/))); assert.equal(calls.length, 0)
-  const log = ui.getByRole('log'); const ps = [...log.querySelectorAll('.cs-msg-bubble p')]
-  assert.equal(ps.length, 4, 'bốn đoạn'); assert.match(ps[0].textContent ?? '', /Chào bạn, mình là Mira!/); assert.equal((ps[0] as HTMLElement).style.fontWeight, '700', 'dòng đầu in đậm')
-  assert.match(log.textContent ?? '', /trợ lý AI của Thầy Văn Anh/)
-  assert.ok(ui.getByText(/trợ lý AI/), 'lời chào nói rõ đây là AI')
+  assert.ok(ui.getByLabelText('Tin nhắn gửi Mira'), 'ô soạn có ngay, không chờ server')
+  const ps = [...ui.getByRole('log').querySelectorAll('.cs-msg-bubble p')]
+  assert.equal(ps.length, 2, 'lời chào 2 đoạn'); assert.match(ps[0].textContent ?? '', /Chào bạn, mình là Mira!/); assert.equal((ps[0] as HTMLElement).style.fontWeight, '700')
+  assert.match(ps[1].textContent ?? '', /Trợ lý AI của Thầy Văn Anh/)
+  const info = ui.getByTestId('mira-info') as HTMLDetailsElement
+  assert.equal(info.open, false, 'thông tin AI đóng sẵn — không lấn nội dung')
+  for (const re of [/Mira là AI, có thể sai/, /không phải người thật/, /không thay Thầy chấm bài/, /Anthropic/, /không lưu cuộc trò chuyện/]) assert.match(info.textContent ?? '', re)
+  await waitFor(() => assert.ok(rpcCalls.some(c => c.fn === 'ai_consent_status')))
+  assert.equal(ui.queryByTestId('mira-data'), null, 'server chưa có nội dung đồng ý → không mời chia sẻ dữ liệu')
+  assert.equal(calls.length, 0)
 })
 test('gửi → gọi mira-student-chat với message + history rỗng; hiện câu trả lời; KHÔNG gửi user_id/role', async () => {
   queue.push(ok('Hôm nay tập âm giai C chậm nhé.'))
@@ -199,83 +205,61 @@ test('Chat.tsx: Mira không đi vào ConversationView/dm_* (id "mira" không bao
   assert.ok(/selection\.kind === 'conversation' && !isMira/.test(s)); assert.ok(/isMira && miraOn/.test(s))
 })
 
-// ── V1.1: màn đồng ý ──
+// ── V1.3: không cổng đồng ý; chia sẻ dữ liệu học tập là LỰA CHỌN trong thông tin AI ──
 const textOf = (ui: ReturnType<typeof render>) => ui.container.textContent ?? ''
-test('chưa đồng ý (none): hiện màn đồng ý với nội dung/phiên bản từ server; KHÔNG có ô soạn; không gọi Mira', async () => {
-  consentState = 'none'
+test('chưa đồng ý (none): VẪN trò chuyện được (phổ thông); lời mời chia sẻ dữ liệu nằm trong thông tin AI với nội dung/phiên bản từ server', async () => {
+  consentState = 'none'; queue.push(ok('Hợp âm Am gồm La, Đô, Mi.'))
   const ui = render(<MiraChatView onBack={() => {}} onOpenClass={() => {}} />)
-  await waitFor(() => assert.ok(ui.getByTestId('mira-consent')))
-  assert.ok(textOf(ui).includes(NOTICE.title) && textOf(ui).includes('TRỢ LÝ AI') && textOf(ui).includes('Phiên bản nội dung: 7'))
-  assert.equal(ui.queryByLabelText('Tin nhắn gửi Mira'), null, 'không có ô soạn khi chưa đồng ý')
-  assert.equal(calls.length, 0)
+  await waitFor(() => assert.ok(ui.getByTestId('mira-data')))
+  assert.ok(textOf(ui).includes(NOTICE.title) && textOf(ui).includes('TRỢ LÝ AI'))
+  await say(ui, 'Hợp âm Am gồm những nốt nào?')
+  await waitFor(() => assert.ok(ui.getByText('Hợp âm Am gồm La, Đô, Mi.')))
+  assert.equal(rpcCalls.filter(c => c.fn === 'ai_consent_grant').length, 0, 'không tự ghi đồng ý')
 })
-test('đồng ý: gửi ĐÚNG phiên bản do server trả (7), không kèm danh tính; sau đó có ô soạn', async () => {
+test('chọn "Cho Mira dùng hồ sơ học tập": gửi ĐÚNG phiên bản server trả (7), không kèm danh tính; không tự gọi Mira', async () => {
   consentState = 'none'
   const ui = render(<MiraChatView onBack={() => {}} onOpenClass={() => {}} />)
-  const grantBtn = await ui.findByTestId('mira-consent-grant')
-  await act(async () => { fireEvent.click(grantBtn) })
-  await waitFor(() => assert.ok(ui.getByLabelText('Tin nhắn gửi Mira')))
+  const btn = await ui.findByTestId('mira-consent-grant')
+  await act(async () => { fireEvent.click(btn) })
+  await waitFor(() => assert.ok(ui.getByTestId('mira-withdraw')))
   const g = rpcCalls.filter(c => c.fn === 'ai_consent_grant')
-  assert.equal(g.length, 1); assert.deepEqual(g[0].args, { p_feature: 'mira_student', p_version: 7 })
-  assert.equal(calls.length, 0, 'đồng ý không tự gọi Mira')
+  assert.equal(g.length, 1); assert.deepEqual(g[0].args, { p_feature: 'mira_student', p_version: 7 }); assert.equal(calls.length, 0)
+  assert.match(textOf(ui), /đang dùng hồ sơ học tập/)
 })
-test('"Không tham gia": gọi onBack, không ghi gì', async () => {
-  consentState = 'none'; let back = 0
-  const ui = render(<MiraChatView onBack={() => { back++ }} onOpenClass={() => {}} />)
-  const declineBtn = await ui.findByTestId('mira-consent-decline')
-  await act(async () => { fireEvent.click(declineBtn) })
-  assert.equal(back, 1); assert.equal(rpcCalls.filter(c => c.fn === 'ai_consent_grant').length, 0)
-})
-test('đã rút lại / phiên bản cũ: màn đồng ý có lời nhắn riêng, vẫn không có ô soạn', async () => {
-  for (const [st, re] of [['withdrawn', /đã rút lại đồng ý/], ['outdated', /đã được cập nhật/]] as const) {
+test('đã rút lại / phiên bản cũ: lời nhắn riêng trong thông tin AI; ô soạn vẫn có', async () => {
+  for (const [st, re] of [['withdrawn', /ngừng chia sẻ trước đó/], ['outdated', /đã được cập nhật/]] as const) {
     consentState = st
     const ui = render(<MiraChatView onBack={() => {}} onOpenClass={() => {}} />)
-    await waitFor(() => assert.ok(re.test(textOf(ui)), st)); assert.equal(ui.queryByLabelText('Tin nhắn gửi Mira'), null)
+    await waitFor(() => assert.ok(re.test(textOf(ui)), st)); assert.ok(ui.getByLabelText('Tin nhắn gửi Mira'))
     cleanup()
   }
 })
-test('lỗi mạng khi hỏi trạng thái: KHÔNG coi là đã đồng ý — báo lỗi + thử lại, không ô soạn', async () => {
+test('lỗi mạng / dữ liệu lạ khi hỏi trạng thái: KHÔNG coi là đã đồng ý — không mời/không báo đang dùng hồ sơ; trò chuyện phổ thông vẫn được', async () => {
   rpcFail = true
   const ui = render(<MiraChatView onBack={() => {}} onOpenClass={() => {}} />)
-  await waitFor(() => assert.ok(/Chưa kiểm tra được/.test(textOf(ui))))
-  assert.equal(ui.queryByLabelText('Tin nhắn gửi Mira'), null); assert.equal(calls.length, 0)
-  rpcFail = false
-  await act(async () => { fireEvent.click(ui.getByText('Thử lại')) })
-  await waitFor(() => assert.ok(ui.getByLabelText('Tin nhắn gửi Mira')))
-})
-test('dữ liệu lạ từ server (không phải trạng thái hợp lệ) → báo lỗi, không mở chat', async () => {
-  const rpc = (await import('../../src/class-social/chat/miraApi')).fetchMiraConsent
-  assert.equal(typeof rpc, 'function')
+  await waitFor(() => assert.ok(rpcCalls.some(c => c.fn === 'ai_consent_status')))
+  assert.equal(ui.queryByTestId('mira-data'), null); assert.ok(!/đang dùng hồ sơ học tập/.test(textOf(ui))); assert.ok(ui.getByLabelText('Tin nhắn gửi Mira'))
+  cleanup()
   setMiraTransport({ rpc: async () => ({ data: true, error: null }), invoke: async () => ({ data: null, error: null }) })
-  const ui = render(<MiraChatView onBack={() => {}} onOpenClass={() => {}} />)
-  await waitFor(() => assert.ok(/Chưa kiểm tra được/.test(textOf(ui))))
-  assert.equal(ui.queryByLabelText('Tin nhắn gửi Mira'), null)
+  const ui2 = render(<MiraChatView onBack={() => {}} onOpenClass={() => {}} />)
+  await new Promise(r => setTimeout(r, 20))
+  assert.equal(ui2.queryByTestId('mira-data'), null); assert.ok(!/đang dùng hồ sơ học tập/.test(textOf(ui2)))
 })
-test('Mira chưa sẵn sàng (unavailable: ngoài pilot hoặc chưa kích hoạt nội dung): thông báo, không nút đồng ý, không ô soạn', async () => {
-  consentState = 'unavailable'
+test('ngừng chia sẻ: có xác nhận; server xác nhận → quay về lời mời; trò chuyện vẫn tiếp tục', async () => {
+  queue.push(ok('Trả lời trước.'))
   const ui = render(<MiraChatView onBack={() => {}} onOpenClass={() => {}} />)
-  await waitFor(() => assert.ok(/chưa sẵn sàng/.test(textOf(ui))))
-  assert.equal(ui.queryByTestId('mira-consent-grant'), null); assert.equal(ui.queryByLabelText('Tin nhắn gửi Mira'), null)
-})
-test('rút lại: có xác nhận; sau khi server xác nhận → về màn đồng ý (withdrawn), xoá tin trên màn hình, không còn ô soạn', async () => {
-  queue.push(ok('Trả lời trước khi rút lại.'))
-  const ui = render(<MiraChatView onBack={() => {}} onOpenClass={() => {}} />)
-  await say(ui, 'Em cần gợi ý')
-  await waitFor(() => assert.ok(ui.getByText('Trả lời trước khi rút lại.')))
-  await act(async () => { fireEvent.click(ui.getByTestId('mira-withdraw')) })
-  assert.ok(ui.getByTestId('mira-withdraw-confirm'), 'có bước xác nhận'); assert.equal(rpcCalls.filter(c => c.fn === 'ai_consent_withdraw').length, 0)
+  await say(ui, 'Em cần gợi ý'); await waitFor(() => assert.ok(ui.getByText('Trả lời trước.')))
+  await act(async () => { fireEvent.click(await ui.findByTestId('mira-withdraw')) })
+  assert.ok(ui.getByTestId('mira-withdraw-confirm')); assert.equal(rpcCalls.filter(c => c.fn === 'ai_consent_withdraw').length, 0)
   await act(async () => { fireEvent.click(ui.getByTestId('mira-withdraw-yes')) })
-  await waitFor(() => assert.ok(ui.getByTestId('mira-consent')))
-  assert.equal(rpcCalls.filter(c => c.fn === 'ai_consent_withdraw').length, 1)
-  assert.ok(!textOf(ui).includes('Trả lời trước khi rút lại.') && ui.queryByLabelText('Tin nhắn gửi Mira') === null)
-  assert.ok(/đã rút lại đồng ý/.test(textOf(ui)))
+  await waitFor(() => assert.ok(ui.getByTestId('mira-consent-grant')))
+  assert.equal(rpcCalls.filter(c => c.fn === 'ai_consent_withdraw').length, 1); assert.ok(ui.getByLabelText('Tin nhắn gửi Mira'))
 })
-test('server báo consent_required giữa chừng (đã rút lại ở thiết bị khác): giao diện quay về màn đồng ý', async () => {
+test('server báo consent_required (rút ở thiết bị khác): báo nhẹ + làm mới trạng thái; ô soạn vẫn có', async () => {
   queue.push({ data: { status: 'consent_required', reply: '', actions: [], ctx_fp: '' }, error: null })
   const ui = render(<MiraChatView onBack={() => {}} onOpenClass={() => {}} />)
-  await waitFor(() => assert.ok(ui.getByLabelText('Tin nhắn gửi Mira')))
   consentState = 'withdrawn'
   await say(ui, 'Em hỏi tiếp')
-  await waitFor(() => assert.ok(ui.getByTestId('mira-consent')))
-  assert.equal(ui.queryByLabelText('Tin nhắn gửi Mira'), null)
+  await waitFor(() => assert.ok(/vẫn trả lời câu hỏi chung/.test(textOf(ui))))
+  await waitFor(() => assert.ok(ui.getByTestId('mira-consent-grant'))); assert.ok(ui.getByLabelText('Tin nhắn gửi Mira'))
 })
