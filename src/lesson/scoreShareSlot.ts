@@ -2,6 +2,7 @@
 // Trang công khai / bản in / Admin không cấp ⇒ LessonScore hiển thị như cũ, không có lớp khoanh.
 import { createContext } from 'react'
 import type { BarRange, ScoreKey } from '../share/shareNoteApi'
+import type { TextAnchor } from '../share/textAnchor'
 
 export type ScoreShareContext = {
   /** Người học chọn xong một dải ô ở bản nhạc `score` → mở khung soạn câu hỏi / chia sẻ */
@@ -10,5 +11,9 @@ export type ScoreShareContext = {
   focus: { score: ScoreKey; bars: BarRange } | null
   /** Bản nhạc của vùng focus đã tô xong (để trang cuộn tới đúng chỗ một lần) */
   onFocusShown?: (el: HTMLElement) => void
+  /** V2 — chia sẻ VÙNG VĂN BẢN: có hàm này thì giáo trình cho phép chọn văn bản trong MỘT lá; chọn xong → khung soạn câu hỏi. `quote` chỉ để hiện cho người soạn. */
+  onAskText?: (anchor: TextAnchor, quote: string) => void
+  /** Vùng văn bản cần tô khi mở từ liên kết (server đã xác nhận + client đã kiểm băm) */
+  textFocus?: TextAnchor | null
 }
 export const ScoreShareSlot = createContext<ScoreShareContext | null>(null)

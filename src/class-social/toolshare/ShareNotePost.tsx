@@ -4,9 +4,11 @@
 // - Nạp khi thẻ gần khung nhìn (IntersectionObserver); chỉ MAX_LIVE_RENDERERS bản nhạc sống cùng lúc; thẻ cuộn xa → huỷ alphaTab (giữ chiều cao để Feed không giật).
 // - Mỗi thẻ có error boundary: một thẻ lỗi không làm hỏng Feed. Thích / bình luận nằm ở chân bài (FeedEntryCard), không đổi.
 import { Component, useEffect, useRef, useState, type ReactNode } from 'react'
+import { BookOpen, ChevronDown, ChevronUp } from 'lucide-react'
 import LessonScore from '../../lesson/LessonScore'
 import { ContextSectionView } from '../../lesson/LessonDocument'
 import { contextHasMore } from '../../share/contextShare'
+import { textContextHasMore } from '../../share/textAnchor'
 import type { ExcerptPlan } from '../../share/scoreExcerpt'
 import { loadSharePreview, requestRenderSlot, shareNoteMessage, type PreviewLoad } from '../../share/shareNotePreviewStore'
 import type { ToolShareView } from './registry'
@@ -58,17 +60,18 @@ export default function ShareNotePost({ view }: { view: ToolShareView }) {
   }, [near, noteId])
 
   // Khe dựng: chỉ khi có nhạc và thẻ đang gần
+  const isTextPost = note?.kind === 'text'                           // vùng văn bản: KHÔNG alphaTab ⇒ không xin khe dựng, không đếm vào MAX_LIVE_RENDERERS
   const wantRender = near && load?.status === 'ok'
   useEffect(() => {
-    if (!wantRender) return
+    if (!wantRender || isTextPost) return
     const s = requestRenderSlot(() => setSlot(true))
     return () => { s.release(); setSlot(false) }
-  }, [wantRender])
+  }, [wantRender, isTextPost])
 
   // Ghi nhớ chiều cao khi bản nhạc đã dựng xong
   const prev = useRef<HTMLDivElement>(null)
   useEffect(() => {
-    if (!(wantRender && slot) || !prev.current || typeof ResizeObserver === 'undefined') return
+    if (!(wantRender && (slot || isTextPost)) || !prev.current || typeof ResizeObserver === 'undefined') return
     const el = prev.current
     const ro = new ResizeObserver(() => {
       const h = el.offsetHeight; if (h > 40) setHeight(h)
@@ -76,17 +79,23 @@ export default function ShareNotePost({ view }: { view: ToolShareView }) {
     })
     ro.observe(el)
     return () => ro.disconnect()
-  }, [wantRender, slot])
+  }, [wantRender, slot, isTextPost])
 
   if (!note || !view.action) return <p className="cs-tool-share-missing">Kết quả này không còn hiển thị được.</p>
   const Icon = view.icon
   const msg = shareNoteMessage(load)
-  const live = wantRender && slot && load?.status === 'ok'
+  const live = wantRender && (slot || isTextPost) && load?.status === 'ok'
   const label = plan?.truncated ? `${view.detail ?? ''} · hiện ${plan.focusTo - plan.focusFrom + 1} ô đầu — bấm để xem đủ` : view.detail
   // "Xem đầy đủ" chỉ hiện khi thật sự có gì thêm: phần sư phạm bị ẩn, mô tả bị rút gọn, hoặc ô nhạc ngữ cảnh chưa vẽ
-  const hasMore = live && load?.status === 'ok' && load.section !== undefined && (contextHasMore([load.section], { ...load.score, section: 0 }) || clamped || !!plan?.moreContext || expanded)
-  const more = hasMore ? <button type="button" className="cs-sn-more" data-testid="share-note-more" aria-expanded={expanded} onClick={() => setExpanded(v => !v)}>{expanded ? 'Thu gọn' : 'Xem đầy đủ'}</button> : null
-  const open = <a className="cs-btn cs-btn-soft cs-tool-share-cta" href={view.action.href}>{view.action.label}</a>
+  const hasMore = live && load?.status === 'ok' && load.section !== undefined && (load.kind === 'text'
+    ? (textContextHasMore(load.section, load.text) || expanded)
+    : (contextHasMore([load.section], { ...load.score, section: 0 }) || clamped || !!plan?.moreContext || expanded))
+  const more = hasMore
+    ? <button type="button" className="cs-sn-more" data-testid="share-note-more" aria-expanded={expanded} onClick={() => setExpanded(v => !v)}>
+        <span>{expanded ? 'Thu gọn' : 'Xem đầy đủ'}</span>{expanded ? <ChevronUp size={16} aria-hidden="true" /> : <ChevronDown size={16} aria-hidden="true" />}
+      </button>
+    : null
+  const open = <a className="cs-sn-open" data-testid="share-note-open" href={view.action.href}><BookOpen size={17} aria-hidden="true" /><span>{view.action.label}</span></a>
 
   return (
     <div className="cs-tool-share cs-sn-post" ref={box} data-testid="share-note-post">
@@ -97,9 +106,11 @@ export default function ShareNotePost({ view }: { view: ToolShareView }) {
       {load?.status === 'ok' && (
         <div className="cs-sn-slot" style={{ minHeight: live ? undefined : height || 120 }} ref={prev} data-testid="share-note-preview" data-live={live ? '1' : '0'} data-plan={plan ? `${plan.start},${plan.count},${plan.focusFrom},${plan.focusTo}` : undefined}>
           {live
-            ? <PreviewBoundary fallback={<p className="cs-sn-msg">Chưa hiển thị được bản nhạc. Bấm “Mở trong giáo trình”.</p>}>
-                <a className="cs-sn-preview" href={view.action.href} aria-label={`Mở trong giáo trình: ${view.detail ?? 'đoạn đã khoanh'}`}>
+            ? <PreviewBoundary fallback={<p className="cs-sn-msg">{load.kind === 'text' ? 'Chưa hiển thị được đoạn văn bản.' : 'Chưa hiển thị được bản nhạc.'} Bấm “Mở trong giáo trình”.</p>}>
+                <a className="cs-sn-preview" href={view.action.href} aria-label={`Mở trong giáo trình: ${view.detail ?? 'đoạn đã chọn'}`}>
                   {(() => {
+                    // Vùng văn bản: khung = khối giáo trình GỐC (cửa sổ gọn / tiểu mục) dựng bằng chính renderer; vùng chọn là <mark> cam. Không alphaTab.
+                    if (load.kind === 'text') return <ContextSectionView section={load.section} index={load.text.section} text={load.text} expanded={expanded} />
                     const score = <LessonScore tex={load.tex} excerpt={load.bars} onExcerpt={setPlan} zoomable={false} barsPerRow={4} excerptContext={load.section ? (expanded ? 'full' : 'focus') : 'full'} />
                     // Khung ngữ cảnh = khối giáo trình GỐC (tiêu đề, mô tả, nhịp độ, tên tác phẩm) dựng bằng chính renderer của LessonDocument; thiếu khối → chỉ trích đoạn như V1.1
                     return load.section ? <ContextSectionView section={load.section} index={load.score.section} scoreKey={load.score} node={score} expanded={expanded} /> : score

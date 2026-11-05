@@ -3,18 +3,26 @@
 // - Hàng đợi: MỘT yêu cầu một lúc (không bắn hàng loạt khi Feed có nhiều thẻ).
 // - Cache theo NGƯỜI XEM (uid trong khoá): đổi tài khoản không dùng lại kết quả của người khác; hết hạn sau TTL để thấy bản nhạc Thầy sửa.
 // - Lỗi mạng KHÔNG cache (lần sau thử lại). supabase nạp ĐỘNG để component lá test được trên Node.
-import { isShareNoteSessionOpen, openShareNote, type BarRange, type ScoreKey } from './shareNoteApi'
+import { isBarsOpen, isShareNoteSessionOpen, isTextOpen, openShareNote, type BarRange, type ScoreKey, type ShareNoteKind } from './shareNoteApi'
 import { scoreTexAt } from './scoreExcerpt'
 import { UNAVAILABLE_TEXT } from './refCards'
+import { verifyAnchor, type TextAnchor } from './textAnchor'
 
 export type PreviewLoad =
-  | { status: 'ok'; note: string; tex: string; bars: BarRange; score: ScoreKey; section?: unknown }   // section = khối giáo trình chứa bản nhạc (khung ngữ cảnh)
-  | { status: 'stale' | 'no_access' | 'locked'; note: string }
+  | { status: 'ok'; kind: 'bars'; note: string; tex: string; bars: BarRange; score: ScoreKey; section?: unknown }   // section = khối giáo trình chứa bản nhạc (khung ngữ cảnh)
+  /** vùng văn bản: `text` = toạ độ ĐÃ được server xác nhận VÀ client kiểm lại bằng băm (verifyAnchor); `section` = khối chứa lá */
+  | { status: 'ok'; kind: 'text'; note: string; text: TextAnchor; moved: boolean; section: unknown }
+  | { status: 'stale' | 'no_access' | 'locked'; note: string; kind?: ShareNoteKind }
   | { status: 'unavailable' }
   | { status: 'error' }
 
 export function shareNoteMessage(load: PreviewLoad | null): string | null {
   if (!load) return null
+  if (load.status !== 'ok' && 'kind' in load && load.kind === 'text') {
+    if (load.status === 'no_access') return 'Bạn chưa có quyền xem phần giáo trình này.'
+    if (load.status === 'locked') return 'Buổi này chưa mở cho bạn nên chưa xem được đoạn văn bản.'
+    if (load.status === 'stale') return 'Giáo trình đã được cập nhật nên chưa hiển thị đoạn này.'
+  }
   if (load.status === 'no_access') return 'Bạn chưa có quyền xem bản nhạc này.'
   if (load.status === 'locked') return 'Buổi này chưa mở cho bạn nên chưa xem được bản nhạc.'
   if (load.status === 'stale') return 'Bản nhạc đã được cập nhật nên chưa hiển thị đoạn này.'
@@ -62,8 +70,8 @@ async function run(noteId: string, uid: string): Promise<PreviewLoad> {
     const open = await openShareNote(noteId)
     let out: PreviewLoad
     if (open.status === 'unavailable') out = { status: 'unavailable' }
-    else if (open.status !== 'ok') out = { status: open.status, note: open.note }   // stale / no_access: KHÔNG đọc giáo trình
-    else if (!(await isShareNoteSessionOpen(noteId))) out = { status: 'locked', note: open.note }   // buổi khoá: KHÔNG tải giáo trình
+    else if (open.status === 'stale' || open.status === 'no_access') out = { status: open.status, note: open.note, kind: open.kind }   // stale / no_access: KHÔNG đọc giáo trình
+    else if (!(await isShareNoteSessionOpen(noteId))) out = { status: 'locked', note: open.note, kind: open.kind }   // buổi khoá: KHÔNG tải giáo trình
     else {
       const sid = await sessionIdOf(open.classId, open.sessionNo)
       let sections = sid ? fresh(contents, `${uid}:${sid}`)?.v : null
@@ -74,9 +82,18 @@ async function run(noteId: string, uid: string): Promise<PreviewLoad> {
         sections = c?.sections ?? null
         if (sections) contents.set(`${uid}:${sid}`, { at: clock(), v: sections })
       }
-      const tex = sections ? scoreTexAt(sections, open.score) : null
-      // Không đọc được giáo trình / không thấy khối nhạc → coi như không có quyền xem nhạc (không đoán, không vẽ)
-      out = tex ? { status: 'ok', note: open.note, tex, bars: open.bars, score: open.score, section: Array.isArray(sections) ? sections[open.score.section] : undefined } : { status: 'no_access', note: open.note }
+      if (isTextOpen(open)) {
+        // Vùng văn bản: server đã quyết ok/moved; client KIỂM LẠI toạ độ + băm trên đúng giáo trình người xem đọc được (RLS). Không khớp ⇒ KHÔNG tô/hiện (stale).
+        if (!sections) out = { status: 'no_access', note: open.note, kind: 'text' }
+        else if (!(await verifyAnchor(sections, open.text, open.sha))) out = { status: 'stale', note: open.note, kind: 'text' }
+        else out = { status: 'ok', kind: 'text', note: open.note, text: open.text, moved: open.status === 'moved', section: (sections as unknown[])[open.text.section] }
+      } else if (!isBarsOpen(open)) {
+        out = { status: 'unavailable' }
+      } else {
+        const tex = sections ? scoreTexAt(sections, open.score) : null
+        // Không đọc được giáo trình / không thấy khối nhạc → coi như không có quyền xem nhạc (không đoán, không vẽ)
+        out = tex ? { status: 'ok', kind: 'bars', note: open.note, tex, bars: open.bars, score: open.score, section: Array.isArray(sections) ? sections[open.score.section] : undefined } : { status: 'no_access', note: open.note, kind: 'bars' }
+      }
     }
     if (out.status !== 'locked') notes.set(key, { at: clock(), v: out })   // khoá buổi KHÔNG cache: mở khoá xong thẻ cập nhật ở lần nạp kế
     return out

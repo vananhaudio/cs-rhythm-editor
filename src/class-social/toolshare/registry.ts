@@ -20,7 +20,8 @@ export type ToolShareView = {
   /** Có = object gốc chia sẻ được cho bạn bè trong Chat (artifact: BMS, Nhịp & Phách) */
   shareRef?: ShareRef | null
   /** Share Note: tham chiếu để Feed vẽ xem trước trích đoạn (KHÔNG có nội dung nhạc — nhạc chỉ nạp sau khi server cho phép) */
-  sharedNote?: { noteId: string; classId: string; sessionNo: number; from: number; to: number }
+  /** kind 'bars' = khoanh ô nhịp (V1; from/to = dải ô) · 'text' = vùng văn bản giáo trình (V2; không có dải ô) */
+  sharedNote?: { noteId: string; classId: string; sessionNo: number; kind: 'bars' | 'text'; from?: number; to?: number }
 }
 
 type ToolDef = { describe: (raw: Record<string, unknown>) => ToolShareView | null }
@@ -137,13 +138,23 @@ TOOL_REGISTRY.share_note = {
   describe: raw => {
     const id = raw.note_id, cls = raw.class_id, note = raw.note, n = int(raw.session_no), a = int(raw.bar_from), b = int(raw.bar_to)
     if (raw.kind !== 'share_note' || typeof id !== 'string' || !UUID_RE.test(id) || typeof cls !== 'string' || !UUID_RE.test(cls)) return null
+    if (raw.anchor === 'text') {   // V2: vùng văn bản — payload KHÔNG có nội dung giáo trình và KHÔNG có dải ô
+      if (typeof note !== 'string' || !note.trim() || note.length > 500 || n === null || n < 0) return null
+      return {
+        tool: 'share_note', toolLabel: 'Giáo trình', icon: MessageCircleQuestion, kindLabel: `Buổi ${n}`,
+        headline: note.trim(), detail: 'Đoạn văn bản', thumbnail: null, note: null,
+        action: { label: 'Mở trong giáo trình', href: shareNoteHref(cls, n, id) },
+        shareRef: null,
+        sharedNote: { noteId: id.toLowerCase(), classId: cls, sessionNo: n, kind: 'text' },
+      }
+    }
     if (typeof note !== 'string' || !note.trim() || note.length > 500 || n === null || n < 0 || a === null || b === null || a < 1 || b < a) return null
     return {
       tool: 'share_note', toolLabel: 'Bản nhạc', icon: MessageCircleQuestion, kindLabel: `Buổi ${n}`,
       headline: note.trim(), detail: a === b ? `Ô ${a}` : `Ô ${a}–${b}`, thumbnail: null, note: null,
       action: { label: 'Mở trong giáo trình', href: shareNoteHref(cls, n, id) },
       shareRef: null,
-      sharedNote: { noteId: id.toLowerCase(), classId: cls, sessionNo: n, from: a, to: b },
+      sharedNote: { noteId: id.toLowerCase(), classId: cls, sessionNo: n, kind: 'bars', from: a, to: b },
     }
   },
 }

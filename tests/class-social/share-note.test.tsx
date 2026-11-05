@@ -8,7 +8,7 @@ import { readFileSync } from "node:fs";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { hitTestBar, rectsForBars, toRange, rangeFits, barCount, type BoundsLike } from "../../src/lesson/scoreShare";
-import { parseShareNoteOpen, barRangeText, sameScoreKey, scoreKeyId } from "../../src/share/shareNoteApi";
+import { parseShareNoteOpen, barRangeText, sameScoreKey, scoreKeyId, isBarsOpen } from "../../src/share/shareNoteApi";
 import { shareNoteCardView, REF_RESOLVERS } from "../../src/share/refCards";
 import { SHARE_REF_TYPES, shareNoteRef, toShareRef } from "../../src/share/shareRef";
 import { shareNoteHref, shareNoteIdFromSearch } from "../../src/share/shareNoteLink";
@@ -65,7 +65,7 @@ test("mở: ok trả khối/đường dẫn/ô; stale & no_access KHÔNG có v�
   const base = { note: "Thầy ơi", author_id: "x", is_author: false, class_id: CLS, session_no: 1, created_at: "t" };
   const ok = parseShareNoteOpen([{ ...base, status: "ok", section_idx: 5, score_path: ["tex"], bar_from: 2, bar_to: 3 }]);
   assert.equal(ok.status, "ok");
-  assert.ok(ok.status === "ok" && ok.score.section === 5 && ok.bars.from === 2 && ok.bars.to === 3);
+  assert.ok(isBarsOpen(ok) && ok.score.section === 5 && ok.bars.from === 2 && ok.bars.to === 3);
   const st = parseShareNoteOpen([{ ...base, status: "stale", section_idx: null, score_path: null, bar_from: null, bar_to: null }]);
   assert.equal(st.status, "stale");
   assert.equal("bars" in st, false);

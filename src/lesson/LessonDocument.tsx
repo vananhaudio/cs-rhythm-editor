@@ -2,8 +2,11 @@
 // Nhận một LessonDoc (dữ liệu) → dựng trang giáo trình: web/app + in A4.
 // Nhận diện Class: cream #F7F5FC, indigo #4338CA, Be Vietnam Pro (index.html đã nạp font).
 // Section nào không có trong doc.sections thì đơn giản là không hiện.
-import { useContext, useRef, useState, type ReactNode } from 'react'
+import { createContext, useContext, useRef, useState, type ReactNode } from 'react'
 import type { ScoreKey } from '../share/shareNoteApi'
+import { leafKey, splitForMark, studyCompact, studySubsection, type TextAnchor } from '../share/textAnchor'
+import { ScoreShareSlot } from './scoreShareSlot'
+import TextSelectionLayer from './TextSelectionLayer'
 import type { CheckpointQuiz, CheckpointSection, LessonDoc, LessonSection, StudyBlock } from './lessonTypes'
 import { checkpointAcceptsLabel, quizOf } from './checkpoint'
 import { CheckpointSlot } from './checkpointSlot'
@@ -34,11 +37,27 @@ function Block({ label, title, children, sub }:
   )
 }
 
-/** Chế độ KHUNG NGỮ CẢNH (Contextual Share): cùng renderer, chỉ thay LessonScore của đúng bản nhạc đã chia sẻ bằng `node` và lược các phần không thuộc khung. */
-export type ContextRender = { key: ScoreKey; node: ReactNode; expanded?: boolean }
+/** Chia sẻ VÙNG VĂN BẢN (Contextual Share V2): `select` = trang Buổi cho phép chọn (mỗi lá gắn data-tp để lớp chọn đổi vùng chọn → điểm mã);
+ *  `focus` = lá + khoảng điểm mã cần tô (đã được server xác nhận và client kiểm băm). Không có provider ⇒ lá in thẳng chuỗi như cũ (không đổi bản in / PDF / trang công khai). */
+export type TextLeafView = { select?: boolean; focus?: TextAnchor | null }
+const TextLeafCtx = createContext<TextLeafView>({})
+/** Một LÁ văn bản. Chuỗi nguồn được in NGUYÊN VĂN (không trim); lá được tô chia thành [trước][<mark>][sau] — tổng nối lại bằng đúng chuỗi nguồn. */
+function T({ si, path, text }: { si: number; path: (string | number)[]; text: string }) {
+  const v = useContext(TextLeafCtx)
+  const p = path.map(String)
+  const hit = !!v.focus && v.focus.section === si && v.focus.path.join('.') === p.join('.')
+  if (!v.select && !hit) return <>{text}</>
+  const parts = hit && v.focus ? splitForMark(text, v.focus.from, v.focus.to) : null
+  const inner = parts ? <>{parts[0]}<mark className="lsn-text-hl" data-testid="text-focus">{parts[1]}</mark>{parts[2]}</> : text
+  return v.select ? <span className="lsn-leaf" data-tp={leafKey(si, p)}>{inner}</span> : <>{inner}</>
+}
+
+/** Chế độ KHUNG NGỮ CẢNH (Contextual Share): cùng renderer, chỉ thay LessonScore của đúng bản nhạc đã chia sẻ bằng `node` và lược các phần không thuộc khung.
+ *  V2 văn bản: `text` = neo; khối `study` chỉ dựng cửa sổ (gọn: tiêu đề + khối chứa lá + khối phụ thuộc; đầy đủ: cả tiểu mục) — các loại khối còn lại dựng nguyên khối. */
+export type ContextRender = { key?: ScoreKey; node?: ReactNode; text?: TextAnchor; expanded?: boolean }
 /** Phần ngữ cảnh sư phạm ĐI SAU / BÊN CẠNH bản nhạc (chú thích marks, guidance, ghi chú, danh sách dự kiến, trạng thái chờ): hiện ở trang giáo trình gốc, ẩn ở khung mặc định, hiện khi "Xem thêm ngữ cảnh". */
 const showMore = (c: ContextRender | undefined) => !c || !!c.expanded
-const ctxHit = (c: ContextRender | undefined, i: number, path: ScoreKey['path']) => !!c && c.key.section === i && c.key.path.join('.') === path.join('.')
+const ctxHit = (c: ContextRender | undefined, i: number, path: ScoreKey['path']) => !!c && !!c.key && c.key.section === i && c.key.path.join('.') === path.join('.')
 
 function renderSection(s: LessonSection, i: number, ctx?: ContextRender) {
   switch (s.kind) {
@@ -46,7 +65,7 @@ function renderSection(s: LessonSection, i: number, ctx?: ContextRender) {
       return (
         <section key={i} className="lsn-goals lsn-block">
           <h2>{s.title ?? 'Sau buổi này học viên làm được'}</h2>
-          <ol>{s.items.map((t, k) => <li key={k}>{t}</li>)}</ol>
+          <ol>{s.items.map((t, k) => <li key={k}><T si={i} path={['items', k]} text={t} /></li>)}</ol>
         </section>
       )
 
@@ -58,7 +77,7 @@ function renderSection(s: LessonSection, i: number, ctx?: ContextRender) {
             {s.steps.map((st, k) => (
               <div key={k} className="lsn-recap-step">
                 <b>{st.label}</b>
-                <ul>{st.items.map((t, j) => <li key={j}>{t}</li>)}</ul>
+                <ul>{st.items.map((t, j) => <li key={j}><T si={i} path={['steps', k, 'items', j]} text={t} /></li>)}</ul>
               </div>
             ))}
           </div>
@@ -90,7 +109,7 @@ function renderSection(s: LessonSection, i: number, ctx?: ContextRender) {
       return (
         <aside key={i} className="lsn-note lsn-block">
           {s.title && <strong>{s.title}</strong>}
-          <p>{s.text}</p>
+          <p><T si={i} path={['text']} text={s.text} /></p>
         </aside>
       )
 
@@ -204,7 +223,7 @@ function renderSection(s: LessonSection, i: number, ctx?: ContextRender) {
         <Block key={i} title={s.title ?? 'Bài tập về nhà'}>
           <ul className="lsn-hw">
             {s.items.map((it, k) => (
-              <li key={k}><b>{it.label}</b> {it.text}</li>
+              <li key={k}><b>{it.label}</b> <T si={i} path={['items', k, 'text']} text={it.text} /></li>
             ))}
           </ul>
           {s.message && <p className="lsn-msg">{s.message}</p>}
@@ -215,7 +234,7 @@ function renderSection(s: LessonSection, i: number, ctx?: ContextRender) {
       return (
         <Block key={i} title={s.title ?? 'Checklist cuối bài'}>
           <ul className="lsn-check">
-            {s.items.map((t, k) => <li key={k}><span className="lsn-box" />{t}</li>)}
+            {s.items.map((t, k) => <li key={k}><span className="lsn-box" /><T si={i} path={['items', k]} text={t} /></li>)}
           </ul>
         </Block>
       )
@@ -236,7 +255,16 @@ function renderSection(s: LessonSection, i: number, ctx?: ContextRender) {
             {s.tag && <span className="lsn-tag">{s.tag}</span>}
             <h2>{s.title}</h2>
           </div>
-          {s.blocks.map((bl, j) => renderStudyBlock(bl, j))}
+          {(() => {
+            const at = ctx?.text && ctx.text.section === i && ctx.text.path[0] === 'blocks' ? Number(ctx.text.path[1]) : null
+            const only = at !== null && Number.isInteger(at) ? (ctx?.expanded ? studySubsection(s.blocks, at) : studyCompact(s.blocks, at)) : null
+            const gap = (k: string) => <div key={k} className="lsn-ctx-gap" aria-hidden="true">⋯</div>
+            return <>
+              {only && only.length > 0 && only[0] > 0 && gap('g0')}
+              {s.blocks.map((bl, j) => (only && !only.includes(j)) ? null : renderStudyBlock(bl, j, i))}
+              {only && only.length > 0 && only[only.length - 1] < s.blocks.length - 1 && gap('g1')}
+            </>
+          })()}
         </section>
       )
 
@@ -305,14 +333,14 @@ function safeRenderSection(s: LessonSection, i: number, ctx?: ContextRender) {
 
 const isBlank = (c: string) => /^_{2,}$/.test(c.trim())
 
-function renderStudyBlock(bl: StudyBlock, j: number) {
+function renderStudyBlock(bl: StudyBlock, j: number, si: number) {
   switch (bl.b) {
-    case 'h': return <h3 key={j} className="lsn-st-h">{bl.text}</h3>
-    case 'p': return <p key={j} className="lsn-st-p">{bl.text}</p>
-    case 'ul': return <ul key={j} className="lsn-st-list">{bl.items.map(t => <li key={t}>{t}</li>)}</ul>
-    case 'ol': return <ol key={j} className="lsn-st-list">{bl.items.map(t => <li key={t}>{t}</li>)}</ol>
+    case 'h': return <h3 key={j} className="lsn-st-h"><T si={si} path={['blocks', j, 'text']} text={bl.text} /></h3>
+    case 'p': return <p key={j} className="lsn-st-p"><T si={si} path={['blocks', j, 'text']} text={bl.text} /></p>
+    case 'ul': return <ul key={j} className="lsn-st-list">{bl.items.map((t, k) => <li key={k}><T si={si} path={['blocks', j, 'items', k]} text={t} /></li>)}</ul>
+    case 'ol': return <ol key={j} className="lsn-st-list">{bl.items.map((t, k) => <li key={k}><T si={si} path={['blocks', j, 'items', k]} text={t} /></li>)}</ol>
     case 'callout':
-      return <div key={j} className="lsn-st-callout"><strong>{bl.label}</strong><p>{bl.text}</p></div>
+      return <div key={j} className="lsn-st-callout"><strong>{bl.label}</strong><p><T si={si} path={['blocks', j, 'text']} text={bl.text} /></p></div>
     case 'write':
       return (
         <div key={j} className="lsn-st-write">
@@ -324,10 +352,10 @@ function renderStudyBlock(bl: StudyBlock, j: number) {
       return (
         <div key={j} className="lsn-st-tablewrap">
           <table className="lsn-st-table">
-            <thead><tr>{bl.rows[0].map((c, k) => <th key={k}>{c}</th>)}</tr></thead>
+            <thead><tr>{bl.rows[0].map((c, k) => <th key={k}>{isBlank(c) ? c : <T si={si} path={['blocks', j, 'rows', 0, k]} text={c} />}</th>)}</tr></thead>
             <tbody>
               {bl.rows.slice(1).map((r, ri) => (
-                <tr key={ri}>{r.map((c, k) => <td key={k} className={isBlank(c) ? 'is-blank' : undefined}>{isBlank(c) ? '' : c}</td>)}</tr>
+                <tr key={ri}>{r.map((c, k) => <td key={k} className={isBlank(c) ? 'is-blank' : undefined}>{isBlank(c) ? '' : <T si={si} path={['blocks', j, 'rows', ri + 1, k]} text={c} />}</td>)}</tr>
               ))}
             </tbody>
           </table>
@@ -342,6 +370,8 @@ function renderStudyBlock(bl: StudyBlock, j: number) {
 export default function LessonDocument({ doc, onBack, embedded = false }: { doc: LessonDoc; onBack?: () => void; embedded?: boolean }) {
   const m = doc.meta
   const paperRef = useRef<HTMLElement>(null)
+  const share = useContext(ScoreShareSlot)                       // chỉ trang Buổi /me cấp; nơi khác = null ⇒ không chọn văn bản, không đổi giao diện
+  const textView: TextLeafView = { select: !!share?.onAskText, focus: share?.textFocus ?? null }
   const [pdf, setPdf] = useState<'idle' | 'working' | 'error'>('idle')
 
   const fileName = `${m.programCode}-Buoi-${String(m.sessionNo).padStart(2, '0')}.pdf`
@@ -385,23 +415,28 @@ export default function LessonDocument({ doc, onBack, embedded = false }: { doc:
           {m.stageLabel && <p className="lsn-head-stage">{m.stageLabel}</p>}
         </header>
 
-        {doc.sections.map((s, i) => safeRenderSection(s, i))}
+        <TextLeafCtx.Provider value={textView}>
+          {doc.sections.map((s, i) => safeRenderSection(s, i))}
+        </TextLeafCtx.Provider>
 
         <footer className="lsn-foot">
           {m.programCode} · Buổi {String(m.sessionNo).padStart(2, '0')} — Thầy Văn Anh Guitar
         </footer>
       </article>
+      {share?.onAskText && <TextSelectionLayer root={paperRef} sections={doc.sections} onAsk={share.onAskText} />}
     </div>
   )
 }
 
 /** Khung ngữ cảnh giáo trình (Universal Contextual Share): dựng ĐÚNG khối gốc bằng chính renderer + CSS của LessonDocument, chỉ thay phần bản nhạc bằng `node`
  *  (trích đoạn + vùng chú ý). Dữ liệu `section` là khối ĐÃ qua kiểm quyền ở server/RLS; mọi văn bản đi qua React (không HTML thô). */
-export function ContextSectionView({ section, index, scoreKey, node, expanded = false }: { section: unknown; index: number; scoreKey: ScoreKey; node: ReactNode; expanded?: boolean }) {
+export function ContextSectionView({ section, index, scoreKey, node, text, expanded = false }: { section: unknown; index: number; scoreKey?: ScoreKey; node?: ReactNode; text?: TextAnchor; expanded?: boolean }) {
   return (
     <div className="lsn is-embedded lsn-ctx" data-testid="context-section" data-expanded={expanded ? '1' : '0'}>
       <style>{CSS}</style>
-      <article className="lsn-paper">{safeRenderSection(section as LessonSection, index, { key: scoreKey, node, expanded })}</article>
+      <TextLeafCtx.Provider value={{ focus: text ?? null }}>
+        <article className="lsn-paper">{safeRenderSection(section as LessonSection, index, { key: scoreKey, node, text, expanded })}</article>
+      </TextLeafCtx.Provider>
     </div>
   )
 }
@@ -540,6 +575,17 @@ const CSS = `
 .lsn-share-btn{display:inline-flex;align-items:center;gap:5px;min-height:34px;padding:0 12px;border:1px solid ${P.line};border-radius:999px;background:#fff;color:${P.purple};font-weight:600;font-size:13.5px;line-height:1;font-family:inherit;cursor:pointer;}
 .lsn-share-btn[aria-pressed="true"]{background:${P.purpleTint};}
 .lsn-share-btn.is-primary{background:${P.purple};border-color:${P.purple};color:#fff;}
+/* Contextual Share V2 — vùng văn bản: nền cam nhạt + gạch chân cam (cùng màu điểm nhấn với vùng khoanh ô nhịp); thanh hành động cố định ở đáy */
+.lsn-text-hl{background:rgba(234,88,12,.18);color:inherit;border-radius:3px;padding:0 1px;box-decoration-break:clone;-webkit-box-decoration-break:clone;box-shadow:inset 0 -2px 0 rgba(234,88,12,.85);}
+.lsn-ctx-gap{color:${P.inkFaint};text-align:center;letter-spacing:.35em;line-height:1;padding:4px 0;font-size:16px;}
+.lsn-textbar{position:fixed;left:0;right:0;bottom:0;z-index:40;display:flex;justify-content:center;padding:8px 12px calc(10px + env(safe-area-inset-bottom));pointer-events:none;}
+.lsn-textbar-in{pointer-events:auto;width:min(100%,560px);background:#fff;border:1px solid ${P.line};border-radius:16px;box-shadow:0 8px 28px rgba(29,25,48,.22);padding:10px 12px;display:flex;flex-direction:column;gap:8px;}
+.lsn-textbar-q{display:block;font-size:14px;line-height:1.45;color:${P.ink};overflow-wrap:anywhere;}
+.lsn-textbar-warn{margin:0;font-size:14px;line-height:1.45;color:#b42318;}
+.lsn-textbar-acts{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.lsn-textbar .lsn-share-btn{min-height:44px;padding:0 14px;}
+.lsn-textbar .lsn-share-icon{min-width:44px;min-height:44px;}
+@media print{.lsn-textbar{display:none;}}
 .lsn-share-icon{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border:1px solid ${P.line};border-radius:50%;background:#fff;color:${P.inkSoft};cursor:pointer;}
 .lsn-share-range{font-weight:800;color:${P.ink};font-size:14px;padding:0 4px;}
 .lsn-share-hint{font-size:13px;color:${P.inkFaint};overflow-wrap:anywhere;}

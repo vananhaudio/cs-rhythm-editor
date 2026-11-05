@@ -73,10 +73,18 @@ export function chordCardView(row: ChordCardRow | null | undefined): ToolShareVi
 }
 
 // ── Khoanh ô nhịp (Share Note V1): lời nhắn + buổi + dải ô qua RPC share_note_card (quyền THẤY) — mở bản nhạc do trang Buổi + RPC open quyết ──
-export type ShareNoteCardView = { id: string; note: string; class_id: string; session_no: number | string | null; bar_from: number | string | null; bar_to: number | string | null }
+export type ShareNoteCardView = { id: string; note: string; class_id: string; session_no: number | string | null; anchor_kind?: string | null; bar_from: number | string | null; bar_to: number | string | null }
 export function shareNoteCardView(row: ShareNoteCardView | null | undefined): ToolShareView | null {
   const n = Number(row?.session_no), a = Number(row?.bar_from), b = Number(row?.bar_to)
   const note = (row?.note ?? '').trim()
+  if (row?.anchor_kind === 'text') {   // V2: vùng văn bản — thẻ tham chiếu (Chat chưa dựng khung)
+    if (!note || note.length > 500 || !Number.isInteger(n) || n < 0) return null
+    return {
+      tool: 'share_note', toolLabel: 'Giáo trình', icon: MessageCircleQuestion, kindLabel: `Buổi ${n}`, headline: note,
+      detail: 'Đoạn văn bản', thumbnail: null, note: null,
+      action: { label: 'Mở trong giáo trình', href: shareNoteHref(row.class_id, n, row.id) },
+    }
+  }
   if (!row || !note || note.length > 500 || !Number.isInteger(n) || n < 0 || !Number.isInteger(a) || !Number.isInteger(b) || a < 1 || b < a) return null
   return {
     tool: 'share_note', toolLabel: 'Bản nhạc', icon: MessageCircleQuestion, kindLabel: `Buổi ${n}`, headline: note,

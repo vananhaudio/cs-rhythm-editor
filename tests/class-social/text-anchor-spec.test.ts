@@ -6,16 +6,9 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
+import { boundaryOk, cpLen, cpSlice, cpToUtf16, snapToGraphemes, textLeaves, utf16ToCp } from '../../src/share/textAnchor.ts'
 
-// ───────────────────────── 1. ĐƠN VỊ = ĐIỂM MÃ (code point) ─────────────────────────
-// PostgreSQL (UTF8): length / substr / position đếm ĐIỂM MÃ. JavaScript: .length / .slice / DOM Range đếm đơn vị UTF-16.
-// Quy tắc: neo lưu và truyền theo ĐIỂM MÃ; mọi chỗ JS đổi qua các hàm dưới đây, CẤM .length/.slice trực tiếp trên toạ độ neo.
-const cpLen = (s: string) => Array.from(s).length
-const cpSlice = (s: string, a: number, b: number) => Array.from(s).slice(a, b).join('')
-/** chỉ số điểm mã → chỉ số UTF-16 (để cắt chuỗi / dựng Range) */
-function cpToUtf16(s: string, cp: number): number { let u = 0, i = 0; for (const ch of s) { if (i === cp) return u; u += ch.length; i++ } return i === cp ? u : -1 }
-/** chỉ số UTF-16 (DOM Range) → điểm mã; -1 nếu rơi GIỮA cặp thay thế (không hợp lệ) */
-function utf16ToCp(s: string, u16: number): number { let u = 0, i = 0; for (const ch of s) { if (u === u16) return i; if (u > u16) return -1; u += ch.length; i++ } return u === u16 ? i : -1 }
+// ───────────────────────── 1. ĐƠN VỊ = ĐIỂM MÃ (hàm THẬT của client: src/share/textAnchor.ts) ─────────────────────────
 const sha = (s: string) => createHash('sha256').update(Buffer.from(s, 'utf8')).digest('hex')
 
 type Vec = { name: string; text: string; pgLengthCp: number; jsUtf16Length: number; ranges: { from: number; to: number; substr: string; sha: string; firstPosCp: number }[] }
@@ -53,33 +46,7 @@ test('Không chuẩn hoá Unicode: NFC ≠ NFD → băm khác → neo cũ thành
   assert.notEqual(sha(nfc), sha(nfd))
 })
 
-// ───────────────────────── 2. BIÊN CHỌN: không cắt giữa cụm ký tự ─────────────────────────
-// Client co biên ra ranh giới grapheme (Intl.Segmenter) rồi mới gửi; server CHẶN thêm lớp thứ hai bằng dải ký tự đơn giản.
-// eslint-disable-next-line no-misleading-character-class -- dải dấu tổ hợp/ZWJ/VS/skin-tone là CHỦ Ý (đúng quy tắc server §16.4)
-const COMBINING_OR_JOINER = /^[̀-ͯ᪰-᫿᷀-᷿⃐-⃿︀-️︠-︯‍\u{1f3fb}-\u{1f3ff}]/u
-const ZWJ = '‍'
-/** Biên [a,b) hợp lệ ở phía server: ký tự đầu không phải dấu tổ hợp/ZWJ/VS/skin-tone; ký tự ngay sau b cũng không; ký tự cuối không phải ZWJ */
-function boundaryOk(text: string, a: number, b: number): boolean {
-  const cps = Array.from(text)
-  if (a < 0 || b > cps.length || b <= a) return false
-  if (COMBINING_OR_JOINER.test(cps[a])) return false
-  if (b < cps.length && COMBINING_OR_JOINER.test(cps[b])) return false
-  if (cps[b - 1] === ZWJ) return false
-  return true
-}
-/** co biên ra ranh giới grapheme (phía client) — theo điểm mã */
-function snapToGraphemes(text: string, a: number, b: number): [number, number] {
-  const seg = new Intl.Segmenter('vi', { granularity: 'grapheme' })
-  const cuts = new Set<number>([0])
-  let u = 0, cp = 0
-  for (const g of seg.segment(text)) { cuts.add(cp); u += g.segment.length; cp += cpLen(g.segment) }
-  cuts.add(cp); void u
-  let lo = a, hi = b
-  while (lo > 0 && !cuts.has(lo)) lo--
-  while (hi < cp && !cuts.has(hi)) hi++
-  return [lo, hi]
-}
-
+// ───────────────────────── 2. BIÊN CHỌN: không cắt giữa cụm ký tự (hàm THẬT: boundaryOk / snapToGraphemes) ─────────────────────────
 test('Biên tiếng Việt tổ hợp (NFD) và emoji ZWJ: client co ra grapheme, server chặn biên cắt giữa cụm', () => {
   const nfd = 'giữ đều tay'.normalize('NFD')              // "ữ" = u + ◌̛ + ◌̃
   const iU = Array.from(nfd).indexOf('u')
@@ -98,30 +65,12 @@ test('Biên tiếng Việt tổ hợp (NFD) và emoji ZWJ: client co ra grapheme
 })
 
 // ───────────────────────── 3. block_fp và bộ tìm lại (mô hình tham chiếu) ─────────────────────────
-type Leaf = { path: string[]; text: string }
 type Section = { kind: string; title?: string; [k: string]: unknown }
 const FP_TAG = 'tsa1'
 /** block_fp = sha256_hex(utf8('tsa1' ␟ kind ␟ title)); title thiếu → ''.  Không chuẩn hoá, không cắt khoảng trắng. */
 const blockFp = (s: Section) => sha(`${FP_TAG}\u001f${s.kind}\u001f${typeof s.title === 'string' ? s.title : ''}`)
-const isBlank = (c: string) => /^_{2,}$/.test(c.trim())
 
-/** Lá văn bản cho phép trong MVP (đúng 6 loại khối đã duyệt). Thứ tự = thứ tự hiển thị. */
-function leaves(s: Section): Leaf[] {
-  const out: Leaf[] = []
-  const push = (path: (string | number)[], t: unknown) => { if (typeof t === 'string' && t.length > 0 && !isBlank(t)) out.push({ path: path.map(String), text: t }) }
-  switch (s.kind) {
-    case 'note': push(['text'], s.text); break
-    case 'objectives': case 'checklist': (s.items as unknown[] | undefined)?.forEach((t, k) => push(['items', k], t)); break
-    case 'recap': (s.steps as { items?: unknown[] }[] | undefined)?.forEach((st, i) => st.items?.forEach((t, k) => push(['steps', i, 'items', k], t))); break
-    case 'assignment': (s.items as { text?: unknown }[] | undefined)?.forEach((it, k) => push(['items', k, 'text'], it.text)); break
-    case 'study': (s.blocks as { b: string; text?: string; items?: string[]; rows?: string[][] }[] | undefined)?.forEach((bl, j) => {
-      if (bl.b === 'h' || bl.b === 'p' || bl.b === 'callout') push(['blocks', j, 'text'], bl.text)
-      else if (bl.b === 'ul' || bl.b === 'ol') bl.items?.forEach((t, k) => push(['blocks', j, 'items', k], t))
-      else if (bl.b === 'table') bl.rows?.forEach((r, ri) => r.forEach((c, ci) => push(['blocks', j, 'rows', ri, ci], c)))
-    }); break
-  }
-  return out
-}
+const leaves = (s: Section) => textLeaves(s)   // enumerator THẬT của client (đối chiếu với SQL share_text_leaves ở run-share-text-db.mjs)
 
 type Anchor = { section: number; path: string[]; from: number; to: number; sel: string /* sha */; ctx: string /* sha */; fp: string }
 const CTX_N = 32

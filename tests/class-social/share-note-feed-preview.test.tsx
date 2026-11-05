@@ -67,7 +67,7 @@ const payload = { v: 1, tool: 'share_note', kind: 'share_note', note_id: ID.toUp
 
 test('registry: share_note mang tham chiếu (KHÔNG có nội dung nhạc / đường dẫn / sha)', () => {
   const v = describeToolShare(payload)!
-  assert.deepEqual(v.sharedNote, { noteId: ID, classId: CLS, sessionNo: 1, from: 2, to: 7 })
+  assert.deepEqual(v.sharedNote, { noteId: ID, classId: CLS, sessionNo: 1, kind: 'bars', from: 2, to: 7 })
   assert.equal(v.detail, 'Ô 2–7')
   assert.match(v.action!.href, /\/sessions\/1\?note=/)
   assert.ok(!JSON.stringify(v.sharedNote).match(/tex|sha|path|score/i))
@@ -89,7 +89,7 @@ test('Thông báo theo trạng thái: no_access / stale / unavailable / lỗi m�
   assert.match(shareNoteMessage({ status: 'unavailable' })!, /không còn khả dụng/)
   assert.match(shareNoteMessage({ status: 'error' })!, /Chưa tải được/)
   assert.equal(shareNoteMessage(null), null)
-  assert.equal(shareNoteMessage({ status: 'ok', note: 'x', tex: 't', bars: { from: 1, to: 2 }, score: { section: 0, path: ['tex'] } }), null)
+  assert.equal(shareNoteMessage({ status: 'ok', kind: 'bars', note: 'x', tex: 't', bars: { from: 1, to: 2 }, score: { section: 0, path: ['tex'] } }), null)
 })
 
 test('Khe dựng: tối đa MAX_LIVE_RENDERERS bản nhạc sống; thẻ chờ được cấp khi khe trống; trả khe idempotent; không rò rỉ', () => {
