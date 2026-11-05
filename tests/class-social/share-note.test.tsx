@@ -98,7 +98,7 @@ test("thẻ Chat: lời nhắn + Buổi + Ô; mở đúng đoạn bằng deep li
   assert.equal(v!.kindLabel, "Buổi 1");
   assert.equal(v!.action!.href, `/me/classes/${CLS}/sessions/1?note=${NOTE}`);
   const html = renderToStaticMarkup(<ShareCardView view={v} />);
-  assert.match(html, /Mở đúng đoạn/);
+  assert.match(html, /Mở trong giáo trình/);
   assert.doesNotMatch(html, /share_note/);
   assert.equal(shareNoteCardView({ id: NOTE, note: "  ", class_id: CLS, session_no: 1, bar_from: 1, bar_to: 1 }), null);
   assert.equal(shareNoteCardView({ id: NOTE, note: "x", class_id: CLS, session_no: 1, bar_from: 3, bar_to: 2 }), null);

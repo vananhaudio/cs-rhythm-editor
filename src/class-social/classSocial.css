@@ -1857,10 +1857,10 @@ button.cs-subs-title:hover { color: var(--cs-accent); }
 .cs-sn-msg { margin: 6px 0 0; font-size: 14px; color: var(--cs-muted); overflow-wrap: anywhere; }
 .cs-sn-slot { width: 100%; margin-top: 8px; }
 .cs-sn-wait { padding: 8px 0; }
-.cs-sn-preview { display: block; position: relative; border-radius: 12px; border: 2px solid #EA580C; background: #fff; overflow: hidden; color: inherit; text-decoration: none; }
+.cs-sn-preview { display: block; position: relative; border-radius: 12px; border: 1px solid var(--cs-border, #E4E0F0); background: #fff; overflow: hidden; color: inherit; text-decoration: none; }
 /* V1.1: nền cam chỉ phủ VÙNG KHOANH (.lsn-excerpt-hl); ô ngữ cảnh để nguyên */
 .cs-sn-preview .lsn-excerpt-focus { position: absolute; inset: 0; pointer-events: none; }
-.cs-sn-preview .lsn-excerpt-hl { position: absolute; background: rgba(234, 88, 12, 0.09); box-shadow: inset 0 0 0 1.5px rgba(234, 88, 12, 0.5); border-radius: 6px; }
+.cs-sn-preview .lsn-excerpt-hl { position: absolute; background: rgba(234, 88, 12, 0.11); box-shadow: inset 0 0 0 2px rgba(234, 88, 12, 0.75); border-radius: 6px; }   /* điểm nhấn thị giác DUY NHẤT: khung ngoài trung tính, chỉ vùng khoanh màu cam */
 /* Khung giáo trình trong Feed (Contextual Share): CÙNG renderer, chỉ thu gọn cỡ chữ + khoảng đệm cho thẻ Feed (không ẩn / không cắt nội dung). */
 .cs-sn-post .cs-sn-preview .lsn-ctx .lsn-paper { padding: 0; }
 .cs-sn-post .cs-sn-preview .lsn-ctx .lsn-paper .lsn-block { border: 0; border-radius: 0; margin: 0; padding: 10px 12px 4px; background: transparent; }
@@ -1872,8 +1872,13 @@ button.cs-subs-title:hover { color: var(--cs-accent); }
 .cs-sn-post .cs-sn-preview .lsn-ctx .lsn-paper .lsn-piece-by { font-size: 12.5px; }
 .cs-sn-post .cs-sn-preview .lsn-ctx .lsn-paper .lsn-piece-note { font-size: 13.5px; line-height: 1.4; margin: 2px 0 6px; }
 .cs-sn-post .cs-sn-preview .lsn-ctx .lsn-paper .lsn-tempo { font-size: 12.5px; line-height: 1.35; margin-bottom: 4px; }
-.cs-sn-more { display: block; width: 100%; margin-top: 6px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--cs-border, #E4E0F0); border-radius: 12px; background: #fff; color: var(--cs-p-strong, #4338CA); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.cs-sn-actions { display: flex; gap: 8px; margin-top: 8px; }
+.cs-sn-actions > * { flex: 1 1 0; min-width: 0; min-height: 44px; margin: 0; width: auto; display: inline-flex; align-items: center; justify-content: center; text-align: center; box-sizing: border-box; padding-inline: 8px; font-size: 14px; white-space: nowrap; }
+.cs-sn-more { padding: 8px 12px; border: 1px solid var(--cs-border, #E4E0F0); border-radius: 12px; background: #fff; color: var(--cs-p-strong, #4338CA); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
 .cs-sn-more:focus-visible { outline: 3px solid var(--cs-p-strong); outline-offset: 2px; }
+/* Mô tả dài rút gọn 2 dòng khi chưa "Xem đầy đủ" — chỉ chữ mô tả; nguyên văn vẫn đủ trong DOM, KHÔNG bao giờ áp cho bản nhạc / TAB / lời hát */
+.cs-sn-post .cs-sn-preview .lsn-ctx[data-expanded="0"] .lsn-paper .lsn-sub,
+.cs-sn-post .cs-sn-preview .lsn-ctx[data-expanded="0"] .lsn-paper .lsn-piece-note { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .cs-sn-preview:focus-visible { outline: 3px solid var(--cs-p-strong); outline-offset: 2px; }
 .cs-sn-preview .lsn-score { position: relative; padding: 6px 4px; }
 .cs-sn-preview .lsn-score-host { overflow: hidden; }

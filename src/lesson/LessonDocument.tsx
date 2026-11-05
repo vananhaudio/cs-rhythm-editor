@@ -171,7 +171,7 @@ function renderSection(s: LessonSection, i: number, ctx?: ContextRender) {
                 {showMore(ctx) && w.guidance && <ul className="lsn-guide">{w.guidance.map((g, j) => <li key={j}>{g}</li>)}</ul>}
               </div>
             ))}
-            {/* tệp tải về (assets) là thao tác tương tác: KHÔNG đưa vào khung; đường về nguồn = nút "Mở đúng đoạn" */}
+            {/* tệp tải về (assets) là thao tác tương tác: KHÔNG đưa vào khung; đường về nguồn = nút "Mở trong giáo trình" */}
             {ctx ? (!ctx.expanded || s.status !== 'pending' ? null : (
               <div className="lsn-pending">
                 {s.pendingText ?? 'Tác phẩm Buổi 01 – chờ giáo viên cung cấp MusicXML/PDF/TAB.'}
@@ -399,7 +399,7 @@ export default function LessonDocument({ doc, onBack, embedded = false }: { doc:
  *  (trích đoạn + vùng chú ý). Dữ liệu `section` là khối ĐÃ qua kiểm quyền ở server/RLS; mọi văn bản đi qua React (không HTML thô). */
 export function ContextSectionView({ section, index, scoreKey, node, expanded = false }: { section: unknown; index: number; scoreKey: ScoreKey; node: ReactNode; expanded?: boolean }) {
   return (
-    <div className="lsn is-embedded lsn-ctx" data-testid="context-section">
+    <div className="lsn is-embedded lsn-ctx" data-testid="context-section" data-expanded={expanded ? '1' : '0'}>
       <style>{CSS}</style>
       <article className="lsn-paper">{safeRenderSection(section as LessonSection, index, { key: scoreKey, node, expanded })}</article>
     </div>

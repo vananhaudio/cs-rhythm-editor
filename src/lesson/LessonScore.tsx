@@ -7,7 +7,7 @@ import ZoomFrame from './ZoomFrame'
 import ScoreShareLayer from './ScoreShareLayer'
 import { ScoreShareSlot } from './scoreShareSlot'
 import type { BarRange, ScoreKey } from '../share/shareNoteApi'
-import { planExcerpt, type ExcerptPlan } from '../share/scoreExcerpt'
+import { planExcerpt, planExcerptFocus, type ExcerptPlan } from '../share/scoreExcerpt'
 import { rectsForBars, type BoundsLike } from './scoreShare'
 
 interface Props {
@@ -22,6 +22,8 @@ interface Props {
   excerpt?: BarRange
   /** Báo kế hoạch vẽ (đổi khi khổ đổi) — để thẻ ghi "hiện N ô đầu"; ô ngữ cảnh (trước/sau vùng khoanh) vẽ bình thường, chỉ vùng khoanh được tô */
   onExcerpt?: (plan: ExcerptPlan) => void
+  /** 'focus' (V1.3, khung giáo trình trên Feed): chỉ các dòng chứa vùng khoanh; 'full' (mặc định, V1.1): thêm ≤ 2 ô ngữ cảnh mỗi phía. Đổi giá trị = khắc lại TRONG CÙNG renderer. */
+  excerptContext?: 'focus' | 'full'
 }
 
 /** Trích đoạn: alphaTab chừa ~50px dưới dòng nhạc cuối (lề + dòng bản quyền đã ẩn). Đo bằng điểm ảnh (03/11, Chrome + WebKit, 2 bản nhạc, 2 khổ): nét mực cuối
@@ -37,7 +39,8 @@ function trimExcerptBottom(api: any, host: HTMLElement | null) {
   host.style.overflow = 'hidden'
 }
 
-export default function LessonScore({ tex, barsPerRow = 4, zoomable = true, shareKey, excerpt, onExcerpt }: Props) {
+export default function LessonScore({ tex, barsPerRow = 4, zoomable = true, shareKey, excerpt, onExcerpt, excerptContext = 'full' }: Props) {
+  const ctxModeRef = useRef(excerptContext); ctxModeRef.current = excerptContext   // eslint-disable-line react-hooks/refs -- chỉ đọc trong callback khắc
   const share = useContext(ScoreShareSlot)
   const [tick, setTick] = useState(0)   // tăng sau MỖI lần alphaTab khắc xong → lớp khoanh tính lại vùng tô
   // Lớp khoanh cần api + khung qua STATE (không đọc ref lúc render)
@@ -86,7 +89,7 @@ const LYRIC_BAR = 395     // px/ô nhịp ở cỡ 1 cho ô 8 âm tiết — dư
   const applyExcerpt = (st: any, rows: number): boolean => {
     if (!excerpt) return true
     // ≤ 2 dòng khuông (EXCERPT_MAX_ROWS) ở mọi khổ: đo 04/11 — 3 dòng trên iPhone cao ~976px (> màn hình 844), 2 dòng ~480px
-    const plan = planExcerpt(excerpt, rows)
+    const plan = ctxModeRef.current === 'focus' ? planExcerptFocus(excerpt, rows) : planExcerpt(excerpt, rows)
     if (!plan) return false
     st.display.startBar = plan.start; st.display.barCount = plan.count
     setFocus({ from: plan.focusFrom, to: plan.focusTo })
@@ -167,6 +170,21 @@ const LYRIC_BAR = 395     // px/ô nhịp ở cỡ 1 cho ô 8 âm tiết — dư
     return () => { dead = true; moRef.current?.disconnect(); try { apiRef.current?.destroy() } catch { /* */ } }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Đổi chế độ ngữ cảnh ("Xem đầy đủ" ↔ "Thu gọn"): khắc lại bằng CHÍNH api đang có (không dựng renderer mới); lần đầu do effect khởi tạo lo
+  const lastCtx = useRef(excerptContext)
+  useEffect(() => {
+    if (lastCtx.current === excerptContext) return
+    lastCtx.current = excerptContext
+    const api = apiRef.current, host = hostRef.current
+    if (!api || !excerpt || !host) return
+    try {
+      const { rows } = layoutFor(host.clientWidth || window.innerWidth)
+      applyExcerpt(api.settings, rows)
+      api.updateSettings(); api.render()
+    } catch { /* */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [excerptContext])
 
   useEffect(() => { if (apiRef.current) { try { apiRef.current.tex(tex) } catch { /* */ } } }, [tex])
 

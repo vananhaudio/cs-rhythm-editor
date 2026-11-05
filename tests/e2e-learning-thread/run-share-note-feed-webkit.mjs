@@ -78,6 +78,29 @@ for (const [name, vp] of [['iPhone 390', { viewport: { width: 390, height: 844 }
   await B.waitForSelector('.lsn-share-hl.is-focus', { timeout: 40000 })
   ok(`${name}: trích đoạn từ ô ${m[2]} (in ra ${p.bars}), không tràn ngang; cuộn 6 thẻ × 2: sống tối đa ${maxLive}, bề mặt tối đa ${maxSurf}; bấm → mở đúng đoạn (vùng tô)`)
 }
+// V1.3 trên WebKit (iPhone 390): khung GỌN mặc định → "Xem đầy đủ" → "Thu gọn" trên thẻ CTX-1 (Tác phẩm thực hành)
+{
+  const W = await open('b@test.local', { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true })
+  const Q = 'CTX-1 Ô 2–3'
+  await W.waitForFunction(q => [...document.querySelectorAll('[data-testid="share-note-post"]')].some(e => e.textContent.includes(q)), Q, { timeout: 40000 })
+  const st = q => W.evaluate(q => { const c = [...document.querySelectorAll('[data-testid="share-note-post"]')].find(e => e.textContent.includes(q)); const n = c.querySelector('.lsn-piece-note'), b = c.querySelector('[data-testid="share-note-more"]')
+    return { rows: [...c.querySelectorAll('svg text')].filter(t => t.textContent.includes('\uE050')).length, btn: b?.textContent.trim() ?? null, cta: c.querySelector('.cs-tool-share-cta')?.textContent.trim(), list: !!c.querySelector('.lsn-rep-list'), marks: !!c.querySelector('.lsn-marks'),
+      clamped: n ? n.scrollHeight > n.clientHeight + 1 : null, plan: c.querySelector('[data-testid="share-note-preview"]')?.getAttribute('data-plan'), h: Math.round(c.getBoundingClientRect().height), sw: document.documentElement.scrollWidth <= innerWidth + 1,
+      busy: !!c.querySelector('.lsn-score-msg') || !c.querySelector('[data-live="1"] .at-surface svg') } }, q)
+  await W.evaluate(q => [...document.querySelectorAll('[data-testid="share-note-post"]')].find(e => e.textContent.includes(q)).scrollIntoView({ block: 'center' }), Q)
+  await W.waitForFunction(async q => { const c = [...document.querySelectorAll('[data-testid="share-note-post"]')].find(e => e.textContent.includes(q)); return !!c.querySelector('[data-live="1"] .at-surface svg') && !c.querySelector('.lsn-score-msg') }, Q, { timeout: 40000 }); await W.waitForTimeout(900)
+  const w0 = await st(Q)
+  assert.equal(w0.rows, 1, `WebKit gọn: 1 dòng nhạc (có ${w0.rows})`); assert.equal(w0.btn, 'Xem đầy đủ'); assert.equal(w0.cta, 'Mở trong giáo trình'); assert.ok(!w0.list && !w0.marks && w0.clamped && w0.sw)
+  await W.evaluate(q => [...document.querySelectorAll('[data-testid="share-note-post"]')].find(e => e.textContent.includes(q)).querySelector('[data-testid="share-note-more"]').click(), Q)
+  await W.waitForFunction(q => { const c = [...document.querySelectorAll('[data-testid="share-note-post"]')].find(e => e.textContent.includes(q)); return c.querySelector('[data-testid="share-note-more"]')?.textContent.trim() === 'Thu gọn' && !!c.querySelector('.lsn-rep-list') && !c.querySelector('.lsn-score-msg') && [...c.querySelectorAll('svg text')].filter(t => t.textContent.includes('\uE050')).length === 2 }, Q, { timeout: 20000 }); await W.waitForTimeout(700)
+  const w1 = await st(Q)
+  assert.equal(w1.rows, 2); assert.ok(w1.list && w1.marks && !w1.clamped && w1.sw && w1.h > w0.h)
+  assert.deepEqual(w1.plan.split(',').slice(2).map(Number), [2, 3], 'vùng khoanh không đổi')
+  await W.evaluate(q => [...document.querySelectorAll('[data-testid="share-note-post"]')].find(e => e.textContent.includes(q)).querySelector('[data-testid="share-note-more"]').click(), Q)
+  await W.waitForFunction(q => { const c = [...document.querySelectorAll('[data-testid="share-note-post"]')].find(e => e.textContent.includes(q)); return c.querySelector('[data-testid="share-note-more"]')?.textContent.trim() === 'Xem đầy đủ' && !c.querySelector('.lsn-rep-list') && !c.querySelector('.lsn-score-msg') }, Q, { timeout: 20000 }); await W.waitForTimeout(700)
+  const w2 = await st(Q); assert.equal(w2.rows, 1); assert.equal(w2.plan, w0.plan)
+  ok(`iPhone 390 khung giáo trình: gọn ${w0.h}px (1 dòng nhạc, mô tả rút gọn) → "Xem đầy đủ" ${w1.h}px (2 dòng + dự kiến/marks) → "Thu gọn" ${w2.h}px; vùng khoanh không đổi, không tràn ngang`)
+}
 const C = await open('c@test.local', { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
 for (let i = 0; i < 6; i++) { await C.evaluate(i => document.querySelectorAll('[data-testid="share-note-post"]')[i].scrollIntoView({ block: 'center' }), i); await C.waitForTimeout(500) }
 await C.waitForFunction(() => [...document.querySelectorAll('[data-testid="share-note-post"]')].filter(e => /chưa có quyền xem bản nhạc/.test(e.textContent)).length >= 6, null, { timeout: 40000 })

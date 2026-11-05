@@ -71,7 +71,11 @@ const cardText = (page, i) => page.evaluate(i => [...document.querySelectorAll('
 // ── V1.1: ngữ cảnh quanh vùng khoanh. Kế hoạch (data-plan = ô bắt đầu vẽ, số ô vẽ, ô khoanh đầu, ô khoanh cuối) so với bảng TÍNH TAY theo luật Owner:
 //    ≤ 2 ô trước + ≤ 2 ô sau vào chỗ còn trống (thẻ Feed desktop rộng ~560px → 2 ô/dòng × 2 dòng = 4; iPhone không lời 2 ô/dòng × 2 dòng = 4), thiếu chỗ giảm ngữ cảnh trước khi cắt vùng khoanh.
 const EXPECT = { // RANGES[i] → [start, focusFrom, focusTo]
-  desktop: [[2, 3, 4], [1, 1, 4], [6, 7, 7], [12, 12, 14], [20, 20, 23], [4, 5, 6]],
+  // V1.3 (gọn, mặc định): CHỈ các dòng chứa vùng khoanh; ô ngữ cảnh chỉ lấp chỗ trống của chính các dòng đó (2 ô/dòng × tối đa 2 dòng)
+  desktop: [[3, 3, 4], [1, 1, 4], [7, 7, 7], [12, 12, 14], [20, 20, 23], [5, 5, 6]],
+  iphone: [[3, 3, 4], [1, 1, 4], [7, 7, 7], [12, 12, 14], [20, 20, 23], [5, 5, 6]],
+}
+const EXPECT_FULL = { // "Xem đầy đủ" = kế hoạch V1.1 (≤ 2 ô ngữ cảnh mỗi phía)
   iphone: [[2, 3, 4], [1, 1, 4], [6, 7, 7], [12, 12, 14], [20, 20, 23], [4, 5, 6]],
 }
 const planOf = (page, i) => page.evaluate(i => (document.querySelectorAll('[data-testid="share-note-post"]')[i].querySelector('[data-testid="share-note-preview"]').getAttribute('data-plan') || '').split(',').map(Number), i)
@@ -288,12 +292,20 @@ ok(`8a Bản nhạc CÓ LỜI @390: đúng 2 dòng, ô in ra ${barsL}, đủ l�
 const lyr2 = await L.evaluate(q => [...document.querySelectorAll('[data-testid="share-note-post"]')].findIndex(e => e.textContent.includes(q)), LQ[1])
 await L.evaluate(i => document.querySelectorAll('[data-testid="share-note-post"]')[i].scrollIntoView({ block: 'center' }), lyr2)
 await waitFor(L, i => document.querySelectorAll('[data-testid="share-note-post"]')[i].querySelector('[data-live="1"] .at-surface svg'), lyr2); await sleep(900)
-assert.deepEqual(await planOf(L, lyr2), [9, 2, 9, 9], 'Ô 9 có lời @390: 2 chỗ → vùng khoanh 1 ô + 1 ô ngữ cảnh SAU (ô 10), không ngữ cảnh trước')
-assert.deepEqual(await printedBars(L, lyr2), [9, 10]); assert.equal(await rowsOf(L, lyr2), 2)
-await tintCheck(L, lyr2, { before: 0, after: 1 }, 'có lời 1 ô')
+assert.deepEqual(await planOf(L, lyr2), [9, 1, 9, 9], 'Ô 9 có lời @390 (V1.3 gọn): chỉ dòng chứa vùng khoanh — 1 ô/dòng nên KHÔNG ô ngữ cảnh')
+assert.deepEqual(await printedBars(L, lyr2), [9]); assert.equal(await rowsOf(L, lyr2), 1)
+await tintCheck(L, lyr2, { before: 0, after: 0 }, 'có lời 1 ô')
 assertTrim(await inkGap(L, lyr2), 'có lời 1 ô')
 await L.screenshot({ path: `${SHOTS}/fp-8-b-iphone-co-loi-1o.png` })
-ok('8b Dải 1 ô có lời (Ô 9) @390: 2 dòng (ô 9 tô cam + ô 10 ngữ cảnh không tô), trắng đáy gọn')
+// "Xem đầy đủ" trên bản có lời: trả lại ngữ cảnh V1.1 (ô 10) trong CÙNG renderer, lời hát vẫn đủ
+await L.evaluate(i => document.querySelectorAll('[data-testid="share-note-post"]')[i].querySelector('[data-testid="share-note-more"]').click(), lyr2)
+await waitFor(L, i => { const c = document.querySelectorAll('[data-testid="share-note-post"]')[i]; return c.querySelector('[data-testid="share-note-preview"]').getAttribute('data-plan') === '9,2,9,9' && !c.querySelector('.lsn-score-msg') }, lyr2); await sleep(900)
+assert.deepEqual(await printedBars(L, lyr2), [9, 10]); assert.equal(await rowsOf(L, lyr2), 2)
+await tintCheck(L, lyr2, { before: 0, after: 1 }, 'có lời 1 ô (đầy đủ)')
+assertTrim(await inkGap(L, lyr2), 'có lời 1 ô (đầy đủ)'); assert.ok(await noHScroll(L), 'có lời đầy đủ: không tràn ngang')
+await L.evaluate(i => document.querySelectorAll('[data-testid="share-note-post"]')[i].querySelector('[data-testid="share-note-more"]').click(), lyr2)
+await waitFor(L, i => { const c = document.querySelectorAll('[data-testid="share-note-post"]')[i]; return c.querySelector('[data-testid="share-note-preview"]').getAttribute('data-plan') === '9,1,9,9' && !c.querySelector('.lsn-score-msg') }, lyr2); await sleep(700)
+ok('8b Dải 1 ô có lời (Ô 9) @390: gọn = 1 dòng (ô 9 tô cam); "Xem đầy đủ" = + ô 10 ngữ cảnh (2 dòng) trong cùng renderer; "Thu gọn" trả về 1 dòng; lời đủ, trắng đáy gọn, không tràn ngang')
 // Chạm xem trước → mở đúng đoạn (buổi 2, ô 5–8)
 await L.evaluate(i => document.querySelectorAll('[data-testid="share-note-post"]')[i].scrollIntoView({ block: 'center' }), lyrIdx); await sleep(700)
 await Promise.all([L.waitForNavigation({ waitUntil: 'networkidle0' }).catch(() => null), L.evaluate(i => document.querySelectorAll('[data-testid="share-note-post"]')[i].querySelector('.cs-sn-preview').click(), lyrIdx)])
@@ -374,7 +386,7 @@ const ctxFacts = (page, i) => page.evaluate(i => {
     headerBeforeScore: !!(h2 && surf && (h2.compareDocumentPosition(surf) & Node.DOCUMENT_POSITION_FOLLOWING)),
     scoreInsidePiece: !!(piece && surf && piece.contains(surf)), h: Math.round(card.getBoundingClientRect().height) }
 }, i)
-const WANT = { tag: 'Tác phẩm', h2: 'Tác phẩm thực hành', h3: 'Thành Phố Buồn', by: 'Lam Phương · chuyển về Am', note: 'Đoạn mô tả nguyên văn của tác phẩm thực hành.', tempo: 'Slow rock · chậm, đủ chỗ cho nhịp chùm ba' }
+const WANT = { tag: 'Tác phẩm', h2: 'Tác phẩm thực hành', h3: 'Thành Phố Buồn', by: 'Lam Phương · chuyển về Am', note: 'Đoạn mô tả nguyên văn của tác phẩm thực hành. Thầy dặn: nghe kỹ nhịp chùm ba ở ô 2 và ô 3, đếm một-và-a hai-và-a, giữ ngón cái đều tay trước khi thêm lời hát; đây là đoạn nhiều bạn hay vội nhất trong cả bài.', tempo: 'Slow rock · chậm, đủ chỗ cho nhịp chùm ba' }
 const assertCtx = (f, tag) => {
   assert.ok(f.has, `${tag}: có khung ngữ cảnh`)
   for (const [k, v] of Object.entries(WANT)) assert.equal(f[k], v, `${tag}: ${k} nguyên văn`)
@@ -413,41 +425,64 @@ assert.ok(cardOverflow, 'iPhone: thẻ không tràn ngang')
 const gap10 = await inkGap(P10, pi); assertTrim(gap10, 'ngữ cảnh iphone')
 await (await P10.$$('[data-testid="share-note-post"]'))[pi].screenshot({ path: `${SHOTS}/ctx-10c-iphone.png` })
 ok(`10c iPhone 390: cùng khung gốc, không tràn ngang, không cắt nhạc, thẻ cao ${pf.h}px`)
-// 10g. "Xem thêm ngữ cảnh" (iPhone): mở rộng ngay trong Feed, KHÔNG dựng lại bản nhạc, KHÔNG đổi vùng khoanh, giữ thứ tự + renderer gốc
+// 10g. V1.3 iPhone: khung GỌN mặc định → "Xem đầy đủ" (mở rộng ngay trong thẻ, cùng renderer, cùng vùng khoanh) → "Thu gọn"; nhãn học viên; phân cấp thị giác
 {
   const compactH = pf.h
   const info = () => P10.evaluate(i => {
     const c = document.querySelectorAll('[data-testid="share-note-post"]')[i], x = c.querySelector('[data-testid="context-section"]')
-    const surf = c.querySelector('.at-surface'), btn = c.querySelector('[data-testid="share-note-more"]')
+    const host = c.querySelector('.lsn-score-host'), btn = c.querySelector('[data-testid="share-note-more"]'), cta = c.querySelector('.cs-tool-share-cta'), pv = c.querySelector('.cs-sn-preview')
     const pos = (a, b) => !!(a && b && (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING))
-    const list = x?.querySelector('.lsn-rep-list'), marks = x?.querySelector('.lsn-marks'), guide = x?.querySelector('.lsn-guide')
-    return { h: Math.round(c.getBoundingClientRect().height), btn: btn?.textContent?.trim() ?? null, exp: btn?.getAttribute('aria-expanded') ?? null, btnInsideA: !!btn?.closest('a'),
-      plan: c.querySelector('[data-testid="share-note-preview"]').getAttribute('data-plan'), hl: c.querySelectorAll('.lsn-excerpt-hl').length, surfaces: c.querySelectorAll('.at-surface').length, mark: surf?.dataset.mk ?? null,
+    const list = x?.querySelector('.lsn-rep-list'), marks = x?.querySelector('.lsn-marks'), guide = x?.querySelector('.lsn-guide'), note = x?.querySelector('.lsn-piece-note')
+    const bb = btn?.getBoundingClientRect(), cb = cta?.getBoundingClientRect()
+    return { h: Math.round(c.getBoundingClientRect().height), btn: btn?.textContent?.trim() ?? null, exp: btn?.getAttribute('aria-expanded') ?? null, btnInsideA: !!btn?.closest('a'), cta: cta?.textContent?.trim() ?? null,
+      sameRow: !!(bb && cb && Math.abs(bb.top - cb.top) < 2 && bb.right <= cb.left + 1), btnH: bb ? Math.round(bb.height) : 0, ctaH: cb ? Math.round(cb.height) : 0,
+      plan: c.querySelector('[data-testid="share-note-preview"]').getAttribute('data-plan'), hl: c.querySelectorAll('.lsn-excerpt-hl').length, surfaces: c.querySelectorAll('.at-surface').length, mark: host?.dataset.mk ?? null,
+      rows: [...c.querySelectorAll('svg text')].filter(t => t.textContent.includes('\uE050')).length,
+      border: pv ? getComputedStyle(pv).borderTopColor : null, borderW: pv ? getComputedStyle(pv).borderTopWidth : null, hlBorder: c.querySelector('.lsn-excerpt-hl') ? getComputedStyle(c.querySelector('.lsn-excerpt-hl')).boxShadow : null,
+      noteText: note?.textContent?.trim() ?? null, noteClamped: note ? note.scrollHeight > note.clientHeight + 1 : null, noteH: note ? Math.round(note.getBoundingClientRect().height) : null,
       list: list?.textContent?.trim() ?? null, marksTxt: marks?.textContent?.trim() ?? null, guideTxt: guide?.textContent?.trim() ?? null,
-      order: pos(list, surf) && pos(surf, marks) && pos(marks, guide), assets: c.querySelectorAll('.lsn-assets,.lsn-asset').length, links: [...c.querySelectorAll('a')].map(a => a.className) }
+      order: pos(list, host) && pos(host, marks) && pos(marks, guide), assets: c.querySelectorAll('.lsn-assets,.lsn-asset').length, links: [...c.querySelectorAll('a')].map(a => a.className), allText: c.textContent }
   }, pi)
   const b0 = await info()
-  assert.equal(b0.btn, 'Xem thêm ngữ cảnh'); assert.equal(b0.exp, 'false'); assert.ok(!b0.btnInsideA, 'nút không nằm trong liên kết (không lồng tương tác)')
-  await P10.evaluate(i => { document.querySelectorAll('[data-testid="share-note-post"]')[i].querySelector('.at-surface').dataset.mk = 'same-surface' }, pi)
+  // nhãn hướng tới học viên (không còn thuật ngữ nội bộ)
+  assert.equal(b0.btn, 'Xem đầy đủ'); assert.equal(b0.cta, 'Mở trong giáo trình'); assert.equal(b0.exp, 'false'); assert.ok(!b0.btnInsideA, 'nút không nằm trong liên kết (không lồng tương tác)')
+  assert.ok(!/Xem thêm ngữ cảnh|Thu gọn ngữ cảnh|Mở đúng đoạn/.test(b0.allText), 'không còn nhãn kỹ thuật cũ')
+  assert.ok(b0.sameRow && b0.btnH >= 44 && b0.ctaH >= 44, `hai nút cùng một hàng, đủ chạm 44px (${b0.btnH}/${b0.ctaH}px)`)
+  // phân cấp thị giác: khung ngoài TRUNG TÍNH (không cam), chỉ vùng khoanh cam
+  const rgb = c => (c.match(/\d+/g) ?? []).slice(0, 3).map(Number)
+  const [br, bg, bb2] = rgb(b0.border); assert.ok(Math.max(br, bg, bb2) - Math.min(br, bg, bb2) < 40 && Math.min(br, bg, bb2) > 150, `viền khung trung tính nhẹ (${b0.border})`)
+  assert.equal(b0.borderW, '1px'); assert.match(b0.hlBorder ?? '', /234, 88, 12/, 'vùng khoanh giữ màu cam')
+  // mặc định: đúng 1 dòng nhạc cho vùng Ô 2–3 (2 ô/dòng); mô tả dài rút gọn nhưng nguyên văn đủ
+  assert.equal(b0.rows, 1, `mặc định gọn: CTX-1 (Ô 2–3, 2 ô/dòng) chỉ 1 dòng nhạc, có ${b0.rows}`); assert.deepEqual(b0.plan.split(',').map(Number), [2, 2, 2, 3])
+  assert.equal(b0.noteText, WANT.note, 'mô tả nguyên văn đủ trong DOM'); assert.ok(b0.noteClamped, 'mô tả dài đang rút gọn (2 dòng) khi chưa xem đầy đủ')
+  assert.ok(b0.h < 900, `thẻ iPhone mặc định < 900px (so với 1039px của V1.2): ${b0.h}px`)
+  await P10.evaluate(i => { document.querySelectorAll('[data-testid="share-note-post"]')[i].querySelector('.lsn-score-host').dataset.mk = 'same-host' }, pi)
+  const y0 = await P10.evaluate(i => document.querySelectorAll('[data-testid="share-note-post"]')[i].getBoundingClientRect().top, pi)
   await P10.evaluate(i => document.querySelectorAll('[data-testid="share-note-post"]')[i].querySelector('[data-testid="share-note-more"]').click(), pi)
-  await sleep(900)
+  await waitFor(P10, i => document.querySelectorAll('[data-testid="share-note-post"]')[i].querySelector('[data-testid="share-note-more"]')?.getAttribute('aria-expanded') === 'true' && !!document.querySelectorAll('[data-testid="share-note-post"]')[i].querySelector('.lsn-rep-list') && !document.querySelectorAll('[data-testid="share-note-post"]')[i].querySelector('.lsn-score-msg'), pi); await sleep(1200)
   const b1 = await info()
-  assert.equal(b1.btn, 'Thu gọn ngữ cảnh'); assert.equal(b1.exp, 'true')
-  assert.equal(b1.mark, 'same-surface', 'mở rộng KHÔNG dựng lại bản nhạc (cùng một bề mặt alphaTab)')
-  assert.equal(b1.plan, b0.plan, 'vùng khoanh + trích đoạn không đổi'); assert.equal(b1.hl, b0.hl); assert.equal(b1.surfaces, 1)
+  assert.equal(b1.btn, 'Thu gọn'); assert.equal(b1.exp, 'true'); assert.equal(b1.cta, 'Mở trong giáo trình')
+  assert.equal(b1.mark, 'same-host', 'mở rộng KHÔNG dựng renderer mới (cùng khung alphaTab); chỉ 1 bề mặt'); assert.equal(b1.surfaces, 1)
+  const [es1, , ef1, et1] = b1.plan.split(',').map(Number); assert.deepEqual([ef1, et1], [2, 3], 'vùng khoanh KHÔNG đổi'); assert.equal(es1, 1, 'đầy đủ = ngữ cảnh V1.1 (ô 1 trước vùng khoanh)')
+  assert.ok(b1.hl >= b0.hl && b1.hl >= 1, 'vùng khoanh còn tô'); assert.ok(b1.rows >= 2 && b1.rows <= 2, `đầy đủ: ngữ cảnh V1.1 (${b1.rows} dòng)`)
+  assert.equal(b1.noteText, WANT.note); assert.ok(!b1.noteClamped, 'xem đầy đủ: mô tả hiện hết, không rút gọn')
   assert.equal(b1.list, orig10.list, 'Dự kiến nguyên văn như trang Buổi gốc')
   assert.match(b1.marksTxt, /Ô 2\s*vào nhịp chùm ba/); assert.match(b1.guideTxt, /Giữ nhịp chùm ba thật đều tay\./)
   assert.ok(b1.order, 'thứ tự gốc: Dự kiến → bản nhạc → marks → guidance'); assert.equal(b1.assets, 0, 'không có tệp tải về trong khung')
   assert.deepEqual(b1.links, ['cs-sn-preview', 'cs-btn cs-btn-soft cs-tool-share-cta'], 'chỉ còn đường mở nguồn (không thêm thao tác tương tác)')
+  const y1 = await P10.evaluate(i => document.querySelectorAll('[data-testid="share-note-post"]')[i].getBoundingClientRect().top, pi)
+  assert.ok(Math.abs(y1 - y0) < 2, `mở rộng không làm thẻ nhảy cuộn (đỉnh thẻ ${Math.round(y0)} → ${Math.round(y1)})`)
   assert.ok(await noHScroll(P10), 'iPhone mở rộng: không tràn ngang')
   const gapX = await inkGap(P10, pi); assertTrim(gapX, 'ngữ cảnh iphone mở rộng')
-  await tintCheck(P10, pi, { before: 0, after: 0 }, 'ngữ cảnh iphone mở rộng')
+  await tintCheck(P10, pi, { before: 1, after: 1 }, 'ngữ cảnh iphone mở rộng')
   await (await P10.$$('[data-testid="share-note-post"]'))[pi].screenshot({ path: `${SHOTS}/ctx-10g-iphone-expanded.png` })
   await P10.evaluate(i => document.querySelectorAll('[data-testid="share-note-post"]')[i].querySelector('[data-testid="share-note-more"]').click(), pi)
-  await sleep(600)
+  await waitFor(P10, i => document.querySelectorAll('[data-testid="share-note-post"]')[i].querySelector('[data-testid="share-note-more"]')?.getAttribute('aria-expanded') === 'false' && !document.querySelectorAll('[data-testid="share-note-post"]')[i].querySelector('.lsn-rep-list') && !document.querySelectorAll('[data-testid="share-note-post"]')[i].querySelector('.lsn-score-msg'), pi); await sleep(1000)
   const b2 = await info()
-  assert.equal(b2.btn, 'Xem thêm ngữ cảnh'); assert.equal(b2.list, null); assert.equal(b2.plan, b0.plan); assert.equal(b2.mark, 'same-surface')
-  ok(`10g iPhone: mặc định ${compactH}px → "Xem thêm ngữ cảnh" ${b1.h}px → thu gọn ${b2.h}px; cùng bề mặt nhạc, cùng vùng khoanh (${b1.plan}), Dự kiến/marks/guidance nguyên văn + đúng thứ tự, không tệp tải về, không tràn ngang`)
+  assert.equal(b2.btn, 'Xem đầy đủ'); assert.equal(b2.list, null); assert.equal(b2.mark, 'same-host'); assert.equal(b2.rows, 1); assert.equal(b2.plan, b0.plan, 'thu gọn: trở về đúng kế hoạch gọn')
+  await P10.evaluate(i => document.querySelectorAll('[data-testid="share-note-post"]')[i].scrollIntoView({ block: 'center' }), pi); await sleep(300)
+  await (await P10.$$('[data-testid="share-note-post"]'))[pi].screenshot({ path: `${SHOTS}/ctx-10c-iphone.png` })
+  ok(`10g iPhone: mặc định ${compactH}px (1 dòng nhạc, mô tả rút gọn, viền trung tính, 2 nút cùng hàng) → "Xem đầy đủ" ${b1.h}px (ngữ cảnh V1.1 ${b1.rows} dòng + dự kiến/marks/guidance) → "Thu gọn" ${b2.h}px; cùng khung alphaTab, cùng vùng khoanh, không nhảy cuộn, không tràn ngang`)
 }
 // 10d. Khối score có mô tả + nhịp độ (lead / tempo nguyên văn)
 {

@@ -152,7 +152,7 @@ try {
   await B.evaluate(() => [...document.querySelectorAll('[data-testid="inbox-row"]')].find(e => ['An', 'Nguyễn An'].includes(e.querySelector('.cs-inbox-name').textContent.trim())).click())
   await waitFor(B, () => document.querySelector('.cs-chat-scroll .cs-share-card:not(.is-loading)'))
   const card = await B.$eval('.cs-chat-scroll .cs-share-card', e => ({ t: e.textContent.replace(/\s+/g, ' '), href: e.getAttribute('href') }))
-  assert.match(card.t, /Bản nhạc · Buổi 1/); assert.ok(card.t.includes(NOTE1), card.t); assert.ok(card.t.includes(range), card.t); assert.match(card.t, /Mở đúng đoạn/)
+  assert.match(card.t, /Bản nhạc · Buổi 1/); assert.ok(card.t.includes(NOTE1), card.t); assert.ok(card.t.includes(range), card.t); assert.match(card.t, /Mở trong giáo trình/)
   assert.equal(card.href, `/me/classes/${TH01}/sessions/1?note=${NOTE_ID}`)
   assert.equal(/share_note|alphatex|\\ts/i.test(card.t), false, 'thẻ không lộ từ kỹ thuật / nội dung nhạc')
   await B.screenshot({ path: `${SHOTS}/sn-4-b-the-tro-chuyen.png` })

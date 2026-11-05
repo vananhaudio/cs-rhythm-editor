@@ -66,7 +66,7 @@ update public.class_lesson_content
      jsonb_build_object('kind', 'repertoire', 'title', 'Tác phẩm thực hành', 'status', 'ready',
        'candidates', jsonb_build_array('Thành Phố Buồn – Lam Phương (Am)', 'Diễm Xưa – Trịnh Công Sơn (Am)'),
        'pieces', jsonb_build_array(
-         jsonb_build_object('title', 'Thành Phố Buồn', 'composer', 'Lam Phương · chuyển về Am', 'note', 'Đoạn mô tả nguyên văn của tác phẩm thực hành.', 'tempo', 'Slow rock · chậm, đủ chỗ cho nhịp chùm ba', 'marks', jsonb_build_array(jsonb_build_object('at', 'Ô 2', 'text', 'vào nhịp chùm ba')), 'guidance', jsonb_build_array('Giữ nhịp chùm ba thật đều tay.'), 'tex', \$tex\$$TEX\$tex\$::text),
+         jsonb_build_object('title', 'Thành Phố Buồn', 'composer', 'Lam Phương · chuyển về Am', 'note', 'Đoạn mô tả nguyên văn của tác phẩm thực hành. Thầy dặn: nghe kỹ nhịp chùm ba ở ô 2 và ô 3, đếm một-và-a hai-và-a, giữ ngón cái đều tay trước khi thêm lời hát; đây là đoạn nhiều bạn hay vội nhất trong cả bài.', 'tempo', 'Slow rock · chậm, đủ chỗ cho nhịp chùm ba', 'marks', jsonb_build_array(jsonb_build_object('at', 'Ô 2', 'text', 'vào nhịp chùm ba')), 'guidance', jsonb_build_array('Giữ nhịp chùm ba thật đều tay.'), 'tex', \$tex\$$TEX\$tex\$::text),
          jsonb_build_object('title', 'Diễm Xưa', 'composer', 'Trịnh Công Sơn', 'note', 'TÁC PHẨM KHÁC KHÔNG ĐƯỢC KÉO VÀO KHUNG', 'tex', \$tex\$$TEX_LY\$tex\$::text)))
    )
  where session_id = '51000000-0000-4000-8000-000000000002';

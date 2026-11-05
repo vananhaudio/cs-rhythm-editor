@@ -81,7 +81,7 @@ export function shareNoteCardView(row: ShareNoteCardView | null | undefined): To
   return {
     tool: 'share_note', toolLabel: 'Bản nhạc', icon: MessageCircleQuestion, kindLabel: `Buổi ${n}`, headline: note,
     detail: a === b ? `Ô ${a}` : `Ô ${a}–${b}`, thumbnail: null, note: null,
-    action: { label: 'Mở đúng đoạn', href: shareNoteHref(row.class_id, n, row.id) },
+    action: { label: 'Mở trong giáo trình', href: shareNoteHref(row.class_id, n, row.id) },
   }
 }
 

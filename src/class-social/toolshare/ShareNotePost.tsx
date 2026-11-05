@@ -40,7 +40,8 @@ export default function ShareNotePost({ view }: { view: ToolShareView }) {
   const [load, setLoad] = useState<PreviewLoad | null>(null)
   const [slot, setSlot] = useState(false)
   const [plan, setPlan] = useState<ExcerptPlan | null>(null)
-  const [expanded, setExpanded] = useState(false)   // "Xem thêm ngữ cảnh": mở thêm phần sư phạm của khối gốc ngay trong Feed (không đổi vùng khoanh)
+  const [expanded, setExpanded] = useState(false)   // "Xem đầy đủ": mở thêm ngữ cảnh (nhạc + phần sư phạm của khối gốc) ngay trong Feed — không cấp thêm quyền, không đổi vùng khoanh
+  const [clamped, setClamped] = useState(false)       // mô tả dài đang bị rút gọn 2 dòng (nguyên văn vẫn đủ trong DOM) → có gì đó để "Xem đầy đủ"
   const [height, setHeight] = useState(0)   // chiều cao lần dựng trước: giữ chỗ khi huỷ renderer (Feed không nhảy)
   const noteId = note?.noteId
 
@@ -69,7 +70,10 @@ export default function ShareNotePost({ view }: { view: ToolShareView }) {
   useEffect(() => {
     if (!(wantRender && slot) || !prev.current || typeof ResizeObserver === 'undefined') return
     const el = prev.current
-    const ro = new ResizeObserver(() => { const h = el.offsetHeight; if (h > 40) setHeight(h) })
+    const ro = new ResizeObserver(() => {
+      const h = el.offsetHeight; if (h > 40) setHeight(h)
+      if (el.querySelector('[data-expanded="0"]')) setClamped([...el.querySelectorAll('.lsn-ctx .lsn-sub, .lsn-ctx .lsn-piece-note')].some(n => n.scrollHeight > n.clientHeight + 1))
+    })
     ro.observe(el)
     return () => ro.disconnect()
   }, [wantRender, slot])
@@ -79,6 +83,9 @@ export default function ShareNotePost({ view }: { view: ToolShareView }) {
   const msg = shareNoteMessage(load)
   const live = wantRender && slot && load?.status === 'ok'
   const label = plan?.truncated ? `${view.detail ?? ''} · hiện ${plan.focusTo - plan.focusFrom + 1} ô đầu — bấm để xem đủ` : view.detail
+  // "Xem đầy đủ" chỉ hiện khi thật sự có gì thêm: phần sư phạm bị ẩn, mô tả bị rút gọn, hoặc ô nhạc ngữ cảnh chưa vẽ
+  const hasMore = live && load?.status === 'ok' && load.section !== undefined && (contextHasMore([load.section], { ...load.score, section: 0 }) || clamped || !!plan?.moreContext || expanded)
+  const more = hasMore ? <button type="button" className="cs-sn-more" data-testid="share-note-more" aria-expanded={expanded} onClick={() => setExpanded(v => !v)}>{expanded ? 'Thu gọn' : 'Xem đầy đủ'}</button> : null
   const open = <a className="cs-btn cs-btn-soft cs-tool-share-cta" href={view.action.href}>{view.action.label}</a>
 
   return (
@@ -90,25 +97,23 @@ export default function ShareNotePost({ view }: { view: ToolShareView }) {
       {load?.status === 'ok' && (
         <div className="cs-sn-slot" style={{ minHeight: live ? undefined : height || 120 }} ref={prev} data-testid="share-note-preview" data-live={live ? '1' : '0'} data-plan={plan ? `${plan.start},${plan.count},${plan.focusFrom},${plan.focusTo}` : undefined}>
           {live
-            ? <PreviewBoundary fallback={<p className="cs-sn-msg">Chưa hiển thị được bản nhạc. Bấm “Mở đúng đoạn”.</p>}>
-                <a className="cs-sn-preview" href={view.action.href} aria-label={`Mở đúng đoạn ${view.detail ?? ''} trong bản nhạc`}>
+            ? <PreviewBoundary fallback={<p className="cs-sn-msg">Chưa hiển thị được bản nhạc. Bấm “Mở trong giáo trình”.</p>}>
+                <a className="cs-sn-preview" href={view.action.href} aria-label={`Mở trong giáo trình: ${view.detail ?? 'đoạn đã khoanh'}`}>
                   {(() => {
-                    const score = <LessonScore tex={load.tex} excerpt={load.bars} onExcerpt={setPlan} zoomable={false} barsPerRow={4} />
+                    const score = <LessonScore tex={load.tex} excerpt={load.bars} onExcerpt={setPlan} zoomable={false} barsPerRow={4} excerptContext={load.section ? (expanded ? 'full' : 'focus') : 'full'} />
                     // Khung ngữ cảnh = khối giáo trình GỐC (tiêu đề, mô tả, nhịp độ, tên tác phẩm) dựng bằng chính renderer của LessonDocument; thiếu khối → chỉ trích đoạn như V1.1
                     return load.section ? <ContextSectionView section={load.section} index={load.score.section} scoreKey={load.score} node={score} expanded={expanded} /> : score
                   })()}
                 </a>
               </PreviewBoundary>
             : near && <div className="cs-sn-wait"><span className="cs-skeleton" style={{ width: '60%', height: 14 }} /></div>}
-          {live && load.section !== undefined && contextHasMore([load.section], { ...load.score, section: 0 }) && (
-            <button type="button" className="cs-sn-more" data-testid="share-note-more" aria-expanded={expanded} onClick={() => setExpanded(v => !v)}>
-              {expanded ? 'Thu gọn ngữ cảnh' : 'Xem thêm ngữ cảnh'}
-            </button>
-          )}
         </div>
       )}
       {!load && near && <span className="cs-skeleton" style={{ width: '70%', height: 14 }} />}
-      {open}
+      <div className="cs-sn-actions">
+        {more}
+        {open}
+      </div>
     </div>
   )
 }

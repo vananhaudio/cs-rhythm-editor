@@ -141,7 +141,7 @@ TOOL_REGISTRY.share_note = {
     return {
       tool: 'share_note', toolLabel: 'Bản nhạc', icon: MessageCircleQuestion, kindLabel: `Buổi ${n}`,
       headline: note.trim(), detail: a === b ? `Ô ${a}` : `Ô ${a}–${b}`, thumbnail: null, note: null,
-      action: { label: 'Mở đúng đoạn', href: shareNoteHref(cls, n, id) },
+      action: { label: 'Mở trong giáo trình', href: shareNoteHref(cls, n, id) },
       shareRef: null,
       sharedNote: { noteId: id.toLowerCase(), classId: cls, sessionNo: n, from: a, to: b },
     }

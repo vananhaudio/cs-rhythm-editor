@@ -44,13 +44,13 @@ test('studyContext (hợp đồng văn bản): tiêu đề mục gần nhất + 
 
 const html = (index: number, path: readonly string[], expanded = false) => renderToStaticMarkup(createElement(ContextSectionView, { section: sections[index], index, scoreKey: { section: index, path } as never, node: createElement('i', { id: 'EXCERPT' }), expanded }))
 
-test('Khung ngữ cảnh khối score: giữ nguyên tiêu đề / nhãn / mô tả / nhịp độ, thay bản nhạc bằng trích đoạn, mặc định gọn (chú thích & hướng dẫn nằm sau "Xem thêm")', () => {
+test('Khung ngữ cảnh khối score: giữ nguyên tiêu đề / nhãn / mô tả / nhịp độ, thay bản nhạc bằng trích đoạn, mặc định gọn (chú thích & hướng dẫn nằm sau "Xem đầy đủ")', () => {
   const h = html(1, ['tex'])
   for (const t of ['Giai điệu mở đầu', 'BÀI MẪU', 'Mô tả nguyên văn của Thầy.', '♩ = 60', 'id="EXCERPT"']) assert.match(h, new RegExp(t.replace(/[.♩=]/g, m => '\\' + m)), t)
   assert.doesNotMatch(h, /Gạch đầu dòng|chuyển vùng/)
 })
 
-test('Khung ngữ cảnh khối repertoire: MẶC ĐỊNH chỉ tác phẩm được chia sẻ (tên, tác giả, ghi chú, nhịp độ), danh sách dự kiến nằm sau "Xem thêm"; không kéo tác phẩm khác / tệp', () => {
+test('Khung ngữ cảnh khối repertoire: MẶC ĐỊNH chỉ tác phẩm được chia sẻ (tên, tác giả, ghi chú, nhịp độ), danh sách dự kiến nằm sau "Xem đầy đủ"; không kéo tác phẩm khác / tệp', () => {
   const h = html(2, ['pieces', '0', 'tex'])
   for (const t of ['Tác phẩm', 'Tác phẩm thực hành', 'Lam Phương', 'Đoạn mô tả nguyên văn', 'Slow rock', 'id="EXCERPT"']) assert.ok(h.includes(t), t)
   assert.ok(!h.includes('Dự kiến') && !h.includes('Thành Phố Buồn – Lam Phương'), 'danh sách dự kiến chỉ hiện khi mở rộng')
@@ -66,7 +66,7 @@ test('Khung ngữ cảnh khối layers: chỉ đúng tầng được chia sẻ',
   assert.ok(h.includes('Lớp hai') && !h.includes('Lớp một') && h.includes('id="EXCERPT"'))
 })
 
-test('"Xem thêm ngữ cảnh": mở rộng giữ NGUYÊN renderer + thứ tự gốc (bản nhạc trước, chú thích sau), không nhân đôi bản nhạc, không có tệp tải về', () => {
+test('"Xem đầy đủ": mở rộng giữ NGUYÊN renderer + thứ tự gốc (bản nhạc trước, chú thích sau), không nhân đôi bản nhạc, không có tệp tải về', () => {
   const g = html(1, ['tex'], true)
   assert.ok(g.includes('Gạch đầu dòng') && g.includes('chuyển vùng') && g.includes('Ô 3'))
   assert.ok(g.indexOf('EXCERPT') < g.indexOf('chuyển vùng') && g.indexOf('chuyển vùng') < g.indexOf('Gạch đầu dòng'), 'thứ tự gốc: nhạc → marks → guidance')
@@ -78,7 +78,7 @@ test('"Xem thêm ngữ cảnh": mở rộng giữ NGUYÊN renderer + thứ tự 
   assert.ok(!r.includes('<h3>Diễm Xưa</h3>'), 'tác phẩm khác vẫn không bị kéo vào')
 })
 
-test('contextHasMore: chỉ có nút "Xem thêm" khi thật sự có phần ngữ cảnh bị ẩn', () => {
+test('contextHasMore: chỉ có nút "Xem đầy đủ" khi thật sự có phần ngữ cảnh bị ẩn', () => {
   assert.equal(contextHasMore(sections, { section: 1, path: ['tex'] }), true)                       // marks + guidance
   assert.equal(contextHasMore(sections, { section: 2, path: ['pieces', '1', 'tex'] }), true)        // danh sách dự kiến
   assert.equal(contextHasMore(sections, { section: 3, path: ['layers', '1', 'tex'] }), false)       // không ghi chú

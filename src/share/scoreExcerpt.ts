@@ -24,6 +24,8 @@ export type ExcerptPlan = {
   total: number
   /** true = còn ô của vùng khoanh chưa hiện (hiện N ô đầu) */
   truncated: boolean
+  /** chỉ có ở chế độ 'focus' (V1.3): kế hoạch đầy đủ (V1.1) còn vẽ thêm ô ngữ cảnh so với kế hoạch gọn → "Xem đầy đủ" có thêm nhạc để hiện */
+  moreContext?: boolean
 }
 
 /** Dải ô đã chia sẻ + số ô mỗi dòng + số dòng tối đa → ô cần vẽ. Dải hỏng → null (không vẽ).
@@ -42,6 +44,19 @@ export function planExcerpt(range: BarRange, barsPerRow: number, maxRows: number
   const room = capacity - focus
   while (before + after > room) { if (before >= after && before > 0) before--; else if (after > 0) after--; else break }
   return { start: from - before, count: before + focus + after, focusFrom: from, focusTo: from + focus - 1, before, after, total, truncated }
+}
+
+/** V1.3 — chế độ GỌN (mặc định trên Feed): chỉ vẽ ĐÚNG các dòng chứa vùng khoanh. Ô ngữ cảnh chỉ lấp chỗ TRỐNG của chính các dòng đó (không thêm dòng nào);
+ *  muốn thêm ngữ cảnh thì "Xem đầy đủ" → planExcerpt (V1.1: ≤ 2 ô mỗi phía, ≤ 2 dòng). Vùng khoanh luôn nguyên vẹn và được ưu tiên số 1. */
+export function planExcerptFocus(range: BarRange, barsPerRow: number, maxRows: number = EXCERPT_MAX_ROWS): ExcerptPlan | null {
+  const { from, to } = range
+  if (!Number.isInteger(from) || !Number.isInteger(to) || from < 1 || to < from) return null
+  const perRow = Number.isFinite(barsPerRow) ? Math.max(1, Math.floor(barsPerRow)) : 1
+  const focus = Math.min(to - from + 1, EXCERPT_MAX_BARS, perRow * Math.max(1, Math.floor(maxRows)))
+  const plan = planExcerpt(range, perRow, Math.ceil(focus / perRow))
+  const full = planExcerpt(range, perRow, maxRows)
+  if (!plan || !full) return null
+  return { ...plan, moreContext: full.start < plan.start || full.start + full.count > plan.start + plan.count }
 }
 
 const obj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v)

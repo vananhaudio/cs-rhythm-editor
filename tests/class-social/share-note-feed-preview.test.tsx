@@ -1,7 +1,7 @@
 // Share Note Feed Preview V1 — lõi thuần: kế hoạch trích đoạn (tối đa 4 ô / 2 dòng), lấy nhạc theo đường dẫn, store (quyền, cache, hàng đợi).
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { EXCERPT_MAX_BARS, planExcerpt, scoreTexAt } from '../../src/share/scoreExcerpt.ts'
+import { planExcerpt, planExcerptFocus, scoreTexAt } from '../../src/share/scoreExcerpt.ts'
 
 test('planExcerpt: vùng khoanh ưu tiên, ngữ cảnh ≤ 2 ô mỗi phía lấp chỗ trống, thiếu chỗ thì giảm ngữ cảnh trước', () => {
   const P = (r: { from: number; to: number }, perRow: number, rows = 2, ctx = true) => { const p = planExcerpt(r, perRow, rows, ctx)!; return [p.start, p.count, p.focusFrom, p.focusTo, p.before, p.after, p.truncated] }
@@ -78,7 +78,7 @@ test('registry: share_note mang tham chiếu (KHÔNG có nội dung nhạc / đ�
 test('Thẻ Feed chưa gần khung nhìn: chỉ câu hỏi + nút mở, KHÔNG nạp / dựng bản nhạc', () => {
   const html = renderToStaticMarkup(createElement(ShareNotePost, { view: describeToolShare(payload)! }))
   assert.match(html, /Bản nhạc · Buổi 1/); assert.match(html, /Đoạn này đếm phách thế nào\?/); assert.match(html, /Ô 2–7/)
-  assert.match(html, /Mở đúng đoạn/)
+  assert.match(html, /Mở trong giáo trình/)
   assert.doesNotMatch(html, /at-surface|<svg[^>]*lsn|data-testid="share-note-preview"/)
 })
 
@@ -108,4 +108,21 @@ test('Khe dựng: tối đa MAX_LIVE_RENDERERS bản nhạc sống; thẻ chờ 
   assert.equal(liveRenderers(), 1)
   slots[2].release()
   assert.equal(liveRenderers(), 0, 'trả hết → không rò rỉ')
+})
+
+test('planExcerptFocus (V1.3, khung gọn): chỉ các dòng chứa vùng khoanh; ngữ cảnh chỉ lấp chỗ trống của chính các dòng đó; "Xem đầy đủ" (planExcerpt) là bản V1.1', () => {
+  const F = (r: { from: number; to: number }, perRow: number, rows = 2) => { const p = planExcerptFocus(r, perRow, rows)!; return [p.start, p.count, p.focusFrom, p.focusTo, p.moreContext] }
+  assert.deepEqual(F({ from: 3, to: 4 }, 2), [3, 2, 3, 4, true])     // vừa MỘT dòng → một dòng, không ô ngữ cảnh (V1.1 vẽ ô 2–5 = 2 dòng)
+  assert.deepEqual(F({ from: 7, to: 7 }, 2), [7, 2, 7, 7, true])     // 1 ô: lấp chỗ trống cùng dòng bằng ô sau
+  assert.deepEqual(F({ from: 12, to: 14 }, 2), [12, 4, 12, 14, false]) // 3 ô → 2 dòng (đủ vùng khoanh), chỗ trống cuối lấp ô sau; trùng kế hoạch đầy đủ → không còn nhạc để thêm
+  assert.deepEqual(F({ from: 1, to: 10 }, 2), [1, 4, 1, 4, false])   // vùng dài bị cắt "hiện 4 ô đầu"; đã đủ → không còn gì để thêm
+  assert.deepEqual(F({ from: 9, to: 9 }, 1), [9, 1, 9, 9, true])     // bản có lời (1 ô/dòng): đúng 1 dòng
+  assert.deepEqual(F({ from: 5, to: 6 }, 1), [5, 2, 5, 6, false])    // vùng khoanh trải HAI dòng → giữ đủ cả hai (không bớt để đạt chiều cao)
+  for (let perRow = 1; perRow <= 4; perRow++) for (const r of [{ from: 1, to: 1 }, { from: 2, to: 3 }, { from: 5, to: 9 }, { from: 30, to: 31 }]) {
+    const g = planExcerptFocus(r, perRow)!, f = planExcerpt(r, perRow)!
+    assert.equal(g.focusFrom, f.focusFrom); assert.equal(g.focusTo, f.focusTo)                 // vùng khoanh KHÔNG đổi giữa gọn và đầy đủ
+    assert.ok(g.count <= f.count && g.start >= f.start && g.start + g.count <= f.start + f.count)  // gọn nằm gọn trong đầy đủ
+    assert.ok(Math.ceil(g.count / perRow) <= Math.ceil((Math.min(r.to - r.from + 1, 4, perRow * 2)) / perRow))  // không thêm dòng nào ngoài các dòng chứa vùng khoanh
+  }
+  assert.equal(planExcerptFocus({ from: 0, to: 2 }, 2), null)
 })
