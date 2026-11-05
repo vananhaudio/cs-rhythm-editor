@@ -110,6 +110,8 @@
   background: var(--cs-p-soft); color: var(--cs-p-strong); font-weight: 800;
 }
 .cs-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* Mira (trợ lý AI): nhận diện riêng, kích thước do component quyết định */
+.cs-mira-avatar { background: #4338CA; color: #fff; font-weight: 800; }
 
 /* ── Khung chính: sidebar + nội dung ─────────────────────────────────────── */
 .cs-body { display: flex; align-items: flex-start; }
@@ -1718,8 +1720,6 @@ button.cs-subs-title:hover { color: var(--cs-accent); }
 .cs-classspace .cs-classv2-h2 { text-transform: none; letter-spacing: 0; font-size: 15px; font-weight: 600; color: var(--cs-text); margin-bottom: var(--cs-s2); }
 .cs-classspace .cs-act-line:hover { border-radius: 0; }
 
-/* Âm thanh thông báo (Sound V1): hàng công tắc nhỏ dưới tiêu đề Trò chuyện */
-.cs-chat-sound { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: -4px 0 10px; padding: 0 4px; font-size: 14px; color: var(--cs-text-2, var(--cs-text)); }
 .cs-switch { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 2px 0 8px; border: 0; background: transparent; color: var(--cs-text); font: inherit; font-size: 14px; cursor: pointer; }
 .cs-switch-knob { position: relative; width: 51px; height: 31px; border-radius: 999px; background: var(--cs-neutral-soft, #e5e5ea); transition: background .2s; flex: none; }
 .cs-switch-knob::after { content: ''; position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.3); transition: transform .2s; }
@@ -1826,3 +1826,94 @@ button.cs-subs-title:hover { color: var(--cs-accent); }
 .cs-nr-markall { align-self: flex-end; margin: 2px 10px 4px; padding: 6px 10px; border: none; border-radius: 8px; background: none; color: var(--cs-p-strong); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; flex: none; }
 .cs-nr-markall:hover { background: var(--cs-neutral-soft); }
 .cs-nr-markall:focus-visible { outline: 2px solid var(--cs-p-strong); outline-offset: 2px; }
+
+/* Share Note V1 — câu hỏi về đoạn nhạc mở từ liên kết chia sẻ (?note=) trên trang Buổi */
+.cs-share-note-panel { border-left: 4px solid #EA580C; }
+.cs-share-note-text { margin: 6px 0 4px; font-size: 16px; font-weight: 700; overflow-wrap: anywhere; white-space: pre-wrap; }
+.cs-share-note-status { margin: 0 0 8px; font-size: 14px; color: #5b5b66; overflow-wrap: anywhere; }
+.cs-share-note-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* G3 thẻ "Ôn nhanh" (LessonClipCard): nút "Xem clip" + liên kết phụ "Xem bài học" đủ vùng chạm iOS (≥ 44px) */
+.cs-clip-card .cs-clip-open { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; text-decoration: none; }
+.cs-clip-card .cs-pub-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; }
+.cs-clip-frame { position: relative; width: 100%; aspect-ratio: 16 / 9; margin: 0 0 10px; border-radius: 12px; overflow: hidden; background: #000; }
+.cs-clip-frame iframe { position: absolute; inset: 0; }
+.cs-clip-frame .cs-clip-msg { position: absolute; inset: 0; margin: 0; padding: 12px; display: grid; align-content: center; justify-items: center; gap: 10px; text-align: center; color: #fff; }
+.cs-clip-thumb { position: absolute; inset: 0; display: block; width: 100%; height: 100%; margin: 0; padding: 0; border: 0; cursor: pointer;
+  background: linear-gradient(135deg, var(--cs-p-strong, #5b21b6), var(--cs-p, #6d28d9) 60%, #1f1147); }
+.cs-clip-thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.cs-clip-thumb::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,.35), rgba(0,0,0,0) 45%); pointer-events: none; }
+.cs-clip-play { position: absolute; z-index: 1; left: 50%; top: 50%; width: 64px; height: 64px; margin: -32px 0 0 -32px; border-radius: 50%; display: grid; place-items: center;
+  background: rgba(255,255,255,.94); color: var(--cs-p-strong, #5b21b6); box-shadow: 0 4px 16px rgba(0,0,0,.35); transition: transform .15s; }
+.cs-clip-play svg { margin-left: 3px; }
+.cs-clip-thumb:hover .cs-clip-play { transform: scale(1.06); }
+.cs-clip-dur { position: absolute; z-index: 1; right: 8px; bottom: 8px; padding: 2px 7px; border-radius: 6px; background: rgba(0,0,0,.75); color: #fff; font-size: 12px; font-weight: 700; line-height: 1.5; }
+@media (prefers-reduced-motion: reduce) { .cs-clip-play { transition: none; } }
+.cs-clip-lesson { display: inline-flex; align-items: center; min-height: 44px; padding: 0 4px; color: var(--cs-p-strong); font-weight: 700; text-decoration: none; }
+/* Trình phát Ôn nhanh (LessonClipPlayer): hộp giữa màn hình, rộng hơn hộp hỏi lại; điện thoại gần kín chiều ngang */
+
+/* Share Note trên Feed: xem trước trích đoạn bản nhạc (ShareNotePost). LessonScore dùng style của LessonDocument — ở Feed chỉ khai báo phần cần. */
+.cs-sn-post { width: 100%; }
+.cs-sn-msg { margin: 6px 0 0; font-size: 14px; color: var(--cs-muted); overflow-wrap: anywhere; }
+.cs-sn-slot { width: 100%; margin-top: 8px; }
+.cs-sn-wait { padding: 8px 0; }
+.cs-sn-preview { display: block; position: relative; border-radius: 12px; border: 1px solid var(--cs-border, #E4E0F0); background: #fff; overflow: hidden; color: inherit; text-decoration: none; }
+/* V1.1: nền cam chỉ phủ VÙNG KHOANH (.lsn-excerpt-hl); ô ngữ cảnh để nguyên */
+.cs-sn-preview .lsn-excerpt-focus { position: absolute; inset: 0; pointer-events: none; }
+.cs-sn-preview .lsn-excerpt-hl { position: absolute; background: rgba(234, 88, 12, 0.11); box-shadow: inset 0 0 0 2px rgba(234, 88, 12, 0.75); border-radius: 6px; }   /* điểm nhấn thị giác DUY NHẤT: khung ngoài trung tính, chỉ vùng khoanh màu cam */
+/* Khung giáo trình trong Feed (Contextual Share): CÙNG renderer, chỉ thu gọn cỡ chữ + khoảng đệm cho thẻ Feed (không ẩn / không cắt nội dung). */
+.cs-sn-post .cs-sn-preview .lsn-ctx .lsn-paper { padding: 0; }
+.cs-sn-post .cs-sn-preview .lsn-ctx .lsn-paper .lsn-block { border: 0; border-radius: 0; margin: 0; padding: 10px 12px 4px; background: transparent; }
+.cs-sn-post .cs-sn-preview .lsn-ctx .lsn-paper .lsn-block-h { margin-bottom: 6px; }
+.cs-sn-post .cs-sn-preview .lsn-ctx .lsn-paper .lsn-block h2 { font-size: 17px; line-height: 1.25; }
+.cs-sn-post .cs-sn-preview .lsn-ctx .lsn-paper .lsn-sub { font-size: 13.5px; margin-top: 3px; line-height: 1.4; }
+.cs-sn-post .cs-sn-preview .lsn-ctx .lsn-paper .lsn-piece { margin-top: 4px; padding-top: 4px; border-top: 0; }
+.cs-sn-post .cs-sn-preview .lsn-ctx .lsn-paper .lsn-piece-h h3 { font-size: 16px; line-height: 1.25; }
+.cs-sn-post .cs-sn-preview .lsn-ctx .lsn-paper .lsn-piece-by { font-size: 12.5px; }
+.cs-sn-post .cs-sn-preview .lsn-ctx .lsn-paper .lsn-piece-note { font-size: 13.5px; line-height: 1.4; margin: 2px 0 6px; }
+.cs-sn-post .cs-sn-preview .lsn-ctx .lsn-paper .lsn-tempo { font-size: 12.5px; line-height: 1.35; margin-bottom: 4px; }
+.cs-sn-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; align-self: stretch; width: 100%; min-width: 0; margin-top: 12px; }
+/* Thao tác PHỤ (Xem đầy đủ / Thu gọn): nút chữ nhẹ — không nền, không viền; vùng bấm ≥ 44px; KHÔNG co (chữ không bị ép) */
+.cs-sn-more { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-height: 44px; min-width: 44px; margin: 0; padding: 0 8px; border: 0; border-radius: 10px;
+  background: transparent; color: var(--cs-p-strong, #5b21b6); font: inherit; font-size: 15px; font-weight: 600; line-height: 1.2; white-space: nowrap; cursor: pointer; }
+.cs-sn-more:hover { background: var(--cs-p-softer, #f8f5ff); }
+.cs-sn-more:active { opacity: .8; }
+.cs-sn-more:focus-visible { outline: 3px solid var(--cs-p-strong); outline-offset: 2px; }
+/* Thao tác CHÍNH (điều hướng): nút đặc, biểu tượng mở tài liệu; chiếm phần còn lại của hàng; chữ không tràn (cắt ... chỉ khi màn hình rất hẹp) */
+.cs-sn-actions > .cs-sn-open { flex: 1 1 auto; min-width: max-content; max-width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; margin: 0; width: auto; padding: 0 16px; box-sizing: border-box;
+  border: 0; border-radius: 12px; background: var(--cs-p-strong, #5b21b6); color: #fff; font-size: 15px; font-weight: 600; line-height: 1.2; text-decoration: none; white-space: nowrap; }
+.cs-sn-open > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.cs-sn-open svg, .cs-sn-more svg { flex: none; }
+.cs-sn-open:hover { background: #4c1d95; color: #fff; }
+.cs-sn-open:active { opacity: .88; }
+.cs-sn-open:focus-visible { outline: 3px solid var(--cs-p-strong); outline-offset: 2px; }
+/* Vừa một hàng: nút phụ ở trái, nút chính chiếm phần còn lại. Hẹp (iPhone): nút phụ một dòng, nút chính rộng hết hàng ở dưới — chữ KHÔNG bị ép */
+@media (min-width: 640px) { .cs-sn-actions > .cs-sn-open:only-child { flex: 0 1 280px; margin-left: auto; } }
+/* Mô tả dài rút gọn 2 dòng khi chưa "Xem đầy đủ" — chỉ chữ mô tả; nguyên văn vẫn đủ trong DOM, KHÔNG bao giờ áp cho bản nhạc / TAB / lời hát */
+.cs-sn-post .cs-sn-preview .lsn-ctx[data-expanded="0"] .lsn-paper .lsn-sub,
+.cs-sn-post .cs-sn-preview .lsn-ctx[data-expanded="0"] .lsn-paper .lsn-piece-note { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.cs-sn-preview:focus-visible { outline: 3px solid var(--cs-p-strong); outline-offset: 2px; }
+/* Khung VĂN BẢN (V2): lá chứa vùng chọn không bị rút gọn; chỉ <mark> là điểm nhấn cam */
+.cs-sn-post .cs-sn-preview .lsn-ctx .lsn-study .lsn-block-h { margin-bottom: 4px; }
+.cs-sn-post .cs-sn-preview .lsn-ctx .lsn-study .lsn-block-h h2 { font-size: 16.5px; line-height: 1.3; }
+.cs-sn-post .cs-sn-preview .lsn-ctx .lsn-st-h { font-size: 16px; line-height: 1.35; margin: 10px 0 4px; }
+.cs-sn-post .cs-sn-preview .lsn-ctx .lsn-st-p { font-size: 15px; line-height: 1.5; margin: 4px 0 6px; }
+.cs-sn-post .cs-sn-preview .lsn-ctx .lsn-st-list { font-size: 15px; line-height: 1.45; margin: 4px 0 6px; }
+.cs-sn-post .cs-sn-preview .lsn-ctx .lsn-st-callout { font-size: 14.5px; line-height: 1.45; padding: 8px 10px; margin: 8px 0; }
+.cs-sn-post .cs-sn-preview .lsn-ctx .lsn-st-table { font-size: 14px; }
+.cs-sn-post .cs-sn-preview .lsn-ctx .lsn-note { font-size: 15px; line-height: 1.5; padding: 10px 12px; }
+.cs-sn-preview .lsn-text-hl { background: rgba(234, 88, 12, 0.18); box-shadow: inset 0 -2px 0 rgba(234, 88, 12, 0.85); }
+.cs-sn-preview .lsn-score { position: relative; padding: 6px 4px; }
+.cs-sn-preview .lsn-score-host { overflow: hidden; }
+.cs-sn-preview .lsn-score-host svg { max-width: 100%; height: auto; }
+.cs-sn-preview .lsn-score-msg { font-size: 13.5px; color: var(--cs-muted); padding: 10px; }
+.cs-sn-preview .lsn-score-msg.err { color: #B91C1C; }
+
+/* Chat V2 tinh gọn: bỏ hàng "Âm thanh thông báo" riêng (công tắc nằm cạnh ô tìm kiếm) + tiêu đề trang chỉ còn cho trình đọc màn hình */
+.cs-inbox-searchrow { display: flex; align-items: center; gap: 4px; }
+.cs-inbox-searchrow .cs-inbox-search { flex: 1; min-width: 0; }
+.cs-chat-sound { flex: none; margin: 0; padding: 0; }
+.cs-sound-btn { display: grid; place-items: center; width: 44px; height: 44px; margin: -3px -6px -3px 0; border: 0; border-radius: 50%; background: transparent; color: var(--cs-muted); cursor: pointer; }
+.cs-sound-btn.is-on { color: var(--cs-p); }
+.cs-sound-btn:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--cs-p-soft), 0 0 0 3.5px var(--cs-p); }
+@media (min-width: 701px) { .cs-chat { height: clamp(480px, calc(100dvh - var(--cs-topbar-h) - 72px), 820px); } }

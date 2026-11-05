@@ -287,14 +287,17 @@ export function TapWithSong({ onClose, userRole, onMeaningfulUse }: { onClose?: 
     // Khách chưa đăng nhập: không đọc bảng student_taps (bảng riêng tư của học viên)
     if (!user) { setOtherStudentsCount(0); setOtherResults([]); return }
     const { data: others } = await supabase.from('student_taps')
-      .select('user_id, score, level, app_users(name)')
+      .select('user_id, score, level')
       .eq('song_title', s.title).order('created_at', { ascending: false })
       .neq('user_id', user.id).limit(20)
     if (others && others.length > 0) {
+      // Tên người khác: qua RPC tối thiểu (id + name) — app_users không còn đọc được trực tiếp (RLS P3-E)
+      const { data: nm } = await supabase.rpc('app_user_names', { p_ids: [...new Set(others.map((r: any) => r.user_id))] })
+      const nameOf = new Map<string, string>((nm ?? []).map((x: any) => [x.id, x.name]))
       const seen = new Set<string>()
       const unique: {name:string; score:number; level:number}[] = []
       others.forEach((r: any) => {
-        if (!seen.has(r.user_id)) { seen.add(r.user_id); unique.push({ name: r.app_users?.name ?? 'Học sinh', score: r.score, level: r.level }) }
+        if (!seen.has(r.user_id)) { seen.add(r.user_id); unique.push({ name: nameOf.get(r.user_id) ?? 'Học sinh', score: r.score, level: r.level }) }
       })
       setOtherStudentsCount(unique.length); setOtherResults(unique)
     } else { setOtherStudentsCount(0); setOtherResults([]) }

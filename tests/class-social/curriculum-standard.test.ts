@@ -44,3 +44,38 @@ test("bộ kiểm BẮT được lệch mạch: loại khối lạ · thiếu ob
   assert.ok(solo01Problems([...base.slice(0, 3), cp("5.1"), cp("5.1"), ...base.slice(3)], 5).some(p => /trùng/.test(p)));
   assert.ok(solo01Problems([...base, cp("5.9")], 5).some(p => /TRONG mạch học/.test(p)));
 });
+
+test("khối video ôn nhanh: hợp lệ với mọi dạng link YouTube, bắt link hỏng, không phá mạch/đuôi buổi", () => {
+  const base = SOLO01_BUOI05.sections.filter(s => s.kind !== "checkpoint");
+  const cp: LessonSection = { kind: "checkpoint", id: "5.1", title: "Bài trả" };
+  const video = (url: string): LessonSection => ({ kind: "video", title: "Bản độc tấu gồm 3 lớp", url, duration: "3:52" });
+  assert.ok(KNOWN_SECTION_KINDS.includes("video"));
+  // added_at (G3) là trường tuỳ chọn: có hay không, bộ kiểm chuẩn đều coi khối hợp lệ
+  assert.deepEqual(solo01Problems([...base.slice(0, 3), cp, ({ kind: "video", title: "Bản độc tấu gồm 3 lớp", url: "https://youtu.be/dQw4w9WgXcQ", added_at: "2026-11-01T05:30:12.123Z" } as LessonSection), ...base.slice(3)], 5), []);
+  // chèn giữa mạch học (trước đuôi) với ID thật của clip A / B, ở cả dạng youtu.be, watch?v=, ID trần
+  for (const url of ["https://youtu.be/dQw4w9WgXcQ", "https://www.youtube.com/watch?v=aBcDeFgHiJk", "dQw4w9WgXcQ"]) {
+    assert.deepEqual(solo01Problems([...base.slice(0, 3), cp, video(url), ...base.slice(3)], 5), [], url);
+  }
+  // link không phải YouTube / thiếu ID → bị bắt, không để học viên gặp khung lỗi
+  for (const url of ["", "https://example.com/v.mp4", "https://youtu.be/abc"]) {
+    assert.ok(solo01Problems([...base.slice(0, 3), cp, video(url), ...base.slice(3)], 5).some(p => /link YouTube/.test(p)), url);
+  }
+  // video đặt SAU đuôi buổi vẫn bị bắt bởi luật đuôi (video không được hiểu là một phần của đuôi)
+  assert.ok(solo01Problems([...base.slice(0, 3), cp, ...base.slice(3), video("dQw4w9WgXcQ")], 5).some(p => /Đuôi buổi/.test(p)));
+});
+
+test("khối video ôn nhanh render thành player YouTube đúng ID, nằm trong no-print (PDF không mang link Unlisted)", async () => {
+  const React = (await import("react")).default;
+  const { renderToStaticMarkup } = await import("react-dom/server");
+  const { default: LessonDocument } = await import("../../src/lesson/LessonDocument");
+  void React;
+  const doc = {
+    meta: { programCode: "SOLO01", programName: "SOLO", sessionNo: 6, title: "Buổi 6" },
+    sections: [{ kind: "video", title: "Bản độc tấu gồm 3 lớp", url: "https://youtu.be/dQw4w9WgXcQ", duration: "3:52", note: "Ôn nhanh" }],
+  } as unknown as import("../../src/lesson/lessonTypes").LessonDoc;
+  const html = renderToStaticMarkup(React.createElement(LessonDocument, { doc }));
+  assert.match(html, /youtube\.com\/embed\/dQw4w9WgXcQ/);
+  assert.match(html, /Ôn nhanh · 3:52/);
+  assert.match(html, /class="no-print"><[^>]*[\s\S]*youtube\.com\/embed\/dQw4w9WgXcQ/);
+  assert.ok(!/Phần này cần phiên bản app mới hơn/.test(html), "không rơi vào UnsupportedSection");
+});

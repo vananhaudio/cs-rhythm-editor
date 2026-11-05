@@ -1,7 +1,7 @@
 // Thầy phản hồi một thread: viết nhận xét / trả lời, tuỳ chọn kết luận "Cần làm lại" hoặc "Đạt".
 // Thẻ kiến thức + bài giảng Kho dùng lại picker của Social (chỉ khi allowKho — Kho proxy chỉ có trên class.*).
 // Quyền thật do server kiểm (lt_respond chỉ chạy với teacher/admin).
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { BookOpen, Hash } from 'lucide-react'
 import type { ResourceRef, Tag } from '../class-social/comments/commentModel'
 import ResourceCard from '../class-social/sections/comments/ResourceCard'
@@ -11,7 +11,7 @@ import { MEDIA_ERROR_TEXT, parseExternalMedia } from '../class-social/media/pars
 import { respondAsTeacher } from './ltApi'
 import { MAX_EVENT_BODY, checkBody, teacherKind, type ThreadEvent, type Verdict } from './ltModel'
 
-export default function TeacherComposer({ threadId, events, allowKho, onSent, respond = respondAsTeacher, isCheckpoint = false }: {
+export default function TeacherComposer({ threadId, events, allowKho, onSent, respond = respondAsTeacher, isCheckpoint = false, miraDraft = null, onMiraDraft }: {
   threadId: string
   events: Pick<ThreadEvent, 'authorRole' | 'kind'>[]
   allowKho: boolean
@@ -19,6 +19,10 @@ export default function TeacherComposer({ threadId, events, allowKho, onSent, re
   respond?: typeof respondAsTeacher
   /** bài trả checkpoint trong giáo trình lớp: Đạt đủ bài bắt buộc → server hoàn thành buổi + mở buổi kế */
   isCheckpoint?: boolean
+  /** Nháp từ Mira (đã kiểm ở khung Mira). CHỈ điền vào ô soạn; không tự gửi. n đổi = có nháp mới. */
+  miraDraft?: { n: number; text: string } | null
+  /** Báo số phận nháp n cho khung Mira: received (chờ Thầy xác nhận) · applied (ĐÃ điền vào ô) · declined (không điền). Mira chỉ báo thành công khi nhận 'applied'. */
+  onMiraDraft?: (n: number, outcome: 'received' | 'applied' | 'declined') => void
 }) {
   const [body, setBody] = useState('')
   const [url, setUrl] = useState('')
@@ -28,6 +32,32 @@ export default function TeacherComposer({ threadId, events, allowKho, onSent, re
   const [sending, setSending] = useState<Verdict | 'none' | null>(null)
   const [error, setError] = useState<string | null>(null)
   const inFlight = useRef(false)
+  // Nháp Mira: ô trống → điền ngay; ô đã có chữ → hỏi xác nhận (Giữ nguyên / Thay). Không bao giờ gọi respond().
+  const [pending, setPending] = useState<{ n: number; text: string } | null>(null)
+  const pendingRef = useRef<{ n: number; text: string } | null>(null)
+  useEffect(() => { pendingRef.current = pending }, [pending])
+  const [fromMira, setFromMira] = useState(false)
+  const bodyRef = useRef(body)
+  useEffect(() => { bodyRef.current = body }, [body])
+  const taRef = useRef<HTMLTextAreaElement>(null)
+  const boxRef = useRef<HTMLDivElement>(null)
+  const seenDraft = useRef(0)
+  const show = () => {   // đưa Thầy về ô phản hồi: cuộn vào giữa màn hình + đặt con trỏ
+    boxRef.current?.scrollIntoView?.({ block: 'center', behavior: 'smooth' })
+    taRef.current?.focus({ preventScroll: true })
+  }
+  const applyDraft = (d: { n: number; text: string }) => { setBody(d.text); setError(null); setPending(null); setFromMira(true); show(); onMiraDraft?.(d.n, 'applied') }
+  const keepMine = (d: { n: number }) => { setPending(null); taRef.current?.focus({ preventScroll: true }); onMiraDraft?.(d.n, 'declined') }
+  useEffect(() => {
+    if (!miraDraft || miraDraft.n === seenDraft.current) return
+    seenDraft.current = miraDraft.n
+    const prev = pendingRef.current
+    if (prev) { setPending(null); onMiraDraft?.(prev.n, 'declined') }                    // nháp mới thay nháp đang chờ xác nhận
+    if (inFlight.current) { onMiraDraft?.(miraDraft.n, 'declined'); return }            // đang gửi: không đụng vào ô
+    if (!bodyRef.current.trim()) applyDraft(miraDraft)
+    else { setPending(miraDraft); onMiraDraft?.(miraDraft.n, 'received'); show() }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [miraDraft])
 
   const send = async (verdict: Verdict | null) => {
     if (inFlight.current) return
@@ -42,20 +72,31 @@ export default function TeacherComposer({ threadId, events, allowKho, onSent, re
     })
     inFlight.current = false; setSending(null)
     if (!r.ok) { setError(r.message); return }
-    setBody(''); setUrl(''); setTags([]); setResources([]); setPicker(null)
+    setBody(''); setUrl(''); setTags([]); setResources([]); setPicker(null); setFromMira(false)
+    if (pendingRef.current) { onMiraDraft?.(pendingRef.current.n, 'declined'); setPending(null) }   // đã gửi bản của Thầy: nháp đang chờ không còn áp dụng
     onSent()
   }
 
   const busy = sending !== null
   return (
-    <div className="lt-compose" aria-label="Thầy phản hồi">
+    <div className="lt-compose" aria-label="Thầy phản hồi" ref={boxRef}>
       <h3>Thầy phản hồi</h3>
       <label className="lt-field">
         <span>Nhận xét / trả lời</span>
-        <textarea className="lt-input" rows={4} maxLength={MAX_EVENT_BODY} value={body} disabled={busy}
+        <textarea ref={taRef} className="lt-input" rows={4} maxLength={MAX_EVENT_BODY} value={body} disabled={busy}
           placeholder="Nhận xét phần thực hành hoặc trả lời câu hỏi của học sinh…"
-          onChange={e => { setBody(e.target.value); if (error) setError(null) }} />
+          onChange={e => { setBody(e.target.value); setFromMira(false); if (error) setError(null) }} />
       </label>
+      {pending !== null && (
+        <div className="lt-note" role="alertdialog" aria-label="Thay nội dung bằng nháp của Mira">
+          <p style={{ margin: '0 0 6px' }}>Ô phản hồi đang có chữ. Thay bằng nháp vừa nhận từ Mira?</p>
+          <div className="lt-actions">
+            <button type="button" className="lt-btn is-primary" onClick={() => applyDraft(pending)}>Thay bằng nháp của Mira</button>
+            <button type="button" className="lt-btn is-ghost" onClick={() => keepMine(pending)}>Giữ nguyên</button>
+          </div>
+        </div>
+      )}
+      {fromMira && pending === null && <p className="lt-note" role="status">Đã điền nháp từ Mira. Thầy xem lại và sửa; chưa gửi cho học viên.</p>}
       <label className="lt-field">
         <span>Video minh hoạ <small>(không bắt buộc)</small></span>
         <input className="lt-input" type="url" inputMode="url" autoComplete="off" spellCheck={false} value={url} disabled={busy}

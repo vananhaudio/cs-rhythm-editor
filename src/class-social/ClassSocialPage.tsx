@@ -25,6 +25,7 @@ import { useFriendRequests } from './friends/useFriendRequests'
 import { useChatUnread } from './chat/useChat'
 import type { ChatSelection } from './chat/chatModel'
 import ThreadPage from '../learning-thread/ThreadPage'
+import MiraDock from '../mira-grading/MiraDock'
 import TeacherQueue from '../learning-thread/TeacherQueue'
 import { useSocialClasses } from './classes/useSocialClasses'
 import ClassNav from './classes/ClassNav'
@@ -225,8 +226,12 @@ function SignedInShell({ base, view, onSection, onOpenProfile, onOpenThread, onO
           onMessage={onOpenChatWith} />
       )}
       {view.kind === 'thread' && (
-        <ThreadPage key={view.threadId} threadId={view.threadId} isTeacher={me.isTeacher} onBack={() => onBack(HOME)}
-          onOpenQueue={onOpenQueue} onOpenProfile={onOpenProfile} onOpenClass={onOpenClass} onOpenSession={onOpenSession} />
+        // Mira cạnh màn chấm bài: chỉ Thầy/admin + chỉ khi build bật VITE_MIRA_GRADING_URL; tắt thì chỉ render children y như cũ.
+        // MiraDock đứng NGOÀI ThreadPage (key theo bài) để iframe giữ nguyên khi chuyển bài.
+        <MiraDock enabled={me.isTeacher} threadId={view.threadId}>
+          <ThreadPage key={view.threadId} threadId={view.threadId} isTeacher={me.isTeacher} onBack={() => onBack(HOME)}
+            onOpenQueue={onOpenQueue} onOpenProfile={onOpenProfile} onOpenClass={onOpenClass} onOpenSession={onOpenSession} />
+        </MiraDock>
       )}
       {view.kind === 'queue' && (me.isTeacher
         ? <TeacherQueue onOpenThread={onOpenThread} onBack={() => onBack(HOME)} />
@@ -256,7 +261,7 @@ function SignedInShell({ base, view, onSection, onOpenProfile, onOpenThread, onO
         onJoinedClass={() => { classes.reload(); refreshLearningIdentity(me.userId) }} onOpenBands={onOpenBands} />}
       {section === 'friends' && <Friends requests={requests} onOpenProfile={onOpenProfile} onMessage={onOpenChatWith} />}
       {section === 'chat' && <Chat meId={me.userId} selection={chatSelection} onOpenConversation={onOpenConversation}
-        soundToggle={chatUnread.system != null}
+        soundToggle={chatUnread.system != null} onOpenClass={onOpenClass} isAdmin={me.isAdmin}
         onBackToList={() => onBack({ kind: 'section', section: 'chat' })} onOpenProfile={onOpenProfile}
         onOpenFriends={() => onSection('friends')} onUnreadChanged={() => void chatUnread.refresh()} />}
       {view.kind === 'notices' && <Notices onUnreadChanged={() => void chatUnread.refresh()} onOpenThread={onOpenThread} onClose={() => onBack(HOME)} />}

@@ -19,9 +19,9 @@ export function getYouTubeId(url: string | null | undefined): string | null {
 }
 
 // URL embed chuẩn: playsinline (bắt buộc cho WKWebView), enablejsapi (nhận sự kiện), rel=0.
-export function buildEmbedUrl(id: string): string {
+export function buildEmbedUrl(id: string, autoplay = false): string {
   return `https://www.youtube.com/embed/${id}?${new URLSearchParams({
-    enablejsapi: '1', playsinline: '1', rel: '0',
+    enablejsapi: '1', playsinline: '1', rel: '0', ...(autoplay ? { autoplay: '1' } : {}),
   })}`
 }
 
@@ -31,12 +31,13 @@ const YT_ALLOW = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyr
 // không phải https). Giải pháp chung: nhúng trang player hosted /ytplayer của web app
 // (origin https hợp lệ); trang đó forward nguyên sự kiện YouTube lên parent nên
 // onReady/onEnded/watchdog phía dưới chạy y hệt. Trên web thường → embed trực tiếp.
-const NATIVE = !!(window as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.()
+// typeof window: module còn được nạp khi render phía test/node (LessonDocument nhúng player) — không có window thì là web thường.
+const NATIVE = typeof window !== 'undefined' && !!(window as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.()
 const HOSTED_PLAYER_ORIGIN = 'https://timming.vananhaudio.com'
-function playerSrc(id: string): string {
+function playerSrc(id: string, autoplay = false): string {
   // nofail=1: trong WKWebView, sự kiện widget postMessage không truyền tin cậy giữa các tầng
   // iframe → trang hosted cũng phải tắt watchdog (YouTube tự hiện lỗi của nó nếu có).
-  return NATIVE ? `${HOSTED_PLAYER_ORIGIN}/ytplayer?v=${id}&nofail=1` : buildEmbedUrl(id)
+  return NATIVE ? `${HOSTED_PLAYER_ORIGIN}/ytplayer?v=${id}&nofail=1${autoplay ? '&autoplay=1' : ''}` : buildEmbedUrl(id, autoplay)
 }
 
 type Props = {
@@ -45,13 +46,14 @@ type Props = {
   title?: string
   onEnded?: () => void       // gọi ĐÚNG 1 lần khi video phát tới hết (state ENDED thật của YouTube)
   style?: React.CSSProperties
+  autoplay?: boolean         // phát ngay khi mở — CHỈ dùng khi người xem vừa bấm Play (cử chỉ người dùng); mặc định tắt
   noWatchdog?: boolean       // trang /ytplayer nhúng trong vỏ native: sự kiện không tin cậy → tắt màn lỗi
 }
 
 // Player bài học: iframe + widget API postMessage.
 // - onEnded chỉ bắn khi YouTube trả playerState === 0 (ENDED) — không phải mở bài, play, hay 50%.
 // - Lỗi tải (mạng/video bị chặn nhúng) → thông báo rõ + nút "Thử lại", không ô đen câm.
-export default function YouTubeLesson({ url, videoId, title, onEnded, style, noWatchdog }: Props) {
+export default function YouTubeLesson({ url, videoId, title, onEnded, style, noWatchdog, autoplay }: Props) {
   const id = videoId && /^[\w-]{11}$/.test(videoId) ? videoId : getYouTubeId(videoId ?? url)
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const [gen, setGen] = useState(0)            // đổi key để reload iframe khi "Thử lại"
@@ -112,7 +114,7 @@ export default function YouTubeLesson({ url, videoId, title, onEnded, style, noW
 
   return (
     <div style={{ position: 'relative', aspectRatio: '16/9', background: '#000', ...style }}>
-      <iframe key={gen} ref={iframeRef} src={playerSrc(id)} title={title || 'Video bài học'}
+      <iframe key={gen} ref={iframeRef} src={playerSrc(id, autoplay)} title={title || 'Video bài học'}
         style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
         allow={NATIVE ? 'fullscreen; autoplay; encrypted-media' : YT_ALLOW} allowFullScreen onLoad={armWatchdog} />
       {failed && !ready && (

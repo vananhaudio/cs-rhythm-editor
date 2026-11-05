@@ -3,8 +3,9 @@
 // Feed/PostCard chỉ gọi describeToolShare() — không if/else theo từng công cụ. Server kiểm lại payload khi ghi
 // (db/social_tool_share_v1_setup.sql). Thêm BMS / Nhịp & Phách / Ban nhạc = thêm MỘT mục ở đây + một nhánh ở RPC.
 import type { LucideIcon } from 'lucide-react'
-import { ListMusic, Music4, Timer } from 'lucide-react'
+import { ListMusic, MessageCircleQuestion, Music4, Timer } from 'lucide-react'
 import { artifactRef, chordSheetRef, type ShareRef } from '../../share/shareRef'
+import { shareNoteHref } from '../../share/shareNoteLink'
 
 export type ToolShareView = {
   tool: string
@@ -18,6 +19,9 @@ export type ToolShareView = {
   action: { label: string; href: string } | null   // "Thử ở 80 BPM" → /metronome?tempo=80
   /** Có = object gốc chia sẻ được cho bạn bè trong Chat (artifact: BMS, Nhịp & Phách) */
   shareRef?: ShareRef | null
+  /** Share Note: tham chiếu để Feed vẽ xem trước trích đoạn (KHÔNG có nội dung nhạc — nhạc chỉ nạp sau khi server cho phép) */
+  /** kind 'bars' = khoanh ô nhịp (V1; from/to = dải ô) · 'text' = vùng văn bản giáo trình (V2; không có dải ô) */
+  sharedNote?: { noteId: string; classId: string; sessionNo: number; kind: 'bars' | 'text'; from?: number; to?: number }
 }
 
 type ToolDef = { describe: (raw: Record<string, unknown>) => ToolShareView | null }
@@ -124,6 +128,33 @@ TOOL_REGISTRY.chord_sheet = {
       thumbnail: null, note: null,
       action: { label: 'Mở Play Scroll', href: chordSheetHref(id) },
       shareRef: chordSheetRef(id),
+    }
+  },
+}
+
+/** Khoanh ô nhịp (Share Note V1): tác giả đăng câu hỏi về một đoạn bản nhạc giáo trình. Payload chỉ có tham chiếu + lời nhắn +
+ *  buổi + dải ô (KHÔNG nội dung giáo án); mở bản nhạc do trang Buổi + quyền giáo trình của CHÍNH người xem quyết. Không chuyển tiếp. */
+TOOL_REGISTRY.share_note = {
+  describe: raw => {
+    const id = raw.note_id, cls = raw.class_id, note = raw.note, n = int(raw.session_no), a = int(raw.bar_from), b = int(raw.bar_to)
+    if (raw.kind !== 'share_note' || typeof id !== 'string' || !UUID_RE.test(id) || typeof cls !== 'string' || !UUID_RE.test(cls)) return null
+    if (raw.anchor === 'text') {   // V2: vùng văn bản — payload KHÔNG có nội dung giáo trình và KHÔNG có dải ô
+      if (typeof note !== 'string' || !note.trim() || note.length > 500 || n === null || n < 0) return null
+      return {
+        tool: 'share_note', toolLabel: 'Giáo trình', icon: MessageCircleQuestion, kindLabel: `Buổi ${n}`,
+        headline: note.trim(), detail: 'Đoạn văn bản', thumbnail: null, note: null,
+        action: { label: 'Mở trong giáo trình', href: shareNoteHref(cls, n, id) },
+        shareRef: null,
+        sharedNote: { noteId: id.toLowerCase(), classId: cls, sessionNo: n, kind: 'text' },
+      }
+    }
+    if (typeof note !== 'string' || !note.trim() || note.length > 500 || n === null || n < 0 || a === null || b === null || a < 1 || b < a) return null
+    return {
+      tool: 'share_note', toolLabel: 'Bản nhạc', icon: MessageCircleQuestion, kindLabel: `Buổi ${n}`,
+      headline: note.trim(), detail: a === b ? `Ô ${a}` : `Ô ${a}–${b}`, thumbnail: null, note: null,
+      action: { label: 'Mở trong giáo trình', href: shareNoteHref(cls, n, id) },
+      shareRef: null,
+      sharedNote: { noteId: id.toLowerCase(), classId: cls, sessionNo: n, kind: 'bars', from: a, to: b },
     }
   },
 }

@@ -1,0 +1,293 @@
+{
+  "generatedBy": "PostgreSQL 17.11 UTF8 (cụm tạm, không phải production)",
+  "cases": [
+    {
+      "name": "ascii",
+      "text": "Hello guitar world",
+      "pgLengthCp": 18,
+      "jsUtf16Length": 18,
+      "ranges": [
+        {
+          "from": 0,
+          "to": 3,
+          "substr": "Hel",
+          "sha": "b789c24dcdb68c4437b04c186bf239a7207e7573fb1b22a749fe1a7b8d96d292",
+          "firstPosCp": 0
+        },
+        {
+          "from": 6,
+          "to": 11,
+          "substr": "guita",
+          "sha": "58273061986ccd6514a28a08c1cfe783c8ae4f4bce3a4d42807086843c4eeff6",
+          "firstPosCp": 6
+        },
+        {
+          "from": 14,
+          "to": 18,
+          "substr": "orld",
+          "sha": "ad3429725c9b3f50b1eb3dee9d22590d8e41a13b3b3d0d4931a6d80a6ea286f3",
+          "firstPosCp": 14
+        },
+        {
+          "from": 0,
+          "to": 18,
+          "substr": "Hello guitar world",
+          "sha": "8b8c1107f626443af3130891b81eae223069cf09a962e3e75cd27978ab46b930",
+          "firstPosCp": 0
+        }
+      ]
+    },
+    {
+      "name": "viet_nfc",
+      "text": "Nhịp chùm ba: giữ đều tay, nghe kỹ ô 2 và ô 3.",
+      "pgLengthCp": 46,
+      "jsUtf16Length": 46,
+      "ranges": [
+        {
+          "from": 0,
+          "to": 3,
+          "substr": "Nhị",
+          "sha": "3c3c28a275fd7ceedd70671f0274447bf74ae6b2ee2948688889cc99b8a83893",
+          "firstPosCp": 0
+        },
+        {
+          "from": 15,
+          "to": 20,
+          "substr": "iữ đề",
+          "sha": "5372ba8a3cc44da0f35df251bd175e4349e2281e699278689fcdf12de0092cb1",
+          "firstPosCp": 15
+        },
+        {
+          "from": 42,
+          "to": 46,
+          "substr": "ô 3.",
+          "sha": "c91cc72a5d7c513ce2aed109100c1616923481d17e61bc6fcde1169486da507c",
+          "firstPosCp": 42
+        },
+        {
+          "from": 0,
+          "to": 46,
+          "substr": "Nhịp chùm ba: giữ đều tay, nghe kỹ ô 2 và ô 3.",
+          "sha": "243d21c6227b1022c83ec7a878f598a77d766767e12ba324377aaf2c4e25027a",
+          "firstPosCp": 0
+        }
+      ]
+    },
+    {
+      "name": "viet_nfd",
+      "text": "Nhịp chùm ba: giữ đều tay, nghe kỹ ô 2.",
+      "pgLengthCp": 47,
+      "jsUtf16Length": 47,
+      "ranges": [
+        {
+          "from": 0,
+          "to": 3,
+          "substr": "Nhi",
+          "sha": "985d343ca1f67c08d67d8110df597daf3b426145a7fd0cb4d0438542fb40d223",
+          "firstPosCp": 0
+        },
+        {
+          "from": 15,
+          "to": 20,
+          "substr": " giư",
+          "sha": "624e8dfdfd5a017a5f10999e0f777e2473ac7c7ca729560625fad694122f4399",
+          "firstPosCp": 15
+        },
+        {
+          "from": 43,
+          "to": 47,
+          "substr": "̂ 2.",
+          "sha": "d0b2a47035dae876990f929085b541237f3b78a013e9a7a43bf02505ecea3670",
+          "firstPosCp": 43
+        },
+        {
+          "from": 0,
+          "to": 47,
+          "substr": "Nhịp chùm ba: giữ đều tay, nghe kỹ ô 2.",
+          "sha": "9aa6a40fa68acdb7032dfab82105719a44463004209c7eab0a625d0fc18043fd",
+          "firstPosCp": 0
+        }
+      ]
+    },
+    {
+      "name": "emoji_bmp_astral",
+      "text": "Đàn 🎸 hay 😀 lắm",
+      "pgLengthCp": 15,
+      "jsUtf16Length": 17,
+      "ranges": [
+        {
+          "from": 0,
+          "to": 3,
+          "substr": "Đàn",
+          "sha": "d3ca82d89035c2241c2fe5cd3ceb6646b820886aa433bf9fde1472cecdc582cd",
+          "firstPosCp": 0
+        },
+        {
+          "from": 5,
+          "to": 10,
+          "substr": " hay ",
+          "sha": "5beecb4d57d7a1b90440a75df5a74edb8549320e289b50539928fa1a1825458b",
+          "firstPosCp": 5
+        },
+        {
+          "from": 11,
+          "to": 15,
+          "substr": " lắm",
+          "sha": "d42aac3fc9f0f8deb8e5c396b3c37e194f12aab46b120261447c9ca58adc75c6",
+          "firstPosCp": 11
+        },
+        {
+          "from": 0,
+          "to": 15,
+          "substr": "Đàn 🎸 hay 😀 lắm",
+          "sha": "2f95d132e64cb709d10286b1f640e093f1caae1e2635725a570cce266d5c3b85",
+          "firstPosCp": 0
+        }
+      ]
+    },
+    {
+      "name": "emoji_zwj_family",
+      "text": "Cả nhà 👨‍👩‍👧‍👦 cùng học",
+      "pgLengthCp": 23,
+      "jsUtf16Length": 27,
+      "ranges": [
+        {
+          "from": 0,
+          "to": 3,
+          "substr": "Cả ",
+          "sha": "52b5e533b1623ff5e2dc628aba976afbb543b7901ac20f87324aa83175482492",
+          "firstPosCp": 0
+        },
+        {
+          "from": 7,
+          "to": 12,
+          "substr": "👨‍👩‍👧",
+          "sha": "cc3baf32248d766570483335ce273f90c99f020f4bc530d05ffe869cd3ac2ae8",
+          "firstPosCp": 7
+        },
+        {
+          "from": 19,
+          "to": 23,
+          "substr": " học",
+          "sha": "8392f6ba8a6c996bda0ccd3ff4e29c1e51afd5962a8a305f09d11c0eb197f2f8",
+          "firstPosCp": 19
+        },
+        {
+          "from": 0,
+          "to": 23,
+          "substr": "Cả nhà 👨‍👩‍👧‍👦 cùng học",
+          "sha": "a0b9c03bce10e8e40f39afb6186826b85ae7ff3fb1841bdabb37cd735024b3e8",
+          "firstPosCp": 0
+        }
+      ]
+    },
+    {
+      "name": "emoji_skin_flag",
+      "text": "Giỏi 👍🏽 lắm 🇻🇳 nhé",
+      "pgLengthCp": 18,
+      "jsUtf16Length": 22,
+      "ranges": [
+        {
+          "from": 0,
+          "to": 3,
+          "substr": "Giỏ",
+          "sha": "a285e90a47c7b3a9cdf04164e3cf46b106535c1a9d2c531e6b8dcbf5727988d2",
+          "firstPosCp": 0
+        },
+        {
+          "from": 6,
+          "to": 11,
+          "substr": "🏽 lắm",
+          "sha": "72915054c045224d77f88aeb1ef1baf2e86c163a943b88d571448a7d3d2a8f12",
+          "firstPosCp": 6
+        },
+        {
+          "from": 14,
+          "to": 18,
+          "substr": " nhé",
+          "sha": "31283d060d519c32210811e600c36ed7d5b4535689dfe3174434948e8156e1d8",
+          "firstPosCp": 14
+        },
+        {
+          "from": 0,
+          "to": 18,
+          "substr": "Giỏi 👍🏽 lắm 🇻🇳 nhé",
+          "sha": "16f42dcbabee2f6583e7f29e536d9405c426be70d6269c121701b0c516a94968",
+          "firstPosCp": 0
+        }
+      ]
+    },
+    {
+      "name": "crlf_tab",
+      "text": "Dòng 1\r\nDòng 2\tcột",
+      "pgLengthCp": 18,
+      "jsUtf16Length": 18,
+      "ranges": [
+        {
+          "from": 0,
+          "to": 3,
+          "substr": "Dòn",
+          "sha": "e4cff4781295c2cceabe84c56f86f548c83d28adf3cc60a9689ac7594950573e",
+          "firstPosCp": 0
+        },
+        {
+          "from": 6,
+          "to": 11,
+          "substr": "\r\nDòn",
+          "sha": "ba78afc0743716a8f9e4f0f80797104e72601932ec54228f3282baac15371222",
+          "firstPosCp": 6
+        },
+        {
+          "from": 14,
+          "to": 18,
+          "substr": "\tcột",
+          "sha": "53c27563b8a5a7901dca8e95d1f3ef36afb33ca80110bc5c228e24b85e1f9772",
+          "firstPosCp": 14
+        },
+        {
+          "from": 0,
+          "to": 18,
+          "substr": "Dòng 1\r\nDòng 2\tcột",
+          "sha": "adb8212aa6e9eb84b842a0d0a62bdeb545bdc2bf43ce27ed95d206cac3e7dcf6",
+          "firstPosCp": 0
+        }
+      ]
+    },
+    {
+      "name": "mixed_music",
+      "text": "Nốt ♯ và ♭, nhịp 𝄞 khoá Sol",
+      "pgLengthCp": 27,
+      "jsUtf16Length": 28,
+      "ranges": [
+        {
+          "from": 0,
+          "to": 3,
+          "substr": "Nốt",
+          "sha": "ff9dd95c05a1a9d783ab05edf53e61e87456b3102235bade6da9afb489f3364a",
+          "firstPosCp": 0
+        },
+        {
+          "from": 9,
+          "to": 14,
+          "substr": "♭, nh",
+          "sha": "720113ae47078485811c1c760df610e9c65cbe5152e7f0c3a6f07b4e96180cc1",
+          "firstPosCp": 9
+        },
+        {
+          "from": 23,
+          "to": 27,
+          "substr": " Sol",
+          "sha": "7ff74e5cacfed781842873b5ab6535eaf1a4b5e61843415ffbfb5f6c34cbd0b8",
+          "firstPosCp": 23
+        },
+        {
+          "from": 0,
+          "to": 27,
+          "substr": "Nốt ♯ và ♭, nhịp 𝄞 khoá Sol",
+          "sha": "c3fac43fb7354d848989a19bb1ad12db29f033af816ebd4629d079209d68ca97",
+          "firstPosCp": 0
+        }
+      ]
+    }
+  ]
+}

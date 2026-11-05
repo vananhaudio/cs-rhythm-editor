@@ -58,7 +58,11 @@
     "test:og": "tsc -p tests/og/tsconfig.json && tsx --test tests/og/*.test.ts",
     "test:analyzer": "node --experimental-strip-types --no-warnings --test tests/thuvien-analyzer/*.test.ts",
     "test:worker": "tsc -p services/measure-analyzer/tsconfig.json && node --experimental-strip-types --no-warnings --test tests/measure-worker/*.test.ts",
-    "build:worker": "node services/measure-analyzer/build.mjs"
+    "build:worker": "node services/measure-analyzer/build.mjs",
+    "test:mira-grading": "tsc -p tests/mira-grading/tsconfig.json && tsx --tsconfig tsconfig.app.json --test tests/mira-grading/*.test.ts tests/mira-grading/*.test.tsx",
+    "test:db-mira-grading": "bash scripts/test-mira-grading-db.sh",
+    "e2e:mira-grading": "bash scripts/e2e-mira-grading.sh",
+    "test:db-mira-grading-pilot": "bash scripts/test-mira-grading-pilot-db.sh"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.0",

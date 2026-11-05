@@ -139,7 +139,7 @@ export const SOLO01_BUOI01: LessonDoc = {
       kind: 'checkpoint',
       id: '1.1',
       title: 'Bài trả 1.1 — Tìm nốt trên cần đàn',
-      prompt: 'Ghi ít nhất 2 vị trí khác nhau của cùng một nốt C trên bản đồ C–Am. Viết theo dạng “dây … ngăn …”, ví dụ: C: dây 5 ngăn 3 · C: dây 2 ngăn 1. Không cần video, không cần thuộc hết bản đồ.',
+      prompt: 'Bài 1.1 – Tìm hai vị trí của cùng một nốt nhạc đồng âm trên cần đàn.\n\nDựa vào bản đồ nốt nhạc C–Am, anh/chị hãy tìm hai vị trí khác nhau trên cần đàn guitar tạo ra cùng một nốt nhạc, có cùng tên nốt và cùng cao độ.\n\nVí dụ: nốt Đô (C) ở dây 3 ngăn 5 và dây 2 ngăn 1. Hai vị trí này đều phát ra nốt C4, nên là hai nốt đồng âm.\n\nLưu ý: Hai nốt chỉ cùng tên nhưng cách nhau một hoặc nhiều quãng tám không được tính là đồng âm trong yêu cầu bài này.',
       required: true,
       accepts: ['text'],
     },

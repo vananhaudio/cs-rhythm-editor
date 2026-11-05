@@ -5,9 +5,12 @@
 import type { LessonDoc, LessonSection } from './lessonTypes'
 import { checkpointAccepts, checkpointProblems, completionProblems, isCheckpoint } from './checkpoint'
 
+// Giống getYouTubeId (src/video/YouTubeLesson.tsx) nhưng thuần — module đó đụng `window` nên không nạp được trong test node.
+const YT_ID_RE = /(?:[?&]v=|youtu\.be\/|\/(?:embed|shorts|live|v)\/)[\w-]{11}|^[\w-]{11}$/
+
 /** Loại khối LessonDocument hiểu. Thêm loại mới = thêm CAPABILITY (renderer + app mới), không phải nội dung. */
 export const KNOWN_SECTION_KINDS: LessonSection['kind'][] = [
-  'objectives', 'recap', 'layers', 'note', 'strum', 'flow', 'fretboard', 'score', 'repertoire', 'assignment', 'checklist', 'studentNotes', 'study', 'checkpoint',
+  'objectives', 'recap', 'layers', 'note', 'strum', 'flow', 'fretboard', 'score', 'repertoire', 'video', 'assignment', 'checklist', 'studentNotes', 'study', 'checkpoint',
 ]
 
 /** Đuôi buổi của SOLO01 — luôn kết thúc: Bài tập về nhà → Checklist cuối bài → Ghi chú cho thầy. */
@@ -22,6 +25,8 @@ export function solo01Problems(sections: LessonSection[], sessionNo: number): st
   const out: string[] = []
   sections.forEach((s, i) => {
     if (!KNOWN_SECTION_KINDS.includes(s.kind)) out.push(`Phần #${i + 1}: loại "${String(s.kind)}" không có trong khuôn — dùng loại sẵn có`)
+    // Khối video: phải là link YouTube hợp lệ (11 ký tự ID), nếu không học viên chỉ thấy khung lỗi
+    if (s.kind === 'video' && !YT_ID_RE.test(s.url ?? '')) out.push(`Phần #${i + 1}: video cần link YouTube hợp lệ`)
   })
   const body = sections.filter(s => !isCheckpoint(s)).map(s => s.kind)
   const head = body.slice(0, 3)

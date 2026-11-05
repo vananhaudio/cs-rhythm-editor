@@ -3,9 +3,11 @@ import { ArrowLeft } from 'lucide-react'
 import { Avatar } from '../ui'
 
 /** Đầu khung hội thoại: ← (chỉ hiện trên điện thoại) + avatar + tên (bấm → trang cá nhân) */
-export default function ChatHeader({ name, avatarUrl, isTeacher, onBack, onOpenProfile, tag, actionLabel, menu }: {
+export default function ChatHeader({ name, avatarUrl, avatar, isTeacher, onBack, onOpenProfile, tag, actionLabel, menu }: {
   name: string | null
   avatarUrl: string | null
+  /** Thay avatar mặc định (vd. Mira); không truyền → Avatar thường */
+  avatar?: ReactNode
   isTeacher?: boolean
   onBack: () => void
   onOpenProfile?: () => void
@@ -25,7 +27,7 @@ export default function ChatHeader({ name, avatarUrl, isTeacher, onBack, onOpenP
         ? <div className="cs-skeleton" style={{ width: 160, height: 18 }} aria-label="Đang tải" />
         : (
           <button type="button" className="cs-chat-peer" onClick={onOpenProfile} disabled={!onOpenProfile} aria-label={actionLabel ?? `Trang cá nhân của ${name}`}>
-            <Avatar name={name} url={avatarUrl} size={40} />
+            {avatar ?? <Avatar name={name} url={avatarUrl} size={40} />}
             <span className="cs-chat-peer-text">
               <span className="cs-chat-peer-name">{name}{isTeacher && <span className="cs-post-role"> · Giáo viên</span>}</span>
               {tag && <span className="cs-chat-peer-tag">{tag}</span>}
