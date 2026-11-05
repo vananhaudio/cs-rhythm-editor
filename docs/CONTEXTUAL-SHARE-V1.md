@@ -1,7 +1,7 @@
 # Universal Contextual Share — Chia sẻ nguyên cảnh giáo trình (V1: lát cắt "ô nhịp trong khối hỗn hợp")
 
 > Nguyên lý: **Khung nhìn + Vùng chú ý.** Không chia sẻ một mẩu bị tách khỏi bối cảnh; chia sẻ một khung giáo trình GỐC, trong đó vùng người gửi muốn nói được đánh dấu.
-> Trạng thái: nhánh `feat/contextual-share-v1`, **chưa merge / chưa deploy / không đổi DB**. Dựa trên Share Note V1 + Feed Preview V1/V1.1 (đang LIVE).
+> Trạng thái: **V1.3** — nhánh `feat/contextual-share-v1` (commit nghiệm thu `4e6eea4d`), **không đổi DB**. Dựa trên Share Note V1 + Feed Preview V1/V1.1 (đang LIVE).
 
 ## 1. Khảo sát hệ thống hiện hành (đọc mã + schema thật)
 
@@ -46,7 +46,12 @@
 ### Quy tắc ngữ cảnh (xác định, kiểm chứng được)
 1. Vùng chú ý luôn nguyên vẹn (ưu tiên số 1); ≤ 4 ô vẽ, dài hơn thì "hiện N ô đầu".
 2. **Tôn trọng ranh giới khối:** khung = cả khối chứa bản nhạc (tiêu đề, nhãn, mô tả `lead`, danh sách "Dự kiến", tên tác phẩm/tác giả/ghi chú, nhịp độ) → rồi đến trích đoạn. Với `repertoire`/`layers` chỉ kéo đúng tác phẩm/tầng được chia sẻ (không kéo tác phẩm khác, không kéo tệp tải về `assets`).
-3. **Hai chế độ, cùng renderer, cùng thứ tự gốc (lượt hoàn thiện):** *Mặc định gọn* = nhãn, tiêu đề, mô tả `lead`, tên tác phẩm/tác giả/ghi chú, nhịp độ + trích đoạn. *"Xem thêm ngữ cảnh"* (mở ngay trong Feed, không dựng lại bản nhạc, không đổi vùng khoanh) = thêm danh sách "Dự kiến", chú thích `marks`, `guidance`, ghi chú `note` của tầng, trạng thái chờ giáo viên — đúng thứ tự như trang giáo trình. Nút chỉ hiện khi thật sự có phần bị ẩn (`contextHasMore`). Tệp tải về (`assets`) không đưa vào khung ở cả hai chế độ; đường về nguồn = "Mở đúng đoạn". Khung trong Feed dùng CSS thu gọn cỡ chữ/khoảng đệm (`.cs-sn-preview .lsn-ctx`), không ẩn/cắt nội dung.
+3. **Hai chế độ, cùng renderer, cùng thứ tự gốc (V1.3):**
+   - *Mặc định gọn* (`planExcerptFocus`): nhãn, tiêu đề, mô tả `lead` (rút gọn 2 dòng bằng `line-clamp`, nguyên văn vẫn đủ trong DOM), tên tác phẩm/tác giả/ghi chú, nhịp độ + **chỉ các dòng nhạc chứa vùng khoanh**. Ô ngữ cảnh chỉ lấp chỗ trống trong chính các dòng đó, không thêm dòng. Vùng khoanh trải hai dòng thì giữ đủ hai dòng. Không bao giờ cắt khuông, nốt, TAB hay lời; không đặt chiều cao cứng.
+   - *"Xem đầy đủ"* (mở ngay trong thẻ, nút đổi thành *"Thu gọn"*): thêm ngữ cảnh nhạc kiểu V1.1 (≤2 ô mỗi phía, tối đa 2 dòng), mô tả hiện hết, danh sách "Dự kiến", chú thích `marks`, `guidance`, ghi chú `note` của tầng, trạng thái chờ giáo viên — đúng thứ tự như trang giáo trình. Bản nhạc được khắc lại **trên cùng một renderer alphaTab** (không renderer mới), vùng khoanh không đổi, không nhảy cuộn. "Xem đầy đủ" không cấp thêm quyền xem.
+   - Nút "Xem đầy đủ" chỉ hiện khi thật sự có gì để thêm (phần sư phạm bị ẩn, mô tả bị rút gọn, hoặc ô ngữ cảnh chưa vẽ). Tệp tải về (`assets`) không đưa vào khung ở cả hai chế độ.
+   - Đường về nguồn = nút **"Mở trong giáo trình"** (cùng hàng với "Xem đầy đủ", mỗi nút cao ≥44px). Nhãn này dùng thống nhất cho cả Feed và Chat.
+   - Giao diện: viền ngoài khung trung tính 1px (`--cs-border`); **chỉ vùng khoanh** mang màu cam (nền nhạt + viền 2px) làm điểm nhấn thị giác. Cỡ chữ/khoảng đệm khung được thu gọn trong Feed (`.cs-sn-preview .lsn-ctx`). Chiều cao thẻ (iPhone 390px, mẫu thử): V1 1164px → V1.2 1039px → **V1.3 741px** mặc định, ≈1247px khi "Xem đầy đủ".
 4. Ngữ cảnh ô nhạc: ≤ 2 ô mỗi phía, thiếu chỗ thì giảm ngữ cảnh trước khi cắt vùng khoanh (V1.1, không đổi).
 5. Văn bản (hợp đồng, có test, **chưa nối vào Feed**): `studyContext` = tiêu đề mục gần nhất phía trên + khối được chọn + khối phụ thuộc liền sau (list/callout sau đoạn văn).
 
@@ -71,11 +76,11 @@ Không migration / RPC mới. Văn bản giáo trình đi qua React (không HTML
 `src/share/contextShare.ts` (lõi thuần) · `ContextSectionView` + chế độ `ctx` của `renderSection` · `shareNotePreviewStore` mang thêm `section` · `ShareNotePost` dựng khung · test thuần (`tests/class-social/contextual-share.test.tsx`) · E2E bước 10 (`run-share-note-feed.mjs`) trên khối hỗn hợp "Tác phẩm" đúng dạng Owner nêu.
 
 ## 7. Chưa làm (không báo là hỗ trợ)
-Neo văn bản / hình / bảng / ô bài tập (cần cột neo mới hoặc bảng `share_anchors` — migration, chờ Owner); chọn vùng văn bản & hình ở phía người gửi; Chat / Band Chat dựng khung (hiện chỉ thẻ tham chiếu).
+**Giới hạn hỗ trợ hiện tại: chỉ neo ô nhịp.** Văn bản, hình, bảng và ô bài tập **chưa hỗ trợ** (cần cột neo mới hoặc bảng `share_anchors` — migration, chờ Owner; lát cắt 2). Chưa có chọn vùng văn bản & hình ở phía người gửi. Chat / Band Chat chỉ có thẻ tham chiếu (cùng nhãn "Mở trong giáo trình"), chưa dựng khung.
 
 ## 8. Lộ trình
 1. **Neo ngữ nghĩa bất biến:** `share_anchors(kind, section_id, selector jsonb, content_sha)` + id khối bất biến trong blocks (hiện chỉ chỉ số mảng).
 2. **Văn bản:** chọn bằng selection tự nhiên → `{block, start, end}` theo `studyContext`.
 3. **Hình / bảng:** vùng chuẩn hoá 0..1; ô bảng kèm tiêu đề hàng/cột.
 4. **Chat / Band Chat:** thẻ tham chiếu mở rộng dùng lại `ContextSectionView` (không thêm cơ chế lưu).
-5. **"Xem thêm ngữ cảnh"** chỉ khi Owner nghiệm thu thấy thiếu.
+5. ~~"Xem thêm ngữ cảnh"~~ → đã làm ở V1.3 dưới tên **"Xem đầy đủ" / "Thu gọn"**.
