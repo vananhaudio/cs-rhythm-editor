@@ -229,9 +229,14 @@ test("Rào chắn phạm vi: không Service Worker/Web Push/WebSocket/mạng m�
   assert.match(hook, /gate\.current\.observe\(system\)/);
   assert.match(hook, /playPendingNotice/);
   assert.ok(!/removeEventListener\(e, on, true\)\s*if \(ctx/.test(snd), "listener mở khoá không được gỡ sau lần đầu");
-  const ui = code("src/class-social/sections/Chat.tsx");
+  // Chat V2 tinh gọn: công tắc nằm cạnh ô tìm kiếm (SoundSwitch), Chat chỉ gắn nó khi soundToggle bật
+  const ui = code("src/class-social/chat/SoundSwitch.tsx");
   assert.match(ui, /role="switch"/);
+  assert.match(ui, /aria-checked=\{enabled\}/);
   assert.match(ui, /Âm thanh thông báo/);
+  const chat = code("src/class-social/sections/Chat.tsx");
+  assert.match(chat, /soundToggle \? <SoundSwitch enabled=\{sound\.enabled\} onChange=\{sound\.set\} \/> : undefined/);
+  assert.ok(!/cs-chat-sound/.test(chat), "không còn hàng âm thanh riêng ở Chat");
 });
 
 test("Bố cục Chat: hàng Class 2.0 không ăn flex:1 của .cs-chat-items; mobile danh sách cao theo nội dung (không cắt hàng cuối)", () => {

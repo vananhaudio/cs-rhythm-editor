@@ -261,7 +261,7 @@ function SignedInShell({ base, view, onSection, onOpenProfile, onOpenThread, onO
         onJoinedClass={() => { classes.reload(); refreshLearningIdentity(me.userId) }} onOpenBands={onOpenBands} />}
       {section === 'friends' && <Friends requests={requests} onOpenProfile={onOpenProfile} onMessage={onOpenChatWith} />}
       {section === 'chat' && <Chat meId={me.userId} selection={chatSelection} onOpenConversation={onOpenConversation}
-        soundToggle={chatUnread.system != null}
+        soundToggle={chatUnread.system != null} onOpenClass={onOpenClass} isAdmin={me.isAdmin}
         onBackToList={() => onBack({ kind: 'section', section: 'chat' })} onOpenProfile={onOpenProfile}
         onOpenFriends={() => onSection('friends')} onUnreadChanged={() => void chatUnread.refresh()} />}
       {view.kind === 'notices' && <Notices onUnreadChanged={() => void chatUnread.refresh()} onOpenThread={onOpenThread} onClose={() => onBack(HOME)} />}
