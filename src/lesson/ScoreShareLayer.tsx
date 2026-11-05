@@ -8,6 +8,7 @@ import { PenLine, X } from 'lucide-react'
 import { ScoreShareSlot } from './scoreShareSlot'
 import { barCount, hitTestBar, rangeFits, rectsForBars, toRange, type BoundsLike, type HighlightRect } from './scoreShare'
 import { barRangeText, sameScoreKey, type ScoreKey } from '../share/shareNoteApi'
+import { registerScoreProbe } from './regionDom'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AlphaApi = any
@@ -79,6 +80,26 @@ export default function ScoreShareLayer({ api, host, tick, tex, shareKey, childr
     const el = overlayRef.current.querySelector<HTMLElement>('.lsn-share-hl.is-focus')
     if (el) { el.scrollIntoView({ block: 'center' }); ctx?.onFocusShown?.(el) }
   }, [focus, boxes.focus, ctx])
+
+  // V3 (khoanh vùng hỗn hợp): đăng ký bản nhạc này vào sổ để khung chữ nhật tra được ô nhịp nằm dưới khung. Toạ độ client, tính lại mỗi lần gọi (không lưu pixel).
+  useEffect(() => {
+    if ((!ctx?.onAskRegion && !ctx?.regionFocus) || !host) return
+    return registerScoreProbe({
+      sec: shareKey.section, p: [...shareKey.path], el: host,
+      bars: () => {
+        const g = geom(), lk = lookup()
+        if (!g || !lk) return []
+        const out: { index: number; rect: { x: number; y: number; w: number; h: number } }[] = []
+        for (const sys of lk.staffSystems) for (const b of sys.bars) out.push({ index: b.index, rect: { x: g.sr.left + b.realBounds.x * g.k, y: g.sr.top + sys.realBounds.y * g.k, w: b.realBounds.w * g.k, h: sys.realBounds.h * g.k } })
+        return out
+      },
+      rectsFor: (a, b) => {
+        const g = geom(), lk = lookup()
+        return g && lk ? rectsForBars(lk, a, b).map(r => ({ x: g.sr.left + r.x * g.k, y: g.sr.top + r.y * g.k, w: r.w * g.k, h: r.h * g.k })) : []
+      },
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ctx?.onAskRegion, ctx?.regionFocus, host, geom, lookup, shareKey.section, shareKey.path.join('.')])
 
   const barAt = (e: RPointerEvent) => {
     const g = geom()

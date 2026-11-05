@@ -77,6 +77,14 @@ export type ShareNoteCardView = { id: string; note: string; class_id: string; se
 export function shareNoteCardView(row: ShareNoteCardView | null | undefined): ToolShareView | null {
   const n = Number(row?.session_no), a = Number(row?.bar_from), b = Number(row?.bar_to)
   const note = (row?.note ?? '').trim()
+  if (row?.anchor_kind === 'region') {   // V3: vùng khoanh hỗn hợp — thẻ tham chiếu
+    if (!note || note.length > 500 || !Number.isInteger(n) || n < 0) return null
+    return {
+      tool: 'share_note', toolLabel: 'Giáo trình', icon: MessageCircleQuestion, kindLabel: `Buổi ${n}`, headline: note,
+      detail: 'Vùng khoanh trong giáo trình', thumbnail: null, note: null,
+      action: { label: 'Mở vùng khoanh', href: shareNoteHref(row.class_id, n, row.id) },
+    }
+  }
   if (row?.anchor_kind === 'text') {   // V2: vùng văn bản — thẻ tham chiếu (Chat chưa dựng khung)
     if (!note || note.length > 500 || !Number.isInteger(n) || n < 0) return null
     return {

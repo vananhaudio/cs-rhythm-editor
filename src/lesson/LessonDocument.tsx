@@ -4,6 +4,7 @@
 // Section nào không có trong doc.sections thì đơn giản là không hiện.
 import { createContext, useContext, useRef, useState, type ReactNode } from 'react'
 import type { ScoreKey } from '../share/shareNoteApi'
+import RegionLayer, { RegionHighlight } from './RegionLayer'
 import { leafKey, splitForMark, studyCompact, studySubsection, type TextAnchor } from '../share/textAnchor'
 import { ScoreShareSlot } from './scoreShareSlot'
 import TextSelectionLayer from './TextSelectionLayer'
@@ -371,7 +372,7 @@ export default function LessonDocument({ doc, onBack, embedded = false }: { doc:
   const m = doc.meta
   const paperRef = useRef<HTMLElement>(null)
   const share = useContext(ScoreShareSlot)                       // chỉ trang Buổi /me cấp; nơi khác = null ⇒ không chọn văn bản, không đổi giao diện
-  const textView: TextLeafView = { select: !!share?.onAskText, focus: share?.textFocus ?? null }
+  const textView: TextLeafView = { select: !!share?.onAskText || !!share?.onAskRegion, focus: share?.textFocus ?? null }
   const [pdf, setPdf] = useState<'idle' | 'working' | 'error'>('idle')
 
   const fileName = `${m.programCode}-Buoi-${String(m.sessionNo).padStart(2, '0')}.pdf`
@@ -416,7 +417,7 @@ export default function LessonDocument({ doc, onBack, embedded = false }: { doc:
         </header>
 
         <TextLeafCtx.Provider value={textView}>
-          {doc.sections.map((s, i) => safeRenderSection(s, i))}
+          {doc.sections.map((s, i) => share?.onAskRegion ? <div key={i} data-sec={i}>{safeRenderSection(s, i)}</div> : safeRenderSection(s, i))}
         </TextLeafCtx.Provider>
 
         <footer className="lsn-foot">
@@ -424,6 +425,8 @@ export default function LessonDocument({ doc, onBack, embedded = false }: { doc:
         </footer>
       </article>
       {share?.onAskText && <TextSelectionLayer root={paperRef} sections={doc.sections} onAsk={share.onAskText} />}
+      {share?.onAskRegion && <RegionLayer root={paperRef} onAsk={share.onAskRegion} />}
+      {share?.regionFocus && <RegionHighlight root={paperRef} parts={share.regionFocus} focus onShown={share.onFocusShown} />}
     </div>
   )
 }
@@ -586,6 +589,18 @@ const CSS = `
 .lsn-textbar .lsn-share-btn{min-height:44px;padding:0 14px;}
 .lsn-textbar .lsn-share-icon{min-width:44px;min-height:44px;}
 @media print{.lsn-textbar{display:none;}}
+/* ── V3 Khoanh vùng hỗn hợp: nút bật (nổi, góc phải-dưới), lớp bắt kéo, khung đang kéo, vùng đã neo (tô cam + viền nét đứt kiểu bút khoanh) ── */
+.lsn-rg-start{position:fixed;right:14px;bottom:calc(14px + env(safe-area-inset-bottom));z-index:38;display:inline-flex;align-items:center;gap:6px;min-height:46px;padding:0 16px;border:none;border-radius:999px;background:${P.purple};color:#fff;font-weight:700;font-size:14.5px;font-family:inherit;cursor:pointer;box-shadow:0 6px 20px rgba(29,25,48,.3);}
+.lsn-rg-capture{position:fixed;inset:0;z-index:36;cursor:crosshair;touch-action:none;background:rgba(29,25,48,.06);}
+.lsn-rg-capture.is-scroll{pointer-events:none;touch-action:auto;background:transparent;}
+.lsn-rg-live{position:fixed;border:2px dashed #EA580C;background:rgba(234,88,12,.12);border-radius:8px;pointer-events:none;}
+.lsn-rg-layer{position:absolute;left:0;top:0;width:0;height:0;z-index:30;pointer-events:none;}
+.lsn-rg-fill{position:absolute;background:rgba(234,88,12,.18);border-radius:4px;}
+.lsn-rg-fill.is-approx{background:repeating-linear-gradient(45deg,rgba(234,88,12,.14),rgba(234,88,12,.14) 6px,rgba(234,88,12,.05) 6px,rgba(234,88,12,.05) 12px);}
+.lsn-rg-outline{position:absolute;border:2.5px solid #EA580C;border-radius:14px;box-shadow:0 0 0 2px rgba(255,255,255,.85);}
+.lsn-rg-outline.is-approx{border-style:dashed;}
+@media print{.lsn-rg-start,.lsn-rg-capture,.lsn-rg-layer{display:none;}}
+
 .lsn-share-icon{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border:1px solid ${P.line};border-radius:50%;background:#fff;color:${P.inkSoft};cursor:pointer;}
 .lsn-share-range{font-weight:800;color:${P.ink};font-size:14px;padding:0 4px;}
 .lsn-share-hint{font-size:13px;color:${P.inkFaint};overflow-wrap:anywhere;}

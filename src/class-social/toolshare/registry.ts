@@ -138,6 +138,15 @@ TOOL_REGISTRY.share_note = {
   describe: raw => {
     const id = raw.note_id, cls = raw.class_id, note = raw.note, n = int(raw.session_no), a = int(raw.bar_from), b = int(raw.bar_to)
     if (raw.kind !== 'share_note' || typeof id !== 'string' || !UUID_RE.test(id) || typeof cls !== 'string' || !UUID_RE.test(cls)) return null
+    if (raw.anchor === 'region') {   // V3: vùng khoanh hỗn hợp — thẻ tham chiếu nhẹ (không khung xem trước trong Feed); vùng được vẽ trên trang Buổi theo quyền của người xem
+      if (typeof note !== 'string' || !note.trim() || note.length > 500 || n === null || n < 0) return null
+      return {
+        tool: 'share_note', toolLabel: 'Giáo trình', icon: MessageCircleQuestion, kindLabel: `Buổi ${n}`,
+        headline: note.trim(), detail: 'Vùng khoanh trong giáo trình', thumbnail: null, note: null,
+        action: { label: 'Mở vùng khoanh', href: shareNoteHref(cls, n, id) },
+        shareRef: null,
+      }
+    }
     if (raw.anchor === 'text') {   // V2: vùng văn bản — payload KHÔNG có nội dung giáo trình và KHÔNG có dải ô
       if (typeof note !== 'string' || !note.trim() || note.length > 500 || n === null || n < 0) return null
       return {
