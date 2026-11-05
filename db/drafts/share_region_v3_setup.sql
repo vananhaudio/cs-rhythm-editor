@@ -45,31 +45,31 @@ declare
   l jsonb; s jsonb; v_p text[]; v_has integer; v_n integer;
 begin
   select c.blocks into v_blocks from public.class_lesson_content c where c.session_id = p_session and c.status = 'published';
-  if v_blocks is null or jsonb_typeof(v_blocks) <> 'array' or jsonb_typeof(p_parts) <> 'array' or jsonb_array_length(p_parts) not between 1 and 12 then return null; end if;
+  if v_blocks is null or jsonb_typeof(v_blocks) is distinct from 'array' or jsonb_typeof(p_parts) is distinct from 'array' or jsonb_array_length(p_parts) not between 1 and 12 then return null; end if;
   for e in select * from jsonb_array_elements(p_parts) loop
-    if jsonb_typeof(e) <> 'object' or jsonb_typeof(e -> 'sec') <> 'number' then return null; end if;
+    if jsonb_typeof(e) is distinct from 'object' or jsonb_typeof(e -> 'sec') is distinct from 'number' then return null; end if;
     v_i := (e ->> 'sec')::numeric::integer;
     if (e ->> 'sec')::numeric <> v_i or v_i not between 0 and 999 or v_i = any (v_seen) then return null; end if;
     v_seen := v_seen || v_i;
     v_sec := v_blocks -> v_i;
-    if jsonb_typeof(v_sec) <> 'object' then return null; end if;
+    if jsonb_typeof(v_sec) is distinct from 'object' then return null; end if;
     -- hộp: 4 số nguyên ‰, 0 ≤ x0 < x1 ≤ 1000 …
     v_box := e -> 'box';
-    if jsonb_typeof(v_box) <> 'array' or jsonb_array_length(v_box) <> 4 or exists (select 1 from jsonb_array_elements(v_box) b where jsonb_typeof(b) <> 'number' or (b #>> '{}')::numeric <> trunc((b #>> '{}')::numeric) or (b #>> '{}')::numeric not between 0 and 1000)
+    if jsonb_typeof(v_box) is distinct from 'array' or jsonb_array_length(v_box) <> 4 or exists (select 1 from jsonb_array_elements(v_box) b where jsonb_typeof(b) is distinct from 'number' or (b #>> '{}')::numeric <> trunc((b #>> '{}')::numeric) or (b #>> '{}')::numeric not between 0 and 1000)
        or (v_box ->> 0)::int >= (v_box ->> 2)::int or (v_box ->> 1)::int >= (v_box ->> 3)::int then return null; end if;
     -- lá văn bản: phải tồn tại trong khối HIỆN HÀNH
     v_leaves := coalesce(e -> 'leaves', '[]'::jsonb);
-    if jsonb_typeof(v_leaves) <> 'array' or jsonb_array_length(v_leaves) > 40 then return null; end if;
+    if jsonb_typeof(v_leaves) is distinct from 'array' or jsonb_array_length(v_leaves) > 40 then return null; end if;
     for l in select * from jsonb_array_elements(v_leaves) loop
-      if jsonb_typeof(l) <> 'array' or jsonb_array_length(l) not between 1 and 5 or exists (select 1 from jsonb_array_elements(l) x where jsonb_typeof(x) <> 'string') then return null; end if;
+      if jsonb_typeof(l) is distinct from 'array' or jsonb_array_length(l) not between 1 and 5 or exists (select 1 from jsonb_array_elements(l) x where jsonb_typeof(x) is distinct from 'string') then return null; end if;
       select array(select jsonb_array_elements_text(l)) into v_p;
       if not exists (select 1 from public.share_text_leaves(v_sec) q where q.path = v_p) then return null; end if;
     end loop;
     -- bản nhạc: đường dẫn phải ra alphaTex; dải ô 1..64
     v_scores := coalesce(e -> 'scores', '[]'::jsonb);
-    if jsonb_typeof(v_scores) <> 'array' or jsonb_array_length(v_scores) > 6 then return null; end if;
+    if jsonb_typeof(v_scores) is distinct from 'array' or jsonb_array_length(v_scores) > 6 then return null; end if;
     for s in select * from jsonb_array_elements(v_scores) loop
-      if jsonb_typeof(s) <> 'object' or jsonb_typeof(s -> 'p') <> 'array' or jsonb_typeof(s -> 'from') <> 'number' or jsonb_typeof(s -> 'to') <> 'number' then return null; end if;
+      if jsonb_typeof(s) is distinct from 'object' or jsonb_typeof(s -> 'p') is distinct from 'array' or jsonb_typeof(s -> 'from') is distinct from 'number' or jsonb_typeof(s -> 'to') is distinct from 'number' then return null; end if;
       if (s ->> 'from')::numeric <> trunc((s ->> 'from')::numeric) or (s ->> 'to')::numeric <> trunc((s ->> 'to')::numeric)
          or (s ->> 'from')::int < 1 or (s ->> 'to')::int < (s ->> 'from')::int or (s ->> 'to')::int - (s ->> 'from')::int > 63 then return null; end if;
       select array(select jsonb_array_elements_text(s -> 'p')) into v_p;
@@ -87,7 +87,7 @@ returns jsonb language plpgsql stable security definer set search_path = '' as $
 declare v_blocks jsonb; e jsonb; v_i integer; v_out jsonb := '[]'::jsonb; v_moved boolean := false; v_c integer[]; v_k integer; v_n integer; v_used integer[] := '{}';
 begin
   select c.blocks into v_blocks from public.class_lesson_content c where c.session_id = p_session and c.status = 'published';
-  if v_blocks is null or jsonb_typeof(v_blocks) <> 'array' or jsonb_typeof(p_region) <> 'array' then return null; end if;
+  if v_blocks is null or jsonb_typeof(v_blocks) is distinct from 'array' or jsonb_typeof(p_region) is distinct from 'array' then return null; end if;
   v_n := jsonb_array_length(v_blocks);
   for e in select * from jsonb_array_elements(p_region) loop
     v_i := (e ->> 'sec')::integer;
