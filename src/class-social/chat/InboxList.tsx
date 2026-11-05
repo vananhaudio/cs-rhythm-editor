@@ -11,7 +11,7 @@ import { useInbox } from './useInbox'
 
 type Inbox = ReturnType<typeof useInbox>
 
-export default function InboxList({ inbox, source, selectedId, onSelect, onOpenFriends, top }: {
+export default function InboxList({ inbox, source, selectedId, onSelect, onOpenFriends, top, trailing }: {
   inbox: Inbox
   source: InboxSource
   selectedId: string | null
@@ -19,6 +19,8 @@ export default function InboxList({ inbox, source, selectedId, onSelect, onOpenF
   onOpenFriends: () => void
   /** Mục hệ thống ghim đầu danh sách (vd. Mira); không truyền thì không hiển thị gì */
   top?: ReactNode
+  /** Nút nhỏ cạnh ô tìm kiếm (vd. công tắc âm thanh thông báo) */
+  trailing?: ReactNode
 }) {
   const { state, filter, busy } = inbox
   const [manager, setManager] = useState(false)
@@ -32,7 +34,10 @@ export default function InboxList({ inbox, source, selectedId, onSelect, onOpenF
   return (
     <div className="cs-chat-list cs-inbox" data-testid="inbox">
       <div className="cs-inbox-head">
-        <SearchField value={inbox.rawQuery} onChange={inbox.setQuery} />
+        <div className="cs-inbox-searchrow">
+          <SearchField value={inbox.rawQuery} onChange={inbox.setQuery} />
+          {trailing}
+        </div>
         <KindTabs kind={filter.kind} summary={summary} onChange={inbox.setKind} />
         <div className="cs-inbox-chips">
           <button type="button" className={'cs-inbox-chip' + (filter.unreadOnly ? ' is-on' : '')} aria-pressed={filter.unreadOnly}
