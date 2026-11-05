@@ -256,7 +256,7 @@ Không chuẩn hoá Unicode, không cắt khoảng trắng, không phân biệt-
 ### 15.5 Quy trình (thứ tự cố định, dừng ở bước đầu cho kết quả)
 Tiền điều kiện: người gọi đã qua `share_note_visible` và `share_note_score_ok` (§15.8).
 1. **Đúng vị trí:** lá tại `(section_idx, text_path)` tồn tại và `sha(substr(lá, from+1, to−from)) = text_sha` và biên hợp lệ ⇒ **`ok`**. (Không đòi `block_fp` khớp: nhận dạng là chính đoạn chữ.)
-2. **Cùng chỉ số khối, mọi lá hợp lệ:** quét mọi cửa sổ có độ dài `L = to−from`; ứng viên = cửa sổ có băm khớp và biên hợp lệ. Đúng 1 ứng viên ⇒ **`moved`**. ≥ 2 ⇒ lọc bằng `ctx_sha`: còn đúng 1 ⇒ `moved`; ngược lại ⇒ **`stale`** (dừng, **không** sang khối khác). 0 ứng viên ⇒ sang bước 3.
+2. **Cùng chỉ số khối, mọi lá hợp lệ — CHỈ khi khối ở chỉ số này vẫn là khối cũ (`block_fp` hiện tại = `block_fp` đã lưu):** quét mọi cửa sổ có độ dài `L = to−from`; ứng viên = cửa sổ có băm khớp và biên hợp lệ. Đúng 1 ứng viên ⇒ **`moved`**. ≥ 2 ⇒ lọc bằng `ctx_sha`: còn đúng 1 ⇒ `moved`; ngược lại ⇒ **`stale`** (dừng, **không** sang khối khác). 0 ứng viên ⇒ sang bước 3. *(Bổ sung sau E2E: nếu khối cũ bị xoá và một khối KHÁC chứa cùng cụm từ trượt vào đúng chỉ số cũ thì `block_fp` khác ⇒ bỏ qua bước 2 ⇒ `stale`; cụm từ trùng ở khối lạ không chứng minh được neo. Có test DB D18 + spec + E2E 10d.)*
 3. **Khối khác cùng `block_fp`:** gom các khối (≠ khối gợi ý) có `block_fp` bằng nhau. 0 khối hoặc > 8 khối ⇒ `stale`. Quét như bước 2 trên tất cả các khối này rồi hợp lại: đúng 1 ứng viên (hoặc đúng 1 sau lọc `ctx_sha`) ⇒ `moved`, ngược lại ⇒ `stale`.
 4. Mọi nhánh khác (lỗi dữ liệu, kiểu không phải chuỗi, ngân sách vượt) ⇒ `stale`.
 

@@ -4,8 +4,8 @@
 //   báo rõ lý do, khoá nút, giữ nguyên vùng chọn của người dùng (docs §14). Chỉ làm tròn tới ranh giới ký tự trọn (grapheme) TRONG cùng lá.
 // • Toạ độ = ĐIỂM MÃ (xem src/share/textAnchor.ts). Lá lấy từ dữ liệu giáo trình (không từ DOM); DOM chỉ cho offset UTF-16, và phải khớp chuỗi nguồn — lệch ⇒ outside.
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
-import { BookOpen, X } from 'lucide-react'
-import { classifyInLeaf, cpLen, leafTextAt, SELECTION_HINT, TEXT_MAX_CP, TEXT_MIN_NON_SPACE, type SelectionVerdict, type TextAnchor } from '../share/textAnchor'
+import { MessageCircleQuestion, X } from 'lucide-react'
+import { classifyInLeaf, cpLen, leafTextAt, SELECTION_HINT, type SelectionVerdict, type TextAnchor } from '../share/textAnchor'
 
 const leafOf = (n: Node | null): HTMLElement | null => {
   const el = n && (n.nodeType === 1 ? (n as Element) : n.parentElement)
@@ -65,7 +65,7 @@ export default function TextSelectionLayer({ root, sections, onAsk }: { root: Re
             <q className="lsn-textbar-q" data-testid="text-share-quote">{quote}</q>
             <div className="lsn-textbar-acts">
               <button type="button" className="lsn-share-btn is-primary" data-testid="text-share-ask" onClick={() => { onAsk(v.anchor, v.text); clear() }}>
-                <BookOpen size={15} aria-hidden="true" /> Hỏi / Chia sẻ
+                <MessageCircleQuestion size={15} aria-hidden="true" /> Hỏi / Chia sẻ
               </button>
               <button type="button" className="lsn-share-btn" onClick={wholeLeaf}>Cả đoạn</button>
               <button type="button" className="lsn-share-icon" aria-label="Bỏ chọn" onClick={clear}><X size={16} aria-hidden="true" /></button>
@@ -78,7 +78,6 @@ export default function TextSelectionLayer({ root, sections, onAsk }: { root: Re
           </>
         )}
       </div>
-      <span hidden data-min={TEXT_MIN_NON_SPACE} data-max={TEXT_MAX_CP} />
     </div>
   )
 }
