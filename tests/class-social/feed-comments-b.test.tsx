@@ -55,13 +55,13 @@ const openMenu = (r: ReturnType<typeof render>, id: string) => {
 const items = (r: ReturnType<typeof render>) => [...r.container.querySelectorAll('[role=menuitem]')].map(x => x.textContent)
 const dialog = (r: ReturnType<typeof render>) => r.container.querySelector('[role=alertdialog]')
 
-test('xoá bình luận gốc có trả lời: hộp xác nhận nêu rõ số trả lời bị xoá cùng; Huỷ không xoá gì', async () => {
+test('xoá bình luận gốc có trả lời: hộp xác nhận cảnh báo chung (không nêu số) về trả lời bị xoá cùng; Huỷ không xoá gì', async () => {
   const r = await mount()
   const li = openMenu(r, A); fireEvent.click([...li.querySelectorAll('[role=menuitem]')].find(x => x.textContent === 'Xoá bình luận')!)
   const d = dialog(r)!
   assert.ok(d, 'có hộp xác nhận (không còn window.confirm)')
   assert.match(d.textContent ?? '', /Xoá bình luận này\?/)
-  assert.match(d.textContent ?? '', /2 trả lời bên dưới sẽ bị xoá cùng/)
+  assert.match(d.textContent ?? '', /cùng mọi trả lời bên dưới \(nếu có\)/); assert.ok(!/\d/.test(d.textContent ?? ''), 'không nêu số trả lời (số chỉ phản ánh dòng đang thấy)')
   assert.ok(li.classList.contains('is-deleting'), 'bình luận đang chờ xoá được làm mờ')
   const [cancel, del] = [...d.querySelectorAll('button')]
   assert.equal(cancel.textContent, 'Huỷ'); assert.equal(del.textContent, 'Xoá'); assert.ok(del.classList.contains('cs-btn-danger'))
@@ -69,10 +69,10 @@ test('xoá bình luận gốc có trả lời: hộp xác nhận nêu rõ số t
   assert.equal(dialog(r), null); assert.deepEqual(removed, []); assert.ok(!li.classList.contains('is-deleting'))
 })
 
-test('Esc / bấm nền = Huỷ; xoá một trả lời: tiêu đề riêng, không nhắc "trả lời bên dưới"', async () => {
+test('Esc / bấm nền = Huỷ; xoá một trả lời: tiêu đề riêng', async () => {
   const r = await mount()
   const li = openMenu(r, R1); fireEvent.click([...li.querySelectorAll('[role=menuitem]')].find(x => x.textContent === 'Xoá bình luận')!)
-  assert.match(dialog(r)!.textContent ?? '', /Xoá trả lời này\?/); assert.ok(!/bên dưới/.test(dialog(r)!.textContent ?? ''))
+  assert.match(dialog(r)!.textContent ?? '', /Xoá trả lời này\?/)
   fireEvent.keyDown(window, { key: 'Escape' }); assert.equal(dialog(r), null)
   openMenu(r, R1); fireEvent.click(r.container.querySelector('[role=menuitem].is-danger')!)
   fireEvent.click(r.container.querySelector('.cs-dialog-backdrop')!); assert.equal(dialog(r), null)

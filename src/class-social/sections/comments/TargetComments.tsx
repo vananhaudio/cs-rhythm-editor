@@ -213,7 +213,7 @@ export default function TargetComments({ kind, id, me, now, onOpenProfile }: {
       )}
       {actionError && <p className="cs-cmts-error" role="alert">{actionError}</p>}
       {deleting && (
-        <DeleteCommentConfirm isReply={!!deleting.parentId} replyCount={nodes?.find(n => n.comment.id === deleting.id)?.replies.length ?? 0}
+        <DeleteCommentConfirm isReply={!!deleting.parentId}
           onConfirm={confirmDelete} onClose={() => setDeleting(null)} />
       )}
       {me && <Composer idBase={`cs-cmt-input-${kind}-${id}`} placeholder="Viết bình luận..." submitLabel="Gửi bình luận" me={me} onSubmit={send(null)} />}

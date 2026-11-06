@@ -126,7 +126,7 @@ export default function CommentsSection({ postId, total, state, me, now, onRefre
         </ul>
       )}
       {actionError && <p className="cs-cmts-error" role="alert">{actionError}</p>}
-      {deleting && <DeleteCommentConfirm isReply={!!deleting.parentId} replyCount={descendantCount(all, deleting.id)} onConfirm={confirmDelete} onClose={() => setDeleting(null)} />}
+      {deleting && <DeleteCommentConfirm isReply={!!deleting.parentId} onConfirm={confirmDelete} onClose={() => setDeleting(null)} />}
       {me && <CommentComposer postId={postId} me={me} onSent={() => onRefresh(postId)} />}
     </section>
   )

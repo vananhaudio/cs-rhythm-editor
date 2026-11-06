@@ -127,7 +127,7 @@ test('I2 (Social): trả lời một CÂU TRẢ LỜI của gốc nằm ngoài t
   assert.equal(new Set(ids(r)).size, ids(r).length)
 })
 
-test('I3 (Social+B+C): xoá gốc có trả lời lồng → hộp nêu số cascade theo cây (gồm trả lời của trả lời); xoá xong cả nhánh biến mất, vùng khác nguyên', async () => {
+test('I3 (Social+B+C): xoá gốc có trả lời lồng → hộp cảnh báo cascade chung, không nêu số; xoá xong cả nhánh biến mất, vùng khác nguyên', async () => {
   rows.find(x => x.id === uid(12))!.is_mine = true; rows.find(x => x.id === uid(12))!.author_user_id = 'u-me'
   const r = render(<Harness />)
   await waitFor(() => assert.equal(ids(r).length, 3))
@@ -136,7 +136,7 @@ test('I3 (Social+B+C): xoá gốc có trả lời lồng → hộp nêu số cas
   fireEvent.click(at(r, uid(12))!.querySelector(':scope > .cs-cmt .cs-more-btn')!)
   fireEvent.click((Array.from(r.container.querySelectorAll('[role=menuitem]')) as HTMLElement[]).find(m => /Xoá bình luận/.test(m.textContent!))!)
   const dlg = r.container.querySelector('[role=alertdialog]')!
-  assert.match(dlg.textContent!, /và 2 trả lời bên dưới/)                   // a + b (b là trả lời của a)
+  assert.match(dlg.textContent!, /cùng mọi trả lời bên dưới \(nếu có\)/); assert.ok(!/\d/.test(dlg.textContent!))
   const nBefore = calls.length
   fireEvent.click(Array.from(dlg.querySelectorAll('button')).find(b => b.textContent === 'Xoá')!)
   await waitFor(() => assert.ok(!at(r, uid(12))))

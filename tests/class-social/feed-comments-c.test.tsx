@@ -158,7 +158,7 @@ test('C3: "Xem thêm" đếm theo bình luận thật đang hiện (cả gốc k
   assert.match(r.container.querySelector('.cs-cmts-more')!.textContent!, /\(1\)/)
 })
 
-test('C4 (+B): xoá gốc có trả lời → hộp xác nhận nêu số trả lời bị xoá cascade theo cây cha–con; không trả lời → câu cũ; huỷ thì không xoá', async () => {
+test('C4 (+B): xoá gốc có trả lời → hộp xác nhận cảnh báo cascade chung, không nêu số (số đang thấy có thể thiếu); huỷ thì không xoá;; huỷ thì không xoá', async () => {
   const rows = [row('a', null, { is_mine: true, author_user_id: 'u-me' }), row('a1', 'a'), row('a2', 'a1'), row('s', null, { is_mine: true, author_user_id: 'u-me' })]
   const r = mount(rows)
   const dlg = () => r.container.querySelector('[role=alertdialog]')
@@ -167,11 +167,11 @@ test('C4 (+B): xoá gốc có trả lời → hộp xác nhận nêu số trả 
     fireEvent.click((Array.from(r.container.querySelectorAll('[role="menuitem"]')) as HTMLElement[]).find(m => /Xoá bình luận/.test(m.textContent!))!)
   }
   del('a')
-  assert.match(dlg()!.textContent!, /và 2 trả lời/)                        // a1 + a2 (con của con) — đếm theo cây, không theo số đang thấy
+  assert.match(dlg()!.textContent!, /cùng mọi trả lời bên dưới \(nếu có\)/); assert.ok(!/\d/.test(dlg()!.textContent!))
   fireEvent.click(Array.from(dlg()!.querySelectorAll('button')).find(b => b.textContent === 'Huỷ')!)
   await new Promise(r2 => setTimeout(r2, 20)); assert.deepEqual(deleted, []); assert.ok(!dlg())
   del('s')
-  assert.match(dlg()!.textContent!, /Bình luận sẽ bị xoá/); assert.ok(!/trả lời bên dưới/.test(dlg()!.textContent!))
+  assert.match(dlg()!.textContent!, /Bình luận này sẽ bị xoá/)
   fireEvent.click(Array.from(dlg()!.querySelectorAll('button')).find(b => b.textContent === 'Xoá')!)
   await waitFor(() => assert.deepEqual(deleted, ['s']))
   await waitFor(() => assert.equal(refreshes, 1))

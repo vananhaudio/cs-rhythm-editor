@@ -10,10 +10,8 @@ export function deleteErrorText(m: string): string {
   return m
 }
 
-export default function DeleteCommentConfirm({ isReply, replyCount = 0, onConfirm, onClose }: {
+export default function DeleteCommentConfirm({ isReply, onConfirm, onClose }: {
   isReply: boolean
-  /** Số trả lời sẽ bị xoá cùng (chỉ khi xoá bình luận gốc) */
-  replyCount?: number
   /** null = đã xoá; chuỗi = lý do thất bại */
   onConfirm: () => Promise<string | null>
   onClose: () => void
@@ -30,11 +28,10 @@ export default function DeleteCommentConfirm({ isReply, replyCount = 0, onConfir
     if (e) { setErr(deleteErrorText(e)); return }
     onClose()
   }
+  // KHÔNG nêu số trả lời: màn hình chỉ biết những dòng đang nhìn thấy (trả lời bị ẩn / của người bị chặn / chưa tải vẫn bị xoá cascade).
   const lead = isReply
-    ? 'Trả lời này sẽ bị xoá và không thể khôi phục.'
-    : replyCount > 0
-      ? `Bình luận này và ${replyCount} trả lời bên dưới sẽ bị xoá cùng. Không thể khôi phục.`
-      : 'Bình luận sẽ bị xoá và không thể khôi phục.'
+    ? 'Trả lời này sẽ bị xoá, cùng mọi trả lời bên dưới nó (nếu có). Không thể khôi phục.'
+    : 'Bình luận này sẽ bị xoá, cùng mọi trả lời bên dưới (nếu có). Không thể khôi phục.'
   return (
     <ConfirmDialog title={isReply ? 'Xoá trả lời này?' : 'Xoá bình luận này?'} confirmLabel={err ? 'Thử lại' : 'Xoá'} danger busy={busy}
       onConfirm={() => void run()} onCancel={onClose}>
