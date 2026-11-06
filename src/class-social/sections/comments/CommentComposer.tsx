@@ -12,10 +12,14 @@ import ResourceCard from './ResourceCard'
 import TagPicker from './TagPicker'
 import { CommentInputBox, revealComment, useCommentSubmit } from './ComposerInput'
 
-export default function CommentComposer({ postId, me, onSent }: {
+export default function CommentComposer({ postId, me, onSent, parentId = null, replyingTo, onCancel }: {
   postId: string
   me: ClassIdentity
   onSent: () => Promise<unknown> | void
+  /** Trả lời: id bình luận được trả lời trực tiếp (p_parent_id) + tên hiển thị "Đang trả lời …". */
+  parentId?: string | null
+  replyingTo?: string
+  onCancel?: () => void
 }) {
   const [tags, setTags] = useState<Tag[]>([])
   const [resources, setResources] = useState<ResourceRef[]>([])
@@ -27,23 +31,32 @@ export default function CommentComposer({ postId, me, onSent }: {
     check: checkCommentBody,
     run: async body => {
       const { addComment } = await loadCommentsApi()
-      const r = await addComment({ postId, body, tagIds: teacher ? tags.map(t => t.id) : [], resources: teacher ? resources : [] })
+      const r = await addComment({ postId, body, parentId, tagIds: teacher ? tags.map(t => t.id) : [], resources: teacher ? resources : [] })
       if (!r.ok) return r.message
       setTags([]); setResources([]); setPicker(null)
       await onSent()
-      revealComment(r.value.id)
+      if (!parentId) revealComment(r.value.id)
       return null
     },
   })
   const sending = state.sending
-  const id = `cs-cmt-input-${postId}`
+  const id = parentId ? `cs-reply-input-${parentId}` : `cs-cmt-input-${postId}`
+  const isReply = !!parentId
 
   return (
-    <div className="cs-cmt-composer">
+    <div className={'cs-cmt-composer' + (isReply ? ' is-reply' : '')}>
       <Avatar name={me.name} url={me.avatarUrl} size={32} />
-      <form className="cs-cmt-form" onSubmit={e => { e.preventDefault(); void state.submit() }}>
-        <label htmlFor={id} className="cs-sr-only">{teacher ? 'Nhận xét hoặc bình luận' : 'Viết bình luận'}</label>
-        <CommentInputBox id={id} label="Gửi bình luận" placeholder={teacher ? 'Viết nhận xét…' : 'Viết bình luận...'} maxLength={MAX_COMMENT} state={state} />
+      <form className="cs-cmt-form" onSubmit={e => { e.preventDefault(); void state.submit() }}
+        onKeyDown={e => { if (e.key === 'Escape' && isReply && onCancel) { e.preventDefault(); onCancel() } }}>
+        {isReply && (
+          <p className="cs-replying" id={`${id}-to`}>
+            Đang trả lời <strong>{replyingTo}</strong>
+            {onCancel && <>{' · '}<button type="button" className="cs-link-btn cs-cmt-cancel" onClick={onCancel}>Huỷ</button></>}
+          </p>
+        )}
+        <label htmlFor={id} className="cs-sr-only">{isReply ? `Trả lời ${replyingTo}` : teacher ? 'Nhận xét hoặc bình luận' : 'Viết bình luận'}</label>
+        <CommentInputBox id={id} label={isReply ? 'Gửi trả lời' : 'Gửi bình luận'} autoFocus={isReply} maxLength={MAX_COMMENT} state={state}
+          placeholder={isReply ? `Trả lời ${replyingTo}…` : teacher ? 'Viết nhận xét…' : 'Viết bình luận...'} />
 
         {teacher && (tags.length > 0 || resources.length > 0) && (
           <div className="cs-cmt-attached">
