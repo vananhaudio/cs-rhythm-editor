@@ -2,7 +2,7 @@
 import { spawnSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
 const here = new URL('.', import.meta.url).pathname
-const all = (process.env.E2E_REGION_DB_ONLY ? ['run-share-region-db.mjs'] : process.env.E2E_REGION_CHROME_ONLY ? ['run-share-region-db.mjs', 'run-share-region.mjs'] : ['run-share-region-db.mjs', 'run-share-region.mjs', 'run-share-region-webkit.mjs']).filter(f => existsSync(here + f))
+const all = (process.env.E2E_REGION_DB_ONLY ? ['run-share-region-db.mjs'] : process.env.E2E_REGION_WEBKIT_ONLY ? ['run-share-region-db.mjs', 'run-share-region-webkit.mjs'] : process.env.E2E_REGION_CHROME_ONLY ? ['run-share-region-db.mjs', 'run-share-region.mjs'] : ['run-share-region-db.mjs', 'run-share-region.mjs', 'run-share-region-webkit.mjs']).filter(f => existsSync(here + f))
 for (const f of all) {
   const env = f === all.at(-1) ? process.env : { ...process.env, E2E_HOLD: '' }
   const r = spawnSync(process.execPath, [here + f], { stdio: 'inherit', env })

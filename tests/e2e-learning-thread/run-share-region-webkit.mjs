@@ -64,8 +64,11 @@ try {
   ok(`desktop: khoanh NỬA đoạn bằng chuột → ${t0}/${cpl} ký tự đầu, không lấy cả lá`)
   await A.click('[data-testid=region-redo]'); await sleep(150)
   await topAt(A, `[data-tp="${SI}:blocks.0.text"]`, 640)
+  // chờ bố cục ổn định (alphaTab khắc xong) rồi đo lại ngay trước khi kéo
+  let prev = ''; for (let i = 0; i < 20; i++) { const cur = JSON.stringify([await box(A, `[data-sec="${SC}"] .at-surface`), await box(A, `[data-tp="${SI}:blocks.1.text"]`)]); if (cur === prev) break; prev = cur; await sleep(400) }
+  await topAt(A, `[data-tp="${SI}:blocks.0.text"]`, 640)
   const hh = await box(A, `[data-tp="${SI}:blocks.0.text"]`), sf = await box(A, `[data-sec="${SC}"] .at-surface`), pl = await lines(A, `[data-tp="${SI}:blocks.1.text"]`)
-  await A.mouse.move(sf.x + 6, Math.max(30, sf.y + sf.h * 0.55)); await A.mouse.down(); await A.mouse.move(pl[0].x + pl[0].w * 0.5, pl[0].y + pl[0].h + 1, { steps: 10 }); await A.mouse.up(); await sleep(300)
+  await A.mouse.move(sf.x + 6, Math.max(130, sf.y + sf.h * 0.55)); await A.mouse.down(); await A.mouse.move(pl[0].x + pl[0].w * 0.5, pl[0].y + pl[0].h + 1, { steps: 10 }); await A.mouse.up(); await sleep(300)
   const mix = await summary(A)
   assert.match(mix ?? '', /^2 khối · \d+ đoạn chữ · bản nhạc \(ô \d+(–\d+)?\)$/, mix); void hh
   ok(`desktop: khoanh HỖN HỢP chữ + một phần nhạc → "${mix}"`)
@@ -111,7 +114,7 @@ try {
   const real = errors.filter(m => !/ due to access control checks\.$|Importing a module script failed/.test(m))
   assert.deepEqual(real, [], real.join(' | ')); ok('không lỗi JavaScript thật (bỏ qua 2 loại nhiễu điều hướng của WebKit)')
   console.log(`\nALL_SHARE_REGION_WEBKIT_OK ${pass} PASS`)
-} catch (e) { console.log('FAIL: ' + (e?.stack || e)); await browser.close(); process.exit(1) }
+} catch (e) { console.log('FAIL: ' + (e?.stack || e)); if (process.env.E2E_HOLD_ON_FAIL) { console.log(`STAGING_READY ${ME} (lỗi — giữ stack)`); setInterval(() => {}, 1 << 30); await new Promise(() => {}) } await browser.close(); process.exit(1) }
 if (process.env.E2E_HOLD) {
   console.log(`\nSTAGING_READY ${ME}\n  Đăng nhập: a@test.local (An — người khoanh) · b@test.local (Bình — người nhận, cùng lớp) · c@test.local (Chi — lớp khác, KHÔNG quyền); mật khẩu bất kỳ\n  Buổi 1: ${SESSION}  → bấm "Khoanh để hỏi" (nút tím, góc phải-dưới)`)
   await browser.close().catch(() => {}); setInterval(() => {}, 1 << 30); await new Promise(() => {})

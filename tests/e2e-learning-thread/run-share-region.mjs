@@ -191,7 +191,7 @@ try {
   const hh = await box(A, leaf(SI, 'blocks.0.text')); sf = await box(A, `[data-sec="${SC}"] .at-surface`)
   const pl = await lineRects(A, leaf(SI, 'blocks.1.text'))
   assert.ok(pl[0].y + pl[0].h < 870, 'đoạn nằm trong màn hình ' + JSON.stringify([sf, hh, pl[0]]))
-  await drag(A, { x: sf.x + 6, y: Math.max(30, sf.y + sf.h * 0.55) }, { x: pl[0].x + pl[0].w * 0.5, y: pl[0].y + pl[0].h + 1 })
+  await drag(A, { x: sf.x + 6, y: Math.max(130, sf.y + sf.h * 0.55) }, { x: pl[0].x + pl[0].w * 0.5, y: pl[0].y + pl[0].h + 1 })
   anc = await anchor(A)
   assert.ok(anc && anc.length === 2, 'hỗn hợp: ' + (await summary(A)) + ' ' + (await hint(A)))
   const mixSc = anc.find(x => x.scores.length)?.scores[0], mixTx = anc.find(x => x.leaves.length)
