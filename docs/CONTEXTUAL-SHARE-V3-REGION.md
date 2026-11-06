@@ -1,6 +1,7 @@
-# Contextual Share V3 — "Khoanh vùng hỗn hợp" (PROTOTYPE, chưa phát hành)
+# Contextual Share V3.1 — "Khoanh để hỏi" (PROTOTYPE hoàn thiện để nghiệm thu, chưa phát hành)
 
 > Trạng thái: **prototype trên nhánh `feat/contextual-share-v3-region`**, chạy trên staging cô lập + DB tạm. Chưa merge, chưa migrate production.
+> V3.1 (commit sau `0c0be78e`): khoanh ĐÚNG phần được bao (không lấy cả lá/cả bản nhạc), stale theo từng phần tử, Feed dựng nguyên cảnh, tự cuộn khi kéo sát mép, vẽ lại theo sự kiện bố cục.
 > Mục tiêu Owner: học viên nhìn thấy vùng nào trên giáo trình cũng khoanh được (chữ, bản nhạc, bảng, danh sách, hình, hỗn hợp), hỏi và chia sẻ — như dùng bút khoanh trên giấy.
 
 ## 1. Kiến trúc đề xuất
@@ -12,26 +13,37 @@ khung chữ nhật (người kéo)  ──probe DOM──▶  PHẦN theo khối
    toạ độ client, tạm thời                   {sec, leaves[], scores[], box‰}          + fp + sha (server tự tính)
 ```
 
-Mỗi **phần** (một khối giáo trình bị khung chạm tới):
+Mỗi **phần** (một khối giáo trình mà khung bao được ít nhất một phần tử):
 
 | Trường | Ý nghĩa | Nguồn |
 |---|---|---|
 | `sec` | chỉ số khối (gợi ý) | client |
-| `leaves` | đường dẫn các **lá văn bản** bị chạm ≥ 25% diện tích dòng chữ (cùng hệ lá với V2: `data-tp`) | client → server kiểm tồn tại |
-| `scores` | bản nhạc + **dải ô** (1-based) bị chạm ≥ 25% diện tích ô (cùng hệ V1.3, từ `boundsLookup` alphaTab) | client → server kiểm đường dẫn |
+| `leaves` | `[{p, r:[[từ,đến),…]}]`: đường dẫn **lá văn bản** (cùng hệ V2, `data-tp`) + các **đoạn chữ theo ĐIỂM MÃ** mà khung thực sự bao | client → server kiểm lá tồn tại, đoạn nằm trong lá, tăng dần, ≤ 1000 điểm mã, biên không cắt cụm ký tự |
+| `scores` | bản nhạc + **dải ô** (1-based) mà khung bao ≥ 50% diện tích ô (cùng hệ V1.3, từ `boundsLookup` alphaTab) | client → server kiểm đường dẫn ra alphaTex |
 | `box` | khung theo ‰ hộp khối — **chỉ dùng khi phần không có phần tử gốc** (sơ đồ, hình, khoảng trống) | client |
 | `fp` | băm (loại + tiêu đề) khối | **server** |
-| `sha` | băm TOÀN KHỐI lúc khoanh (`sha256(jsonb::text)`) | **server** |
+| `leaves[].r[].s / .c` | băm đoạn chữ / băm ngữ cảnh ≤ 32 điểm mã hai phía (cùng hàm V2) | **server** |
+| `scores[].x` | băm alphaTex của bản nhạc | **server** |
+| `sha` | băm TOÀN KHỐI — **chỉ cho phần không có phần tử gốc** (hình) | **server** |
 
 Không có pixel làm neo, không ảnh chụp, không bản sao nội dung, không nhân đôi asset. Client **không gửi** băm; server không trả băm.
 
 ## 2. Cách neo vào tài liệu gốc (và vì sao không phải toạ độ màn hình)
 
-* **Khung kéo = công cụ nhập**, không phải thứ lưu. Thả chuột → `buildParts()` tra DOM, đổi khung thành **tập phần tử tài liệu** (lá / ô nhịp / khối).
-* **Vẽ lại = tra lại đúng phần tử** trong DOM hiện tại (`drawParts()`): lá → các hình chữ nhật dòng chữ hiện hành; ô nhịp → `rectsForBars` theo lần khắc hiện hành của alphaTab. Chữ xuống dòng, đổi font, đổi bề rộng, zoom, xoay máy đều tự đi theo phần tử; viền cam bao quanh các phần tử của từng khối.
-* **Người soạn thấy đúng thứ người nhận sẽ thấy**: sau khi thả, vùng được vẽ lại từ chính neo bằng cùng bộ vẽ (`RegionHighlight`), không phải từ khung kéo.
-* **Phần gần đúng được đánh dấu**: phần chỉ có hộp ‰ (hình, sơ đồ, khoảng trống) vẽ bằng **sọc + viền nét đứt** và ghi "gần đúng" trong tóm tắt. Không giả vờ neo chính xác.
-* **Giáo trình đổi** (fail-closed, server): mỗi phần phải còn **nguyên văn** (cùng `sha`) ở đúng chỉ số, hoặc duy nhất ở chỉ số khác (`moved`). Bất kỳ phần nào sai/mơ hồ ⇒ `stale` cho cả vùng: chỉ trả câu hỏi, **không toạ độ**, client không tô gì.
+* **Khung kéo = công cụ nhập**, không phải thứ lưu (điểm kéo giữ theo toạ độ TRANG nên cuộn giữa chừng không làm lệch). Thả chuột → `buildParts()` đổi khung thành **tập phần tử tài liệu**:
+  * chữ: đo hộp từng điểm mã (Range) → **từ** nào có ≥ 50% ký tự với tâm nằm trong khung thì lấy cả từ; từ liên tiếp nối thành một đoạn; khung bao trọn lá ⇒ cả lá. Khoanh nửa đoạn ⇒ chỉ nửa đoạn; khoanh nửa phải của vài dòng ⇒ nhiều mảnh rời; khoanh một hàng bảng ⇒ chỉ các ô của hàng đó;
+  * nhạc: chỉ các ô có ≥ 50% diện tích nằm trong khung ⇒ vài ô, không cả bản nhạc;
+  * khối không có phần tử gốc: hộp ‰.
+* **Vẽ lại = tra lại đúng chữ/ô** trong DOM hiện tại (`drawParts()`): đoạn chữ → `Range.getClientRects()` theo điểm mã; ô nhịp → `rectsForBars` theo lần khắc hiện hành của alphaTab. Chữ xuống dòng, đổi font, đổi bề rộng, zoom, xoay máy đều tự đi theo chữ.
+* **Cập nhật theo sự kiện, không hỏi định kỳ**: `ResizeObserver` (trang + từng khối), `MutationObserver`, `fonts.loadingdone`, `resize/orientationchange`, và sự kiện "alphaTab khắc xong" (`notifyLayoutChange`). Gộp về một lần/khung hình.
+* **Người soạn thấy đúng thứ người nhận sẽ thấy**: sau khi thả, vùng được vẽ lại từ chính neo bằng cùng bộ vẽ (`RegionHighlight`).
+* **Feed**: dựng nguyên cảnh bằng chính renderer giáo trình (`ContextSectionView`) — khối gốc, đoạn chữ tô cam đúng từng đoạn (`<mark>`), bản nhạc chỉ trích đoạn đúng dải ô, phần hình có khung nét đứt. Mặc định gọn (≤ 3 khối, ≤ 1 bản nhạc sống, cửa sổ study quanh phần được khoanh); "Xem đầy đủ" hiện cả tiểu mục / mọi khối / mọi bản nhạc. Nút "Mở trong giáo trình" giữ nguyên.
+* **Phần gần đúng được đánh dấu**: phần chỉ có hộp ‰ vẽ bằng **sọc + viền nét đứt** và ghi "gần đúng". Không giả vờ neo chính xác.
+* **Giáo trình đổi** (fail-closed, server) — chỉ so cái ĐƯỢC KHOANH:
+  * đoạn chữ: đúng vị trí (băm đoạn khớp) ⇒ ok; lệch ⇒ thử cùng độ dời của đoạn trước trong lá ⇒ rồi `share_text_resolve` của V2 (duy nhất, hoặc duy nhất theo ngữ cảnh) ⇒ moved; mơ hồ ⇒ stale. Tối đa 6 lần tìm đắt cho cả vùng;
+  * bản nhạc: băm alphaTex phải còn khớp (hoặc duy nhất ở khối khác cùng loại+tiêu đề);
+  * sửa câu/khối KHÁC, đổi tiêu đề khối, thêm câu trước/sau đoạn được khoanh ⇒ **không stale**;
+  * sửa chính đoạn được khoanh / bản nhạc được khoanh / xoá khối ⇒ `stale` cho cả vùng: chỉ trả câu hỏi, **không toạ độ**, client không tô gì.
 
 ## 3. Quyền & chống lộ
 
@@ -41,42 +53,42 @@ Không có pixel làm neo, không ảnh chụp, không bản sao nội dung, kh�
 * Payload Feed `anchor:'region'` không chứa nội dung giáo trình, không `bar_from/bar_to`.
 * Chỉ khi trang Buổi cấp `ScoreShareSlot.onAskRegion` mới bọc `[data-sec]` và dựng lớp khoanh ⇒ trang công khai / bản in / Admin **không đổi**.
 
-## 4. Đã làm được (prototype) và mức sẵn sàng
+## 4. Mức sẵn sàng
 
 | Hạng mục | Mức |
 |---|---|
-| Lõi thuần `src/share/regionAnchor.ts` (khung → phần → vẽ), 10 unit test | **đạt mức production** (logic), chưa review UX |
-| Lớp khoanh `RegionLayer.tsx` (kéo chuột/cảm ứng/bút, "Cuộn", Esc, "Khoanh lại", Huỷ) | **prototype** |
-| Vẽ vùng `RegionHighlight` (portal, vòng 250 ms) | **prototype** — nên thay vòng 250 ms bằng ResizeObserver + sự kiện khắc xong của alphaTab |
-| DB `db/drafts/share_region_v3_setup.sql` (+ rollback, 31 test PASS) | **dự thảo — CHƯA chạy production**; cần preflight/postflight/gate md5 như V2 |
-| Composer, ClassSessionPage (tô + cuộn), thẻ Feed/Chat nhẹ | **prototype** |
-| Xem trước nguyên cảnh ngay trong Feed (như thẻ V2) | **chưa làm** — Feed chỉ có thẻ nhẹ + "Mở vùng khoanh"; nguyên cảnh + vùng khoanh xem ở trang Buổi |
+| Lõi thuần `src/share/regionAnchor.ts` + `regionContext.ts` (16 + 3 unit test) | **đạt mức production** (logic); chưa review UX |
+| Lớp khoanh `RegionLayer.tsx` (kéo chuột/cảm ứng/bút, "Cuộn", tự cuộn sát mép, Esc, "Khoanh lại", Huỷ, thanh công cụ tránh vùng khoanh) | **prototype hoàn thiện** — cần thử iPhone thật |
+| Vẽ vùng `RegionHighlight` (theo sự kiện bố cục) | **prototype hoàn thiện** |
+| Feed dựng nguyên cảnh (`ShareNotePost` + `RegionContextView`) | **prototype hoàn thiện** — cần Owner duyệt bố cục gọn/đầy đủ |
+| DB `db/drafts/share_region_v3_setup.sql` (+ rollback, test SQL R0–R20, S1–S9) | **dự thảo — CHƯA chạy production**; cần preflight/postflight/gate md5 như V2 |
 
 ## 5. Loại nội dung đã khoanh thử (E2E, dữ liệu giả)
 
-Một đoạn chữ · nhiều đoạn · tiêu đề + đoạn + danh sách · bảng (ô `___` bỏ qua) · vùng bản nhạc (dải ô) · **chữ + nhạc** · **chữ + sơ đồ cần đàn (hình) + chữ**. Không có khối "ảnh" trong schema giáo trình hiện tại; sơ đồ cần đàn (SVG do renderer vẽ) đại diện cho phần không có lá/ô.
+Nửa đoạn văn (nửa dòng đầu) · nửa phải của hai dòng · nhiều đoạn · tiêu đề + đoạn + danh sách · **một phần bảng** (một hàng, một ô) · **vài ô nhịp** (ô 1–2 trên 26 ô) · **chữ + một phần bản nhạc** · **chữ + sơ đồ cần đàn (hình) + chữ**. Không có khối "ảnh" trong schema giáo trình hiện tại; sơ đồ cần đàn (SVG do renderer vẽ) đại diện cho phần không có lá/ô.
 
 ## 6. Hạn chế kỹ thuật còn lại
 
-1. **Vùng phải nằm gọn trong một khung nhìn** lúc thả. Chưa có tự cuộn khi kéo sát mép; giáo trình dài phải thu nhỏ (zoom out) hoặc khoanh từng đoạn.
-2. **Snap theo phần tử**: lá nào bị chạm ≥ 25% thì lấy trọn lá (không cắt giữa câu như V2). Viền hiển thị là viền quanh phần tử, không đúng từng pixel khung kéo.
-3. **Hình/sơ đồ chỉ neo gần đúng** (‰ của hộp khối). Khi renderer đổi kích thước sơ đồ, vùng giữ tỉ lệ nhưng không bám từng nét.
-4. **Quá khắt khe có chủ đích**: sửa BẤT KỲ chữ nào trong khối được khoanh (kể cả chữ ngoài vùng) ⇒ `stale` cho cả vùng. Cải tiến: băm theo từng lá/bản nhạc thay vì cả khối (cần khảo sát thêm tỉ lệ sửa giáo trình).
-5. **Bản nhạc đang khắc**: nếu alphaTab chưa khắc xong, vùng nhạc chưa vẽ (không đoán); khi xong tự vẽ.
-6. **Chỉ chuột/chạm/bút**, chưa có thao tác bàn phím cho khoanh (V2 vẫn chọn chữ bằng bàn phím được).
+1. **Làm tròn theo từ**: biên đoạn chữ khớp ranh giới từ (từ có ≥ 50% ký tự trong khung thì lấy cả từ). Không khoanh được nửa từ — chủ ý.
+2. **Ô nhịp**: ô nào có ≥ 50% diện tích trong khung thì lấy cả ô; dải ô là liên tục theo thứ tự đọc (khoanh ô 3 dòng trên và ô 2 dòng dưới ⇒ lấy cả dải giữa).
+3. **Hình/sơ đồ chỉ neo gần đúng** (‰ của hộp khối). Sửa khối hình ⇒ stale (so cả khối). Khi renderer đổi kích thước sơ đồ, vùng giữ tỉ lệ nhưng không bám từng nét.
+4. **Bản nhạc bị sửa bất kỳ ⇒ stale** (băm alphaTex cả bản; chưa phân biệt ô bị sửa với ô khác).
+5. **Giới hạn kích cỡ**: ≤ 12 khối, ≤ 40 lá/khối, ≤ 12 mảnh/lá, ≤ 60 đoạn/vùng, ≤ 64 ô; khung quá nhiều mảnh rời báo "khoanh gọn lại".
+6. **Chưa có thao tác bàn phím** cho khoanh (V2 vẫn chọn chữ bằng bàn phím được).
 7. **App iOS đóng gói cũ**: ghi chú region hiển thị "không còn khả dụng"; thẻ Feed region rơi về thẻ nhẹ/ẩn; không lỗi.
-8. **Chưa thử iPhone/Safari thật**: cảm ứng chỉ qua giả lập Chrome (touch events) và PointerEvent tổng hợp trên WebKit.
-9. `sha` dựa trên `jsonb::text`; ổn định trong một phiên bản PostgreSQL, nên gate bằng test khi nâng PG.
+8. **Chưa thử iPhone/Safari thật**: cảm ứng qua giả lập Chrome và PointerEvent tổng hợp trên WebKit; tự cuộn khi kéo ngón tay chưa đo trên thiết bị thật.
+9. **Mất ngữ cảnh khi stale ở Feed**: chỉ hiện câu hỏi + thông báo "đã được cập nhật" (không dựng khối cũ — đúng ý fail-closed).
+10. Feed region hiện **một bài = một vùng**; vùng 12 khối chỉ hiện 3 khối ở chế độ gọn.
 
 ## 7. Cần migration không?
 
-**Có** (dự thảo, chỉ cộng thêm): cột `share_notes.region jsonb`, nới CHECK theo loại neo, 3 hàm nội bộ + `share_region_create` / `share_region_open` / `social_share_share_region`. **Không sửa** hàm V1/V2 (md5 giữ nguyên — test), không đụng `class_lesson_content`. Rollback `db/drafts/share_region_v3_rollback.sql` xoá hàng/bài Feed `region` rồi trả schema về V2.
+**Có** (dự thảo, chỉ cộng thêm): cột `share_notes.region jsonb`, nới CHECK theo loại neo, 4 hàm nội bộ (`share_region_sha/leaf_txt/build/resolve`) + `share_region_create` / `share_region_open` / `social_share_share_region`. **Không sửa** hàm V1/V2 (md5 giữ nguyên — test), không đụng `class_lesson_content`. Rollback `db/drafts/share_region_v3_rollback.sql` xoá hàng/bài Feed `region` rồi trả schema về V2.
 
 ## 8. Lộ trình lên production
 
-1. Owner dùng staging, chốt UX (nút, snap, viền, tên nút) và quyết định #4 (độ khắt khe) / Feed preview.
+1. Owner dùng staging và nghiệm thu UX (khoanh, Feed gọn/đầy đủ).
 2. Khảo sát chỉ-đọc production (số khối/lá/ô mỗi buổi; tần suất sửa giáo trình) để đặt giới hạn.
 3. Chuyển `db/drafts/*` → `db/`, thêm preflight/postflight (md5 10 hàm V1 + hàm V2, dấu vân tay `bars`/`text`), dry-run, migrate qua `prod-db.py` — như V2.
-4. Xem trước nguyên cảnh trong Feed (nhiều khối), thay vòng vẽ 250 ms, tự cuộn khi kéo sát mép.
+4. (đã làm ở V3.1: Feed nguyên cảnh, tự cuộn, vẽ lại theo sự kiện) — còn lại: đo thiết bị thật.
 5. Thử iPhone/Safari thật + hồi quy V1.3/V2/Chat/Mira.
 6. Phát hành theo thứ tự V2: DB trước, FE sau; rollback FE trước, DB sau.
