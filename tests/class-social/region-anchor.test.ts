@@ -199,3 +199,19 @@ test('parseRegionParts: nhận dữ liệu đúng, từ chối dữ liệu lạ'
 })
 
 test('normRect', () => assert.deepEqual(normRect({ x: 50, y: 40 }, { x: 10, y: 90 }), R(10, 40, 40, 50)))
+
+test('V3.2: phần hình tính ‰ trên PHẦN TỬ HÌNH, dựng lại đúng khi bề rộng/chú thích đổi', () => {
+  const sec = (box: Rect, visual: Rect): SectionProbe => ({ sec: 3, box, visual, leaves: [], scores: [] })
+  // Người khoanh (1280): hình 600×200 tại (100,300); chú thích 1 dòng phía trên. Khung bao góc trên-trái của hình.
+  const region: Rect = { x: 130, y: 320, w: 180, h: 80 }
+  const r = buildParts(region, [sec({ x: 80, y: 260, w: 700, h: 300 }, { x: 100, y: 300, w: 600, h: 200 })])
+  assert.ok(r.ok); if (!r.ok) return
+  assert.deepEqual(r.parts[0].box, [50, 100, 350, 500])                       // ‰ của HÌNH, không phải của khối
+  // Người nhận (390): hình 300×100 tại (20,150) (chú thích xuống 3 dòng, khối cao hơn). Cùng ‰ ⇒ cùng chỗ TRÊN HÌNH.
+  const d = drawParts(r.parts, { section: () => ({ x: 20, y: 150, w: 300, h: 100 }), leaf: () => [], bars: () => [] })
+  assert.deepEqual(d[0].rects[0], { x: 35, y: 160, w: 90, h: 40 })
+  assert.equal(d[0].approx, true)
+  // Khung chỉ chạm mép hình (< 15% diện tích khung nằm trên hình) ⇒ không đưa vào
+  const touch = buildParts({ x: 90, y: 480, w: 400, h: 200 }, [sec({ x: 80, y: 260, w: 700, h: 300 }, { x: 100, y: 300, w: 600, h: 200 })])
+  assert.equal(touch.ok, false)
+})

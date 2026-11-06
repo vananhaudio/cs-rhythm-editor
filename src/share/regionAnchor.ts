@@ -20,6 +20,8 @@ export const REGION_LIMITS = { parts: 12, leaves: 40, ranges: 60, rangesPerLeaf:
 export type SectionProbe = {
   sec: number
   box: Rect
+  /** hình của khối (sơ đồ/ảnh) — mốc cho phần "gần đúng"; null nếu khối không có hình */
+  visual?: Rect | null
   leaves: { path: string[]; text: string; rects: Rect[]; chars: () => (Rect | null)[] }[]
   scores: { p: string[]; bars: { index: number; rect: Rect }[] }[]   // index: 0-based (masterBar)
 }
@@ -130,10 +132,18 @@ export function buildParts(region: Rect, secs: SectionProbe[]): BuildResult {
     if (scores.length > REGION_LIMITS.scores) return { ok: false, reason: 'tooManyBars' }
     // Khối có phần tử gốc nhưng khung không bao cái nào (chỉ chạm lề / khoảng trống) ⇒ KHÔNG đưa vào. Khối KHÔNG có phần tử gốc (hình ảnh…) ⇒ giữ bằng hộp.
     const hasAnchors = s.leaves.length > 0 || s.scores.length > 0
-    if (hasAnchors && !leaves.length && !scores.length) continue
+    if (hasAnchors && !leaves.length && !scores.length && !s.visual) continue
+    // Phần chỉ-vẽ-gần-đúng: tính hộp ‰ trên HÌNH của khối (nếu có) — khung phải bao đủ lớn phần hình; ngược lại tính trên cả khối.
+    const approxOnly = !leaves.length && !scores.length
+    let ref = s.box, cutR = cut
+    if (approxOnly && s.visual) {
+      const iv = intersect(s.visual, region)
+      if (!iv || area(iv) < 0.15 * area(region)) continue
+      ref = s.visual; cutR = iv
+    }
     const box: [number, number, number, number] = [
-      permille((cut.x - s.box.x) / s.box.w), permille((cut.y - s.box.y) / s.box.h),
-      permille((cut.x + cut.w - s.box.x) / s.box.w), permille((cut.y + cut.h - s.box.y) / s.box.h),
+      permille((cutR.x - ref.x) / ref.w), permille((cutR.y - ref.y) / ref.h),
+      permille((cutR.x + cutR.w - ref.x) / ref.w), permille((cutR.y + cutR.h - ref.y) / ref.h),
     ]
     if (box[2] <= box[0]) box[2] = Math.min(1000, box[0] + 1)
     if (box[3] <= box[1]) box[3] = Math.min(1000, box[1] + 1)

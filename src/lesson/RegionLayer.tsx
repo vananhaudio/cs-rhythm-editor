@@ -61,7 +61,7 @@ export function RegionHighlight({ root, parts, focus = false, onShown }: { root:
 }
 
 type Pt = { x: number; y: number }
-const EDGE = 72, MAX_STEP = 22
+const EDGE = 72, MAX_STEP = 22, ARM_MS = 450
 
 export default function RegionLayer({ root, sections, onAsk }: { root: RefObject<HTMLElement | null>; sections: unknown; onAsk: (parts: RegionPart[], summary: string) => void }) {
   const [mode, setMode] = useState<'off' | 'draw' | 'scroll'>('off')
@@ -83,10 +83,15 @@ export default function RegionLayer({ root, sections, onAsk }: { root: RefObject
 
   // Tự cuộn khi kéo sát mép trên/dưới màn hình (cuộn nhanh dần theo độ sát mép); điểm cuối luôn bám theo con trỏ.
   const loopRef = useRef<() => void>(() => undefined)
+  // Chỉ cuộn khi người dùng CHỦ Ý kéo tới mép: con trỏ đã rời vùng mép một lần, hoặc giữ yên sát mép ≥ ARM_MS (không cuộn bất ngờ khi bắt đầu kéo ở đầu màn hình).
+  const armed = useRef({ at: 0, left: false })
   useEffect(() => {
     loopRef.current = () => {
       const y = ptr.current.y, h = window.innerHeight
-      const dy = y < EDGE ? -Math.ceil((EDGE - y) / EDGE * MAX_STEP) : y > h - EDGE ? Math.ceil((y - (h - EDGE)) / EDGE * MAX_STEP) : 0
+      const inEdge = y < EDGE || y > h - EDGE
+      if (!inEdge) armed.current.left = true
+      const may = !inEdge || armed.current.left || performance.now() - armed.current.at >= ARM_MS
+      const dy = !may ? 0 : y < EDGE ? -Math.ceil((EDGE - y) / EDGE * MAX_STEP) : y > h - EDGE ? Math.ceil((y - (h - EDGE)) / EDGE * MAX_STEP) : 0
       if (dy) {
         const before = window.scrollY
         window.scrollBy({ top: dy, behavior: 'instant' as ScrollBehavior })
@@ -100,6 +105,7 @@ export default function RegionLayer({ root, sections, onAsk }: { root: RefObject
     id.current = e.pointerId
     try { e.currentTarget.setPointerCapture(e.pointerId) } catch { /* sự kiện không còn hoạt động */ }
     ptr.current = { x: e.clientX, y: e.clientY }
+    armed.current = { at: performance.now(), left: e.clientY >= EDGE && e.clientY <= window.innerHeight - EDGE }
     const p = { x: e.clientX + window.scrollX, y: e.clientY + window.scrollY }
     setRes(null); setDrag({ a: p, b: p }); e.preventDefault()
     stopLoop(); raf.current = requestAnimationFrame(() => loopRef.current())

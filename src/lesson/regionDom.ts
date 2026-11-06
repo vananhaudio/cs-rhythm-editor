@@ -1,4 +1,5 @@
 // Cầu nối DOM ⇄ lõi thuần regionAnchor: đọc hộp khối / dòng chữ của lá / ô nhịp của bản nhạc trong giáo trình ĐANG HIỂN THỊ (toạ độ client).
+import { findVisual } from './regionVisual'
 // Bản nhạc (alphaTab) tự đăng ký vào sổ này (ScoreShareLayer) vì ô nhịp chỉ biết qua api.renderer.boundsLookup.
 import type { Rect, RegionPart, SectionProbe } from '../share/regionAnchor'
 import { cpLen, cpToUtf16, leafTextAt } from '../share/textAnchor'
@@ -68,7 +69,8 @@ export function probeSections(root: HTMLElement, sections: unknown): SectionProb
       return [{ path, text, rects, chars: () => (cache ??= charRects(l)) }]
     })
     const sc = Array.from(scores.values()).filter(s => s.sec === sec && el.contains(s.el)).map(s => ({ p: s.p, bars: s.bars() }))
-    out.push({ sec, box: r2(el.getBoundingClientRect()), leaves, scores: sc })
+    const vis = findVisual(el)
+    out.push({ sec, box: r2(el.getBoundingClientRect()), visual: vis ? r2(vis.getBoundingClientRect()) : null, leaves, scores: sc })
   })
   return out
 }
@@ -77,7 +79,8 @@ export function probeSections(root: HTMLElement, sections: unknown): SectionProb
 export function lookupFor(root: HTMLElement) {
   const secEl = (sec: number) => root.querySelector<HTMLElement>(`[data-sec="${sec}"]`)
   return {
-    section: (sec: number) => { const e = secEl(sec); return e ? r2(e.getBoundingClientRect()) : null },
+    // Mốc của phần hình/khoảng trống: phần tử hình của khối nếu có, không thì cả khối (cùng quy tắc với `probeSections`)
+    section: (sec: number) => { const e = secEl(sec); if (!e) return null; const v = findVisual(e); return r2((v ?? e).getBoundingClientRect()) },
     leaf: (sec: number, path: string[], ranges: [number, number][]): Rect[] => {
       const e = root.querySelector<HTMLElement>(`[data-tp="${sec}:${path.join('.')}"]`)
       if (!e) return []

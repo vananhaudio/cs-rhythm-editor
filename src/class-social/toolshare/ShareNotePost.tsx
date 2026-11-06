@@ -45,7 +45,7 @@ function RegionContextView({ sections, parts, expanded, onPlan }: { sections: un
     <div className="cs-sn-region" data-testid="region-context" data-parts={parts.length} data-shown={views.shown.length}>
       {views.shown.map((v, k) => (
         <div key={v.part.sec} className="cs-sn-region-part" data-sec={v.part.sec}>
-          <ContextSectionView section={sections[v.part.sec]} index={v.part.sec} expanded={expanded} marks={v.marks} blocksAt={v.blocksAt} approx={v.approx ? v.part.box : undefined}
+          <ContextSectionView section={sections[v.part.sec]} index={v.part.sec} expanded={expanded} marks={v.marks} blocksAt={v.blocksAt} approx={v.approx ? v.part.box : undefined} crop={v.approx}
             scoreKey={v.score ? { section: v.part.sec, path: v.score.p as never } : undefined}
             node={v.score && v.tex ? <LessonScore tex={v.tex} excerpt={{ from: v.score.from, to: v.score.to }} onExcerpt={k === 0 ? onPlan : undefined} zoomable={false} barsPerRow={4} excerptContext={expanded ? 'full' : 'focus'} /> : undefined} />
           {v.part.scores.length > 0 && !v.score && <p className="cs-sn-msg">Bản nhạc ô {v.part.scores[0].from === v.part.scores[0].to ? v.part.scores[0].from : `${v.part.scores[0].from}–${v.part.scores[0].to}`} — bấm “Xem đầy đủ” để xem.</p>}

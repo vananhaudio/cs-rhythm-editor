@@ -92,3 +92,13 @@ Nửa đoạn văn (nửa dòng đầu) · nửa phải của hai dòng · nhi�
 4. (đã làm ở V3.1: Feed nguyên cảnh, tự cuộn, vẽ lại theo sự kiện) — còn lại: đo thiết bị thật.
 5. Thử iPhone/Safari thật + hồi quy V1.3/V2/Chat/Mira.
 6. Phát hành theo thứ tự V2: DB trước, FE sau; rollback FE trước, DB sau.
+
+## V3.2 — hoàn thiện trải nghiệm khoanh trực quan (07/11)
+
+**Không đổi DB / không cần migration bổ sung** (hộp ‰ vẫn là 4 số nguyên 0–1000; chỉ đổi *mốc* tính ‰ cho phần hình, xem dưới).
+
+1. **Phần hình/sơ đồ neo theo PHẦN TỬ HÌNH, không theo cả khối.** `src/lesson/regionVisual.ts#findVisual` (SVG `role=img`, `img`, `canvas`, `video` ≥ 48×32, ngoài vùng bản nhạc). Người khoanh và người nhận dùng cùng quy tắc: phần chỉ-gần-đúng (không có chữ, không có ô nhịp) có ‰ trên chính hình đó; khối không có hình ⇒ ‰ trên cả khối. Sơ đồ là SVG co giãn theo viewBox nên đổi bề rộng 1280 → 390 hay chú thích xuống dòng không làm lệch (kiểm bằng hình học thật: sai số < 1,5% cạnh sơ đồ). Khung chỉ chạm mép hình (< 15% diện tích khung nằm trên hình) thì không đưa phần hình vào. Giới hạn: nếu khối có cả chữ được khoanh lẫn phần hình thì chỉ chữ được neo (phần hình của khối đó không vẽ).
+2. **Lớp tô nhẹ**: bỏ hẳn sọc chéo. Chữ: nền cam 12% + gạch chân 1,5px. Khung vẽ: nền ≤ 9%, viền ≤ 2px. Gần đúng: viền nét đứt 1,5px + nhãn "gần đúng". Ô nhạc trong Feed (vùng khoanh): nền 5% + viền 1,5px (V1/V2 giữ nguyên).
+3. **Feed xem gọn cho phần hình**: cắt dải dọc quanh hộp (± 56px, tối thiểu 120px), nút "Xem đầy đủ" mở cả khối và thu gọn lại. Thẻ sơ đồ 390px: ~419px (gọn) ↔ ~627px (đầy đủ).
+4. **Tự cuộn có chủ ý**: chỉ cuộn khi con trỏ đã rời vùng mép một lần, hoặc giữ yên sát mép ≥ 450ms. Bắt đầu kéo ở y=30 không còn cuộn bất ngờ (đây là điểm UX thật, không chỉ lỗi test WebKit).
+5. **Chat**: chia sẻ giáo trình vẫn chỉ đi qua Feed (V1/V2/V3 không có đường vào Chat); không có gì để cải thiện lại trong phạm vi này.

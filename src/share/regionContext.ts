@@ -25,5 +25,6 @@ export function regionViews(sections: unknown[], parts: RegionPart[], expanded: 
 export function regionHasMore(sections: unknown[], parts: RegionPart[]): boolean {
   if (parts.length > REGION_COMPACT_PARTS) return true
   if (parts.filter(p => p.scores.length > 0).length > 1) return true
+  if (parts.some(p => !p.leaves.length && !p.scores.length)) return true   // phần hình/khoảng trống: xem gọn cắt dải quanh vùng
   return parts.some(p => p.leaves.some(l => textContextHasMore(sections[p.sec], { path: l.p })))
 }
