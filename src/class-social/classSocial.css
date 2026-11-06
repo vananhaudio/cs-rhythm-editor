@@ -1952,3 +1952,8 @@ button.cs-subs-title:hover { color: var(--cs-accent); }
 @media (max-width: 1023px) {
   .cs-cmts .cs-more-item { display: flex; align-items: center; min-height: 44px; padding: 10px 12px; font-size: 15px; }
 }
+
+/* Feed Comments Lát D — tải thêm bình luận cũ hơn */
+.cs-cmts-end { margin: 0; padding: 4px 0; font-size: 13px; color: var(--cs-muted); text-align: center; }
+.cs-cmts-more { min-height: 44px; }
+.cs-cmts-more:disabled { opacity: 0.7; }

@@ -20,6 +20,9 @@ export type PostSocial = {
   comments: Record<string, PostComments>
   onRefreshComments: (postId: string) => Promise<unknown>
   onExpandComments: (postId: string) => Promise<unknown>
+  onLoadOlderComments?: (postId: string) => Promise<number>   // Lát D: tải từng trang cũ hơn
+  onDropComment?: (postId: string, commentId: string) => void
+  onRefreshCommentThread?: (postId: string, rootSeq: number | null) => Promise<unknown>   // sau khi trả lời: nạp lại đúng cây của gốc
   onModeratePost: (post: FeedPost, hidden: boolean) => void
   /** Bấm tên/avatar → trang cá nhân */
   onOpenProfile?: (userId: string) => void
@@ -99,7 +102,7 @@ export default function PostCard({ post, now, social, footer }: { post: FeedPost
       {footer}
       {social && (
         <CommentsSection postId={post.id} total={post.commentCount} state={social.comments[post.id]} me={social.me} now={now}
-          onRefresh={social.onRefreshComments} onExpand={social.onExpandComments} onOpenProfile={social.onOpenProfile} />
+          onRefresh={social.onRefreshComments} onExpand={social.onExpandComments} onLoadOlder={social.onLoadOlderComments} onDrop={social.onDropComment} onRefreshThread={social.onRefreshCommentThread} onOpenProfile={social.onOpenProfile} />
       )}
     </article>
   )
