@@ -101,4 +101,4 @@ http.createServer(async (req, res) => {
   }
   console.log(`[proxy] 404 ${req.method} ${url.pathname}`)
   send(res, 404, { msg: 'not mocked' })
-}).listen(PORT, '127.0.0.1', () => console.log(`[proxy] :${PORT} → ${PGRST}`))
+}).listen(PORT, process.env.PROXY_HOST || '127.0.0.1', () => console.log(`[proxy] :${PORT} → ${PGRST}`))
