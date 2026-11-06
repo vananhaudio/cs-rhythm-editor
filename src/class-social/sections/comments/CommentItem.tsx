@@ -1,5 +1,6 @@
 // Một bình luận. Nhận xét của Thầy: badge THẦY + nền tím rất nhẹ + tag + bài giảng đính kèm.
 // Không đổi thứ tự bình luận theo vai trò. Nội dung plain text (React escape, pre-wrap).
+import type { ReactNode } from 'react'
 import type { Comment } from '../../comments/commentModel'
 import { relativeTime } from '../../posts/postModel'
 import { Avatar, MoreMenu, PersonLink } from '../../ui'
@@ -10,7 +11,15 @@ import { Composer } from './TargetComments'
 import SafetyMenu from '../../../class-safety/SafetyMenu'
 import { useIsBlocked } from '../../../class-safety/blockedStore'
 
-export default function CommentItem({ c, canModerate, now, onDelete, onModerate, onOpenProfile, editing, onEdit, onEditDone, saveEdit }: {
+export default function CommentItem({ c, canModerate, now, onDelete, onModerate, onOpenProfile, editing, onEdit, onEditDone, saveEdit, isReply, replyToName, orphan, onReply, children }: {
+  isReply?: boolean
+  /** Trả lời một câu trả lời: tên người được phản hồi (từ dữ liệu parent, không nằm trong nội dung). */
+  replyToName?: string | null
+  /** Bình luận gốc của nhóm này chưa được tải. */
+  orphan?: boolean
+  onReply?: (c: Comment) => void
+  /** Phần dưới bình luận (danh sách trả lời + ô trả lời) — nằm trong cùng mục. */
+  children?: ReactNode
   editing?: boolean
   onEdit?: () => void
   onEditDone?: () => void
@@ -24,14 +33,18 @@ export default function CommentItem({ c, canModerate, now, onDelete, onModerate,
 }) {
   const teacher = c.author.isTeacher
   const blocked = useIsBlocked(c.author.userId)
-  if (blocked && !c.isMine) return null
+  if (blocked && !c.isMine) {
+    // Giữ nguyên hành vi ẩn người bị chặn, nhưng không làm mất các trả lời của người khác bên dưới.
+    return children ? <li className="cs-cmt-blockednote"><p className="cs-cmts-empty">Bình luận của người bạn đã chặn.</p>{children}</li> : null
+  }
   const menu = [
     ...(c.isMine && onEdit ? [{ label: 'Sửa bình luận', onSelect: onEdit }] : []),
     ...(c.isMine ? [{ label: 'Xoá bình luận', danger: true, onSelect: () => onDelete(c) }] : []),
     ...(canModerate && !c.isMine ? [{ label: c.isHidden ? 'Bỏ ẩn bình luận' : 'Ẩn bình luận', onSelect: () => onModerate(c, !c.isHidden) }] : []),
   ]
   return (
-    <li className={'cs-cmt' + (teacher ? ' is-teacher' : '') + (c.isHidden ? ' is-hidden' : '')}>
+    <li className={'cs-cmt-node'} data-comment-id={c.id}>
+    <div className={'cs-cmt' + (teacher ? ' is-teacher' : '') + (c.isHidden ? ' is-hidden' : '') + (isReply ? ' is-reply' : '')}>
       <PersonLink userId={c.author.userId} onOpen={onOpenProfile} label={`Trang cá nhân của ${c.author.name}`}>
         <Avatar name={c.author.name} url={c.author.avatarUrl} size={32} />
       </PersonLink>
@@ -41,6 +54,9 @@ export default function CommentItem({ c, canModerate, now, onDelete, onModerate,
             onSubmit={async b => { const e = await saveEdit(b); if (!e) onEditDone?.(); return e }} onCancel={onEditDone} />
         ) : (
         <div className="cs-cmt-bubble">
+          {(replyToName || orphan) && (
+            <p className="cs-replyto">{replyToName ? <>↪ Trả lời <strong>{replyToName}</strong></> : 'Trả lời một bình luận không hiển thị ở đây'}</p>
+          )}
           <div className="cs-cmt-head">
             <PersonLink userId={c.author.userId} onOpen={onOpenProfile} label={`Trang cá nhân của ${c.author.name}`} className="cs-cmt-author">
               {c.author.name}
@@ -63,11 +79,14 @@ export default function CommentItem({ c, canModerate, now, onDelete, onModerate,
         )}
         <div className="cs-cmt-meta">
           <time dateTime={c.createdAt}>{relativeTime(c.createdAt, now)}</time>
+          {onReply && !c.isHidden && <button type="button" className="cs-link-btn cs-cmt-reply" onClick={() => onReply(c)}>Trả lời</button>}
           {c.isMine
             ? <MoreMenu label="Tuỳ chọn bình luận" items={menu} />
             : <SafetyMenu label="Tuỳ chọn bình luận" kind="comment" targetId={c.id} userId={c.author.userId} userName={c.author.name} extraItems={menu} />}
         </div>
       </div>
+    </div>
+    {children}
     </li>
   )
 }

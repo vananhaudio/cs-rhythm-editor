@@ -25,13 +25,14 @@ export async function fetchComments(postIds: string[], perPost: number): Promise
   }
 }
 
-export async function addComment(input: { postId: string; body: string; tagIds?: number[]; resources?: ResourceRef[] }): Promise<Result<{ id: string }>> {
+export async function addComment(input: { postId: string; body: string; parentId?: string | null; tagIds?: number[]; resources?: ResourceRef[] }): Promise<Result<{ id: string }>> {
   try {
     const { data, error, status } = await supabase.rpc('class_add_comment', {
       p_post_id: input.postId,
       p_body: input.body,
       p_tag_ids: input.tagIds ?? [],
       p_resources: toResourcePayload(input.resources ?? []),
+      p_parent_id: input.parentId ?? null,
     })
     if (error || !data) { devWarn('add comment', error); return { ok: false, message: friendlyError(error ? { ...error, status } : null, 'post', online()) } }
     return { ok: true, value: { id: data as string } }
