@@ -11,6 +11,8 @@ import { Avatar, MoreMenu, PersonLink } from '../../ui'
 import ExpandableText from '../ExpandableText'
 import { CommentInputBox, revealComment, useCommentSubmit } from './ComposerInput'
 import SafetyMenu from '../../../class-safety/SafetyMenu'
+import CommentAuthorLine from './CommentAuthorLine'
+import DeleteCommentConfirm from './DeleteCommentConfirm'
 import { useIsBlocked } from '../../../class-safety/blockedStore'
 
 const api: TargetCommentsApi = supabaseTargetCommentsApi
@@ -33,8 +35,8 @@ export function Composer({ idBase, placeholder, initial = '', submitLabel, me, a
   )
 }
 
-function Row({ c, isReply, me, now, editing, onReply, onEdit, onEditDone, onDelete, onHide, onOpenProfile, saveEdit }: {
-  c: TargetComment; isReply: boolean; me: ClassIdentity | null; now?: Date; editing: boolean
+function Row({ c, isReply, me, now, editing, deleting, onReply, onEdit, onEditDone, onDelete, onHide, onOpenProfile, saveEdit }: {
+  c: TargetComment; isReply: boolean; me: ClassIdentity | null; now?: Date; editing: boolean; deleting?: boolean
   onReply?: () => void; onEdit: () => void; onEditDone: () => void; onDelete: () => void; onHide: (h: boolean) => void
   onOpenProfile?: (userId: string) => void; saveEdit: (body: string) => Promise<string | null>
 }) {
@@ -45,7 +47,7 @@ function Row({ c, isReply, me, now, editing, onReply, onEdit, onEditDone, onDele
     ...(me?.isTeacher && !c.isMine ? [{ label: c.isHidden ? 'Bỏ ẩn bình luận' : 'Ẩn bình luận', onSelect: () => onHide(!c.isHidden) }] : []),
   ]
   return (
-    <li className={'cs-cmt' + (c.author.isTeacher ? ' is-teacher' : '') + (c.isHidden ? ' is-hidden' : '') + (isReply ? ' is-reply' : '')} data-comment-id={c.id}>
+    <li className={'cs-cmt' + (c.author.isTeacher ? ' is-teacher' : '') + (c.isHidden ? ' is-hidden' : '') + (isReply ? ' is-reply' : '') + (deleting ? ' is-deleting' : '')} data-comment-id={c.id}>
       <PersonLink userId={c.author.userId} onOpen={onOpenProfile} label={`Trang cá nhân của ${c.author.name}`}>
         <Avatar name={c.author.name} url={c.author.avatarUrl} size={isReply ? 26 : 32} />
       </PersonLink>
@@ -55,11 +57,7 @@ function Row({ c, isReply, me, now, editing, onReply, onEdit, onEditDone, onDele
             onSubmit={async b => { const e = await saveEdit(b); if (!e) onEditDone(); return e }} onCancel={onEditDone} />
         ) : (
           <div className="cs-cmt-bubble">
-            <div className="cs-cmt-head">
-              <PersonLink userId={c.author.userId} onOpen={onOpenProfile} label={`Trang cá nhân của ${c.author.name}`} className="cs-cmt-author">{c.author.name}</PersonLink>
-              {c.author.isTeacher && <span className="cs-cmt-badge" title="Nhận xét của giáo viên">Thầy</span>}
-              {c.isHidden && <span className="cs-cmt-hidden">Đã ẩn · học sinh không thấy</span>}
-            </div>
+            <CommentAuthorLine userId={c.author.userId} name={c.author.name} isTeacher={c.author.isTeacher} hidden={c.isHidden} onOpenProfile={onOpenProfile} />
             <ExpandableText text={c.body} className="cs-cmt-body" lines={4} />
           </div>
         )}
@@ -103,11 +101,13 @@ export default function TargetComments({ kind, id, me, now, onOpenProfile }: {
     if (!r.ok) return r.message
     setReplyTo(null); await reload(); revealComment(r.value); return null
   }
-  const del = async (c: TargetComment) => {
-    if (!window.confirm(c.parentId ? 'Xoá trả lời này?' : 'Xoá bình luận này? Các trả lời của nó cũng bị xoá.')) return
-    const r = await api.remove(kind, c.id)
-    if (!r.ok) { setActionError(r.message); return }
-    setActionError(null); await reload()
+  // Xoá: hộp xác nhận chung (DeleteCommentConfirm) — thất bại giữ hộp mở + báo lý do; thành công tải lại danh sách
+  const [deleting, setDeleting] = useState<TargetComment | null>(null)
+  const confirmDelete = async (): Promise<string | null> => {
+    if (!deleting) return null
+    const r = await api.remove(kind, deleting.id)
+    if (!r.ok) return r.message
+    setActionError(null); await reload(); return null
   }
   const hide = async (c: TargetComment, h: boolean) => {
     const r = await api.hide(c.id, h)
@@ -121,9 +121,9 @@ export default function TargetComments({ kind, id, me, now, onOpenProfile }: {
   }
 
   const row = (c: TargetComment, isReply: boolean) => (
-    <Row key={c.id} c={c} isReply={isReply} me={me} now={now} editing={editing === c.id} onOpenProfile={onOpenProfile}
+    <Row key={c.id} c={c} isReply={isReply} me={me} now={now} editing={editing === c.id} deleting={deleting?.id === c.id} onOpenProfile={onOpenProfile}
       onReply={isReply ? undefined : () => setReplyTo(replyTo === c.id ? null : c.id)}
-      onEdit={() => setEditing(c.id)} onEditDone={() => setEditing(null)} onDelete={() => void del(c)} onHide={h => void hide(c, h)} saveEdit={saveEdit(c)} />
+      onEdit={() => setEditing(c.id)} onEditDone={() => setEditing(null)} onDelete={() => setDeleting(c)} onHide={h => void hide(c, h)} saveEdit={saveEdit(c)} />
   )
   return (
     <section className="cs-cmts cs-target-cmts" aria-label="Bình luận" data-kind={kind}>
@@ -151,6 +151,10 @@ export default function TargetComments({ kind, id, me, now, onOpenProfile }: {
         </ul>
       )}
       {actionError && <p className="cs-cmts-error" role="alert">{actionError}</p>}
+      {deleting && (
+        <DeleteCommentConfirm isReply={!!deleting.parentId} replyCount={nodes?.find(n => n.comment.id === deleting.id)?.replies.length ?? 0}
+          onConfirm={confirmDelete} onClose={() => setDeleting(null)} />
+      )}
       {me && <Composer idBase={`cs-cmt-input-${kind}-${id}`} placeholder="Viết bình luận..." submitLabel="Gửi bình luận" me={me} onSubmit={send(null)} />}
     </section>
   )
