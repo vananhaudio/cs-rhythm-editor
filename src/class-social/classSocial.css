@@ -1926,3 +1926,8 @@ button.cs-subs-title:hover { color: var(--cs-accent); }
 .cs-mira-info-body { padding: 0 16px 10px; display: grid; gap: 6px; font-size: 13px; color: var(--cs-text, #18181B); max-height: 40vh; overflow: auto; }
 .cs-mira-info-body p { margin: 0; }
 .cs-mira-info-data { display: grid; gap: 6px; padding-top: 6px; border-top: 1px dashed var(--cs-border, #E4E4E7); }
+
+/* Feed Comments Lát D — tải thêm bình luận cũ hơn */
+.cs-cmts-end { margin: 0; padding: 4px 0; font-size: 13px; color: var(--cs-muted); text-align: center; }
+.cs-cmts-more { min-height: 44px; }
+.cs-cmts-more:disabled { opacity: 0.7; }

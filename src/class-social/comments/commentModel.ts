@@ -1,6 +1,7 @@
 // Domain bình luận / nhận xét của Thầy — hàm THUẦN để test được.
 // Nhận xét của Thầy VẪN là bình luận; tag + đính kèm là metadata có cấu trúc.
 import { safeImageUrl } from '../media/safeImageUrl'
+import { toSeq } from './paging'
 
 export const MAX_COMMENT = 2000
 export const MAX_TAG = 40
@@ -35,11 +36,18 @@ export type CommentRow = {
   tags: { id: number; name: string }[] | null
   resources: { id: string; resource_type: string; resource_id: string; title: string | null; start_seconds: number | null; excerpt: string | null }[] | null
   post_comment_count?: number | null
+  // Chỉ có từ class_comments_page_safe (Paging V1)
+  seq?: number | string | null
+  root_seq?: number | string | null
+  older_roots?: number | null
 }
 
 export type Comment = {
   id: string
   postId: string
+  parentId: string | null
+  seq: number | null          // thứ tự ghi (Paging V1); null = dữ liệu từ hàm cũ
+  rootSeq: number | null      // seq của bình luận gốc chứa nó
   body: string
   createdAt: string
   author: { userId: string; name: string; avatarUrl: string | null; isTeacher: boolean }
@@ -56,6 +64,9 @@ export function toComment(r: CommentRow): Comment | null {
   return {
     id: r.id,
     postId: r.post_id,
+    parentId: r.parent_comment_id ?? null,
+    seq: toSeq(r.seq),
+    rootSeq: toSeq(r.root_seq),
     body: r.body ?? '',
     createdAt: r.created_at,
     author: {

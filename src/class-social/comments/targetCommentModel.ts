@@ -1,5 +1,6 @@
 // Feed Comments V2 — mô hình THUẦN bình luận theo mục (thread / publication; bài Social đọc bảng cũ). Hai tầng: gốc + trả lời MỘT cấp.
 import { safeImageUrl } from '../media/safeImageUrl'
+import { toSeq } from './paging'
 import { MAX_COMMENT } from './commentModel'
 import type { LikeKind } from '../likes/likeModel'
 
@@ -10,11 +11,14 @@ export type TargetCommentRow = {
   id: string; parent_comment_id: string | null; body: string; created_at: string; edited_at: string | null
   author_user_id: string; author_name: string | null; author_avatar_url: string | null; author_role: string | null
   is_mine: boolean | null; is_hidden: boolean | null
+  // Chỉ có từ feed_comment_page (Paging V1)
+  seq?: number | string | null; root_seq?: number | string | null; older_roots?: number | null; total_count?: number | null
 }
 export type TargetComment = {
   id: string; parentId: string | null; body: string; createdAt: string; edited: boolean
   author: { userId: string; name: string; avatarUrl: string | null; isTeacher: boolean }
   isMine: boolean; isHidden: boolean
+  seq: number | null; rootSeq: number | null   // Paging V1; null = từ hàm cũ
 }
 export type CommentNode = { comment: TargetComment; replies: TargetComment[] }
 
@@ -23,7 +27,7 @@ export function toTargetComment(r: TargetCommentRow): TargetComment | null {
   return {
     id: r.id, parentId: r.parent_comment_id ?? null, body: r.body, createdAt: r.created_at, edited: !!r.edited_at,
     author: { userId: r.author_user_id, name: (r.author_name ?? '').trim() || 'Thành viên Class', avatarUrl: safeImageUrl(r.author_avatar_url), isTeacher: r.author_role === 'teacher' },
-    isMine: !!r.is_mine, isHidden: !!r.is_hidden,
+    isMine: !!r.is_mine, isHidden: !!r.is_hidden, seq: toSeq(r.seq), rootSeq: toSeq(r.root_seq),
   }
 }
 
@@ -36,6 +40,15 @@ export function buildThread(rows: TargetCommentRow[]): CommentNode[] {
   for (const c of all) if (c.parentId) roots.get(c.parentId)?.replies.push(c)
   return out
 }
+/** Danh sách phẳng (CŨ → MỚI) → cây hai tầng; trả lời chỉ vào gốc ĐÃ có trong danh sách (trang phân trang luôn kèm đủ gốc). */
+export function buildThreadFromComments(all: TargetComment[]): CommentNode[] {
+  const roots = new Map<string, CommentNode>()
+  const out: CommentNode[] = []
+  for (const c of all) if (!c.parentId) { const n = { comment: c, replies: [] as TargetComment[] }; roots.set(c.id, n); out.push(n) }
+  for (const c of all) if (c.parentId) roots.get(c.parentId)?.replies.push(c)
+  return out
+}
+export const flattenNodes = (nodes: CommentNode[]): TargetComment[] => nodes.flatMap(n => [n.comment, ...n.replies])
 export const countComments = (nodes: CommentNode[]): number => nodes.reduce((n, x) => n + 1 + x.replies.length, 0)
 
 export function checkTargetBody(raw: string): { ok: true; body: string } | { ok: false; error: string } {

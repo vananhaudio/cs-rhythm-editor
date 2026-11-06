@@ -64,7 +64,7 @@ export default function MeHome({ me, identityRev = 0, onOpenProfile, requests, o
 
   // Bình luận: MỘT request cho mọi bài đang hiện (không N+1)
   const postIds = useMemo(() => state.status === 'ready' ? state.posts.filter(isPostEntry).map(p => p.id) : [], [state])
-  const { comments, refresh, expand, refreshAll } = useFeedComments(postIds)
+  const { comments, refresh, expand, loadOlder, drop, refreshAll } = useFeedComments(postIds)
 
   // Đăng xong: tải lại trang đầu (giữ danh sách cũ trong lúc tải) rồi đưa feed vào tầm nhìn
   const onPosted = useCallback(async () => {
@@ -89,6 +89,8 @@ export default function MeHome({ me, identityRev = 0, onOpenProfile, requests, o
     comments,
     onRefreshComments: refresh,
     onExpandComments: expand,
+    onLoadOlderComments: loadOlder,
+    onDropComment: drop,
     onModeratePost: (p, h) => void onModeratePost(p, h),
     onOpenProfile,
     onOpenThread,
