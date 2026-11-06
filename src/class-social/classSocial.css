@@ -1926,3 +1926,10 @@ button.cs-subs-title:hover { color: var(--cs-accent); }
 .cs-mira-info-body { padding: 0 16px 10px; display: grid; gap: 6px; font-size: 13px; color: var(--cs-text, #18181B); max-height: 40vh; overflow: auto; }
 .cs-mira-info-body p { margin: 0; }
 .cs-mira-info-data { display: grid; gap: 6px; padding-top: 6px; border-top: 1px dashed var(--cs-border, #E4E4E7); }
+
+/* ── Feed Composer Lát A: đang gửi (biểu tượng xoay, không đổi kích thước nút) + nút Gửi lại ── */
+.cs-cmt-send.is-sending:disabled { background: var(--cs-p); cursor: progress; }
+.cs-spin { animation: cs-spin 0.9s linear infinite; }
+@keyframes cs-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .cs-spin { animation-duration: 2.4s; } }
+.cs-cmt-retry { min-height: 44px; padding: 0 8px; font-weight: 700; }

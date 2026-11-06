@@ -31,7 +31,7 @@ export default function CommentItem({ c, canModerate, now, onDelete, onModerate,
     ...(canModerate && !c.isMine ? [{ label: c.isHidden ? 'Bỏ ẩn bình luận' : 'Ẩn bình luận', onSelect: () => onModerate(c, !c.isHidden) }] : []),
   ]
   return (
-    <li className={'cs-cmt' + (teacher ? ' is-teacher' : '') + (c.isHidden ? ' is-hidden' : '')}>
+    <li className={'cs-cmt' + (teacher ? ' is-teacher' : '') + (c.isHidden ? ' is-hidden' : '')} data-comment-id={c.id}>
       <PersonLink userId={c.author.userId} onOpen={onOpenProfile} label={`Trang cá nhân của ${c.author.name}`}>
         <Avatar name={c.author.name} url={c.author.avatarUrl} size={32} />
       </PersonLink>
