@@ -168,4 +168,11 @@ begin
   perform t.ok(not exists (select 1 from public.class_comments_page_safe(t.id('post'), null, 50) where id = t.cid('sg30')), 'Social: bình luận bị ẩn, học viên không thấy');
   perform t.as_user('T');
   perform t.ok(exists (select 1 from public.class_comments_page_safe(t.id('post'), null, 50) where id = t.cid('sg30') and is_hidden), 'Social: Thầy vẫn thấy');
+  -- Tích hợp A–D: xoá cascade theo quan hệ cha–con THẬT (không dựa vào số đang hiển thị)
+  perform t.reset();
+  perform t.ok((select count(*) from public.class_post_comments where id in (t.cid('sg3'), a1, nested)) = 3, 'cascade: trước khi xoá có gốc + trả lời + trả lời lồng');
+  delete from public.class_post_comments where id = t.cid('sg3');
+  perform t.ok((select count(*) from public.class_post_comments where id in (t.cid('sg3'), a1, nested)) = 0, 'cascade: xoá gốc kéo theo CẢ trả lời và trả lời của trả lời (3 dòng)');
+  perform t.ok(not exists (select 1 from public.class_post_comments c where c.parent_comment_id is not null and not exists (select 1 from public.class_post_comments p where p.id = c.parent_comment_id)), 'cascade: không còn trả lời mồ côi');
+  perform t.ok((select count(*) from public.class_post_comments where post_id = t.id('post')) = 29, 'cascade: chỉ mất đúng 3 dòng (32 → 29)');
 end $$;
