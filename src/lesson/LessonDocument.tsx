@@ -6,6 +6,7 @@ import { createContext, useContext, useRef, useState, type ReactNode } from 'rea
 import type { ScoreKey } from '../share/shareNoteApi'
 import RegionLayer, { RegionHighlight } from './RegionLayer'
 import { leafKey, splitForMark, studyCompact, studySubsection, type TextAnchor } from '../share/textAnchor'
+import { splitByRanges } from '../share/regionAnchor'
 import { ScoreShareSlot } from './scoreShareSlot'
 import TextSelectionLayer from './TextSelectionLayer'
 import type { CheckpointQuiz, CheckpointSection, LessonDoc, LessonSection, StudyBlock } from './lessonTypes'
@@ -40,13 +41,19 @@ function Block({ label, title, children, sub }:
 
 /** Chia sẻ VÙNG VĂN BẢN (Contextual Share V2): `select` = trang Buổi cho phép chọn (mỗi lá gắn data-tp để lớp chọn đổi vùng chọn → điểm mã);
  *  `focus` = lá + khoảng điểm mã cần tô (đã được server xác nhận và client kiểm băm). Không có provider ⇒ lá in thẳng chuỗi như cũ (không đổi bản in / PDF / trang công khai). */
-export type TextLeafView = { select?: boolean; focus?: TextAnchor | null }
+export type TextLeafView = { select?: boolean; focus?: TextAnchor | null; marks?: Map<string, [number, number][]> }
 const TextLeafCtx = createContext<TextLeafView>({})
 /** Một LÁ văn bản. Chuỗi nguồn được in NGUYÊN VĂN (không trim); lá được tô chia thành [trước][<mark>][sau] — tổng nối lại bằng đúng chuỗi nguồn. */
 function T({ si, path, text }: { si: number; path: (string | number)[]; text: string }) {
   const v = useContext(TextLeafCtx)
   const p = path.map(String)
   const hit = !!v.focus && v.focus.section === si && v.focus.path.join('.') === p.join('.')
+  // V3.1 (khung ngữ cảnh của vùng khoanh): tô ĐÚNG các đoạn đã khoanh trong lá; đoạn không khớp chuỗi nguồn ⇒ không tô gì (fail-closed)
+  const rg = v.marks?.get(leafKey(si, p))
+  if (rg) {
+    const segs = splitByRanges(text, rg)
+    return <>{segs ? segs.map((g, k) => g.hl ? <mark key={k} className="lsn-text-hl" data-testid="region-mark">{g.t}</mark> : <span key={k}>{g.t}</span>) : text}</>
+  }
   if (!v.select && !hit) return <>{text}</>
   const parts = hit && v.focus ? splitForMark(text, v.focus.from, v.focus.to) : null
   const inner = parts ? <>{parts[0]}<mark className="lsn-text-hl" data-testid="text-focus">{parts[1]}</mark>{parts[2]}</> : text
@@ -55,7 +62,7 @@ function T({ si, path, text }: { si: number; path: (string | number)[]; text: st
 
 /** Chế độ KHUNG NGỮ CẢNH (Contextual Share): cùng renderer, chỉ thay LessonScore của đúng bản nhạc đã chia sẻ bằng `node` và lược các phần không thuộc khung.
  *  V2 văn bản: `text` = neo; khối `study` chỉ dựng cửa sổ (gọn: tiêu đề + khối chứa lá + khối phụ thuộc; đầy đủ: cả tiểu mục) — các loại khối còn lại dựng nguyên khối. */
-export type ContextRender = { key?: ScoreKey; node?: ReactNode; text?: TextAnchor; expanded?: boolean }
+export type ContextRender = { key?: ScoreKey; node?: ReactNode; text?: TextAnchor; expanded?: boolean; blocksAt?: number[] }
 /** Phần ngữ cảnh sư phạm ĐI SAU / BÊN CẠNH bản nhạc (chú thích marks, guidance, ghi chú, danh sách dự kiến, trạng thái chờ): hiện ở trang giáo trình gốc, ẩn ở khung mặc định, hiện khi "Xem thêm ngữ cảnh". */
 const showMore = (c: ContextRender | undefined) => !c || !!c.expanded
 const ctxHit = (c: ContextRender | undefined, i: number, path: ScoreKey['path']) => !!c && !!c.key && c.key.section === i && c.key.path.join('.') === path.join('.')
@@ -258,7 +265,8 @@ function renderSection(s: LessonSection, i: number, ctx?: ContextRender) {
           </div>
           {(() => {
             const at = ctx?.text && ctx.text.section === i && ctx.text.path[0] === 'blocks' ? Number(ctx.text.path[1]) : null
-            const only = at !== null && Number.isInteger(at) ? (ctx?.expanded ? studySubsection(s.blocks, at) : studyCompact(s.blocks, at)) : null
+            const ats = ctx?.blocksAt?.length ? ctx.blocksAt : at !== null && Number.isInteger(at) ? [at] : null     // V3.1: nhiều khối study được khoanh ⇒ hợp các cửa sổ
+            const only = ats ? [...new Set(ats.flatMap(a => (ctx?.expanded ? studySubsection(s.blocks, a) : studyCompact(s.blocks, a))))].sort((x, y) => x - y) : null
             const gap = (k: string) => <div key={k} className="lsn-ctx-gap" aria-hidden="true">⋯</div>
             return <>
               {only && only.length > 0 && only[0] > 0 && gap('g0')}
@@ -425,7 +433,7 @@ export default function LessonDocument({ doc, onBack, embedded = false }: { doc:
         </footer>
       </article>
       {share?.onAskText && <TextSelectionLayer root={paperRef} sections={doc.sections} onAsk={share.onAskText} />}
-      {share?.onAskRegion && <RegionLayer root={paperRef} onAsk={share.onAskRegion} />}
+      {share?.onAskRegion && <RegionLayer root={paperRef} sections={doc.sections} onAsk={share.onAskRegion} />}
       {share?.regionFocus && <RegionHighlight root={paperRef} parts={share.regionFocus} focus onShown={share.onFocusShown} />}
     </div>
   )
@@ -433,12 +441,19 @@ export default function LessonDocument({ doc, onBack, embedded = false }: { doc:
 
 /** Khung ngữ cảnh giáo trình (Universal Contextual Share): dựng ĐÚNG khối gốc bằng chính renderer + CSS của LessonDocument, chỉ thay phần bản nhạc bằng `node`
  *  (trích đoạn + vùng chú ý). Dữ liệu `section` là khối ĐÃ qua kiểm quyền ở server/RLS; mọi văn bản đi qua React (không HTML thô). */
-export function ContextSectionView({ section, index, scoreKey, node, text, expanded = false }: { section: unknown; index: number; scoreKey?: ScoreKey; node?: ReactNode; text?: TextAnchor; expanded?: boolean }) {
+export function ContextSectionView({ section, index, scoreKey, node, text, expanded = false, marks, blocksAt, approx }: {
+  section: unknown; index: number; scoreKey?: ScoreKey; node?: ReactNode; text?: TextAnchor; expanded?: boolean
+  /** V3.1 vùng khoanh: các đoạn chữ cần tô (khoá `${sec}:${path}`), các khối study được khoanh (để chọn cửa sổ), hộp ‰ cho phần chỉ vẽ gần đúng */
+  marks?: Map<string, [number, number][]>; blocksAt?: number[]; approx?: [number, number, number, number]
+}) {
   return (
     <div className="lsn is-embedded lsn-ctx" data-testid="context-section" data-expanded={expanded ? '1' : '0'}>
       <style>{CSS}</style>
-      <TextLeafCtx.Provider value={{ focus: text ?? null }}>
-        <article className="lsn-paper">{safeRenderSection(section as LessonSection, index, { key: scoreKey, node, text, expanded })}</article>
+      <TextLeafCtx.Provider value={{ focus: text ?? null, marks }}>
+        <article className="lsn-paper" style={approx ? { position: 'relative' } : undefined}>
+          {safeRenderSection(section as LessonSection, index, { key: scoreKey, node, text, expanded, blocksAt })}
+          {approx && <div className="lsn-ctx-approx" data-testid="region-approx" title="Vùng hình/khoảng trống: chỉ hiển thị gần đúng" style={{ left: `${approx[0] / 10}%`, top: `${approx[1] / 10}%`, width: `${(approx[2] - approx[0]) / 10}%`, height: `${(approx[3] - approx[1]) / 10}%` }} />}
+        </article>
       </TextLeafCtx.Provider>
     </div>
   )
@@ -597,8 +612,10 @@ const CSS = `
 .lsn-rg-layer{position:absolute;left:0;top:0;width:0;height:0;z-index:30;pointer-events:none;}
 .lsn-rg-fill{position:absolute;background:rgba(234,88,12,.18);border-radius:4px;}
 .lsn-rg-fill.is-approx{background:repeating-linear-gradient(45deg,rgba(234,88,12,.14),rgba(234,88,12,.14) 6px,rgba(234,88,12,.05) 6px,rgba(234,88,12,.05) 12px);}
-.lsn-rg-outline{position:absolute;border:2.5px solid #EA580C;border-radius:14px;box-shadow:0 0 0 2px rgba(255,255,255,.85);}
-.lsn-rg-outline.is-approx{border-style:dashed;}
+.lsn-ctx-approx{position:absolute;border:2.5px dashed #EA580C;border-radius:10px;pointer-events:none;background:repeating-linear-gradient(45deg,rgba(234,88,12,.14),rgba(234,88,12,.14) 6px,rgba(234,88,12,.05) 6px,rgba(234,88,12,.05) 12px);}
+.lsn-rg-outline{position:absolute;border:1.5px solid rgba(234,88,12,.55);border-radius:12px;}
+.lsn-rg-outline.is-approx{border:2.5px dashed #EA580C;}
+.lsn-textbar.lsn-rg-bar.is-top{top:0;bottom:auto;padding:calc(10px + env(safe-area-inset-top)) 12px 8px;}
 @media print{.lsn-rg-start,.lsn-rg-capture,.lsn-rg-layer{display:none;}}
 
 .lsn-share-icon{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border:1px solid ${P.line};border-radius:50%;background:#fff;color:${P.inkSoft};cursor:pointer;}

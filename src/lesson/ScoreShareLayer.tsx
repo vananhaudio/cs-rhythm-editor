@@ -8,7 +8,7 @@ import { PenLine, X } from 'lucide-react'
 import { ScoreShareSlot } from './scoreShareSlot'
 import { barCount, hitTestBar, rangeFits, rectsForBars, toRange, type BoundsLike, type HighlightRect } from './scoreShare'
 import { barRangeText, sameScoreKey, type ScoreKey } from '../share/shareNoteApi'
-import { registerScoreProbe } from './regionDom'
+import { notifyLayoutChange, registerScoreProbe } from './regionDom'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AlphaApi = any
@@ -80,6 +80,9 @@ export default function ScoreShareLayer({ api, host, tick, tex, shareKey, childr
     const el = overlayRef.current.querySelector<HTMLElement>('.lsn-share-hl.is-focus')
     if (el) { el.scrollIntoView({ block: 'center' }); ctx?.onFocusShown?.(el) }
   }, [focus, boxes.focus, ctx])
+
+  // V3.1: alphaTab khắc xong / khắc lại (tick đổi) ⇒ báo cho vùng khoanh vẽ lại (thay vòng hỏi định kỳ)
+  useEffect(() => { if (ctx?.onAskRegion || ctx?.regionFocus) notifyLayoutChange() }, [tick, ctx?.onAskRegion, ctx?.regionFocus])
 
   // V3 (khoanh vùng hỗn hợp): đăng ký bản nhạc này vào sổ để khung chữ nhật tra được ô nhịp nằm dưới khung. Toạ độ client, tính lại mỗi lần gọi (không lưu pixel).
   useEffect(() => {

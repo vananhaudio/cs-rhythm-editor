@@ -9,6 +9,8 @@ import LessonScore from '../../lesson/LessonScore'
 import { ContextSectionView } from '../../lesson/LessonDocument'
 import { contextHasMore } from '../../share/contextShare'
 import { textContextHasMore } from '../../share/textAnchor'
+import { summarize, type RegionPart } from '../../share/regionAnchor'
+import { regionHasMore, regionViews } from '../../share/regionContext'
 import type { ExcerptPlan } from '../../share/scoreExcerpt'
 import { loadSharePreview, requestRenderSlot, shareNoteMessage, type PreviewLoad } from '../../share/shareNotePreviewStore'
 import type { ToolShareView } from './registry'
@@ -33,6 +35,25 @@ function useNear(ref: { current: Element | null }): boolean {
     return () => io.disconnect()
   }, [ref])
   return near
+}
+
+/** Vùng khoanh trong Feed: nguyên cảnh = các khối giáo trình GỐC (cửa sổ gọn / tiểu mục đầy đủ) dựng bằng chính renderer; chữ được khoanh tô cam đúng từng đoạn,
+ *  bản nhạc chỉ vẽ đúng dải ô, phần hình/khoảng trống có khung nét đứt (gần đúng). Mặc định gọn: tối đa 3 khối, tối đa 1 bản nhạc sống. */
+function RegionContextView({ sections, parts, expanded, onPlan }: { sections: unknown[]; parts: RegionPart[]; expanded: boolean; onPlan: (p: ExcerptPlan | null) => void }) {
+  const views = regionViews(sections, parts, expanded)
+  return (
+    <div className="cs-sn-region" data-testid="region-context" data-parts={parts.length} data-shown={views.shown.length}>
+      {views.shown.map((v, k) => (
+        <div key={v.part.sec} className="cs-sn-region-part" data-sec={v.part.sec}>
+          <ContextSectionView section={sections[v.part.sec]} index={v.part.sec} expanded={expanded} marks={v.marks} blocksAt={v.blocksAt} approx={v.approx ? v.part.box : undefined}
+            scoreKey={v.score ? { section: v.part.sec, path: v.score.p as never } : undefined}
+            node={v.score && v.tex ? <LessonScore tex={v.tex} excerpt={{ from: v.score.from, to: v.score.to }} onExcerpt={k === 0 ? onPlan : undefined} zoomable={false} barsPerRow={4} excerptContext={expanded ? 'full' : 'focus'} /> : undefined} />
+          {v.part.scores.length > 0 && !v.score && <p className="cs-sn-msg">Bản nhạc ô {v.part.scores[0].from === v.part.scores[0].to ? v.part.scores[0].from : `${v.part.scores[0].from}–${v.part.scores[0].to}`} — bấm “Xem đầy đủ” để xem.</p>}
+        </div>
+      ))}
+      {views.hidden > 0 && <p className="cs-sn-msg" data-testid="region-hidden">+{views.hidden} khối nữa trong vùng khoanh — bấm “Xem đầy đủ”. ({summarize(parts)})</p>}
+    </div>
+  )
 }
 
 export default function ShareNotePost({ view }: { view: ToolShareView }) {
@@ -60,7 +81,8 @@ export default function ShareNotePost({ view }: { view: ToolShareView }) {
   }, [near, noteId])
 
   // Khe dựng: chỉ khi có nhạc và thẻ đang gần
-  const isTextPost = note?.kind === 'text'                           // vùng văn bản: KHÔNG alphaTab ⇒ không xin khe dựng, không đếm vào MAX_LIVE_RENDERERS
+  // vùng văn bản (hoặc vùng khoanh KHÔNG có bản nhạc): KHÔNG alphaTab ⇒ không xin khe dựng, không đếm vào MAX_LIVE_RENDERERS
+  const isTextPost = note?.kind === 'text' || (load?.status === 'ok' && load.kind === 'region' && !load.parts.some(p => p.scores.length > 0))
   const wantRender = near && load?.status === 'ok'
   useEffect(() => {
     if (!wantRender || isTextPost) return
@@ -87,9 +109,11 @@ export default function ShareNotePost({ view }: { view: ToolShareView }) {
   const live = wantRender && (slot || isTextPost) && load?.status === 'ok'
   const label = plan?.truncated ? `${view.detail ?? ''} · hiện ${plan.focusTo - plan.focusFrom + 1} ô đầu — bấm để xem đủ` : view.detail
   // "Xem đầy đủ" chỉ hiện khi thật sự có gì thêm: phần sư phạm bị ẩn, mô tả bị rút gọn, hoặc ô nhạc ngữ cảnh chưa vẽ
-  const hasMore = live && load?.status === 'ok' && load.section !== undefined && (load.kind === 'text'
+  const hasMore = live && load?.status === 'ok' && (load.kind === 'region'
+    ? (regionHasMore(load.sections, load.parts) || expanded)
+    : load.section !== undefined && (load.kind === 'text'
     ? (textContextHasMore(load.section, load.text) || expanded)
-    : (contextHasMore([load.section], { ...load.score, section: 0 }) || clamped || !!plan?.moreContext || expanded))
+    : (contextHasMore([load.section], { ...load.score, section: 0 }) || clamped || !!plan?.moreContext || expanded)))
   const more = hasMore
     ? <button type="button" className="cs-sn-more" data-testid="share-note-more" aria-expanded={expanded} onClick={() => setExpanded(v => !v)}>
         <span>{expanded ? 'Thu gọn' : 'Xem đầy đủ'}</span>{expanded ? <ChevronUp size={16} aria-hidden="true" /> : <ChevronDown size={16} aria-hidden="true" />}
@@ -106,10 +130,11 @@ export default function ShareNotePost({ view }: { view: ToolShareView }) {
       {load?.status === 'ok' && (
         <div className="cs-sn-slot" style={{ minHeight: live ? undefined : height || 120 }} ref={prev} data-testid="share-note-preview" data-live={live ? '1' : '0'} data-plan={plan ? `${plan.start},${plan.count},${plan.focusFrom},${plan.focusTo}` : undefined}>
           {live
-            ? <PreviewBoundary fallback={<p className="cs-sn-msg">{load.kind === 'text' ? 'Chưa hiển thị được đoạn văn bản.' : 'Chưa hiển thị được bản nhạc.'} Bấm “Mở trong giáo trình”.</p>}>
+            ? <PreviewBoundary fallback={<p className="cs-sn-msg">{load.kind === 'text' ? 'Chưa hiển thị được đoạn văn bản.' : load.kind === 'region' ? 'Chưa hiển thị được vùng khoanh.' : 'Chưa hiển thị được bản nhạc.'} Bấm “Mở trong giáo trình”.</p>}>
                 <a className="cs-sn-preview" href={view.action.href} aria-label={`Mở trong giáo trình: ${view.detail ?? 'đoạn đã chọn'}`}>
                   {(() => {
                     // Vùng văn bản: khung = khối giáo trình GỐC (cửa sổ gọn / tiểu mục) dựng bằng chính renderer; vùng chọn là <mark> cam. Không alphaTab.
+                    if (load.kind === 'region') return <RegionContextView sections={load.sections} parts={load.parts} expanded={expanded} onPlan={setPlan} />
                     if (load.kind === 'text') return <ContextSectionView section={load.section} index={load.text.section} text={load.text} expanded={expanded} />
                     const score = <LessonScore tex={load.tex} excerpt={load.bars} onExcerpt={setPlan} zoomable={false} barsPerRow={4} excerptContext={load.section ? (expanded ? 'full' : 'focus') : 'full'} />
                     // Khung ngữ cảnh = khối giáo trình GỐC (tiêu đề, mô tả, nhịp độ, tên tác phẩm) dựng bằng chính renderer của LessonDocument; thiếu khối → chỉ trích đoạn như V1.1

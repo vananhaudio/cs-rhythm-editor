@@ -6,7 +6,7 @@ do $$ begin
   end if;
 end $$;
 drop function if exists public.social_share_share_region(uuid), public.share_region_open(uuid), public.share_region_create(uuid, jsonb, text, text),
-  public.share_region_resolve(uuid, jsonb), public.share_region_build(uuid, jsonb), public.share_region_sha(jsonb);
+  public.share_region_resolve(uuid, jsonb), public.share_region_build(uuid, jsonb), public.share_region_leaf_txt(jsonb, text[]), public.share_region_sha(jsonb);
 alter table public.share_notes drop constraint if exists share_notes_anchor_shape_check;
 alter table public.share_notes drop column if exists region;
 alter table public.share_notes add constraint share_notes_anchor_shape_check check (

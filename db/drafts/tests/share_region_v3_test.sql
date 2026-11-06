@@ -9,6 +9,11 @@ create function pg_temp.sec(s uuid, k text, title text) returns integer language
   select (e.i - 1)::integer from public.class_lesson_content c cross join lateral jsonb_array_elements(c.blocks) with ordinality e(v, i)
    where c.session_id = s and e.v ->> 'kind' = k and (title is null or e.v ->> 'title' = title) limit 1 $$;
 
+-- lf: phần tử leaves {p, r:[[from,to]]} cho đoạn `phrase` (điểm mã) trong lá `path` của khối `sec` — position() đếm điểm mã như share_text_*
+create function pg_temp.lf(s uuid, sec integer, pth text[], phrase text) returns jsonb language sql as $$
+  select jsonb_build_object('p', to_jsonb(pth), 'r', jsonb_build_array(jsonb_build_array(position(phrase in l.txt) - 1, position(phrase in l.txt) - 1 + char_length(phrase))))
+    from public.class_lesson_content c cross join lateral public.share_text_leaves(c.blocks -> sec) l where c.session_id = s and l.path = pth $$;
+
 begin;
 update public.share_notes set created_at = created_at - interval '1 hour';
 do $$
@@ -19,7 +24,7 @@ begin
   execute 'reset role';
   i_sc := pg_temp.sec(s, 'score', 'Thành phố buồn'); i_st := pg_temp.sec(s, 'study', 'Ôn tập 7 ngày'); i_fr := pg_temp.sec(s, 'fretboard', null); i_st2 := pg_temp.sec(s, 'study', 'Luyện tập sau sơ đồ');
   parts := jsonb_build_array(
-    jsonb_build_object('sec', i_st, 'box', jsonb_build_array(0, 100, 1000, 600), 'leaves', jsonb_build_array(jsonb_build_array('blocks','1','text'), jsonb_build_array('blocks','2','items','0')), 'scores', '[]'::jsonb),
+    jsonb_build_object('sec', i_st, 'box', jsonb_build_array(0, 100, 1000, 600), 'leaves', jsonb_build_array(pg_temp.lf(s, i_st, array['blocks','1','text'], 'nghe kỹ nhịp chùm ba ở ô 2'), pg_temp.lf(s, i_st, array['blocks','2','items','0'], 'Khởi động ngón cái chậm rãi')), 'scores', '[]'::jsonb),
     jsonb_build_object('sec', i_sc, 'box', jsonb_build_array(0, 0, 1000, 1000), 'leaves', '[]'::jsonb, 'scores', jsonb_build_array(jsonb_build_object('p', jsonb_build_array('tex'), 'from', 2, 'to', 4))),
     jsonb_build_object('sec', i_fr, 'box', jsonb_build_array(100, 100, 900, 900), 'leaves', '[]'::jsonb, 'scores', '[]'::jsonb));
   perform pg_temp.ok(i_sc is not null and i_st is not null and i_fr is not null and i_st2 is not null, 'R0 fixture có đủ khối chữ / nhạc / hình');
@@ -31,7 +36,9 @@ begin
   perform pg_temp.ok(public.share_region_create(s, parts, 'Em khoanh cả chữ, nhạc và hình', 'ck-r1-aaaaaaaa') = nid, 'R1b bấm đúp / thử lại cùng khoá → cùng id');
   execute 'reset role';
   select region into parts from public.share_notes where id = nid;
-  perform pg_temp.ok(jsonb_array_length(parts) = 3 and (select bool_and(x ->> 'sha' ~ '^[0-9a-f]{64}$' and x ->> 'fp' ~ '^[0-9a-f]{64}$') from jsonb_array_elements(parts) x), 'R2 server TỰ tính fp + sha cho từng khối');
+  perform pg_temp.ok(jsonb_array_length(parts) = 3 and (select bool_and(x ->> 'fp' ~ '^[0-9a-f]{64}$') from jsonb_array_elements(parts) x)
+    and (parts -> 1 -> 'leaves' -> 0 -> 'r' -> 0 ->> 's') ~ '^[0-9a-f]{64}$' and (parts -> 1 -> 'leaves' -> 0 -> 'r' -> 0 ->> 'c') ~ '^[0-9a-f]{64}$'
+    and (parts -> 0 -> 'scores' -> 0 ->> 'x') ~ '^[0-9a-f]{64}$' and (parts -> 2 ->> 'sha') ~ '^[0-9a-f]{64}$' and not (parts -> 1) ? 'sha' and not (parts -> 0) ? 'sha', 'R2 server TỰ tính fp + băm từng đoạn chữ / bản nhạc; băm cả khối CHỈ cho phần hình');
   perform pg_temp.ok(parts::text not like '%chùm ba%' and parts::text not like '%Thành phố%' and parts::text not like '%Sơ đồ%', 'R3 neo KHÔNG chứa nội dung giáo trình');
   perform pg_temp.ok((select anchor_kind = 'region' and score_path is null and text_path is null and bar_from is null from public.share_notes where id = nid), 'R4 hàng: anchor_kind=region, cột V1/V2 NULL');
 
@@ -47,7 +54,8 @@ begin
   execute 'set local role authenticated'; perform pg_temp.who(b);
   select * into o from public.share_region_open(nid);
   perform pg_temp.ok(o.status = 'ok' and jsonb_array_length(o.region) = 3 and o.note = 'Em khoanh cả chữ, nhạc và hình', 'R7 B (có quyền) mở → ok + 3 phần');
-  perform pg_temp.ok(not (o.region -> 0) ? 'sha' and not (o.region -> 0) ? 'fp', 'R8 phần trả về KHÔNG lộ băm nội bộ (chỉ sec/box/leaves/scores)');
+  perform pg_temp.ok(not (o.region -> 1) ? 'sha' and not (o.region -> 1) ? 'fp', 'R8 phần trả về KHÔNG lộ băm nội bộ (chỉ sec/box/leaves/scores)');
+  perform pg_temp.ok(not o.region::text ~ '"(s|c|x|sha)"' and (o.region -> 1 -> 'leaves' -> 0 -> 'r' -> 0 ->> 0)::int > 0, 'R8c đoạn chữ trả về là [từ,đến) điểm mã, không băm');
   perform pg_temp.ok(not exists (select 1 from public.share_note_open_v2(nid) v where v.status = 'ok' and v.score_path is not null), 'R8b open_v2 cho vùng region không trả toạ độ nhạc/văn bản (bundle V2 cũ → không hiểu, an toàn)');
   perform pg_temp.who(c);
   select * into o from public.share_region_open(nid);
@@ -56,8 +64,19 @@ begin
   -- R10 payload giả
   execute 'reset role'; n0 := (select count(*) from public.share_notes);
   perform pg_temp.who(a); execute 'set local role authenticated';
-  r := pg_temp.try(format($q$select public.share_region_create(%L, %L::jsonb, 'x', 'ck-r10-00000001')$q$, s, jsonb_build_array(jsonb_build_object('sec', i_st, 'box', jsonb_build_array(0,0,1000,1000), 'leaves', jsonb_build_array(jsonb_build_array('blocks','99','text')), 'scores', '[]'::jsonb))));
+  r := pg_temp.try(format($q$select public.share_region_create(%L, %L::jsonb, 'x', 'ck-r10-00000001')$q$, s, jsonb_build_array(jsonb_build_object('sec', i_st, 'box', jsonb_build_array(0,0,1000,1000), 'leaves', jsonb_build_array(jsonb_build_object('p', jsonb_build_array('blocks','99','text'), 'r', jsonb_build_array(jsonb_build_array(0, 5)))), 'scores', '[]'::jsonb))));
   perform pg_temp.ok(r like '22023%', 'R10 lá không tồn tại bị từ chối: ' || left(r, 30));
+  -- đoạn chữ sai: vượt độ dài lá / đảo / chồng nhau / chỉ khoảng trắng / thiếu r
+  r := pg_temp.try(format($q$select public.share_region_create(%L, %L::jsonb, 'x', 'ck-r10-0000000a')$q$, s, jsonb_build_array(jsonb_build_object('sec', i_st, 'box', jsonb_build_array(0,0,1000,1000), 'leaves', jsonb_build_array(jsonb_build_object('p', jsonb_build_array('blocks','1','text'), 'r', jsonb_build_array(jsonb_build_array(0, 9999)))), 'scores', '[]'::jsonb))));
+  perform pg_temp.ok(r like '22023%', 'R10a đoạn chữ vượt độ dài lá bị từ chối');
+  r := pg_temp.try(format($q$select public.share_region_create(%L, %L::jsonb, 'x', 'ck-r10-0000000b')$q$, s, jsonb_build_array(jsonb_build_object('sec', i_st, 'box', jsonb_build_array(0,0,1000,1000), 'leaves', jsonb_build_array(jsonb_build_object('p', jsonb_build_array('blocks','1','text'), 'r', jsonb_build_array(jsonb_build_array(10, 20), jsonb_build_array(15, 30)))), 'scores', '[]'::jsonb))));
+  perform pg_temp.ok(r like '22023%', 'R10b hai đoạn chồng nhau bị từ chối');
+  r := pg_temp.try(format($q$select public.share_region_create(%L, %L::jsonb, 'x', 'ck-r10-0000000c')$q$, s, jsonb_build_array(jsonb_build_object('sec', i_st, 'box', jsonb_build_array(0,0,1000,1000), 'leaves', jsonb_build_array(jsonb_build_object('p', jsonb_build_array('blocks','1','text'), 'r', jsonb_build_array(jsonb_build_array(20, 10)))), 'scores', '[]'::jsonb))));
+  perform pg_temp.ok(r like '22023%', 'R10c đoạn đảo đầu/cuối bị từ chối');
+  r := pg_temp.try(format($q$select public.share_region_create(%L, %L::jsonb, 'x', 'ck-r10-0000000d')$q$, s, jsonb_build_array(jsonb_build_object('sec', i_st, 'box', jsonb_build_array(0,0,1000,1000), 'leaves', jsonb_build_array(jsonb_build_object('p', jsonb_build_array('blocks','1','text'), 'r', jsonb_build_array(jsonb_build_array(3, 4)))), 'scores', '[]'::jsonb))));
+  perform pg_temp.ok(r like '22023%', 'R10d đoạn chỉ có khoảng trắng bị từ chối');
+  r := pg_temp.try(format($q$select public.share_region_create(%L, %L::jsonb, 'x', 'ck-r10-0000000e')$q$, s, jsonb_build_array(jsonb_build_object('sec', i_st, 'box', jsonb_build_array(0,0,1000,1000), 'leaves', jsonb_build_array(jsonb_build_object('p', jsonb_build_array('blocks','1','text'))), 'scores', '[]'::jsonb))));
+  perform pg_temp.ok(r like '22023%', 'R10e lá thiếu danh sách đoạn bị từ chối (không tự lấy cả lá)');
   r := pg_temp.try(format($q$select public.share_region_create(%L, %L::jsonb, 'x', 'ck-r10-00000002')$q$, s, jsonb_build_array(jsonb_build_object('sec', i_st, 'box', jsonb_build_array(0,0,1000,1000), 'leaves', '[]'::jsonb, 'scores', jsonb_build_array(jsonb_build_object('p', jsonb_build_array('tex'), 'from', 1, 'to', 2))))));
   perform pg_temp.ok(r like '22023%', 'R11 "bản nhạc" ở khối không có nhạc bị từ chối');
   r := pg_temp.try(format($q$select public.share_region_create(%L, %L::jsonb, 'x', 'ck-r10-00000003')$q$, s, jsonb_build_array(jsonb_build_object('sec', i_sc, 'box', jsonb_build_array(0,0,1000,1000), 'leaves', '[]'::jsonb, 'scores', jsonb_build_array(jsonb_build_object('p', jsonb_build_array('tex'), 'from', 1, 'to', 80))))));
@@ -85,11 +104,11 @@ rollback;
 
 -- ───────────── sửa giáo trình: mỗi kịch bản một transaction, ROLLBACK cuối ─────────────
 create function pg_temp.mk(ck text) returns uuid language plpgsql as $$
-declare s uuid := '51000000-0000-4000-8000-000000000001'; i_sc integer := pg_temp.sec(s, 'score', 'Thành phố buồn'); i_st integer := pg_temp.sec(s, 'study', 'Ôn tập 7 ngày'); i_fr integer := pg_temp.sec(s, 'fretboard', null); v_id uuid;
+declare s uuid := '51000000-0000-4000-8000-000000000001'; i_sc integer := pg_temp.sec(s, 'score', 'Thành phố buồn'); i_st integer := pg_temp.sec(s, 'study', 'Ôn tập 7 ngày'); i_fr integer := pg_temp.sec(s, 'fretboard', null); v_id uuid; v_l jsonb := pg_temp.lf(s, pg_temp.sec(s, 'study', 'Ôn tập 7 ngày'), array['blocks','1','text'], 'nghe kỹ nhịp chùm ba ở ô 2');
 begin
   perform pg_temp.who('aaaaaaaa-0000-4000-8000-00000000000a'); execute 'set local role authenticated';
   v_id := public.share_region_create(s, jsonb_build_array(
-    jsonb_build_object('sec', i_st, 'box', jsonb_build_array(0, 100, 1000, 600), 'leaves', jsonb_build_array(jsonb_build_array('blocks','1','text')), 'scores', '[]'::jsonb),
+    jsonb_build_object('sec', i_st, 'box', jsonb_build_array(0, 100, 1000, 600), 'leaves', jsonb_build_array(v_l), 'scores', '[]'::jsonb),
     jsonb_build_object('sec', i_sc, 'box', jsonb_build_array(0, 0, 1000, 1000), 'leaves', '[]'::jsonb, 'scores', jsonb_build_array(jsonb_build_object('p', jsonb_build_array('tex'), 'from', 2, 'to', 4))),
     jsonb_build_object('sec', i_fr, 'box', jsonb_build_array(100, 100, 900, 900), 'leaves', '[]'::jsonb, 'scores', '[]'::jsonb)), 'ghi chú', ck);
   perform public.social_share_share_region(v_id);          -- đăng Feed để B THẤY
@@ -100,11 +119,60 @@ create function pg_temp.secs(j jsonb) returns text language sql as $$ select str
 
 \set B '\'bbbbbbbb-0000-4000-8000-00000000000b\''
 begin; update public.share_notes set created_at = created_at - interval '1 hour';
-do $$ declare s uuid := '51000000-0000-4000-8000-000000000001'; n uuid; o record; i_st integer := pg_temp.sec(s, 'study', 'Ôn tập 7 ngày');
+do $$ declare s uuid := '51000000-0000-4000-8000-000000000001'; n uuid; o record; i_st integer := pg_temp.sec(s, 'study', 'Ôn tập 7 ngày'); i_sc integer := pg_temp.sec(s, 'score', 'Thành phố buồn');
 begin n := pg_temp.mk('ck-s1-00000001'); execute 'reset role';
   update public.class_lesson_content set blocks = jsonb_set(blocks, array[i_st::text, 'blocks', '1', 'text'], to_jsonb('Câu đã bị Thầy sửa lại hoàn toàn.'::text)) where session_id = s;
   select * into o from pg_temp.opn('bbbbbbbb-0000-4000-8000-00000000000b', n) as (status text, note text, author_id uuid, is_author boolean, class_id uuid, session_no integer, region jsonb, created_at timestamptz);
-  perform pg_temp.ok(o.status = 'stale' and o.region is null and o.note is not null, 'S1 sửa một câu trong khối được khoanh → stale, KHÔNG trả toạ độ (vẫn có câu hỏi)');
+  perform pg_temp.ok(o.status = 'stale' and o.region is null and o.note is not null, 'S1 sửa chính đoạn chữ được khoanh → stale, KHÔNG trả toạ độ (vẫn có câu hỏi)');
+end $$; rollback;
+
+begin; update public.share_notes set created_at = created_at - interval '1 hour';
+do $$ declare s uuid := '51000000-0000-4000-8000-000000000001'; n uuid; o record; i_st integer := pg_temp.sec(s, 'study', 'Ôn tập 7 ngày'); i_sc integer := pg_temp.sec(s, 'score', 'Thành phố buồn');
+begin n := pg_temp.mk('ck-s1b-00000001'); execute 'reset role';
+  update public.class_lesson_content set blocks = jsonb_set(blocks, array[i_st::text, 'blocks', '5', 'text'], to_jsonb('Câu ngoài vùng khoanh đã sửa.'::text)) where session_id = s;
+  select * into o from pg_temp.opn('bbbbbbbb-0000-4000-8000-00000000000b', n) as (status text, note text, author_id uuid, is_author boolean, class_id uuid, session_no integer, region jsonb, created_at timestamptz);
+  perform pg_temp.ok(o.status = 'ok' and jsonb_array_length(o.region) = 3, 'S1b sửa đoạn KHÁC trong cùng khối → vẫn ok (không stale oan)');
+end $$; rollback;
+
+begin; update public.share_notes set created_at = created_at - interval '1 hour';
+do $$ declare s uuid := '51000000-0000-4000-8000-000000000001'; n uuid; o record; i_st integer := pg_temp.sec(s, 'study', 'Ôn tập 7 ngày'); i_sc integer := pg_temp.sec(s, 'score', 'Thành phố buồn');
+begin n := pg_temp.mk('ck-s1c-00000001'); execute 'reset role';
+  update public.class_lesson_content set blocks = jsonb_set(blocks, array[i_st::text, 'blocks', '1', 'text'], to_jsonb(('Câu mở đầu mới thêm vào. ' || (blocks #>> array[i_st::text, 'blocks', '1', 'text']))::text)) where session_id = s;
+  select * into o from pg_temp.opn('bbbbbbbb-0000-4000-8000-00000000000b', n) as (status text, note text, author_id uuid, is_author boolean, class_id uuid, session_no integer, region jsonb, created_at timestamptz);
+  perform pg_temp.ok(o.status = 'moved' and (o.region -> 1 -> 'leaves' -> 0 -> 'r' -> 0 ->> 0)::int = (select position('nghe kỹ nhịp chùm ba ở ô 2' in c.blocks #>> array[i_st::text, 'blocks', '1', 'text']) - 1 from public.class_lesson_content c where c.session_id = s), 'S1c thêm câu TRƯỚC đoạn được khoanh trong cùng lá → vẫn tìm đúng đoạn (offset dời đúng)');
+end $$; rollback;
+
+begin; update public.share_notes set created_at = created_at - interval '1 hour';
+do $$ declare s uuid := '51000000-0000-4000-8000-000000000001'; n uuid; o record; i_st integer := pg_temp.sec(s, 'study', 'Ôn tập 7 ngày'); i_sc integer := pg_temp.sec(s, 'score', 'Thành phố buồn');
+begin n := pg_temp.mk('ck-s1d-00000001'); execute 'reset role';
+  update public.class_lesson_content set blocks = jsonb_set(blocks, array[i_st::text, 'blocks', '1', 'text'], to_jsonb(((blocks #>> array[i_st::text, 'blocks', '1', 'text']) || ' Câu thêm cuối đoạn.')::text)) where session_id = s;
+  select * into o from pg_temp.opn('bbbbbbbb-0000-4000-8000-00000000000b', n) as (status text, note text, author_id uuid, is_author boolean, class_id uuid, session_no integer, region jsonb, created_at timestamptz);
+  perform pg_temp.ok(o.status = 'ok' and o.region -> 1 -> 'leaves' -> 0 -> 'r' -> 0 ->> 0 = (select (position('nghe kỹ nhịp chùm ba ở ô 2' in c.blocks #>> array[i_st::text, 'blocks', '1', 'text']) - 1)::text from public.class_lesson_content c where c.session_id = s), 'S1d thêm câu SAU đoạn được khoanh → ok, không dời');
+end $$; rollback;
+
+begin; update public.share_notes set created_at = created_at - interval '1 hour';
+do $$ declare s uuid := '51000000-0000-4000-8000-000000000001'; n uuid; o record; i_st integer := pg_temp.sec(s, 'study', 'Ôn tập 7 ngày'); i_sc integer := pg_temp.sec(s, 'score', 'Thành phố buồn');
+begin n := pg_temp.mk('ck-s1e-00000001'); execute 'reset role';
+  update public.class_lesson_content set blocks = jsonb_set(blocks, array[i_sc::text, 'tex'], to_jsonb('tex đã đổi |'::text)) where session_id = s;
+  select * into o from pg_temp.opn('bbbbbbbb-0000-4000-8000-00000000000b', n) as (status text, note text, author_id uuid, is_author boolean, class_id uuid, session_no integer, region jsonb, created_at timestamptz);
+  perform pg_temp.ok(o.status = 'stale' and o.region is null, 'S1e sửa bản nhạc được khoanh → stale');
+end $$; rollback;
+
+begin; update public.share_notes set created_at = created_at - interval '1 hour';
+do $$ declare s uuid := '51000000-0000-4000-8000-000000000001'; n uuid; o record; i_st integer := pg_temp.sec(s, 'study', 'Ôn tập 7 ngày'); i_sc integer := pg_temp.sec(s, 'score', 'Thành phố buồn');
+begin n := pg_temp.mk('ck-s1f-00000001'); execute 'reset role';
+  update public.class_lesson_content set blocks = jsonb_set(blocks, array[i_st::text, 'title'], to_jsonb('Ôn tập 8 ngày'::text)) where session_id = s;
+  select * into o from pg_temp.opn('bbbbbbbb-0000-4000-8000-00000000000b', n) as (status text, note text, author_id uuid, is_author boolean, class_id uuid, session_no integer, region jsonb, created_at timestamptz);
+  perform pg_temp.ok(o.status = 'ok' and jsonb_array_length(o.region) = 3, 'S1f đổi tiêu đề khối (không phải thứ được khoanh) → vẫn ok');
+end $$; rollback;
+
+begin; update public.share_notes set created_at = created_at - interval '1 hour';
+do $$ declare s uuid := '51000000-0000-4000-8000-000000000001'; n uuid; o record; i_st integer := pg_temp.sec(s, 'study', 'Ôn tập 7 ngày');
+begin n := pg_temp.mk('ck-s9-00000001'); execute 'reset role';
+  -- đoạn được khoanh xuất hiện HAI lần trong lá với ngữ cảnh khác hẳn bản gốc ⇒ không đoán ⇒ stale
+  update public.class_lesson_content set blocks = jsonb_set(blocks, array[i_st::text, 'blocks', '1', 'text'], to_jsonb('Mở đầu khác. nghe kỹ nhịp chùm ba ở ô 2 rồi dừng. Kết thúc khác, lại nghe kỹ nhịp chùm ba ở ô 2 nữa.'::text)) where session_id = s;
+  select * into o from pg_temp.opn('bbbbbbbb-0000-4000-8000-00000000000b', n) as (status text, note text, author_id uuid, is_author boolean, class_id uuid, session_no integer, region jsonb, created_at timestamptz);
+  perform pg_temp.ok(o.status = 'stale' and o.region is null, 'S9 đoạn khoanh lặp hai lần, không phân biệt được bằng ngữ cảnh → stale, không đoán');
 end $$; rollback;
 
 begin; update public.share_notes set created_at = created_at - interval '1 hour';

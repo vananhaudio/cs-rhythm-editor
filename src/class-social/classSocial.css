@@ -1917,3 +1917,7 @@ button.cs-subs-title:hover { color: var(--cs-accent); }
 .cs-sound-btn.is-on { color: var(--cs-p); }
 .cs-sound-btn:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--cs-p-soft), 0 0 0 3.5px var(--cs-p); }
 @media (min-width: 701px) { .cs-chat { height: clamp(480px, calc(100dvh - var(--cs-topbar-h) - 72px), 820px); } }
+
+/* Contextual Share V3.1 — vùng khoanh trong Feed: nhiều khối giáo trình xếp dọc, cách nhau gọn */
+.cs-sn-region{display:flex;flex-direction:column;gap:10px;}
+.cs-sn-region-part{position:relative;}

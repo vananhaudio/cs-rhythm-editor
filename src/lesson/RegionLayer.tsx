@@ -7,7 +7,7 @@ import { useCallback, useEffect, useRef, useState, type PointerEvent as RPointer
 import { createPortal } from 'react-dom'
 import { PenLine, X, Hand, MessageCircleQuestion } from 'lucide-react'
 import { buildParts, drawParts, normRect, REGION_HINT, summarize, type DrawnPart, type Rect, type RegionPart } from '../share/regionAnchor'
-import { lookupFor, partsReady, probeSections } from './regionDom'
+import { lookupFor, onLayoutChange, partsReady, probeSections } from './regionDom'
 
 const pageRect = (r: Rect): Rect => ({ x: r.x + window.scrollX, y: r.y + window.scrollY, w: r.w, h: r.h })   // client → toạ độ trang (cuộn không làm lệch khi vẽ)
 
@@ -18,17 +18,31 @@ export function RegionHighlight({ root, parts, focus = false, onShown }: { root:
   const shown = useRef(false)
   useEffect(() => {
     shown.current = false
+    const el = root.current
+    if (!el) return
     const tick = () => {
-      const el = root.current
-      if (!el) return
       const d = drawParts(parts, lookupFor(el)).map(p => ({ ...p, rects: p.rects.map(pageRect), outline: p.outline && pageRect(p.outline) }))
       const s = JSON.stringify(d.map(p => [p.rects.map(r => [r.x, r.y, r.w, r.h].map(Math.round)), p.approx]))
       if (s !== sig.current) { sig.current = s; setDrawn(d) }
     }
+    // Vẽ lại theo SỰ KIỆN bố cục (không hỏi định kỳ): đổi kích thước khối/trang, DOM đổi, font nạp xong, alphaTab khắc xong/khắc lại, xoay máy. Gộp về một lần/khung hình.
+    let raf = 0
+    const schedule = () => { if (raf) return; raf = requestAnimationFrame(() => { raf = 0; tick() }) }
     tick()
-    const iv = window.setInterval(tick, 250)          // bố cục đổi âm thầm (ảnh/alphaTab tải muộn, xoay máy): 250 ms/lần, chỉ khi CÓ vùng đang hiển thị
-    window.addEventListener('resize', tick)
-    return () => { window.clearInterval(iv); window.removeEventListener('resize', tick); sig.current = '' }
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(schedule) : null
+    ro?.observe(el); el.querySelectorAll('[data-sec]').forEach(n => ro?.observe(n))
+    const mo = typeof MutationObserver !== 'undefined' ? new MutationObserver(schedule) : null
+    mo?.observe(el, { childList: true, subtree: true })
+    const off = onLayoutChange(schedule)
+    window.addEventListener('resize', schedule); window.addEventListener('orientationchange', schedule)
+    const fonts = (document as Document & { fonts?: FontFaceSet }).fonts
+    fonts?.ready.then(schedule).catch(() => undefined); fonts?.addEventListener?.('loadingdone', schedule)
+    return () => {
+      if (raf) cancelAnimationFrame(raf)
+      ro?.disconnect(); mo?.disconnect(); off()
+      window.removeEventListener('resize', schedule); window.removeEventListener('orientationchange', schedule)
+      fonts?.removeEventListener?.('loadingdone', schedule); sig.current = ''
+    }
   }, [root, parts])
   useEffect(() => {
     if (!focus || shown.current || !drawn.some(p => p.rects.length) || !root.current || !partsReady(parts, root.current)) return
@@ -46,12 +60,20 @@ export function RegionHighlight({ root, parts, focus = false, onShown }: { root:
     </div>, document.body)
 }
 
-export default function RegionLayer({ root, onAsk }: { root: RefObject<HTMLElement | null>; onAsk: (parts: RegionPart[], summary: string) => void }) {
+type Pt = { x: number; y: number }
+const EDGE = 72, MAX_STEP = 22
+
+export default function RegionLayer({ root, sections, onAsk }: { root: RefObject<HTMLElement | null>; sections: unknown; onAsk: (parts: RegionPart[], summary: string) => void }) {
   const [mode, setMode] = useState<'off' | 'draw' | 'scroll'>('off')
-  const [drag, setDrag] = useState<{ a: { x: number; y: number }; b: { x: number; y: number } } | null>(null)
-  const [res, setRes] = useState<{ parts: RegionPart[] } | { hint: string } | null>(null)
+  // Điểm kéo lưu theo TOẠ ĐỘ TRANG (cuộn trong lúc kéo không làm lệch); chỉ là đầu vào tạm thời, không được lưu lên server.
+  const [drag, setDrag] = useState<{ a: Pt; b: Pt } | null>(null)
+  const [res, setRes] = useState<{ parts: RegionPart[]; top: boolean } | { hint: string } | null>(null)
   const id = useRef<number | null>(null)
-  const off = useCallback(() => { setMode('off'); setDrag(null); setRes(null) }, [])
+  const ptr = useRef<Pt>({ x: 0, y: 0 })        // con trỏ theo toạ độ client (để tự cuộn khi sát mép)
+  const raf = useRef(0)
+  const stopLoop = useCallback(() => { if (raf.current) cancelAnimationFrame(raf.current); raf.current = 0 }, [])
+  const off = useCallback(() => { stopLoop(); setMode('off'); setDrag(null); setRes(null) }, [stopLoop])
+  useEffect(() => stopLoop, [stopLoop])
   useEffect(() => {
     if (mode === 'off') return
     const k = (e: KeyboardEvent) => { if (e.key === 'Escape') off() }
@@ -59,39 +81,64 @@ export default function RegionLayer({ root, onAsk }: { root: RefObject<HTMLEleme
     return () => document.removeEventListener('keydown', k)
   }, [mode, off])
 
+  // Tự cuộn khi kéo sát mép trên/dưới màn hình (cuộn nhanh dần theo độ sát mép); điểm cuối luôn bám theo con trỏ.
+  const loopRef = useRef<() => void>(() => undefined)
+  useEffect(() => {
+    loopRef.current = () => {
+      const y = ptr.current.y, h = window.innerHeight
+      const dy = y < EDGE ? -Math.ceil((EDGE - y) / EDGE * MAX_STEP) : y > h - EDGE ? Math.ceil((y - (h - EDGE)) / EDGE * MAX_STEP) : 0
+      if (dy) {
+        const before = window.scrollY
+        window.scrollBy({ top: dy, behavior: 'instant' as ScrollBehavior })
+        if (window.scrollY !== before) setDrag(d => (d ? { ...d, b: { x: ptr.current.x + window.scrollX, y: ptr.current.y + window.scrollY } } : d))
+      }
+      raf.current = requestAnimationFrame(() => loopRef.current())
+    }
+  })
+
   const down = (e: RPointerEvent<HTMLDivElement>) => {
     id.current = e.pointerId
     try { e.currentTarget.setPointerCapture(e.pointerId) } catch { /* sự kiện không còn hoạt động */ }
-    setRes(null); setDrag({ a: { x: e.clientX, y: e.clientY }, b: { x: e.clientX, y: e.clientY } }); e.preventDefault()
+    ptr.current = { x: e.clientX, y: e.clientY }
+    const p = { x: e.clientX + window.scrollX, y: e.clientY + window.scrollY }
+    setRes(null); setDrag({ a: p, b: p }); e.preventDefault()
+    stopLoop(); raf.current = requestAnimationFrame(() => loopRef.current())
   }
-  const move = (e: RPointerEvent<HTMLDivElement>) => { if (id.current === e.pointerId) setDrag(d => (d ? { ...d, b: { x: e.clientX, y: e.clientY } } : d)) }
+  const move = (e: RPointerEvent<HTMLDivElement>) => {
+    if (id.current !== e.pointerId) return
+    ptr.current = { x: e.clientX, y: e.clientY }
+    setDrag(d => (d ? { ...d, b: { x: e.clientX + window.scrollX, y: e.clientY + window.scrollY } } : d))
+  }
   const up = (e: RPointerEvent<HTMLDivElement>) => {
     if (id.current !== e.pointerId || !drag || !root.current) return
-    id.current = null
-    const r = buildParts(normRect(drag.a, { x: e.clientX, y: e.clientY }), probeSections(root.current))
+    id.current = null; stopLoop()
+    const sx = window.scrollX, sy = window.scrollY
+    const g = normRect({ x: drag.a.x - sx, y: drag.a.y - sy }, { x: e.clientX, y: e.clientY })     // khung theo client lúc thả (các khối ngoài màn hình vẫn đo được)
+    const r = buildParts(g, probeSections(root.current, sections))
     setDrag(null)
-    setRes(r.ok ? { parts: r.parts } : { hint: REGION_HINT[r.reason] })
+    // Thanh công cụ không che vùng vừa khoanh: vùng nằm thấp ⇒ đặt thanh ở đầu màn hình
+    setRes(r.ok ? { parts: r.parts, top: g.y + g.h > window.innerHeight - 170 && g.y > 170 } : { hint: REGION_HINT[r.reason] })
   }
 
-  const live = drag ? normRect(drag.a, drag.b) : null
+  const live = drag ? normRect({ x: drag.a.x - window.scrollX, y: drag.a.y - window.scrollY }, { x: drag.b.x - window.scrollX, y: drag.b.y - window.scrollY }) : null
   const parts = res && 'parts' in res ? res.parts : null
   return (
     <>
       {mode === 'off' && (
         <button type="button" className="lsn-rg-start no-print" data-testid="region-start" onClick={() => setMode('draw')}>
-          <PenLine size={16} aria-hidden="true" /> Khoanh vùng để hỏi
+          <PenLine size={16} aria-hidden="true" /> Khoanh để hỏi
         </button>
       )}
       {mode !== 'off' && (
-        <div ref={undefined} className={'lsn-rg-capture no-print' + (mode === 'scroll' ? ' is-scroll' : '')} data-testid="region-capture"
+        <div className={'lsn-rg-capture no-print' + (mode === 'scroll' ? ' is-scroll' : '')} data-testid="region-capture"
           onPointerDown={mode === 'draw' ? down : undefined} onPointerMove={mode === 'draw' ? move : undefined}
-          onPointerUp={mode === 'draw' ? up : undefined} onPointerCancel={() => { id.current = null; setDrag(null) }}>
+          onPointerUp={mode === 'draw' ? up : undefined} onPointerCancel={() => { id.current = null; stopLoop(); setDrag(null) }}>
           {live && <div className="lsn-rg-live" style={{ left: live.x, top: live.y, width: live.w, height: live.h }} data-testid="region-live" />}
         </div>
       )}
       {parts && root.current && <RegionHighlight root={root} parts={parts} />}
-      {mode !== 'off' && (
-        <div className="lsn-textbar lsn-rg-bar no-print" role="region" aria-label="Khoanh vùng để hỏi" data-testid="region-bar" data-state={parts ? 'ok' : res ? 'hint' : 'idle'}>
+      {mode !== 'off' && !drag && (
+        <div className={'lsn-textbar lsn-rg-bar no-print' + (res && 'parts' in res && res.top ? ' is-top' : '')} role="region" aria-label="Khoanh để hỏi" data-testid="region-bar" data-anchor={parts ? JSON.stringify(parts) : undefined} data-state={parts ? 'ok' : res ? 'hint' : 'idle'}>
           <div className="lsn-textbar-in">
             {parts ? (
               <>
@@ -107,7 +154,7 @@ export default function RegionLayer({ root, onAsk }: { root: RefObject<HTMLEleme
             ) : (
               <>
                 <p className={res ? 'lsn-textbar-warn' : 'lsn-textbar-q'} role="status" data-testid="region-hint">
-                  {res && 'hint' in res ? res.hint : mode === 'scroll' ? 'Đang ở chế độ Cuộn. Bấm "Vẽ" để khoanh tiếp.' : 'Kéo một khung chữ nhật quanh phần bạn muốn hỏi.'}
+                  {res && 'hint' in res ? res.hint : mode === 'scroll' ? 'Đang ở chế độ Cuộn. Bấm "Vẽ" để khoanh tiếp.' : 'Kéo một khung quanh phần bạn muốn hỏi. Kéo sát mép màn hình để cuộn.'}
                 </p>
                 <div className="lsn-textbar-acts">
                   <button type="button" className="lsn-share-btn" data-testid="region-mode" onClick={() => setMode(m => (m === 'draw' ? 'scroll' : 'draw'))}>
