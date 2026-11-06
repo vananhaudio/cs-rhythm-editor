@@ -158,22 +158,24 @@ test('C3: "Xem thêm" đếm theo bình luận thật đang hiện (cả gốc k
   assert.match(r.container.querySelector('.cs-cmts-more')!.textContent!, /\(1\)/)
 })
 
-test('C4: xoá gốc có trả lời → hỏi kèm số trả lời bị xoá cùng; không có trả lời → câu cũ; huỷ thì không xoá', async () => {
+test('C4 (+B): xoá gốc có trả lời → hộp xác nhận nêu số trả lời bị xoá cascade theo cây cha–con; không trả lời → câu cũ; huỷ thì không xoá', async () => {
   const rows = [row('a', null, { is_mine: true, author_user_id: 'u-me' }), row('a1', 'a'), row('a2', 'a1'), row('s', null, { is_mine: true, author_user_id: 'u-me' })]
   const r = mount(rows)
-  const menu = (id: string) => {
+  const dlg = () => r.container.querySelector('[role=alertdialog]')
+  const del = (id: string) => {
     fireEvent.click(at(r, id).querySelector(':scope > .cs-cmt .cs-more-btn')!)
-    return Array.from(r.container.querySelectorAll('[role="menuitem"]')) as HTMLElement[]
+    fireEvent.click((Array.from(r.container.querySelectorAll('[role="menuitem"]')) as HTMLElement[]).find(m => /Xoá bình luận/.test(m.textContent!))!)
   }
-  confirmAnswer = false
-  fireEvent.click(menu('a').find(m => /Xoá bình luận/.test(m.textContent!))!)
-  assert.match(confirmMsg[0], /và 2 trả lời/)
-  await new Promise(r2 => setTimeout(r2, 20)); assert.deepEqual(deleted, [])
-  confirmAnswer = true
-  fireEvent.click(menu('s').find(m => /Xoá bình luận/.test(m.textContent!))!)
-  assert.equal(confirmMsg[1], 'Xoá bình luận này?')
+  del('a')
+  assert.match(dlg()!.textContent!, /và 2 trả lời/)                        // a1 + a2 (con của con) — đếm theo cây, không theo số đang thấy
+  fireEvent.click(Array.from(dlg()!.querySelectorAll('button')).find(b => b.textContent === 'Huỷ')!)
+  await new Promise(r2 => setTimeout(r2, 20)); assert.deepEqual(deleted, []); assert.ok(!dlg())
+  del('s')
+  assert.match(dlg()!.textContent!, /Bình luận sẽ bị xoá/); assert.ok(!/trả lời bên dưới/.test(dlg()!.textContent!))
+  fireEvent.click(Array.from(dlg()!.querySelectorAll('button')).find(b => b.textContent === 'Xoá')!)
   await waitFor(() => assert.deepEqual(deleted, ['s']))
   await waitFor(() => assert.equal(refreshes, 1))
+  await waitFor(() => assert.ok(!dlg()))
 })
 
 test('C4: menu kiểm duyệt không đổi (người khác: Báo cáo + Chặn; Thầy thêm Ẩn; của mình: Xoá); Trả lời không thay menu; bình luận bị ẩn không có Trả lời', () => {

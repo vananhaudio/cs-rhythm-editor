@@ -283,6 +283,7 @@ test('D2: xoá bình luận ở vùng cũ (đã tải thêm) biến mất ngay; 
   const total = count(r), calls = fetchPageCalls
   fireEvent.click(li.querySelector('.cs-more-btn')!)
   fireEvent.click(Array.from(r.container.querySelectorAll('[role="menuitem"]')).find(m => /Xoá bình luận/.test(m.textContent!)) as HTMLElement)
+  fireEvent.click(Array.from(r.container.querySelector('[role=alertdialog]')!.querySelectorAll('button')).find(b => b.textContent === 'Xoá') as HTMLElement)   // hộp xác nhận chung (B)
   await waitFor(() => assert.ok(!r.container.querySelector(`[data-comment-id="${target.id}"]`)))
   assert.deepEqual(deleted, [target.id])
   await waitFor(() => assert.equal(fetchPageCalls, calls + 1))              // một trang mới nhất, không tải lại cả danh sách

@@ -35,6 +35,7 @@ beforeEach(() => {
   for (const u of ['u-me', 'u-other', 'u-s2', 'u-teacher']) __seedIdentity(u, buildIdentities([], '2026-11-06'))   // không gọi mạng thật
   removed = []; listCalls = 0
   removeImpl = async () => ({ ok: true, value: null })
+  api.page = (async () => ({ ok: false as const, message: '', code: 'UNSUPPORTED' })) as typeof api.page   // tích hợp A–D: máy chủ chưa có hàm phân trang → đường cũ (api.list)
   api.list = (async () => { listCalls++; return { ok: true as const, value: (await import('../../src/class-social/comments/targetCommentModel')).buildThread(rows()) } }) as typeof api.list
   api.remove = (async (_k: unknown, id: string) => { removed.push(id); return removeImpl(id) }) as typeof api.remove
   ;(window as unknown as { confirm: () => boolean }).confirm = () => { throw new Error('window.confirm không được dùng nữa') }
@@ -142,7 +143,7 @@ test('huy hiệu danh tính: thread/TeamLab hiện nhãn lớp đúng người; 
   assert.equal(r.container.querySelector(`[data-comment-id="${B}"] .cs-cmt-badge`)!.textContent, 'Thầy')
   assert.equal(r.container.querySelectorAll('.cs-cmt-badge').length, 1)
   // Social: cùng nhãn cho cùng người
-  const c: Comment = { id: 'cc', postId: 'p', body: 'x', createdAt: '2026-11-01T10:00:00Z', author: { userId: 'u-s2', name: 'Học viên Hai', avatarUrl: null, isTeacher: false }, isMine: false, isHidden: false, tags: [], resources: [] }
+  const c: Comment = { id: 'cc', postId: 'p', body: 'x', createdAt: '2026-11-01T10:00:00Z', author: { userId: 'u-s2', name: 'Học viên Hai', avatarUrl: null, isTeacher: false }, parentId: null, seq: null, rootSeq: null, isMine: false, isHidden: false, tags: [], resources: [] }
   const s = render(<ul><CommentItem c={c} canModerate={false} onDelete={() => {}} onModerate={() => {}} /></ul>)
   assert.deepEqual([...s.container.querySelectorAll('.cs-lid')].map(x => x.textContent), ['Đệm hát 2'])
 })
