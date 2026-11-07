@@ -10,14 +10,17 @@ export LC_ALL=C LANG=C
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PGBIN="${PGBIN:-/opt/homebrew/opt/postgresql@17/bin}"
-: "${PUPPETEER_DIR:?đặt PUPPETEER_DIR = thư mục chứa node_modules/puppeteer-core}"
+[ -n "${E2E_SERVE:-}" ] || : "${PUPPETEER_DIR:?đặt PUPPETEER_DIR = thư mục chứa node_modules/puppeteer-core}"
+# Chế độ XEM TAY (scripts/feed-comments-preview.sh): E2E_SERVE=1 dựng stack rồi GIỮ chạy; E2E_BIND/E2E_PUBLIC_HOST cho iPhone trong LAN;
+# E2E_PORT_BASE cố định cổng; E2E_VITE_CONFIG cho phép tên miền LAN. Mặc định tất cả như cũ (chỉ 127.0.0.1).
+BIND="${E2E_BIND:-127.0.0.1}"; PUBLIC_HOST="${E2E_PUBLIC_HOST:-127.0.0.1}"
 TMP="$(mktemp -d /tmp/tvae2e.XXXXXX)"
-PORT=$((56500 + RANDOM % 300)); API_PORT=$((PORT + 300)); PROXY_PORT=$((PORT + 600)); VITE_PORT=$((PORT + 900))
+PORT=${E2E_PORT_BASE:-$((56500 + RANDOM % 300))}; API_PORT=$((PORT + 300)); PROXY_PORT=$((PORT + 600)); VITE_PORT=$((PORT + 900))
 PIDS=()
 cleanup() {
   for p in "${PIDS[@]:-}"; do [ -n "$p" ] && kill "$p" 2>/dev/null || true; done
   # tiến trình CON (npx → node vite, postgrest) không chết theo subshell → dọn theo đúng cổng / file cấu hình của lần chạy này
-  pkill -f "vite --port $VITE_PORT --strictPort" 2>/dev/null || true
+  pkill -f "vite .*--port $VITE_PORT --strictPort" 2>/dev/null || true
   pkill -f "postgrest $TMP/pgrst.conf" 2>/dev/null || true
   "$PGBIN/pg_ctl" -D "$TMP/data" -m immediate stop >/dev/null 2>&1 || true
   [ -n "${KEEP_TMP:-}" ] || rm -rf "$TMP"
@@ -104,14 +107,14 @@ postgrest "$TMP/pgrst.conf" >"$TMP/pgrst.log" 2>&1 & PIDS+=($!)
 
 USERS='{"a@test.local":"aaaaaaaa-0000-4000-8000-00000000000a","b@test.local":"bbbbbbbb-0000-4000-8000-00000000000b","c@test.local":"cccccccc-0000-4000-8000-00000000000c","t@test.local":"dddddddd-0000-4000-8000-00000000000d","n@test.local":"eeeeeeee-0000-4000-8000-00000000000e","t2@test.local":"ffffffff-0000-4000-8000-00000000000f"}'
 PROXY_PORT=$PROXY_PORT PGRST_URL="http://127.0.0.1:$API_PORT" JWT_SECRET="$SECRET" E2E_USERS="$USERS" \
-  node "$ROOT/scripts/e2e-learning-thread-proxy.mjs" >"$TMP/proxy.log" 2>&1 & PIDS+=($!)
+  PROXY_HOST="$BIND" node "$ROOT/scripts/e2e-learning-thread-proxy.mjs" >"$TMP/proxy.log" 2>&1 & PIDS+=($!)
 ANON_KEY="$(JWT_SECRET="$SECRET" node -e '
 const c=require("crypto");const b=o=>Buffer.from(JSON.stringify(o)).toString("base64url");
 const h=b({alg:"HS256",typ:"JWT"}),p=b({role:"anon",iss:"e2e",exp:4102444800});
 console.log(h+"."+p+"."+c.createHmac("sha256",process.env.JWT_SECRET).update(h+"."+p).digest("base64url"))')"
 
-(cd "$ROOT" && VITE_SUPABASE_URL="http://127.0.0.1:$PROXY_PORT" VITE_SUPABASE_ANON_KEY="$ANON_KEY" \
-  npx vite --port "$VITE_PORT" --strictPort --host 127.0.0.1 >"$TMP/vite.log" 2>&1) & PIDS+=($!)
+(cd "$ROOT" && VITE_SUPABASE_URL="http://$PUBLIC_HOST:$PROXY_PORT" VITE_SUPABASE_ANON_KEY="$ANON_KEY" \
+  npx vite ${E2E_VITE_CONFIG:+--config "$E2E_VITE_CONFIG"} --port "$VITE_PORT" --strictPort --host "$BIND" >"$TMP/vite.log" 2>&1) & PIDS+=($!)
 for i in $(seq 1 60); do curl -sf "http://127.0.0.1:$VITE_PORT/" >/dev/null 2>&1 && break; sleep 0.5; done
 curl -sf "http://127.0.0.1:$API_PORT/" >/dev/null || { cat "$TMP/pgrst.log"; exit 1; }
 echo "── Stack: PostgREST :$API_PORT · proxy :$PROXY_PORT · vite :$VITE_PORT"
@@ -120,6 +123,14 @@ echo "── Stack: PostgREST :$API_PORT · proxy :$PROXY_PORT · vite :$VITE_PO
 export E2E_PG_SOCK="$TMP" E2E_PG_PORT="$PORT" E2E_PG_BIN="$PGBIN"
 # Cho kịch bản cần dựng thêm dịch vụ cạnh stack (vd. Mira E2E): cổng proxy Supabase giả + secret JWT local
 export E2E_PROXY_PORT="$PROXY_PORT" E2E_API_PORT="$API_PORT" E2E_JWT_SECRET="$SECRET"
+if [ -n "${E2E_SERVE:-}" ]; then
+  # Chế độ xem tay: nạp dữ liệu như đường kiểm thử rồi giữ stack chạy tới khi bị dừng (SIGTERM → trap dọn sạch cluster tạm)
+  if [ -n "${E2E_CHECKPOINTS:-}" ]; then psqld -f "$ROOT/db/tests/local/class_checkpoints_fixture_data.sql" >/dev/null; fi
+  [ -n "${E2E_EXTRA_SQL:-}" ] && psqld -f "$E2E_EXTRA_SQL" >/dev/null
+  echo "$VITE_PORT $PROXY_PORT $API_PORT $PORT $TMP" > "${E2E_SERVE}"
+  echo "── READY"
+  while :; do sleep 3600 & wait $!; done
+fi
 set +e
 # E2E_SKIP_BASE=1 (chỉ khi gỡ lỗi kịch bản thêm): bỏ qua run.mjs / run-checkpoints.mjs
 if [ -n "${E2E_SKIP_BASE:-}" ] || [ -n "${E2E_ONLY_CHECKPOINTS:-}" ]; then RC=0; else

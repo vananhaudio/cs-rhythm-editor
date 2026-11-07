@@ -3,7 +3,8 @@
 import { supabase } from '../../supabase'
 import { friendlyError } from '../posts/postModel'
 import type { Result } from '../posts/postsApi'
-import { groupByPost, totalsByPost, toResourcePayload, type Comment, type CommentRow, type ResourceRef, type Tag } from './commentModel'
+import { isMissingRpc, PAGE_ROOTS } from './paging'
+import { groupByPost, toComment, totalsByPost, toResourcePayload, type Comment, type CommentRow, type ResourceRef, type Tag } from './commentModel'
 
 const online = () => (typeof navigator === 'undefined' ? true : navigator.onLine !== false)
 const devWarn = (what: string, e: { code?: string; message?: string } | null) => {
@@ -25,13 +26,36 @@ export async function fetchComments(postIds: string[], perPost: number): Promise
   }
 }
 
-export async function addComment(input: { postId: string; body: string; tagIds?: number[]; resources?: ResourceRef[] }): Promise<Result<{ id: string }>> {
+/** Một trang bình luận của MỘT bài (Paging V1): `before` = con trỏ (root_seq nhỏ nhất đã có) hoặc null = trang mới nhất. */
+export type CommentsPageValue = { items: Comment[]; total: number; hasMore: boolean }
+export type PageResult = { ok: true; value: CommentsPageValue } | { ok: false; message: string; unsupported?: boolean }
+export async function fetchCommentsPage(postId: string, before: number | null, limit = PAGE_ROOTS): Promise<PageResult> {
+  try {
+    const { data, error, status } = await supabase.rpc('class_comments_page_safe', { p_post_id: postId, p_before_seq: before, p_limit: limit })
+    if (error) {
+      if (isMissingRpc(error, status)) return { ok: false, message: 'Chưa tải được bình luận.', unsupported: true }
+      devWarn('comments page', error)
+      return { ok: false, message: 'Chưa tải được bình luận cũ hơn.' + (status === 401 ? ' Hãy tải lại trang.' : '') }
+    }
+    const rows = (data ?? []) as CommentRow[]
+    return { ok: true, value: {
+      items: rows.map(toComment).filter((x): x is Comment => x !== null),
+      total: Number(rows[0]?.post_comment_count ?? 0) || 0,
+      hasMore: (rows[0]?.older_roots ?? 0) > 0,
+    } }
+  } catch (e) {
+    return { ok: false, message: friendlyError(e as Error, 'feed', online()) }
+  }
+}
+
+export async function addComment(input: { postId: string; body: string; parentId?: string | null; tagIds?: number[]; resources?: ResourceRef[] }): Promise<Result<{ id: string }>> {
   try {
     const { data, error, status } = await supabase.rpc('class_add_comment', {
       p_post_id: input.postId,
       p_body: input.body,
       p_tag_ids: input.tagIds ?? [],
       p_resources: toResourcePayload(input.resources ?? []),
+      p_parent_id: input.parentId ?? null,
     })
     if (error || !data) { devWarn('add comment', error); return { ok: false, message: friendlyError(error ? { ...error, status } : null, 'post', online()) } }
     return { ok: true, value: { id: data as string } }

@@ -1,6 +1,7 @@
 // Domain bình luận / nhận xét của Thầy — hàm THUẦN để test được.
 // Nhận xét của Thầy VẪN là bình luận; tag + đính kèm là metadata có cấu trúc.
 import { safeImageUrl } from '../media/safeImageUrl'
+import { toSeq } from './paging'
 
 export const MAX_COMMENT = 2000
 export const MAX_TAG = 40
@@ -35,11 +36,19 @@ export type CommentRow = {
   tags: { id: number; name: string }[] | null
   resources: { id: string; resource_type: string; resource_id: string; title: string | null; start_seconds: number | null; excerpt: string | null }[] | null
   post_comment_count?: number | null
+  // Chỉ có từ class_comments_page_safe (Paging V1)
+  seq?: number | string | null
+  root_seq?: number | string | null
+  older_roots?: number | null
 }
 
 export type Comment = {
   id: string
   postId: string
+  /** Bình luận được trả lời trực tiếp (null = bình luận gốc). */
+  parentId: string | null
+  seq: number | null          // thứ tự ghi (Paging V1); null = dữ liệu từ hàm cũ
+  rootSeq: number | null      // seq của bình luận gốc chứa nó
   body: string
   createdAt: string
   author: { userId: string; name: string; avatarUrl: string | null; isTeacher: boolean }
@@ -56,6 +65,9 @@ export function toComment(r: CommentRow): Comment | null {
   return {
     id: r.id,
     postId: r.post_id,
+    parentId: r.parent_comment_id ?? null,
+    seq: toSeq(r.seq),
+    rootSeq: toSeq(r.root_seq),
     body: r.body ?? '',
     createdAt: r.created_at,
     author: {
@@ -96,6 +108,63 @@ export function groupByPost(rows: CommentRow[]): Map<string, Comment[]> {
   // Server đã sắp theo thứ tự ghi (seq). sort ổn định → trùng giờ thì GIỮ thứ tự server.
   for (const list of m.values()) list.sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt))
   return m
+}
+
+// ── Hội thoại hai tầng (Lát C) ──────────────────────────────────────────────
+// DB lưu parent_comment_id = bình luận được trả lời TRỰC TIẾP (cùng bài). Giao diện chỉ có hai tầng: gốc → trả lời.
+// Trả lời một câu trả lời: parent = câu trả lời đó (biết đúng người được phản hồi, không chèn tên vào nội dung),
+// nhưng hiển thị phẳng dưới bình luận gốc kèm "Trả lời <tên>".
+export type ThreadReply = { c: Comment; replyTo: Comment | null }
+export type Thread = {
+  /** null = bình luận gốc chưa được tải (cũ hơn cửa sổ đã lấy, hoặc bị lọc) → nhóm "mồ côi", không mất trả lời. */
+  root: Comment | null
+  replies: ThreadReply[]
+}
+
+const MAX_DEPTH = 64
+
+/** Cửa sổ `limit` bình luận mới nhất + tổ tiên ĐÃ TẢI của chúng (để trả lời không bị tách khỏi bình luận gốc). Giữ thứ tự gốc. */
+export function visibleWithContext(all: Comment[], limit: number): Comment[] {
+  const tail = all.length > limit ? all.slice(-limit) : all
+  if (tail.length === all.length) return all
+  const byId = new Map(all.map(c => [c.id, c]))
+  const keep = new Set(tail.map(c => c.id))
+  for (const c of tail) {
+    let cur: Comment | undefined = c, n = 0
+    while (cur?.parentId && n++ < MAX_DEPTH) { cur = byId.get(cur.parentId); if (cur) keep.add(cur.id) }
+  }
+  return all.filter(c => keep.has(c.id))
+}
+
+/** Nhóm danh sách phẳng (CŨ → MỚI) thành hội thoại hai tầng. Gốc xếp theo thời gian của gốc; trả lời theo thời gian. */
+export function buildThreads(items: Comment[]): Thread[] {
+  const byId = new Map(items.map(c => [c.id, c]))
+  const threads = new Map<string, Thread>()
+  const order: string[] = []
+  for (const c of items) {
+    // Đi lên theo chuỗi cha; dừng ở gốc thật (parentId null) hoặc ở cha chưa tải.
+    let top = c, n = 0
+    while (top.parentId && byId.has(top.parentId) && n++ < MAX_DEPTH) top = byId.get(top.parentId) as Comment
+    const key = top.parentId == null ? top.id : `missing:${top.parentId}`   // lặp vô hạn (dữ liệu hỏng) → coi như mồ côi
+    let t = threads.get(key)
+    if (!t) { t = { root: top.parentId == null ? top : null, replies: [] }; threads.set(key, t); order.push(key) }
+    if (c.id === t.root?.id) continue
+    const parent = c.parentId ? byId.get(c.parentId) ?? null : null
+    t.replies.push({ c, replyTo: parent && parent.id !== t.root?.id ? parent : null })
+  }
+  const anchor = (t: Thread) => Date.parse((t.root ?? t.replies[0].c).createdAt)
+  return order.map(k => threads.get(k) as Thread).sort((a, b) => anchor(a) - anchor(b))
+}
+
+/** Số bình luận bị xoá cùng khi xoá `id` (DB cascade theo parent_comment_id): chính các hậu duệ đã tải. */
+export function descendantCount(items: Comment[], id: string): number {
+  const kids = new Map<string, string[]>()
+  for (const c of items) if (c.parentId) kids.set(c.parentId, [...(kids.get(c.parentId) ?? []), c.id])
+  let n = 0
+  const seen = new Set<string>([id])
+  const stack = [id]
+  while (stack.length) for (const k of kids.get(stack.pop() as string) ?? []) if (!seen.has(k)) { seen.add(k); n++; stack.push(k) }
+  return n
 }
 
 export function checkCommentBody(body: string): { ok: true; body: string } | { ok: false; error: string } {
