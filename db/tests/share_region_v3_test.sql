@@ -1,4 +1,4 @@
--- Test DB Contextual Share V3 (khoanh vùng hỗn hợp) — DB TẠM sau khi áp V2 + db/drafts/share_region_v3_setup.sql. KHÔNG production.
+-- Test DB Contextual Share V3 (khoanh vùng hỗn hợp) — DB TẠM sau khi áp V2 + db/share_region_v3_setup.sql. KHÔNG production.
 -- Người dùng: A=tác giả (có quyền), B=bạn cùng lớp có quyền, C=lớp khác. Mọi sửa giáo trình nằm trong transaction và ROLLBACK.
 \set ON_ERROR_STOP on
 create function pg_temp.ok(c boolean, m text) returns void language plpgsql as $$ begin if c is not true then raise exception 'FAIL: %', m; end if; raise notice 'PASS: %', m; end $$;

@@ -1,4 +1,4 @@
--- DỰ THẢO — Contextual Share V3 "Khoanh vùng hỗn hợp" (docs/CONTEXTUAL-SHARE-V3-REGION.md). CHƯA CHẠY PRODUCTION. Chỉ áp trên DB tạm / staging cô lập.
+-- Contextual Share V3 "Khoanh vùng hỗn hợp" (docs/CONTEXTUAL-SHARE-V3-REGION.md). Phát hành production qua scripts/prod-db.py: preflight → dryrun → migrate → postflight.
 -- Nền: V2 đã migrate (db/share_text_v2_setup.sql). CỘNG THÊM, không sửa hàm V1/V2:
 --   share_notes.anchor_kind += 'region'; cột region jsonb = danh sách PHẦN (mỗi phần = một khối giáo trình bị khung chạm tới).
 --   Mỗi phần lưu: sec (chỉ số gợi ý) · fp (loại+tiêu đề khối) · box (‰ của hộp khối — chỉ dùng khi KHÔNG có phần tử gốc, vẽ gần đúng)

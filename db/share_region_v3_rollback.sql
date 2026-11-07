@@ -1,4 +1,4 @@
--- DỰ THẢO rollback V3: xoá ghi chú 'region' (và bài Feed của chúng) rồi gỡ hàm/cột/ràng buộc về trạng thái V2. Không đụng 'bars' / 'text'.
+-- Rollback V3: xoá ghi chú 'region' (và bài Feed của chúng) rồi gỡ hàm/cột/ràng buộc về trạng thái V2. Không đụng 'bars' / 'text'.
 do $$ begin
   if exists (select 1 from information_schema.columns where table_schema='public' and table_name='share_notes' and column_name='region') then
     delete from public.class_posts where type = 'tool_share' and tool_share ->> 'tool' = 'share_note' and tool_share ->> 'anchor' = 'region';

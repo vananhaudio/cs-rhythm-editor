@@ -61,7 +61,7 @@ Không có pixel làm neo, không ảnh chụp, không bản sao nội dung, kh�
 | Lớp khoanh `RegionLayer.tsx` (kéo chuột/cảm ứng/bút, "Cuộn", tự cuộn sát mép, Esc, "Khoanh lại", Huỷ, thanh công cụ tránh vùng khoanh) | **prototype hoàn thiện** — cần thử iPhone thật |
 | Vẽ vùng `RegionHighlight` (theo sự kiện bố cục) | **prototype hoàn thiện** |
 | Feed dựng nguyên cảnh (`ShareNotePost` + `RegionContextView`) | **prototype hoàn thiện** — cần Owner duyệt bố cục gọn/đầy đủ |
-| DB `db/drafts/share_region_v3_setup.sql` (+ rollback, test SQL R0–R20, S1–S9) | **dự thảo — CHƯA chạy production**; cần preflight/postflight/gate md5 như V2 |
+| DB `db/share_region_v3_setup.sql` (+ preflight, postflight, rollback, test SQL R0–R20, S1–S9) | **sẵn sàng phát hành**; cần preflight/postflight/gate md5 như V2 |
 
 ## 5. Loại nội dung đã khoanh thử (E2E, dữ liệu giả)
 
@@ -88,7 +88,7 @@ Nửa đoạn văn (nửa dòng đầu) · nửa phải của hai dòng · nhi�
 
 1. Owner dùng staging và nghiệm thu UX (khoanh, Feed gọn/đầy đủ).
 2. Khảo sát chỉ-đọc production (số khối/lá/ô mỗi buổi; tần suất sửa giáo trình) để đặt giới hạn.
-3. Chuyển `db/drafts/*` → `db/`, thêm preflight/postflight (md5 10 hàm V1 + hàm V2, dấu vân tay `bars`/`text`), dry-run, migrate qua `prod-db.py` — như V2.
+3. Chuyển `db/drafts/*` → `db/` (ĐÃ làm), thêm preflight/postflight (md5 10 hàm V1 + hàm V2, dấu vân tay `bars`/`text`), dry-run, migrate qua `prod-db.py` — như V2.
 4. (đã làm ở V3.1: Feed nguyên cảnh, tự cuộn, vẽ lại theo sự kiện) — còn lại: đo thiết bị thật.
 5. Thử iPhone/Safari thật + hồi quy V1.3/V2/Chat/Mira.
 6. Phát hành theo thứ tự V2: DB trước, FE sau; rollback FE trước, DB sau.
