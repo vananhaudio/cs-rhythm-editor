@@ -1,60 +1,45 @@
 // Khu bình luận của thẻ Learning Thread / bài TeamLab (Feed Comments V2): tải khi mở, gốc + trả lời MỘT cấp, sửa/xoá của mình,
 // Thầy ẩn/bỏ ẩn. Lỗi → GIỮ nguyên chữ đang gõ; chống gửi đúp. Một tay trên iPhone: ô nhập + nút gửi ≥ 44px, không che trình phát (nằm dưới thẻ).
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { SendHorizontal } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MAX_COMMENT } from '../../comments/commentModel'
 import { setCommentCount } from '../../comments/commentCountStore'
-import { checkTargetBody, countComments, type CommentKind, type CommentNode, type TargetComment } from '../../comments/targetCommentModel'
+import { PAGE_ROOTS, dropWithDescendants, mergeById, minRootSeq, replaceHead } from '../../comments/paging'
+import { useScrollAnchor } from '../../comments/useScrollAnchor'
+import { buildThreadFromComments, checkTargetBody, countComments, flattenNodes, type CommentKind, type TargetComment } from '../../comments/targetCommentModel'
 import { supabaseTargetCommentsApi, type TargetCommentsApi } from '../../comments/targetCommentsApi'
 import { relativeTime } from '../../posts/postModel'
 import type { ClassIdentity } from '../../useClassSession'
 import { Avatar, MoreMenu, PersonLink } from '../../ui'
 import ExpandableText from '../ExpandableText'
+import { CommentInputBox, revealComment, useCommentSubmit } from './ComposerInput'
 import SafetyMenu from '../../../class-safety/SafetyMenu'
+import CommentAuthorLine from './CommentAuthorLine'
+import DeleteCommentConfirm from './DeleteCommentConfirm'
 import { useIsBlocked } from '../../../class-safety/blockedStore'
 
 const api: TargetCommentsApi = supabaseTargetCommentsApi
+const lowerCursor = (cur: number | null, pageMin: number | null) => (cur == null ? pageMin : pageMin == null ? cur : Math.min(cur, pageMin))
 
 export function Composer({ idBase, placeholder, initial = '', submitLabel, me, autoFocus, onSubmit, onCancel }: {
   idBase: string; placeholder: string; initial?: string; submitLabel: string; me: ClassIdentity | null; autoFocus?: boolean
   onSubmit: (body: string) => Promise<string | null>; onCancel?: () => void
 }) {
-  const [body, setBody] = useState(initial)
-  const [sending, setSending] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const inFlight = useRef(false)
-  const submit = async () => {
-    if (inFlight.current) return
-    const chk = checkTargetBody(body)
-    if (!chk.ok) { setError(chk.error); return }
-    inFlight.current = true; setSending(true); setError(null)
-    const err = await onSubmit(chk.body)
-    inFlight.current = false; setSending(false)
-    if (err) { setError(err); return }                 // giữ nguyên nội dung để gửi lại
-    setBody('')
-  }
+  // Hành vi gửi dùng chung với ô bình luận bài Social (ComposerInput): giữ focus, chống gửi trùng, Gửi lại khi lỗi.
+  const state = useCommentSubmit({ initial, check: checkTargetBody, run: onSubmit })
   return (
     <div className="cs-cmt-composer">
       {me && <Avatar name={me.name} url={me.avatarUrl} size={32} />}
-      <form className="cs-cmt-form" onSubmit={e => { e.preventDefault(); void submit() }}>
+      <form className="cs-cmt-form" onSubmit={e => { e.preventDefault(); void state.submit() }}>
         <label htmlFor={idBase} className="cs-sr-only">{submitLabel}</label>
-        <div className="cs-cmt-inputwrap">
-          <textarea id={idBase} className="cs-cmt-input" rows={1} maxLength={MAX_COMMENT} placeholder={placeholder} value={body}
-            disabled={sending} autoFocus={autoFocus}
-            onChange={e => { setBody(e.target.value); if (error) setError(null) }}
-            onInput={e => { const t = e.currentTarget; t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight, 180) + 'px' }}
-            onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); void submit() } }} />
-          <button type="submit" className="cs-cmt-send" disabled={sending || !body.trim()} aria-label={submitLabel}><SendHorizontal size={18} /></button>
-        </div>
+        <CommentInputBox id={idBase} label={submitLabel} placeholder={placeholder} maxLength={MAX_COMMENT} state={state} autoFocus={autoFocus} />
         {onCancel && <button type="button" className="cs-link-btn cs-cmt-cancel" onClick={onCancel}>Huỷ</button>}
-        {error && <p className="cs-form-error" role="alert">{error}</p>}
       </form>
     </div>
   )
 }
 
-function Row({ c, isReply, me, now, editing, onReply, onEdit, onEditDone, onDelete, onHide, onOpenProfile, saveEdit }: {
-  c: TargetComment; isReply: boolean; me: ClassIdentity | null; now?: Date; editing: boolean
+function Row({ c, isReply, me, now, editing, deleting, onReply, onEdit, onEditDone, onDelete, onHide, onOpenProfile, saveEdit }: {
+  c: TargetComment; isReply: boolean; me: ClassIdentity | null; now?: Date; editing: boolean; deleting?: boolean
   onReply?: () => void; onEdit: () => void; onEditDone: () => void; onDelete: () => void; onHide: (h: boolean) => void
   onOpenProfile?: (userId: string) => void; saveEdit: (body: string) => Promise<string | null>
 }) {
@@ -65,7 +50,7 @@ function Row({ c, isReply, me, now, editing, onReply, onEdit, onEditDone, onDele
     ...(me?.isTeacher && !c.isMine ? [{ label: c.isHidden ? 'Bỏ ẩn bình luận' : 'Ẩn bình luận', onSelect: () => onHide(!c.isHidden) }] : []),
   ]
   return (
-    <li className={'cs-cmt' + (c.author.isTeacher ? ' is-teacher' : '') + (c.isHidden ? ' is-hidden' : '') + (isReply ? ' is-reply' : '')} data-comment-id={c.id}>
+    <li className={'cs-cmt' + (c.author.isTeacher ? ' is-teacher' : '') + (c.isHidden ? ' is-hidden' : '') + (isReply ? ' is-reply' : '') + (deleting ? ' is-deleting' : '')} data-comment-id={c.id}>
       <PersonLink userId={c.author.userId} onOpen={onOpenProfile} label={`Trang cá nhân của ${c.author.name}`}>
         <Avatar name={c.author.name} url={c.author.avatarUrl} size={isReply ? 26 : 32} />
       </PersonLink>
@@ -75,11 +60,7 @@ function Row({ c, isReply, me, now, editing, onReply, onEdit, onEditDone, onDele
             onSubmit={async b => { const e = await saveEdit(b); if (!e) onEditDone(); return e }} onCancel={onEditDone} />
         ) : (
           <div className="cs-cmt-bubble">
-            <div className="cs-cmt-head">
-              <PersonLink userId={c.author.userId} onOpen={onOpenProfile} label={`Trang cá nhân của ${c.author.name}`} className="cs-cmt-author">{c.author.name}</PersonLink>
-              {c.author.isTeacher && <span className="cs-cmt-badge" title="Nhận xét của giáo viên">Thầy</span>}
-              {c.isHidden && <span className="cs-cmt-hidden">Đã ẩn · học sinh không thấy</span>}
-            </div>
+            <CommentAuthorLine userId={c.author.userId} name={c.author.name} isTeacher={c.author.isTeacher} hidden={c.isHidden} onOpenProfile={onOpenProfile} />
             <ExpandableText text={c.body} className="cs-cmt-body" lines={4} />
           </div>
         )}
@@ -101,54 +82,114 @@ function Row({ c, isReply, me, now, editing, onReply, onEdit, onEditDone, onDele
 export default function TargetComments({ kind, id, me, now, onOpenProfile }: {
   kind: CommentKind; id: string; me: ClassIdentity | null; now?: Date; onOpenProfile?: (userId: string) => void
 }) {
-  const [nodes, setNodes] = useState<CommentNode[] | null>(null)
+  const [items, setItems] = useState<TargetComment[] | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [replyTo, setReplyTo] = useState<string | null>(null)
   const [editing, setEditing] = useState<string | null>(null)
+  // Phân trang (Paging V1): paged = máy chủ có feed_comment_page; legacy = lùi về feed_comment_list (tối đa 100 gốc)
+  const [paging, setPaging] = useState<{ mode: 'paged' | 'legacy' | null; hasMore: boolean; loadingMore: boolean; moreError: string | null; loadedOlder: boolean }>(
+    { mode: null, hasMore: false, loadingMore: false, moreError: null, loadedOlder: false })
+  const itemsRef = useRef<TargetComment[] | null>(null); itemsRef.current = items
+  const modeRef = useRef<'paged' | 'legacy' | null>(null); modeRef.current = paging.mode
+  const ticket = useRef(0)
+  const moreBusy = useRef(false)
+  // Con trỏ trang kế: chỉ hạ khi tải TRANG (đầu / cũ hơn) — KHÔNG suy từ items, vì một gốc cũ nạp riêng (trả lời vào gốc rất cũ) sẽ làm nhảy qua các gốc ở giữa
+  const cursorRef = useRef<number | null>(null)
+  const nodes = useMemo(() => (items === null ? null : buildThreadFromComments(items)), [items])
+  const sectionRef = useRef<HTMLElement>(null)
+  useScrollAnchor(sectionRef, [items])
 
-  const apply = useCallback((r: Awaited<ReturnType<TargetCommentsApi['list']>>) => {
+  /** Tải trang MỚI NHẤT (lần đầu thay hết; các lần sau giữ trang cũ đã mở). Lỗi: giữ dữ liệu đang hiện. */
+  const reload = useCallback(async () => {
+    const t = ++ticket.current
+    if (modeRef.current !== 'legacy') {
+      const r = await api.page(kind, id, null, PAGE_ROOTS)
+      if (t !== ticket.current) return
+      if (r.ok) {
+        setLoadError(null)
+        setItems(prev => replaceHead(prev ?? [], r.value.items, r.value.hasMore))
+        cursorRef.current = lowerCursor(cursorRef.current, minRootSeq(r.value.items))
+        setPaging(p => ({ ...p, mode: 'paged', hasMore: r.value.hasMore ? (p.mode === 'paged' ? p.hasMore : true) : false }))
+        setCommentCount(kind, id, r.value.total)
+        return
+      }
+      if (r.code !== 'UNSUPPORTED') { setLoadError(r.message); return }
+      setPaging(p => ({ ...p, mode: 'legacy', hasMore: false }))
+    }
+    const r = await api.list(kind, id)
+    if (t !== ticket.current) return
     if (!r.ok) { setLoadError(r.message); return }
-    setLoadError(null); setNodes(r.value); setCommentCount(kind, id, countComments(r.value))
+    setLoadError(null); setItems(flattenNodes(r.value)); setCommentCount(kind, id, countComments(r.value))
   }, [kind, id])
-  const reload = useCallback(async () => { apply(await api.list(kind, id)) }, [apply, kind, id])
   useEffect(() => {
-    let alive = true
-    void api.list(kind, id).then(r => { if (alive) apply(r) })
-    return () => { alive = false }
-  }, [apply, kind, id])
+    modeRef.current = null; cursorRef.current = null; setItems(null); setLoadError(null)
+    setPaging({ mode: null, hasMore: false, loadingMore: false, moreError: null, loadedOlder: false })
+    void reload()
+  }, [reload])
+
+  /** "Xem bình luận cũ hơn": thêm MỘT trang theo con trỏ; chống bấm đúp; lỗi không làm mất bình luận đã hiện. */
+  const loadOlder = async () => {
+    if (moreBusy.current || modeRef.current !== 'paged') return
+    moreBusy.current = true
+    setPaging(p => ({ ...p, loadingMore: true, moreError: null }))
+    const r = await api.page(kind, id, cursorRef.current, PAGE_ROOTS)
+    moreBusy.current = false
+    if (!r.ok) { setPaging(p => ({ ...p, loadingMore: false, moreError: r.message || 'Chưa tải được bình luận cũ hơn.' })); return }
+    cursorRef.current = lowerCursor(cursorRef.current, minRootSeq(r.value.items))
+    setItems(prev => mergeById(prev ?? [], r.value.items))
+    setPaging(p => ({ ...p, loadingMore: false, hasMore: r.value.hasMore, loadedOlder: true }))
+  }
+  const patch = (cid: string, fn: (c: TargetComment) => TargetComment) => setItems(prev => prev && prev.map(c => (c.id === cid ? fn(c) : c)))
 
   const send = (parent: string | null) => async (body: string): Promise<string | null> => {
     const r = await api.add(kind, id, body, parent)
     if (!r.ok) return r.message
-    setReplyTo(null); await reload(); return null
+    setReplyTo(null)
+    // Trả lời vào gốc nằm ngoài trang mới nhất (rất cũ): nạp riêng đúng cây của gốc đó (trang cỡ 1 ngay sau gốc), rồi tải lại đầu trang
+    const root = parent ? itemsRef.current?.find(c => c.id === parent) : null
+    if (root && modeRef.current === 'paged' && root.rootSeq != null) {
+      const one = await api.page(kind, id, root.rootSeq + 1, 1)
+      if (one.ok) setItems(prev => mergeById(prev ?? [], one.value.items))
+    }
+    await reload(); revealComment(r.value); return null
   }
-  const del = async (c: TargetComment) => {
-    if (!window.confirm(c.parentId ? 'Xoá trả lời này?' : 'Xoá bình luận này? Các trả lời của nó cũng bị xoá.')) return
-    const r = await api.remove(kind, c.id)
-    if (!r.ok) { setActionError(r.message); return }
-    setActionError(null); await reload()
+  // Xoá: hộp xác nhận chung (B) — thất bại giữ hộp mở + báo lý do; thành công gỡ cục bộ cả nhánh (D) rồi tải lại trang mới nhất
+  const [deleting, setDeleting] = useState<TargetComment | null>(null)
+  const confirmDelete = async (): Promise<string | null> => {
+    if (!deleting) return null
+    const gone = deleting
+    const r = await api.remove(kind, gone.id)
+    if (!r.ok) return r.message
+    setActionError(null); setItems(prev => prev && dropWithDescendants(prev, gone.id)); await reload(); return null
   }
   const hide = async (c: TargetComment, h: boolean) => {
     const r = await api.hide(c.id, h)
     if (!r.ok) { setActionError(r.message); return }
-    setActionError(null); await reload()
+    setActionError(null); patch(c.id, x => ({ ...x, isHidden: h })); await reload()
   }
   const saveEdit = (c: TargetComment) => async (body: string): Promise<string | null> => {
     const r = await api.edit(kind, c.id, body)
     if (!r.ok) return r.message
-    await reload(); return null
+    patch(c.id, x => ({ ...x, body, edited: true })); await reload(); return null
   }
 
   const row = (c: TargetComment, isReply: boolean) => (
-    <Row key={c.id} c={c} isReply={isReply} me={me} now={now} editing={editing === c.id} onOpenProfile={onOpenProfile}
+    <Row key={c.id} c={c} isReply={isReply} me={me} now={now} editing={editing === c.id} deleting={deleting?.id === c.id} onOpenProfile={onOpenProfile}
       onReply={isReply ? undefined : () => setReplyTo(replyTo === c.id ? null : c.id)}
-      onEdit={() => setEditing(c.id)} onEditDone={() => setEditing(null)} onDelete={() => void del(c)} onHide={h => void hide(c, h)} saveEdit={saveEdit(c)} />
+      onEdit={() => setEditing(c.id)} onEditDone={() => setEditing(null)} onDelete={() => setDeleting(c)} onHide={h => void hide(c, h)} saveEdit={saveEdit(c)} />
   )
   return (
-    <section className="cs-cmts cs-target-cmts" aria-label="Bình luận" data-kind={kind}>
+    <section className="cs-cmts cs-target-cmts" aria-label="Bình luận" data-kind={kind} ref={sectionRef}>
       {nodes === null && !loadError && <p className="cs-cmts-loading" role="status">Đang tải bình luận…</p>}
       {loadError && <p className="cs-cmts-error" role="alert">{loadError}{' '}<button type="button" className="cs-link-btn" onClick={() => void reload()}>Thử lại</button></p>}
+      {paging.hasMore && (
+        <button type="button" className="cs-link-btn cs-cmts-more" onClick={() => void loadOlder()} disabled={paging.loadingMore}>
+          {paging.loadingMore ? 'Đang tải…' : 'Xem bình luận cũ hơn'}
+        </button>
+      )}
+      {paging.moreError && <p className="cs-cmts-error" role="alert">{paging.moreError}{' '}<button type="button" className="cs-link-btn" onClick={() => void loadOlder()}>Thử lại</button></p>}
+      {paging.loadedOlder && !paging.hasMore && <p className="cs-cmts-end" role="status">Đã xem hết bình luận</p>}
       {nodes !== null && nodes.length === 0 && <p className="cs-cmts-empty">Chưa có bình luận nào.</p>}
       {nodes !== null && nodes.length > 0 && (
         <ul className="cs-cmt-list">
@@ -171,6 +212,10 @@ export default function TargetComments({ kind, id, me, now, onOpenProfile }: {
         </ul>
       )}
       {actionError && <p className="cs-cmts-error" role="alert">{actionError}</p>}
+      {deleting && (
+        <DeleteCommentConfirm isReply={!!deleting.parentId}
+          onConfirm={confirmDelete} onClose={() => setDeleting(null)} />
+      )}
       {me && <Composer idBase={`cs-cmt-input-${kind}-${id}`} placeholder="Viết bình luận..." submitLabel="Gửi bình luận" me={me} onSubmit={send(null)} />}
     </section>
   )

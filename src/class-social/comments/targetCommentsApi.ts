@@ -1,6 +1,7 @@
 // Gọi RPC bình luận theo mục. supabase nạp ĐỘNG (test được trên Node). Không ném lỗi ra ngoài.
 import type { LikeKind } from '../likes/likeModel'
-import { buildThread, commentErrorText, type CommentKind, type CommentNode, type TargetCommentRow } from './targetCommentModel'
+import { isMissingRpc } from './paging'
+import { buildThread, toTargetComment, commentErrorText, type CommentKind, type CommentNode, type TargetComment, type TargetCommentRow } from './targetCommentModel'
 
 export type CommentResult<T> = { ok: true; value: T } | { ok: false; message: string; code?: string }
 const online = () => (typeof navigator === 'undefined' ? true : navigator.onLine !== false)
@@ -9,6 +10,8 @@ const fail = (e: Err): { ok: false; message: string; code?: string } => ({ ok: f
 
 export type TargetCommentsApi = {
   list(kind: CommentKind, id: string): Promise<CommentResult<CommentNode[]>>
+  /** Paging V1: một trang gốc (+ trả lời của chúng). before = root_seq nhỏ nhất đã có (null = mới nhất). Chưa có hàm → code 'UNSUPPORTED'. */
+  page(kind: CommentKind, id: string, before: number | null, limit: number): Promise<CommentResult<{ items: TargetComment[]; hasMore: boolean; total: number }>>
   add(kind: CommentKind, id: string, body: string, parentId: string | null): Promise<CommentResult<string>>
   edit(kind: LikeKind, commentId: string, body: string): Promise<CommentResult<null>>
   remove(kind: LikeKind, commentId: string): Promise<CommentResult<null>>
@@ -28,6 +31,14 @@ export const supabaseTargetCommentsApi: TargetCommentsApi = {
       if (error) return { ok: false, message: 'Chưa tải được bình luận.', code: error.code }
       return { ok: true, value: buildThread((data ?? []) as TargetCommentRow[]) }
     } catch { return { ok: false, message: 'Chưa tải được bình luận.' } }
+  },
+  async page(kind, id, before, limit) {
+    try {
+      const { data, error } = await rpc('feed_comment_page', { p_kind: kind, p_id: id, p_before_seq: before, p_limit: limit })
+      if (error) return isMissingRpc(error) ? { ok: false, message: '', code: 'UNSUPPORTED' } : { ok: false, message: before === null ? 'Chưa tải được bình luận.' : 'Chưa tải được bình luận cũ hơn.', code: error.code }
+      const rows = (data ?? []) as TargetCommentRow[]
+      return { ok: true, value: { items: rows.map(toTargetComment).filter((c): c is TargetComment => c !== null), hasMore: (rows[0]?.older_roots ?? 0) > 0, total: Number(rows[0]?.total_count ?? 0) || 0 } }
+    } catch { return { ok: false, message: before === null ? 'Chưa tải được bình luận.' : 'Chưa tải được bình luận cũ hơn.' } }
   },
   async add(kind, id, body, parentId) {
     try {

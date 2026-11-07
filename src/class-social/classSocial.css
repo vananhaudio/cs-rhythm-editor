@@ -1783,10 +1783,16 @@ button.cs-subs-title:hover { color: var(--cs-accent); }
 .cs-likebar-err { margin: 0; padding: 4px 2px 8px; font-size: 13px; color: var(--cs-warn); }
 
 /* Feed Comments V2 — khu bình luận thread/publication, trả lời một cấp */
-.cs-target-cmts .cs-cmt-solo, .cs-target-cmts .cs-cmt-replies { list-style: none; margin: 0; padding: 0; }
-.cs-target-cmts .cs-cmt-node { list-style: none; }
-.cs-target-cmts .cs-cmt-replies { margin: 6px 0 0 40px; display: flex; flex-direction: column; gap: 8px; }
-.cs-target-cmts .cs-cmt-replybox { list-style: none; }
+.cs-cmts .cs-cmt-solo, .cs-cmts .cs-cmt-replies { list-style: none; margin: 0; padding: 0; }
+.cs-cmts .cs-cmt-node { list-style: none; }
+.cs-cmts .cs-cmt-replies { margin: 6px 0 0 40px; display: flex; flex-direction: column; gap: 8px; }
+.cs-cmts .cs-cmt-replies.is-orphan { margin-left: 0; }
+.cs-cmts .cs-cmt-replybox { list-style: none; }
+/* Feed Comments Lát C — trả lời bình luận Social */
+.cs-replying { margin: 0 0 4px; font-size: 13px; color: var(--cs-muted); overflow-wrap: anywhere; }
+.cs-replying strong, .cs-replyto strong { color: var(--cs-text, inherit); font-weight: 600; }
+.cs-replyto { margin: 0 0 2px; font-size: 12.5px; color: var(--cs-muted); overflow-wrap: anywhere; }
+.cs-cmt-blockednote > .cs-cmts-empty { margin-bottom: 6px; }
 .cs-cmts-empty, .cs-cmts-loading { margin: 0; font-size: 13px; color: var(--cs-muted); }
 .cs-cmt-reply, .cs-cmt-cancel { min-height: 32px; padding: 0 6px; font-weight: 600; }
 .cs-likebar-btn .cs-likebar-n { font-weight: 500; opacity: 0.85; }
@@ -1933,3 +1939,28 @@ button.cs-subs-title:hover { color: var(--cs-accent); }
 .cs-mira-info-body { padding: 0 16px 10px; display: grid; gap: 6px; font-size: 13px; color: var(--cs-text, #18181B); max-height: 40vh; overflow: auto; }
 .cs-mira-info-body p { margin: 0; }
 .cs-mira-info-data { display: grid; gap: 6px; padding-top: 6px; border-top: 1px dashed var(--cs-border, #E4E4E7); }
+
+/* ── Feed Composer Lát A: đang gửi (biểu tượng xoay, không đổi kích thước nút) + nút Gửi lại ── */
+.cs-cmt-send.is-sending:disabled { background: var(--cs-p); cursor: progress; }
+.cs-spin { animation: cs-spin 0.9s linear infinite; }
+@keyframes cs-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .cs-spin { animation-duration: 2.4s; } }
+.cs-cmt-retry { min-height: 44px; padding: 0 8px; font-weight: 700; }
+
+/* ── Feed Comments Lát B: hộp xoá · vùng chạm 44px (mở rộng vô hình) · tên dài · phân biệt trả lời ── */
+.cs-confirm-err { display: block; margin-top: 10px; color: #b42318; font-size: 14px; font-weight: 600; }
+.cs-cmt.is-deleting { opacity: 0.5; }
+.cs-cmt-head { min-width: 0; }
+.cs-cmt-author { min-width: 0; max-width: 100%; overflow-wrap: anywhere; text-align: left; }
+.cs-cmt-meta { gap: 14px; flex-wrap: wrap; }
+.cs-cmt-reply, .cs-cmt-cancel { position: relative; }
+.cs-cmt-reply::after, .cs-cmt-cancel::after { content: ''; position: absolute; left: -6px; right: -6px; top: 50%; height: 44px; transform: translateY(-50%); }
+.cs-target-cmts .cs-cmt-replies { margin-left: 16px; padding-left: 12px; border-left: 2px solid var(--cs-border); }
+@media (max-width: 1023px) {
+  .cs-cmts .cs-more-item { display: flex; align-items: center; min-height: 44px; padding: 10px 12px; font-size: 15px; }
+}
+
+/* Feed Comments Lát D — tải thêm bình luận cũ hơn */
+.cs-cmts-end { margin: 0; padding: 4px 0; font-size: 13px; color: var(--cs-muted); text-align: center; }
+.cs-cmts-more { min-height: 44px; }
+.cs-cmts-more:disabled { opacity: 0.7; }

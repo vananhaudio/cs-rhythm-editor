@@ -221,7 +221,7 @@ function Wall({ me, userId, isSelf, identityRev, onOpenProfile, onOpenThread }: 
   const fetchPage = useCallback((c?: { createdAt: string; id: string; key: string }) => fetchWallMixedPage(userId, c), [userId])
   const { state, reload, loadMore } = usePostsFeed(fetchPage)
   const postIds = useMemo(() => state.status === 'ready' ? state.posts.filter(isPostEntry).map(p => p.id) : [], [state])
-  const { comments, refresh, expand, refreshAll } = useFeedComments(postIds)
+  const { comments, refresh, refreshThread, expand, loadOlder, drop, refreshAll } = useFeedComments(postIds)
   const [modError, setModError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -239,6 +239,9 @@ function Wall({ me, userId, isSelf, identityRev, onOpenProfile, onOpenThread }: 
     me, comments,
     onRefreshComments: refresh,
     onExpandComments: expand,
+    onLoadOlderComments: loadOlder,
+    onDropComment: drop,
+    onRefreshCommentThread: refreshThread,
     onModeratePost: (p, h) => void onModeratePost(p, h),
     onOpenProfile: id => { if (id !== userId) onOpenProfile(id) },
     onOpenThread,
