@@ -3,21 +3,29 @@
 // - Hàng đợi: MỘT yêu cầu một lúc (không bắn hàng loạt khi Feed có nhiều thẻ).
 // - Cache theo NGƯỜI XEM (uid trong khoá): đổi tài khoản không dùng lại kết quả của người khác; hết hạn sau TTL để thấy bản nhạc Thầy sửa.
 // - Lỗi mạng KHÔNG cache (lần sau thử lại). supabase nạp ĐỘNG để component lá test được trên Node.
-import { isBarsOpen, isShareNoteSessionOpen, isTextOpen, openShareNote, type BarRange, type ScoreKey, type ShareNoteKind } from './shareNoteApi'
+import { isBarsOpen, isRegionOpen, isShareNoteSessionOpen, isTextOpen, openShareNote, type BarRange, type ScoreKey, type ShareNoteKind } from './shareNoteApi'
 import { scoreTexAt } from './scoreExcerpt'
+import { splitByRanges, type RegionPart } from './regionAnchor'
 import { UNAVAILABLE_TEXT } from './refCards'
-import { verifyAnchor, type TextAnchor } from './textAnchor'
+import { leafTextAt, verifyAnchor, type TextAnchor } from './textAnchor'
 
 export type PreviewLoad =
   | { status: 'ok'; kind: 'bars'; note: string; tex: string; bars: BarRange; score: ScoreKey; section?: unknown }   // section = khối giáo trình chứa bản nhạc (khung ngữ cảnh)
   /** vùng văn bản: `text` = toạ độ ĐÃ được server xác nhận VÀ client kiểm lại bằng băm (verifyAnchor); `section` = khối chứa lá */
   | { status: 'ok'; kind: 'text'; note: string; text: TextAnchor; moved: boolean; section: unknown }
+  /** vùng khoanh hỗn hợp (V3.1): `parts` = toạ độ ĐÃ được server xác nhận VÀ client kiểm lại trên giáo trình người xem đọc được; `sections` = giáo trình của buổi */
+  | { status: 'ok'; kind: 'region'; note: string; parts: RegionPart[]; moved: boolean; sections: unknown[] }
   | { status: 'stale' | 'no_access' | 'locked'; note: string; kind?: ShareNoteKind }
   | { status: 'unavailable' }
   | { status: 'error' }
 
 export function shareNoteMessage(load: PreviewLoad | null): string | null {
   if (!load) return null
+  if (load.status !== 'ok' && 'kind' in load && load.kind === 'region') {
+    if (load.status === 'no_access') return 'Bạn chưa có quyền xem phần giáo trình này.'
+    if (load.status === 'locked') return 'Buổi này chưa mở cho bạn nên chưa xem được vùng được khoanh.'
+    if (load.status === 'stale') return 'Giáo trình đã được cập nhật nên chưa hiển thị vùng này.'
+  }
   if (load.status !== 'ok' && 'kind' in load && load.kind === 'text') {
     if (load.status === 'no_access') return 'Bạn chưa có quyền xem phần giáo trình này.'
     if (load.status === 'locked') return 'Buổi này chưa mở cho bạn nên chưa xem được đoạn văn bản.'
@@ -29,6 +37,14 @@ export function shareNoteMessage(load: PreviewLoad | null): string | null {
   if (load.status === 'unavailable') return UNAVAILABLE_TEXT
   if (load.status === 'error') return 'Chưa tải được bản nhạc. Cuộn lại để thử lại.'
   return null
+}
+
+/** Mọi đoạn chữ khớp lá nguồn, mọi bản nhạc còn có alphaTex, mọi ô nhịp có thể xảy ra (≥ 1). Sai một chỗ ⇒ false. */
+export function regionFits(sections: unknown, parts: RegionPart[]): boolean {
+  if (!Array.isArray(sections)) return false
+  return parts.every(p => sections[p.sec] !== undefined
+    && p.leaves.every(l => { const t = leafTextAt(sections, { section: p.sec, path: l.p }); return t !== null && splitByRanges(t, l.r) !== null })
+    && p.scores.every(sc => scoreTexAt(sections, { section: p.sec, path: sc.p as ScoreKey['path'] }) !== null))
 }
 
 /** Hết hạn cache (ms): đủ để cuộn Feed không tải lại, đủ ngắn để Thầy sửa nhạc thì thẻ sớm báo cập nhật. */
@@ -82,7 +98,12 @@ async function run(noteId: string, uid: string): Promise<PreviewLoad> {
         sections = c?.sections ?? null
         if (sections) contents.set(`${uid}:${sid}`, { at: clock(), v: sections })
       }
-      if (isTextOpen(open)) {
+      if (isRegionOpen(open)) {
+        // Vùng khoanh: server đã quyết ok/moved; client KIỂM LẠI từng đoạn chữ / bản nhạc trên đúng giáo trình người xem đọc được (RLS). Không khớp ⇒ KHÔNG hiện (stale).
+        if (!Array.isArray(sections)) out = { status: 'no_access', note: open.note, kind: 'region' }
+        else if (!regionFits(sections, open.parts)) out = { status: 'stale', note: open.note, kind: 'region' }
+        else out = { status: 'ok', kind: 'region', note: open.note, parts: open.parts, moved: open.status === 'moved', sections }
+      } else if (isTextOpen(open)) {
         // Vùng văn bản: server đã quyết ok/moved; client KIỂM LẠI toạ độ + băm trên đúng giáo trình người xem đọc được (RLS). Không khớp ⇒ KHÔNG tô/hiện (stale).
         if (!sections) out = { status: 'no_access', note: open.note, kind: 'text' }
         else if (!(await verifyAnchor(sections, open.text, open.sha))) out = { status: 'stale', note: open.note, kind: 'text' }

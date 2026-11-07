@@ -2,9 +2,11 @@
 // Nhận một LessonDoc (dữ liệu) → dựng trang giáo trình: web/app + in A4.
 // Nhận diện Class: cream #F7F5FC, indigo #4338CA, Be Vietnam Pro (index.html đã nạp font).
 // Section nào không có trong doc.sections thì đơn giản là không hiện.
-import { createContext, useContext, useRef, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
 import type { ScoreKey } from '../share/shareNoteApi'
+import RegionLayer, { RegionHighlight } from './RegionLayer'
 import { leafKey, splitForMark, studyCompact, studySubsection, type TextAnchor } from '../share/textAnchor'
+import { splitByRanges } from '../share/regionAnchor'
 import { ScoreShareSlot } from './scoreShareSlot'
 import TextSelectionLayer from './TextSelectionLayer'
 import type { CheckpointQuiz, CheckpointSection, LessonDoc, LessonSection, StudyBlock } from './lessonTypes'
@@ -12,6 +14,7 @@ import { checkpointAcceptsLabel, quizOf } from './checkpoint'
 import { CheckpointSlot } from './checkpointSlot'
 import { exportLessonPdf } from './lessonPdf'
 import FretboardMap from './FretboardMap'
+import { findVisual } from './regionVisual'
 import ZoomFrame from './ZoomFrame'
 import LessonScore from './LessonScore'
 import YouTubeLesson from '../video/YouTubeLesson'
@@ -39,13 +42,19 @@ function Block({ label, title, children, sub }:
 
 /** Chia sẻ VÙNG VĂN BẢN (Contextual Share V2): `select` = trang Buổi cho phép chọn (mỗi lá gắn data-tp để lớp chọn đổi vùng chọn → điểm mã);
  *  `focus` = lá + khoảng điểm mã cần tô (đã được server xác nhận và client kiểm băm). Không có provider ⇒ lá in thẳng chuỗi như cũ (không đổi bản in / PDF / trang công khai). */
-export type TextLeafView = { select?: boolean; focus?: TextAnchor | null }
+export type TextLeafView = { select?: boolean; focus?: TextAnchor | null; marks?: Map<string, [number, number][]> }
 const TextLeafCtx = createContext<TextLeafView>({})
 /** Một LÁ văn bản. Chuỗi nguồn được in NGUYÊN VĂN (không trim); lá được tô chia thành [trước][<mark>][sau] — tổng nối lại bằng đúng chuỗi nguồn. */
 function T({ si, path, text }: { si: number; path: (string | number)[]; text: string }) {
   const v = useContext(TextLeafCtx)
   const p = path.map(String)
   const hit = !!v.focus && v.focus.section === si && v.focus.path.join('.') === p.join('.')
+  // V3.1 (khung ngữ cảnh của vùng khoanh): tô ĐÚNG các đoạn đã khoanh trong lá; đoạn không khớp chuỗi nguồn ⇒ không tô gì (fail-closed)
+  const rg = v.marks?.get(leafKey(si, p))
+  if (rg) {
+    const segs = splitByRanges(text, rg)
+    return <>{segs ? segs.map((g, k) => g.hl ? <mark key={k} className="lsn-text-hl" data-testid="region-mark">{g.t}</mark> : <span key={k}>{g.t}</span>) : text}</>
+  }
   if (!v.select && !hit) return <>{text}</>
   const parts = hit && v.focus ? splitForMark(text, v.focus.from, v.focus.to) : null
   const inner = parts ? <>{parts[0]}<mark className="lsn-text-hl" data-testid="text-focus">{parts[1]}</mark>{parts[2]}</> : text
@@ -54,7 +63,7 @@ function T({ si, path, text }: { si: number; path: (string | number)[]; text: st
 
 /** Chế độ KHUNG NGỮ CẢNH (Contextual Share): cùng renderer, chỉ thay LessonScore của đúng bản nhạc đã chia sẻ bằng `node` và lược các phần không thuộc khung.
  *  V2 văn bản: `text` = neo; khối `study` chỉ dựng cửa sổ (gọn: tiêu đề + khối chứa lá + khối phụ thuộc; đầy đủ: cả tiểu mục) — các loại khối còn lại dựng nguyên khối. */
-export type ContextRender = { key?: ScoreKey; node?: ReactNode; text?: TextAnchor; expanded?: boolean }
+export type ContextRender = { key?: ScoreKey; node?: ReactNode; text?: TextAnchor; expanded?: boolean; blocksAt?: number[] }
 /** Phần ngữ cảnh sư phạm ĐI SAU / BÊN CẠNH bản nhạc (chú thích marks, guidance, ghi chú, danh sách dự kiến, trạng thái chờ): hiện ở trang giáo trình gốc, ẩn ở khung mặc định, hiện khi "Xem thêm ngữ cảnh". */
 const showMore = (c: ContextRender | undefined) => !c || !!c.expanded
 const ctxHit = (c: ContextRender | undefined, i: number, path: ScoreKey['path']) => !!c && !!c.key && c.key.section === i && c.key.path.join('.') === path.join('.')
@@ -257,7 +266,8 @@ function renderSection(s: LessonSection, i: number, ctx?: ContextRender) {
           </div>
           {(() => {
             const at = ctx?.text && ctx.text.section === i && ctx.text.path[0] === 'blocks' ? Number(ctx.text.path[1]) : null
-            const only = at !== null && Number.isInteger(at) ? (ctx?.expanded ? studySubsection(s.blocks, at) : studyCompact(s.blocks, at)) : null
+            const ats = ctx?.blocksAt?.length ? ctx.blocksAt : at !== null && Number.isInteger(at) ? [at] : null     // V3.1: nhiều khối study được khoanh ⇒ hợp các cửa sổ
+            const only = ats ? [...new Set(ats.flatMap(a => (ctx?.expanded ? studySubsection(s.blocks, a) : studyCompact(s.blocks, a))))].sort((x, y) => x - y) : null
             const gap = (k: string) => <div key={k} className="lsn-ctx-gap" aria-hidden="true">⋯</div>
             return <>
               {only && only.length > 0 && only[0] > 0 && gap('g0')}
@@ -371,7 +381,7 @@ export default function LessonDocument({ doc, onBack, embedded = false }: { doc:
   const m = doc.meta
   const paperRef = useRef<HTMLElement>(null)
   const share = useContext(ScoreShareSlot)                       // chỉ trang Buổi /me cấp; nơi khác = null ⇒ không chọn văn bản, không đổi giao diện
-  const textView: TextLeafView = { select: !!share?.onAskText, focus: share?.textFocus ?? null }
+  const textView: TextLeafView = { select: !!share?.onAskText || !!share?.onAskRegion, focus: share?.textFocus ?? null }
   const [pdf, setPdf] = useState<'idle' | 'working' | 'error'>('idle')
 
   const fileName = `${m.programCode}-Buoi-${String(m.sessionNo).padStart(2, '0')}.pdf`
@@ -416,7 +426,7 @@ export default function LessonDocument({ doc, onBack, embedded = false }: { doc:
         </header>
 
         <TextLeafCtx.Provider value={textView}>
-          {doc.sections.map((s, i) => safeRenderSection(s, i))}
+          {doc.sections.map((s, i) => share?.onAskRegion ? <div key={i} data-sec={i}>{safeRenderSection(s, i)}</div> : safeRenderSection(s, i))}
         </TextLeafCtx.Provider>
 
         <footer className="lsn-foot">
@@ -424,18 +434,84 @@ export default function LessonDocument({ doc, onBack, embedded = false }: { doc:
         </footer>
       </article>
       {share?.onAskText && <TextSelectionLayer root={paperRef} sections={doc.sections} onAsk={share.onAskText} />}
+      {share?.onAskRegion && <RegionLayer root={paperRef} sections={doc.sections} onAsk={share.onAskRegion} />}
+      {share?.regionFocus && <RegionHighlight root={paperRef} parts={share.regionFocus} focus onShown={share.onFocusShown} />}
     </div>
   )
 }
 
 /** Khung ngữ cảnh giáo trình (Universal Contextual Share): dựng ĐÚNG khối gốc bằng chính renderer + CSS của LessonDocument, chỉ thay phần bản nhạc bằng `node`
  *  (trích đoạn + vùng chú ý). Dữ liệu `section` là khối ĐÃ qua kiểm quyền ở server/RLS; mọi văn bản đi qua React (không HTML thô). */
-export function ContextSectionView({ section, index, scoreKey, node, text, expanded = false }: { section: unknown; index: number; scoreKey?: ScoreKey; node?: ReactNode; text?: TextAnchor; expanded?: boolean }) {
+/** V3.2: xem gọn phần hình/khoảng trống — chỉ cắt dải dọc quanh vùng khoanh (± lề), không đổi tỉ lệ nội dung. `band` = [trên, dưới] theo px trong khối. */
+function CropBand({ band, children }: { band: [number, number] | null; children: ReactNode }) {
+  const inner = useRef<HTMLDivElement>(null)
+  const [h, setH] = useState<number | null>(null)
+  useEffect(() => {
+    const el = inner.current; if (!el) return
+    const calc = () => setH(el.getBoundingClientRect().height)
+    calc()
+    if (typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(calc); ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+  const PAD = 56
+  let top = 0, height: number | undefined
+  if (h && h > 0 && band) {
+    const a = Math.max(0, band[0] - PAD), c = Math.min(h, band[1] + PAD)
+    if (c - a < h - 24) { top = a; height = Math.max(c - a, 120) }
+  }
+  return (
+    <div className={height ? 'lsn-ctx-crop' : undefined} data-testid="region-crop" data-cropped={height ? '1' : '0'} style={height ? { height } : undefined}>
+      <div ref={inner} style={top ? { transform: `translateY(-${top}px)` } : undefined}>{children}</div>
+    </div>
+  )
+}
+
+/** Hộp "gần đúng": ‰ của HÌNH trong khối (cùng quy tắc `findVisual` với người khoanh); không có hình ⇒ ‰ của cả khối. */
+function ApproxOverlay({ host, box, onBand }: { host: RefObject<HTMLElement | null>; box: [number, number, number, number]; onBand?: (b: [number, number]) => void }) {
+  const [r, setR] = useState<{ l: number; t: number; w: number; h: number } | null>(null)
+  useEffect(() => {
+    const art = host.current; if (!art) return
+    let raf = 0
+    const calc = () => {
+      raf = 0
+      const v = findVisual(art), ab = art.getBoundingClientRect(), rb = (v ?? art).getBoundingClientRect()
+      const next = { l: rb.left - ab.left + rb.width * box[0] / 1000, t: rb.top - ab.top + rb.height * box[1] / 1000, w: rb.width * (box[2] - box[0]) / 1000, h: rb.height * (box[3] - box[1]) / 1000 }
+      setR(old => (old && Math.abs(old.l - next.l) < .5 && Math.abs(old.t - next.t) < .5 && Math.abs(old.w - next.w) < .5 && Math.abs(old.h - next.h) < .5 ? old : next))
+      onBand?.([next.t, next.t + next.h])
+    }
+    const sched = () => { if (!raf) raf = requestAnimationFrame(calc) }
+    calc()
+    const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(sched)
+    ro?.observe(art); const v = findVisual(art); if (v) ro?.observe(v)
+    window.addEventListener('resize', sched)
+    return () => { ro?.disconnect(); window.removeEventListener('resize', sched); if (raf) cancelAnimationFrame(raf) }
+  }, [host, box, onBand])
+  if (!r) return null
+  return <div className="lsn-ctx-approx" data-testid="region-approx" title="Vùng hình/khoảng trống: chỉ hiển thị gần đúng" style={{ left: r.l, top: r.t, width: r.w, height: r.h }}><span>gần đúng</span></div>
+}
+
+export function ContextSectionView({ section, index, scoreKey, node, text, expanded = false, marks, blocksAt, approx, crop }: {
+  section: unknown; index: number; scoreKey?: ScoreKey; node?: ReactNode; text?: TextAnchor; expanded?: boolean
+  /** V3.1 vùng khoanh: các đoạn chữ cần tô (khoá `${sec}:${path}`), các khối study được khoanh (để chọn cửa sổ), hộp ‰ cho phần chỉ vẽ gần đúng */
+  marks?: Map<string, [number, number][]>; blocksAt?: number[]; approx?: [number, number, number, number]
+  /** V3.2: xem gọn — cắt dải quanh hộp `approx` */
+  crop?: boolean
+}) {
+  const art = useRef<HTMLElement>(null)
+  const [band, setBand] = useState<[number, number] | null>(null)
+  const onBand = useCallback((b: [number, number]) => setBand(o => (o && Math.abs(o[0] - b[0]) < .5 && Math.abs(o[1] - b[1]) < .5 ? o : b)), [])
+  const body = (
+    <article ref={art} className="lsn-paper" style={approx ? { position: 'relative' } : undefined}>
+      {safeRenderSection(section as LessonSection, index, { key: scoreKey, node, text, expanded, blocksAt })}
+      {approx && <ApproxOverlay host={art} box={approx} onBand={onBand} />}
+    </article>
+  )
   return (
     <div className="lsn is-embedded lsn-ctx" data-testid="context-section" data-expanded={expanded ? '1' : '0'}>
       <style>{CSS}</style>
-      <TextLeafCtx.Provider value={{ focus: text ?? null }}>
-        <article className="lsn-paper">{safeRenderSection(section as LessonSection, index, { key: scoreKey, node, text, expanded })}</article>
+      <TextLeafCtx.Provider value={{ focus: text ?? null, marks }}>
+        {approx && crop && !expanded ? <CropBand band={band}>{body}</CropBand> : body}
       </TextLeafCtx.Provider>
     </div>
   )
@@ -576,7 +652,7 @@ const CSS = `
 .lsn-share-btn[aria-pressed="true"]{background:${P.purpleTint};}
 .lsn-share-btn.is-primary{background:${P.purple};border-color:${P.purple};color:#fff;}
 /* Contextual Share V2 — vùng văn bản: nền cam nhạt + gạch chân cam (cùng màu điểm nhấn với vùng khoanh ô nhịp); thanh hành động cố định ở đáy */
-.lsn-text-hl{background:rgba(234,88,12,.18);color:inherit;border-radius:3px;padding:0 1px;box-decoration-break:clone;-webkit-box-decoration-break:clone;box-shadow:inset 0 -2px 0 rgba(234,88,12,.85);}
+.lsn-text-hl{background:rgba(234,88,12,.12);color:inherit;border-radius:3px;padding:0 1px;box-decoration-break:clone;-webkit-box-decoration-break:clone;box-shadow:inset 0 -1.5px 0 rgba(234,88,12,.75);}
 .lsn-ctx-gap{color:${P.inkFaint};text-align:center;letter-spacing:.35em;line-height:1;padding:4px 0;font-size:16px;}
 .lsn-textbar{position:fixed;left:0;right:0;bottom:0;z-index:40;display:flex;justify-content:center;padding:8px 12px calc(10px + env(safe-area-inset-bottom));pointer-events:none;}
 .lsn-textbar-in{pointer-events:auto;width:min(100%,560px);background:#fff;border:1px solid ${P.line};border-radius:16px;box-shadow:0 8px 28px rgba(29,25,48,.22);padding:10px 12px;display:flex;flex-direction:column;gap:8px;}
@@ -586,6 +662,22 @@ const CSS = `
 .lsn-textbar .lsn-share-btn{min-height:44px;padding:0 14px;}
 .lsn-textbar .lsn-share-icon{min-width:44px;min-height:44px;}
 @media print{.lsn-textbar{display:none;}}
+/* ── V3 Khoanh vùng hỗn hợp: nút bật (nổi, góc phải-dưới), lớp bắt kéo, khung đang kéo, vùng đã neo (tô cam + viền nét đứt kiểu bút khoanh) ── */
+.lsn-rg-start{position:fixed;right:14px;bottom:calc(14px + env(safe-area-inset-bottom));z-index:38;display:inline-flex;align-items:center;gap:6px;min-height:46px;padding:0 16px;border:none;border-radius:999px;background:${P.purple};color:#fff;font-weight:700;font-size:14.5px;font-family:inherit;cursor:pointer;box-shadow:0 6px 20px rgba(29,25,48,.3);}
+.lsn-rg-capture{position:fixed;inset:0;z-index:36;cursor:crosshair;touch-action:none;background:rgba(29,25,48,.06);}
+.lsn-rg-capture.is-scroll{pointer-events:none;touch-action:auto;background:transparent;}
+.lsn-rg-live{position:fixed;border:2px dashed #EA580C;background:rgba(234,88,12,.12);border-radius:8px;pointer-events:none;}
+.lsn-rg-layer{position:absolute;left:0;top:0;width:0;height:0;z-index:30;pointer-events:none;}
+.lsn-rg-fill{position:absolute;background:rgba(234,88,12,.09);border-radius:4px;pointer-events:none;}
+.lsn-rg-fill.is-approx{background:rgba(234,88,12,.04);}
+.lsn-ctx-approx{position:absolute;border:1.5px dashed rgba(234,88,12,.85);border-radius:10px;pointer-events:none;background:rgba(234,88,12,.04);}
+.lsn-ctx-approx>span{white-space:nowrap;position:absolute;left:8px;top:-9px;background:#fff;color:#C2410C;font-size:10.5px;font-weight:700;line-height:1;padding:3px 6px;border-radius:999px;border:1px solid rgba(234,88,12,.5);}
+.lsn-ctx-crop{overflow:hidden;position:relative;}
+.lsn-rg-outline{position:absolute;border:1.5px solid rgba(234,88,12,.55);border-radius:12px;}
+.lsn-rg-outline.is-approx{border:1.5px dashed rgba(234,88,12,.85);}
+.lsn-textbar.lsn-rg-bar.is-top{top:0;bottom:auto;padding:calc(10px + env(safe-area-inset-top)) 12px 8px;}
+@media print{.lsn-rg-start,.lsn-rg-capture,.lsn-rg-layer{display:none;}}
+
 .lsn-share-icon{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border:1px solid ${P.line};border-radius:50%;background:#fff;color:${P.inkSoft};cursor:pointer;}
 .lsn-share-range{font-weight:800;color:${P.ink};font-size:14px;padding:0 4px;}
 .lsn-share-hint{font-size:13px;color:${P.inkFaint};overflow-wrap:anywhere;}

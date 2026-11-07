@@ -7,8 +7,9 @@
 import ShareButton from '../../share/ShareButton'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { ScoreShareSlot, type ScoreShareContext } from '../../lesson/scoreShareSlot'
-import { barRangeText, isBarsOpen, isTextOpen, openShareNote, type BarRange, type ScoreKey, type ShareNoteOpen, type ShareNoteTextOpen } from '../../share/shareNoteApi'
+import { barRangeText, isBarsOpen, isRegionOpen, isTextOpen, openShareNote, type BarRange, type ScoreKey, type ShareNoteOpen, type ShareNoteTextOpen } from '../../share/shareNoteApi'
 import { verifyAnchor, type TextAnchor } from '../../share/textAnchor'
+import type { RegionPart } from '../../share/regionAnchor'
 import { shareNoteIdFromSearch } from '../../share/shareNoteLink'
 import { chatWithPath } from '../resolveMeRoute'
 import { ArrowLeft, ArrowRight } from 'lucide-react'
@@ -35,28 +36,30 @@ function ShareNotePanel({ load, here, textOk }: { load: NoteLoad; here: boolean;
   if (load.status === 'error') return <div className="cs-card cs-feed-error" role="alert"><p>Chưa mở được nội dung chia sẻ. Kiểm tra mạng rồi tải lại trang.</p></div>
   if (load.status === 'unavailable') return <div className="cs-card cs-share-note-panel" role="note"><p className="cs-share-note-status">Nội dung này không còn khả dụng.</p></div>
   const isText = load.kind === 'text'
+  const isRegion = load.kind === 'region'
   const where = load.status === 'ok' && isBarsOpen(load) ? barRangeText(load.bars) : null
   let status: string
   if (load.status === 'ok' || load.status === 'moved') {
     if (!here) status = `Câu hỏi này thuộc Buổi ${load.sessionNo}.`
+    else if (isRegion) status = load.status === 'moved' ? 'Giáo trình đã được sắp xếp lại; vùng được khoanh vẫn còn nguyên và đang tô màu cam bên dưới.' : 'Vùng được khoanh đang tô màu cam trong giáo trình bên dưới.'
     else if (isText) {
       status = textOk === false ? 'Không xác nhận được đoạn văn bản này trong giáo trình hiện tại nên không tô. Bạn vẫn có thể đọc cả buổi.'
         : textOk === null ? 'Đang xác nhận đoạn văn bản được hỏi…'
         : load.status === 'moved' ? 'Giáo trình đã được sắp xếp lại; đoạn được hỏi vẫn còn và đang tô màu cam bên dưới.' : 'Đoạn được hỏi đang tô màu cam trong giáo trình bên dưới.'
     } else status = 'Đoạn được khoanh đang tô màu cam trên bản nhạc bên dưới.'
   } else if (load.status === 'stale') {
-    status = isText ? 'Giáo trình đã được cập nhật sau khi câu hỏi được gửi, nên không xác định chắc chắn đoạn cũ và không tô.' : 'Bản nhạc đã được cập nhật sau khi câu hỏi được gửi, nên vùng khoanh cũ không còn khớp và không được tô.'
-  } else status = isText ? 'Bạn chưa có quyền xem giáo trình của buổi này.' : 'Bạn chưa có quyền xem bản nhạc của buổi này.'
+    status = isRegion ? 'Giáo trình đã được cập nhật sau khi vùng này được khoanh, nên không xác định chắc chắn vùng cũ và không tô. Bạn vẫn có thể đọc cả buổi.' : isText ? 'Giáo trình đã được cập nhật sau khi câu hỏi được gửi, nên không xác định chắc chắn đoạn cũ và không tô.' : 'Bản nhạc đã được cập nhật sau khi câu hỏi được gửi, nên vùng khoanh cũ không còn khớp và không được tô.'
+  } else status = isText || isRegion ? 'Bạn chưa có quyền xem giáo trình của buổi này.' : 'Bạn chưa có quyền xem bản nhạc của buổi này.'
   const canJump = (load.status === 'ok' || load.status === 'moved') && here && (isText ? textOk === true : true)
   return (
-    <section className="cs-card cs-share-note-panel" aria-label={isText ? 'Câu hỏi về đoạn văn bản' : 'Câu hỏi về đoạn nhạc'}>
-      <div className="cs-learn-kicker">{load.isAuthor ? 'Câu hỏi của bạn' : isText ? 'Câu hỏi về đoạn văn bản' : 'Câu hỏi về đoạn nhạc'}{where ? ` · ${where}` : ''}</div>
+    <section className="cs-card cs-share-note-panel" aria-label={isRegion ? 'Câu hỏi về vùng khoanh' : isText ? 'Câu hỏi về đoạn văn bản' : 'Câu hỏi về đoạn nhạc'}>
+      <div className="cs-learn-kicker">{load.isAuthor ? 'Câu hỏi của bạn' : isRegion ? 'Câu hỏi về vùng khoanh' : isText ? 'Câu hỏi về đoạn văn bản' : 'Câu hỏi về đoạn nhạc'}{where ? ` · ${where}` : ''}</div>
       <p className="cs-share-note-text">{load.note}</p>
       <p className="cs-share-note-status" role="status">{status}</p>
       <div className="cs-share-note-actions">
         {canJump && (
           <button type="button" className="cs-btn cs-btn-ghost cs-btn-sm"
-            onClick={() => document.querySelector(isText ? 'mark.lsn-text-hl' : '.lsn-share-hl.is-focus')?.scrollIntoView({ block: 'center', behavior: 'smooth' })}>{isText ? 'Xem đoạn được hỏi' : 'Xem đoạn nhạc'}</button>
+            onClick={() => document.querySelector(isRegion ? '.lsn-rg-outline' : isText ? 'mark.lsn-text-hl' : '.lsn-share-hl.is-focus')?.scrollIntoView({ block: 'center', behavior: 'smooth' })}>{isRegion ? 'Xem vùng được khoanh' : isText ? 'Xem đoạn được hỏi' : 'Xem đoạn nhạc'}</button>
         )}
         {!load.isAuthor && <a className="cs-btn cs-btn-primary cs-btn-sm" href={chatWithPath(load.authorId)}>Trả lời trong Trò chuyện</a>}
       </div>
@@ -89,6 +92,7 @@ export default function ClassSessionPage({ classId, sessionNo, isTeacher = false
   const noteHere = !!note && note.status !== 'loading' && note.status !== 'error' && note.status !== 'unavailable'
     && note.classId.toLowerCase() === classId.toLowerCase() && note.sessionNo === sessionNo
   const focus = noteHere && isBarsOpen(note) ? { score: note.score, bars: note.bars } : null
+  const regionFocus = noteHere && isRegionOpen(note) ? note.parts : null     // V3: server đã xác nhận mọi khối còn NGUYÊN VĂN
   const textNote = noteHere && isTextOpen(note) ? note : null           // vùng văn bản: SessionContent kiểm băm trên giáo trình đã tải rồi báo về đây
   const [textOk, setTextOk] = useState<{ id: string; ok: boolean } | null>(null)
   const textOkNow = textNote && textOk?.id === textNote.text.path.join('.') + ':' + noteId ? textOk.ok : null
@@ -141,7 +145,7 @@ export default function ClassSessionPage({ classId, sessionNo, isTeacher = false
       {learn.role === 'learner' && learn.mode === 'checkpoint' && (
         <SessionStatusLine s={s} now={learn.serverNow ? new Date(learn.serverNow) : new Date()} paceDays={learn.paceDays} />
       )}
-      <SessionContent key={s.sessionId} state={learn} s={s} onReload={reload} onOpenThread={onOpenThread} focus={focus}
+      <SessionContent key={s.sessionId} state={learn} s={s} onReload={reload} onOpenThread={onOpenThread} focus={focus} regionFocus={regionFocus}
         textNote={textNote} onTextChecked={ok => setTextOk(textNote && noteId ? { id: textNote.text.path.join('.') + ':' + noteId, ok } : null)}
         sessionLabel={`Buổi ${pad2(sessionNo)}${s.title ? ' · ' + s.title : ''}`} />
       {nav}
@@ -151,20 +155,24 @@ export default function ClassSessionPage({ classId, sessionNo, isTeacher = false
 
 type ContentLoad = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; doc: LessonDoc }
 
-function SessionContent({ state, s, onReload, onOpenThread, focus, textNote, onTextChecked, sessionLabel }: {
+function SessionContent({ state, s, onReload, onOpenThread, focus, regionFocus, textNote, onTextChecked, sessionLabel }: {
   state: Ready; s: SessionState; onReload: () => void; onOpenThread: (id: string) => void
   /** Vùng văn bản từ liên kết ?note= (server đã quyết ok/moved): kiểm băm trên giáo trình ĐÃ TẢI rồi mới tô; báo kết quả về trang */
   textNote: ShareNoteTextOpen | null
   onTextChecked: (ok: boolean) => void
   /** Vùng tô khi mở từ liên kết chia sẻ (server đã xác nhận còn khớp bản nhạc) */
   focus: { score: ScoreKey; bars: BarRange } | null
+  /** V3: vùng khoanh hỗn hợp cần vẽ (đã được server xác nhận) */
+  regionFocus: RegionPart[] | null
   sessionLabel: string
 }) {
   // "Khoanh để hỏi": chọn dải ô ở một bản nhạc → khung soạn câu hỏi / chia sẻ (Share Note V1)
   const [ask, setAsk] = useState<{ score: ScoreKey; bars: BarRange } | null>(null)
   const [askText, setAskText] = useState<{ anchor: TextAnchor; quote: string } | null>(null)   // V2: hỏi về vùng văn bản đã chọn
+  const [askRegion, setAskRegion] = useState<{ parts: RegionPart[]; summary: string } | null>(null)   // V3: hỏi về vùng khoanh hỗn hợp
   const [textFocus, setTextFocus] = useState<TextAnchor | null>(null)
-  const shareCtx = useMemo<ScoreShareContext>(() => ({ onAsk: (score, bars) => setAsk({ score, bars }), focus, onAskText: (anchor, quote) => setAskText({ anchor, quote }), textFocus: textNote ? textFocus : null }), [focus, textFocus, textNote])
+  const shareCtx = useMemo<ScoreShareContext>(() => ({ onAsk: (score, bars) => setAsk({ score, bars }), focus, onAskText: (anchor, quote) => setAskText({ anchor, quote }), textFocus: textNote ? textFocus : null,
+    onAskRegion: (parts, summary) => setAskRegion({ parts, summary }), regionFocus }), [focus, textFocus, textNote, regionFocus])
   const [load, setLoad] = useState<ContentLoad>({ status: 'loading' })
   const [rev, setRev] = useState(0)
   const [composing, setComposing] = useState<string | null>(null)
@@ -262,9 +270,11 @@ function SessionContent({ state, s, onReload, onOpenThread, focus, textNote, onT
     )
   }
   // Chế độ giáo trình (chưa có bài trả): chỉ cắm phần hiển thị cho khung XEM TRƯỚC của giáo viên; học viên không thấy nút nộp nào.
-  const composer = (ask || askText) && (
+  const composer = (ask || askText || askRegion) && (
     <Suspense fallback={null}>
-      {ask
+      {askRegion
+        ? <ShareNoteComposer sessionId={s.sessionId} sessionLabel={sessionLabel} region={askRegion} onClose={() => setAskRegion(null)} />
+        : ask
         ? <ShareNoteComposer sessionId={s.sessionId} sessionLabel={sessionLabel} score={ask.score} bars={ask.bars} onClose={() => setAsk(null)} />
         : askText && <ShareNoteComposer sessionId={s.sessionId} sessionLabel={sessionLabel} text={askText} onClose={() => setAskText(null)} />}
     </Suspense>

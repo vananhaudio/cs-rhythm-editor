@@ -1908,7 +1908,10 @@ button.cs-subs-title:hover { color: var(--cs-accent); }
 .cs-sn-post .cs-sn-preview .lsn-ctx .lsn-st-callout { font-size: 14.5px; line-height: 1.45; padding: 8px 10px; margin: 8px 0; }
 .cs-sn-post .cs-sn-preview .lsn-ctx .lsn-st-table { font-size: 14px; }
 .cs-sn-post .cs-sn-preview .lsn-ctx .lsn-note { font-size: 15px; line-height: 1.5; padding: 10px 12px; }
-.cs-sn-preview .lsn-text-hl { background: rgba(234, 88, 12, 0.18); box-shadow: inset 0 -2px 0 rgba(234, 88, 12, 0.85); }
+.cs-sn-preview .lsn-text-hl { background: rgba(234, 88, 12, 0.12); box-shadow: inset 0 -1.5px 0 rgba(234, 88, 12, 0.75); }
+/* V3.2: vùng khoanh nhẹ — nội dung giáo trình luôn là trọng tâm (V1/V2 giữ nguyên) */
+.cs-sn-region .lsn-share-hl.is-focus { background: rgba(234, 88, 12, 0.05); outline: 1.5px solid rgba(234, 88, 12, 0.75); }
+.cs-sn-region .lsn-excerpt-hl { background: rgba(234, 88, 12, 0.05); box-shadow: inset 0 0 0 1.5px rgba(234, 88, 12, 0.75); }
 .cs-sn-preview .lsn-score { position: relative; padding: 6px 4px; }
 .cs-sn-preview .lsn-score-host { overflow: hidden; }
 .cs-sn-preview .lsn-score-host svg { max-width: 100%; height: auto; }
@@ -1923,6 +1926,10 @@ button.cs-subs-title:hover { color: var(--cs-accent); }
 .cs-sound-btn.is-on { color: var(--cs-p); }
 .cs-sound-btn:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--cs-p-soft), 0 0 0 3.5px var(--cs-p); }
 @media (min-width: 701px) { .cs-chat { height: clamp(480px, calc(100dvh - var(--cs-topbar-h) - 72px), 820px); } }
+
+/* Contextual Share V3.1 — vùng khoanh trong Feed: nhiều khối giáo trình xếp dọc, cách nhau gọn */
+.cs-sn-region{display:flex;flex-direction:column;gap:10px;}
+.cs-sn-region-part{position:relative;}
 
 /* Mira V1.3 — dòng thông tin AI gọn dưới đầu hội thoại (mở rộng được, không lấn nội dung) */
 .cs-mira-info { border-bottom: 1px solid var(--cs-border, #E4E4E7); font-size: 12px; color: var(--cs-muted, #71717A); }

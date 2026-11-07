@@ -21,7 +21,7 @@ export type ToolShareView = {
   shareRef?: ShareRef | null
   /** Share Note: tham chiếu để Feed vẽ xem trước trích đoạn (KHÔNG có nội dung nhạc — nhạc chỉ nạp sau khi server cho phép) */
   /** kind 'bars' = khoanh ô nhịp (V1; from/to = dải ô) · 'text' = vùng văn bản giáo trình (V2; không có dải ô) */
-  sharedNote?: { noteId: string; classId: string; sessionNo: number; kind: 'bars' | 'text'; from?: number; to?: number }
+  sharedNote?: { noteId: string; classId: string; sessionNo: number; kind: 'bars' | 'text' | 'region'; from?: number; to?: number }
 }
 
 type ToolDef = { describe: (raw: Record<string, unknown>) => ToolShareView | null }
@@ -138,6 +138,16 @@ TOOL_REGISTRY.share_note = {
   describe: raw => {
     const id = raw.note_id, cls = raw.class_id, note = raw.note, n = int(raw.session_no), a = int(raw.bar_from), b = int(raw.bar_to)
     if (raw.kind !== 'share_note' || typeof id !== 'string' || !UUID_RE.test(id) || typeof cls !== 'string' || !UUID_RE.test(cls)) return null
+    if (raw.anchor === 'region') {   // V3.1: vùng khoanh hỗn hợp — Feed dựng nguyên cảnh (ShareNotePost); app/bundle cũ chỉ thấy thẻ tham chiếu
+      if (typeof note !== 'string' || !note.trim() || note.length > 500 || n === null || n < 0) return null
+      return {
+        tool: 'share_note', toolLabel: 'Giáo trình', icon: MessageCircleQuestion, kindLabel: `Buổi ${n}`,
+        headline: note.trim(), detail: 'Vùng khoanh trong giáo trình', thumbnail: null, note: null,
+        action: { label: 'Mở trong giáo trình', href: shareNoteHref(cls, n, id) },
+        shareRef: null,
+        sharedNote: { noteId: id.toLowerCase(), classId: cls, sessionNo: n, kind: 'region' },     // V3.1: Feed dựng nguyên cảnh + vùng khoanh bằng renderer giáo trình
+      }
+    }
     if (raw.anchor === 'text') {   // V2: vùng văn bản — payload KHÔNG có nội dung giáo trình và KHÔNG có dải ô
       if (typeof note !== 'string' || !note.trim() || note.length > 500 || n === null || n < 0) return null
       return {

@@ -83,5 +83,7 @@ SQL
 # idempotent, rollback, áp lại) rồi để DB ở trạng thái ĐÃ migrate cho các kịch bản trình duyệt. Mặc định (không đặt biến) = kịch bản V1.3 như cũ.
 RUNNER=run-share-note-all.mjs
 if [ -n "${E2E_SHARE_TEXT:-}" ]; then cat "$ROOT/db/tests/local/share_text_fixture.sql" >> "$TMPX/extra.sql"; RUNNER=run-share-text-all.mjs; fi
+# Contextual Share V3 DỰ THẢO (E2E_SHARE_REGION=1): thêm khối hình + study cuối Buổi 1; migration V3 do runner DB tự áp (V2 trước). KHÔNG production.
+if [ -n "${E2E_SHARE_REGION:-}" ]; then cat "$ROOT/db/tests/local/share_text_fixture.sql" "$ROOT/db/tests/local/share_region_fixture.sql" >> "$TMPX/extra.sql"; RUNNER=run-share-region-all.mjs; fi
 E2E_CHECKPOINTS=1 E2E_SKIP_BASE=1 E2E_PRE_SQL="$TMPX/pre.sql" E2E_EXTRA_SQL="$TMPX/extra.sql" \
   E2E_EXTRA_RUNNER="$ROOT/tests/e2e-learning-thread/$RUNNER" bash "$ROOT/scripts/e2e-learning-thread.sh"
