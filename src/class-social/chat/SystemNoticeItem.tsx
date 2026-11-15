@@ -1,6 +1,7 @@
 // Một thông báo Class 2.0 — hàng gọn kiểu Facebook: biểu tượng theo loại · nhãn loại · nội dung · thời gian · chấm chưa đọc.
 // Chỉ dùng dữ liệu đã có (kind, body, at, unread): không tự tạo avatar/tên người gửi. Tách riêng khỏi SystemNoticeView (không kéo hook/supabase) để test render thuần.
 import { Bell, CheckCircle2, FileUp, HelpCircle, MessageCircle, MessageSquareReply, RotateCcw } from 'lucide-react'
+import { renderSimpleMarkdown } from './simpleMarkdown'
 import { noticeAction, noticeVariant, relativeTime, type NoticeTone, type SystemNotice } from './chatModel'
 
 const ICONS: Record<NoticeTone, typeof Bell> = {
@@ -21,7 +22,7 @@ export function Notice({ n, onOpen }: { n: SystemNotice; prev?: SystemNotice; on
         <span className="cs-nr-text">
           <span className="cs-nr-chip">{v.chip}</span>
           {isBroadcast && n.title && <span className="cs-nr-title">{n.title}</span>}
-          <span className={'cs-nr-body' + (isBroadcast ? ' is-multiline' : '')}>{n.body}</span>
+          <span className={'cs-nr-body' + (isBroadcast ? ' is-multiline' : '')}>{isBroadcast ? renderSimpleMarkdown(n.body, 'text') : n.body}</span>
           <span className="cs-nr-meta">{time && <span className="cs-nr-time">{time}</span>}{(!isBroadcast || n.link) && <span className="cs-nr-act">{action.label} <span aria-hidden="true">→</span></span>}</span>
         </span>
         {n.unread && <span className="cs-nr-dot" role="img" aria-label="Chưa đọc" />}

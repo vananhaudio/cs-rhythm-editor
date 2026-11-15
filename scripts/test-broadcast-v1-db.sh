@@ -125,6 +125,22 @@ mig tva_bc "$ROOT/db/broadcast_v1_rollback.sql" >/dev/null || fail "rollback 2"
 [ "$(q tva_bc "select md5(prosrc) from pg_proc where oid = to_regprocedure('public.class_system_notices(bigint,integer)')")" = "30611b8e0b46fec74122317b0b073007" ] && ok "rollback: class_system_notices() về đúng bản production (md5)" || fail "rollback md5 RPC thông báo"
 mig tva_bc "$ROOT/db/broadcast_v1_setup.sql" >/dev/null || fail "cài lại"; ok "cài lại sau rollback"
 
+echo "── V1.1: phản hồi có giới hạn vào hội thoại Broadcast Chat"
+grep -qiE '^\s*(begin|commit|rollback)\s*;' "$ROOT/db/broadcast_v1_1_setup.sql" "$ROOT/db/broadcast_v1_1_rollback.sql" && fail "V1.1 có begin/commit" || ok "V1.1 setup/rollback không có begin/commit"
+baseline tva_v11; mig tva_v11 "$ROOT/db/broadcast_v1_setup.sql" >/dev/null
+FPV="$(q tva_v11 "select md5(prosrc) from pg_proc where oid='public.dm_rule(uuid,uuid)'::regprocedure")"
+mig tva_v11 "$ROOT/db/broadcast_v1_1_setup.sql" >/dev/null || fail "V1.1 migration 1"
+mig tva_v11 "$ROOT/db/broadcast_v1_1_setup.sql" >/dev/null || fail "V1.1 migration 2"; ok "V1.1 migration ×2 (idempotent)"
+OUT2="$TMP/t2.out"
+PGOPTIONS="-c client_min_messages=notice" "$PGBIN/psql" -X -q -h "$TMP" -p "$PORT" -U postgres -d tva_v11 -v ON_ERROR_STOP=1 -f "$ROOT/db/tests/broadcast_v1_1_test.sql" >"$OUT2" 2>&1 \
+  || { grep -E "FAIL|ERROR" "$OUT2" | head -5; fail "test SQL V1.1"; }
+echo "PASS: test SQL V1.1: $(grep -c 'NOTICE:  PASS' "$OUT2") kiểm tra"
+! grep -q "NOTICE:  FAIL" "$OUT2" || fail "V1.1 có FAIL"
+[ "$(q tva_v11 "select has_function_privilege('authenticated','public.dm_rule(uuid,uuid)','execute')::text")" = "false" ] && ok "V1.1: dm_rule vẫn khóa với client" || fail "dm_rule lộ quyền"
+mig tva_v11 "$ROOT/db/broadcast_v1_1_rollback.sql" >/dev/null || fail "V1.1 rollback 1"
+mig tva_v11 "$ROOT/db/broadcast_v1_1_rollback.sql" >/dev/null || fail "V1.1 rollback 2"
+[ "$(q tva_v11 "select md5(prosrc) from pg_proc where oid='public.dm_rule(uuid,uuid)'::regprocedure")" = "$FPV" ] && ok "V1.1 rollback: dm_rule về đúng bản trước (md5)" || fail "rollback dm_rule"
+
 echo "── Cổng nền"
 baseline tva_nob; q tva_nob "drop table public.teamlab_band_members" >/dev/null
 mig tva_nob "$ROOT/db/broadcast_v1_setup.sql" >/dev/null 2>"$TMP/n.err" && fail "migration chạy khi thiếu nền"

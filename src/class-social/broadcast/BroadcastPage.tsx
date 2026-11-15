@@ -7,6 +7,7 @@ import { relativeTime } from '../posts/postModel'
 import {
   cancelBroadcast, confirmBroadcast, fetchAudiences, fetchCampaign, fetchCampaigns, fetchRecipients, previewBroadcast,
 } from './broadcastApi'
+import { renderSimpleMarkdown } from '../chat/simpleMarkdown'
 import {
   AUDIENCES, BODY_MAX, CHANNELS, EMPTY_DRAFT, RECIPIENT_STATUS, STATUS_LABEL, TITLE_MAX, channelLabel, confirmLabel, draftProblems, isActive,
   progressPct, reasonList, resultLine,
@@ -185,7 +186,7 @@ function Preview({ draft }: { draft: Draft }) {
     <figure className="cs-bc-preview" aria-label="Xem trước">
       <figcaption>Người nhận sẽ thấy</figcaption>
       {draft.channel === 'notice'
-        ? <div className="cs-bc-pv-notice">{draft.title.trim() && <strong>{draft.title.trim()}</strong>}<span>{body}</span>{draft.link.trim() && <em>Mở liên kết →</em>}</div>
+        ? <div className="cs-bc-pv-notice">{draft.title.trim() && <strong>{draft.title.trim()}</strong>}<span>{renderSimpleMarkdown(body, 'text')}</span>{draft.link.trim() && <em>Mở liên kết →</em>}</div>
         : <div className="cs-bc-pv-chat"><span>{body}</span></div>}
     </figure>
   )
@@ -302,7 +303,7 @@ function CampaignDetail({ id, onBack }: { id: string; onBack: () => void }) {
         <>
           <div className="cs-bc-row-top"><b>{c.title || channelLabel(c.channel)}</b><span className={'cs-bc-badge is-' + c.status}>{STATUS_LABEL[c.status]}</span></div>
           <p className="cs-bc-meta">{channelLabel(c.channel)} · {c.audienceLabel} · {relativeTime(c.createdAt)}</p>
-          <p className="cs-bc-body">{c.body}</p>
+          <div className="cs-bc-body">{renderSimpleMarkdown(c.body, 'anchor')}</div>
           {c.link && <p className="cs-bc-meta">Liên kết: {c.link}</p>}
           <ProgressBar pct={progressPct(c)} />
           <p className="cs-bc-result">{resultLine(c)} · tổng {c.eligible.toLocaleString('vi-VN')} người nhận hợp lệ</p>
