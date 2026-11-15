@@ -5,7 +5,7 @@ import { SYSTEM_FOOTNOTE, SYSTEM_NAME, noticeAction } from './chatModel'
 import { Notice } from './SystemNoticeItem'
 import { useSystemNotices } from './useChat'
 
-export default function SystemNoticeView({ onBack, onActivity, onOpenThread, title = SYSTEM_NAME, bare = false }: {
+export default function SystemNoticeView({ onBack, onActivity, onOpenThread: openThreadProp, title = SYSTEM_NAME, bare = false }: {
   onBack: () => void
   onActivity: () => void
   onOpenThread: (threadId: string, search: string) => void
@@ -14,6 +14,8 @@ export default function SystemNoticeView({ onBack, onActivity, onOpenThread, tit
   /** Class Mobile: màn Thông báo đứng riêng trong khung — khung lo tiêu đề + nút Quay lại, không lặp header/chân trang "Class 2.0". */
   bare?: boolean
 }) {
+  // Thông điệp (Broadcast) không có thread: threadId rỗng → không điều hướng thread (liên kết nội bộ do Notice mở)
+  const onOpenThread = (id: string, search: string) => { if (id) openThreadProp(id, search) }
   const s = useSystemNotices(onActivity)
   const newestFirst = [...s.notices].reverse()
   const hasUnread = s.notices.some(n => n.unread)   // mới nhất ở trên như danh sách thông báo (không phải chat)

@@ -289,19 +289,32 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 export type SystemNoticeRow = {
   seq: number | string; kind: string | null; body: string | null; ref_type: string | null; ref_key: string | null
   created_at: string | null; unread: boolean | null
+  /** Broadcast V1 (RPC mới; bản cũ không có) */
+  title?: string | null; link?: string | null
 }
 /** Một thông báo: chỉ nội dung ngắn + đích điều hướng (thread bài trả). Không giữ nhận xét/kết quả. */
-export type SystemNotice = { seq: number; kind: string; body: string; threadId: string; at: string; unread: boolean }
+export type SystemNotice = { seq: number; kind: string; body: string; threadId: string; at: string; unread: boolean; title?: string; link?: string }
+
+/** Đường dẫn nội bộ an toàn: bắt đầu bằng một dấu / (không // và không \) */
+export const isInternalLink = (v: unknown): v is string => typeof v === 'string' && /^\/(?![/\\])\S*$/.test(v) && v.length <= 300
 
 export type SystemSummaryRow = { last_seq: number | string | null; last_body: string | null; last_at: string | null; unread: number | null }
 /** Tóm tắt cho hàng "Class 2.0" trong danh sách. lastSeq 0 = chưa có thông báo. */
 export type SystemSummary = { lastSeq: number; lastBody: string; lastAt: string; unread: number }
 
 export function toSystemNotices(rows: SystemNoticeRow[] | null | undefined): SystemNotice[] {
-  return (rows ?? [])
-    .filter(r => r?.seq != null && r.ref_type === 'thread' && !!r.ref_key && UUID_RE.test(r.ref_key) && !!(r.body ?? '').trim())
-    .map(r => ({ seq: Number(r.seq), kind: r.kind ?? '', body: (r.body ?? '').trim(), threadId: (r.ref_key as string).toLowerCase(), at: r.created_at ?? '', unread: r.unread === true }))
-    .sort((a, b) => a.seq - b.seq)
+  const out: SystemNotice[] = []
+  for (const r of rows ?? []) {
+    if (r?.seq == null || !(r.body ?? '').trim()) continue
+    const base = { seq: Number(r.seq), kind: r.kind ?? '', body: (r.body ?? '').trim(), at: r.created_at ?? '', unread: r.unread === true }
+    if (r.ref_type === 'thread' && !!r.ref_key && UUID_RE.test(r.ref_key)) {
+      out.push({ ...base, threadId: r.ref_key.toLowerCase() })
+    } else if (r.kind === 'broadcast' && r.ref_type === 'broadcast') {
+      // Thông điệp từ Owner: không có thread; đích (nếu có) là đường dẫn NỘI BỘ đã được server kiểm
+      out.push({ ...base, threadId: '', title: (r.title ?? '').trim() || undefined, link: isInternalLink(r.link) ? r.link : undefined })
+    }
+  }
+  return out.sort((a, b) => a.seq - b.seq)
 }
 
 export function toSystemSummary(rows: SystemSummaryRow[] | null | undefined): SystemSummary {
@@ -352,6 +365,7 @@ export function noticeVariant(kind: string, body: string): { tone: NoticeTone; c
       return { tone: 'graded', chip: 'Đã chấm' }
     case 'question_received': return { tone: 'question', chip: 'Câu hỏi' }
     case 'question_answered': return { tone: 'answer', chip: 'Trả lời' }
+    case 'broadcast': return { tone: 'other', chip: 'Thông điệp' }
     default: return { tone: 'other', chip: 'Thông báo' }
   }
 }
@@ -375,6 +389,7 @@ export function noticeAction(kind: string): { label: string; search: string } {
     case 'question_answered': return { label: 'Xem trả lời', search: NOTICE_TARGET_SEARCH }
     case 'checkpoint_graded': return { label: 'Xem kết quả', search: NOTICE_TARGET_SEARCH }   // ĐẠT hoặc NỘP LẠI: nội dung thông báo nói rõ; đích = phản hồi mới nhất của Thầy
     case 'teacher_commented': return { label: 'Xem nhận xét', search: NOTICE_TARGET_SEARCH }
+    case 'broadcast': return { label: 'Mở liên kết', search: '' }
     default: return { label: 'Xem chi tiết', search: '' }   // loại mới hơn FE: vẫn mở được trang, không đoán focus
   }
 }

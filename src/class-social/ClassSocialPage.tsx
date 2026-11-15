@@ -37,6 +37,7 @@ import ClassSessionPage from './classes/ClassSessionPage'
 import ClassSpacePage from './classes/ClassSpacePage'
 import ProfileEditDialog from './profile/ProfileEditDialog'
 import { BandsAdminPage } from '../band/BandAdmin'
+import BroadcastPage from './broadcast/BroadcastPage'
 import BandManagePage from '../band/BandManage'
 
 const TITLES: Record<SocialSection, string> = {
@@ -94,6 +95,7 @@ export default function ClassSocialPage({ initialSection }: { initialSection: So
     else if (view.kind === 'section') document.title = TITLES[view.section]
     else if (view.kind === 'classes') document.title = 'Lớp học · Thầy Văn Anh Guitar'
     else if (view.kind === 'bands') document.title = 'Quản lý Band · Thầy Văn Anh Guitar'
+    else if (view.kind === 'broadcast') document.title = 'Gửi thông điệp · Thầy Văn Anh Guitar'
     else if (view.kind === 'chatConversation' || view.kind === 'chatWith') document.title = TITLES.chat
     else if (view.kind === 'notices') document.title = 'Thông báo · Thầy Văn Anh Guitar'
     // trang cá nhân tự đặt tiêu đề theo tên người
@@ -143,6 +145,7 @@ export default function ClassSocialPage({ initialSection }: { initialSection: So
   // LỚP CỦA TÔI = /me/classes (bản đồ các lớp của tôi + mã tham gia + lớp khác) · ?feed=classes = tab hoạt động "Lớp"
   const openClasses = () => navigate({ kind: 'classes' })
   const openBands = () => navigate({ kind: 'bands' })
+  const openBroadcast = () => navigate({ kind: 'broadcast' })
   const openBandAdmin = (slug: string) => navigate({ kind: 'bandAdmin', slug })
   // Trò chuyện: "Nhắn tin" từ Bạn bè/Trang cá nhân → /me/chat/u/<id> (hội thoại chỉ tạo khi gửi tin đầu); mở hội thoại có sẵn → /me/chat/<id>
   const openChatWith = (userId: string) => navigate({ kind: 'chatWith', userId })
@@ -153,11 +156,11 @@ export default function ClassSocialPage({ initialSection }: { initialSection: So
   if (session.status === 'no-profile') return <MeNoProfile email={session.email} onSignOut={() => void signOut()} />
   if (session.status !== 'ready') return <Splash text="Đang mở Class…" />
 
-  return <SignedInShell base={session.me} view={view} onSection={go} onOpenProfile={openProfile} onOpenThread={openThread} onOpenQueue={openQueue} onOpenClass={openClass} onOpenSession={openSession} onOpenClassSpace={openClassSpace} onOpenClassMembers={openClassMembers} onOpenClasses={openClasses} onOpenBands={openBands} onOpenBandAdmin={openBandAdmin} onOpenChatWith={openChatWith} onOpenConversation={openConversation} onOpenNotices={openNotices} onBack={back} visit={visit} />
+  return <SignedInShell base={session.me} view={view} onSection={go} onOpenProfile={openProfile} onOpenThread={openThread} onOpenQueue={openQueue} onOpenClass={openClass} onOpenSession={openSession} onOpenClassSpace={openClassSpace} onOpenClassMembers={openClassMembers} onOpenClasses={openClasses} onOpenBands={openBands} onOpenBroadcast={openBroadcast} onOpenBandAdmin={openBandAdmin} onOpenChatWith={openChatWith} onOpenConversation={openConversation} onOpenNotices={openNotices} onBack={back} visit={visit} />
 }
 
 // Danh tính giữ ở MỘT chỗ: đổi ảnh xong → header, top bar, ô Trả bài, bình luận cập nhật ngay.
-function SignedInShell({ base, view, onSection, onOpenProfile, onOpenThread, onOpenQueue, onOpenClass, onOpenSession, onOpenClassSpace, onOpenClassMembers, onOpenClasses, onOpenBands, onOpenBandAdmin, onOpenChatWith, onOpenConversation, onOpenNotices, onBack, visit }: {
+function SignedInShell({ base, view, onSection, onOpenProfile, onOpenThread, onOpenQueue, onOpenClass, onOpenSession, onOpenClassSpace, onOpenClassMembers, onOpenClasses, onOpenBands, onOpenBroadcast, onOpenBandAdmin, onOpenChatWith, onOpenConversation, onOpenNotices, onBack, visit }: {
   base: ClassIdentity
   view: MeView
   onSection: (s: SocialSection) => void
@@ -175,6 +178,7 @@ function SignedInShell({ base, view, onSection, onOpenProfile, onOpenThread, onO
   onOpenClasses: () => void
   /** Quản lý Band (tuyển thành viên · thành viên · Bộ máy) */
   onOpenBands: () => void
+  onOpenBroadcast: () => void
   onOpenBandAdmin: (slug: string) => void
   /** Nhắn tin tới một người (Bạn bè / Trang cá nhân) */
   onOpenChatWith: (userId: string) => void
@@ -254,11 +258,12 @@ function SignedInShell({ base, view, onSection, onOpenProfile, onOpenThread, onO
           onOpenThread={onOpenThread} />
       )}
       {view.kind === 'bands' && <BandsAdminPage onOpenBand={onOpenBandAdmin} />}
+      {view.kind === 'broadcast' && <BroadcastPage isAdmin={me.isAdmin === true} />}
       {view.kind === 'bandAdmin' && <BandManagePage key={view.slug} slug={view.slug} onBack={() => onBack({ kind: 'bands' })} />}
       {section === 'home' && <MeHome key={visit} me={me} identityRev={identityRev} canEditAvatar={editor.canEditAvatar} onEditMedia={editor.pick}
         onOpenProfile={onOpenProfile} requests={requests} onSeeAllRequests={() => onSection('friends')}
         onOpenThread={onOpenThread} onOpenQueue={onOpenQueue} classes={classes} onOpenClass={onOpenClass}
-        onJoinedClass={() => { classes.reload(); refreshLearningIdentity(me.userId) }} onOpenBands={onOpenBands} />}
+        onJoinedClass={() => { classes.reload(); refreshLearningIdentity(me.userId) }} onOpenBands={onOpenBands} onOpenBroadcast={me.isAdmin ? onOpenBroadcast : undefined} />}
       {section === 'friends' && <Friends requests={requests} onOpenProfile={onOpenProfile} onMessage={onOpenChatWith} />}
       {section === 'chat' && <Chat meId={me.userId} selection={chatSelection} onOpenConversation={onOpenConversation}
         soundToggle={chatUnread.system != null} onOpenClass={onOpenClass} isAdmin={me.isAdmin}

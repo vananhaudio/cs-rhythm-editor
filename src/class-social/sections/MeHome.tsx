@@ -2,7 +2,7 @@
 // [chia sẻ] → (lời mời kết bạn / hàng đợi Thầy — chỉ khi có) → Feed (bài + câu chuyện học tập).
 // Ảnh bìa + hồ sơ đầy đủ + Hành trình thuộc về TRANG CÁ NHÂN (/me/u/<id>), không lặp lại ở đây.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Drum } from 'lucide-react'
+import { Drum, Megaphone } from 'lucide-react'
 import type { ClassIdentity } from '../useClassSession'
 import { useCommunityFeed } from '../posts/useCommunityFeed'
 import { isPostEntry, type FeedPost } from '../posts/postModel'
@@ -34,7 +34,7 @@ function useFeedScope(): [FeedScope, (s: FeedScope) => void] {
 /** Home chỉ hiện vài lời mời mới nhất; đủ danh sách ở trang Bạn bè. */
 const HOME_REQUESTS_MAX = 3
 
-export default function MeHome({ me, identityRev = 0, onOpenProfile, requests, onSeeAllRequests, onOpenThread, onOpenQueue, classes, onOpenClass, onJoinedClass, onOpenBands }: {
+export default function MeHome({ me, identityRev = 0, onOpenProfile, requests, onSeeAllRequests, onOpenThread, onOpenQueue, classes, onOpenClass, onJoinedClass, onOpenBands, onOpenBroadcast }: {
   me: ClassIdentity
   identityRev?: number
   /** (không dùng trên Home nữa — đổi ảnh ở Trang cá nhân / menu tài khoản) */
@@ -55,6 +55,8 @@ export default function MeHome({ me, identityRev = 0, onOpenProfile, requests, o
   onJoinedClass?: (classId: string) => void
   /** Thầy: lối vào Tuyển thành viên Band (/me/bands) */
   onOpenBands?: () => void
+  /** Chỉ truyền khi là Owner/admin (server vẫn kiểm quyền) */
+  onOpenBroadcast?: () => void
 }) {
   const [scope, setScope] = useFeedScope()
   const myClassIds = useMemo(() => (classes?.mine ?? []).map(c => c.id), [classes?.mine])
@@ -104,6 +106,11 @@ export default function MeHome({ me, identityRev = 0, onOpenProfile, requests, o
       {me.isTeacher && onOpenBands && (
         <button type="button" className="cs-queue-entry" onClick={onOpenBands}>
           <Drum size={18} aria-hidden="true" /><span>Đơn ứng tuyển Band</span><span aria-hidden="true">›</span>
+        </button>
+      )}
+      {onOpenBroadcast && (
+        <button type="button" className="cs-queue-entry" onClick={onOpenBroadcast}>
+          <Megaphone size={18} aria-hidden="true" /><span>Gửi thông điệp</span><span aria-hidden="true">›</span>
         </button>
       )}
       {requests && requests.count > 0 && onOpenProfile && (

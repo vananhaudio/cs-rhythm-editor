@@ -18,6 +18,7 @@ import ClassSpacePage from '../class-social/classes/ClassSpacePage'
 import ThreadPage from '../learning-thread/ThreadPage'
 import TeacherQueue from '../learning-thread/TeacherQueue'
 import { BandsAdminPage } from '../band/BandAdmin'
+import BroadcastPage from '../class-social/broadcast/BroadcastPage'
 import BandManagePage from '../band/BandManage'
 import { useFriendRequests } from '../class-social/friends/useFriendRequests'
 import { useChatUnread } from '../class-social/chat/useChat'
@@ -201,6 +202,8 @@ export default function MobileShell({ base }: { base: ClassIdentity }) {
           onOpenSession={no => openClassNode({ kind: 'session', classId: view.classId, sessionNo: no }, true)} onOpenThread={openThread} />
       case 'bands':
         return <BandsAdminPage onOpenBand={slug => go({ kind: 'bandAdmin', slug })} />
+      case 'broadcast':
+        return <BroadcastPage isAdmin={me.isAdmin === true} />
       case 'bandAdmin':
         return <BandManagePage key={view.slug} slug={view.slug} onBack={() => backToOr({ kind: 'bands' })} />
       case 'chatConversation':

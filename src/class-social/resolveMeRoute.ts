@@ -135,6 +135,7 @@ export function classMembersFromPath(pathname: string): string | null {
 
 // ── Quản lý Band (Recruit V1 + Quản lý V1): /me/bands · /me/bands/<slug> — quyền do server (band_can_manage) quyết ──
 export const BANDS_PATH = '/me/bands'
+export const BROADCAST_PATH = '/me/broadcast'   // Gửi thông điệp (chỉ Owner/admin; quyền do server quyết)
 const BAND_SLUG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/
 
 export function bandAdminPath(slug: string): string {
@@ -196,6 +197,7 @@ export type MeView =
   | { kind: 'classSpace'; classId: string }
   | { kind: 'classMembers'; classId: string }
   | { kind: 'bands' }
+  | { kind: 'broadcast' }
   | { kind: 'bandAdmin'; slug: string }
   | { kind: 'chatConversation'; conversationId: string }
   | { kind: 'chatWith'; userId: string }
@@ -225,6 +227,7 @@ export function viewFromPath(pathname: string): MeView {
   if (chatWith) return { kind: 'chatWith', userId: chatWith }
   const p = pathname.replace(/\/+$/, '')
   if (p === BANDS_PATH) return { kind: 'bands' }
+  if (p === BROADCAST_PATH) return { kind: 'broadcast' }
   if (p === QUEUE_PATH) return { kind: 'queue' }
   if (p === CLASSES_PATH) return { kind: 'classes' }
   return { kind: 'section', section: sectionFromPath(pathname) }
@@ -241,6 +244,7 @@ export function sameView(a: MeView, b: MeView): boolean {
     case 'queue': return b.kind === 'queue'
     case 'classes': return b.kind === 'classes'
     case 'bands': return b.kind === 'bands'
+    case 'broadcast': return b.kind === 'broadcast'
     case 'bandAdmin': return b.kind === 'bandAdmin' && a.slug === b.slug
     case 'chatConversation': return b.kind === 'chatConversation' && a.conversationId === b.conversationId
     case 'chatWith': return b.kind === 'chatWith' && a.userId === b.userId
@@ -261,6 +265,7 @@ export function viewPath(view: MeView): string {
     case 'queue': return QUEUE_PATH
     case 'classes': return CLASSES_PATH
     case 'bands': return BANDS_PATH
+    case 'broadcast': return BROADCAST_PATH
     case 'bandAdmin': return bandAdminPath(view.slug)
     case 'chatConversation': return chatConversationPath(view.conversationId)
     case 'chatWith': return chatWithPath(view.userId)
@@ -279,7 +284,7 @@ export function canonicalView(view: MeView): MeView {
 export function keepsPathForGuest(view: MeView): boolean {
   return view.kind === 'thread' || view.kind === 'class' || view.kind === 'classes' || view.kind === 'session'
     || view.kind === 'classSpace' || view.kind === 'classMembers'
-    || view.kind === 'bands' || view.kind === 'bandAdmin'
+    || view.kind === 'bands' || view.kind === 'bandAdmin' || view.kind === 'broadcast'
 }
 
 export function resolveMeRoute(input: {

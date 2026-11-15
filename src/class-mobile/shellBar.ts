@@ -28,6 +28,7 @@ export function barFor(view: MobileView, tab: MobileTab): BarSpec {
     case 'notices':
     case 'chatSystem': return { title: 'Thông báo', back: true, hidePageTitle: true }
     case 'bands': return { title: 'Quản lý Band', back: true, hidePageTitle: true }
+    case 'broadcast': return { title: 'Gửi thông điệp', back: true, hidePageTitle: true }
     case 'bandAdmin': return { title: 'Quản lý Band', back: true, hidePageTitle: false }
     case 'profile': return { title: 'Trang cá nhân', back: true, hidePageTitle: false }
     case 'thread': return { title: 'Trao đổi bài', back: true, hidePageTitle: false }

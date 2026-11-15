@@ -10,17 +10,19 @@ const ICONS: Record<NoticeTone, typeof Bell> = {
 
 export function Notice({ n, onOpen }: { n: SystemNotice; prev?: SystemNotice; onOpen: () => void }) {
   const action = noticeAction(n.kind)
+  const isBroadcast = n.kind === 'broadcast'
   const v = noticeVariant(n.kind, n.body)
   const Icon = ICONS[v.tone]
   const time = relativeTime(n.at)
   return (
     <article className={'cs-nr is-' + v.tone + (n.unread ? ' is-unread' : '')} aria-label={n.body}>
-      <button type="button" className="cs-nr-main" onClick={onOpen}>
+      <button type="button" className="cs-nr-main" onClick={() => { onOpen(); if (isBroadcast && n.link) window.location.assign(n.link) }}>
         <span className="cs-nr-icon" aria-hidden="true"><Icon size={20} /></span>
         <span className="cs-nr-text">
           <span className="cs-nr-chip">{v.chip}</span>
-          <span className="cs-nr-body">{n.body}</span>
-          <span className="cs-nr-meta">{time && <span className="cs-nr-time">{time}</span>}<span className="cs-nr-act">{action.label} <span aria-hidden="true">→</span></span></span>
+          {isBroadcast && n.title && <span className="cs-nr-title">{n.title}</span>}
+          <span className={'cs-nr-body' + (isBroadcast ? ' is-multiline' : '')}>{n.body}</span>
+          <span className="cs-nr-meta">{time && <span className="cs-nr-time">{time}</span>}{(!isBroadcast || n.link) && <span className="cs-nr-act">{action.label} <span aria-hidden="true">→</span></span>}</span>
         </span>
         {n.unread && <span className="cs-nr-dot" role="img" aria-label="Chưa đọc" />}
       </button>

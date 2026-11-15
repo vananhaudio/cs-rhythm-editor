@@ -79,6 +79,7 @@ export function adminQuickLinks(meBase: string): QuickLink[] {
   return [
     { icon: '🎼', label: 'Thư viện nhạc',      href: '/thuvien' },
     { icon: '🎤', label: 'Quản lý Band',       href: `${meBase}/me/bands` },
+    { icon: '📣', label: 'Gửi thông điệp',     href: `${meBase}/me/broadcast` },
     { icon: '📥', label: 'Hàng đợi trả bài',   href: `${meBase}/me/queue` },
     { icon: '⚑',  label: 'Báo cáo nội dung',   href: '/story/reports' },
     { icon: '🧠', label: 'Kho Tri Thức',        href: 'https://khotrithuc.netlify.app', external: true },
