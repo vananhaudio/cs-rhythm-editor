@@ -39,6 +39,12 @@ SQL
     psqld "$db" -f "$ROOT/db/$f.sql" >/dev/null
   done
   psqld "$db" -f "$ROOT/db/tests/local/ugc_safety_min_fixture.sql" >/dev/null
+  # Production ĐANG chạy Chat V1b (dm_share_v1): dm_messages.ref_*, dm_append 5 tham số, dm_open — lấy NGUYÊN VĂN từ db/dm_share_v1_setup.sql
+  { sed -n '/^alter table public.dm_messages add column if not exists ref_type/,/^alter table public.dm_messages add column if not exists ref_key/p' "$ROOT/db/dm_share_v1_setup.sql"
+    echo "drop function if exists public.dm_append(uuid, uuid, text);"
+    sed -n '/^create or replace function public.dm_append/,/^revoke all on function public.dm_append/p' "$ROOT/db/dm_share_v1_setup.sql"
+    sed -n '/^create or replace function public.dm_open/,/^revoke all on function public.dm_open/p' "$ROOT/db/dm_share_v1_setup.sql"; } > "$TMP/dm_v1b.sql"
+  psqld "$db" -f "$TMP/dm_v1b.sql" >/dev/null
   psqld "$db" >/dev/null <<'SQL'
 create schema if not exists tva_private;
 create table public.class_schedule (id uuid primary key, name text, status text);
@@ -57,6 +63,15 @@ create table public.learning_threads (id uuid primary key, learner_user_id uuid,
 create table public.learning_thread_events (id uuid primary key default gen_random_uuid(), thread_id uuid, seq bigint, author_role text, kind text, verdict text, hidden_at timestamptz);
 SQL
   psqld "$db" -f "$ROOT/db/class_system_chat_v1_setup.sql" >/dev/null
+  # Production ĐANG có: kind feed_comment + ref_type post/teamlab_publication (Feed Comments) — giả lập đúng định nghĩa đã đọc từ production 15/11
+  psqld "$db" >/dev/null <<'SQL'
+alter table public.class_system_notices drop constraint class_system_notices_kind_check;
+alter table public.class_system_notices add constraint class_system_notices_kind_check
+  check (kind = any (array['checkpoint_graded','submission_received','question_received','question_answered','teacher_commented','feed_comment']));
+alter table public.class_system_notices drop constraint class_system_notices_ref_check;
+alter table public.class_system_notices add constraint class_system_notices_ref_check
+  check (ref_key ~ '^[0-9a-f-]{36}$' and (ref_type = 'thread' or (kind = 'feed_comment' and ref_type = any (array['post','teamlab_publication']))));
+SQL
 }
 fp() { q "$1" "select (select count(*) from public.friendships) || ':' || (select md5(string_agg(proname || '/' || md5(prosrc), ',' order by proname)) from pg_proc p join pg_namespace s on s.oid = p.pronamespace where s.nspname = 'public' and (p.proname like 'dm\_%' or p.proname = 'friendship_status' or p.proname = 'is_class_member')) || ':' || (select count(*) from public.dm_messages)"; }
 
@@ -107,6 +122,7 @@ mig tva_bc "$ROOT/db/broadcast_v1_rollback.sql" >/dev/null || fail "rollback 1"
 mig tva_bc "$ROOT/db/broadcast_v1_rollback.sql" >/dev/null || fail "rollback 2"
 [ "$(q tva_bc "select count(*) from pg_proc where proname like 'broadcast\_%'")" = "0" ] && ok "rollback ×2 gỡ sạch hàm" || fail "rollback sót hàm"
 [ "$(fp tva_bc)" = "$FP0" ] && ok "rollback: Chat/bạn bè không đổi" || fail "rollback đổi Chat"
+[ "$(q tva_bc "select md5(prosrc) from pg_proc where oid = to_regprocedure('public.class_system_notices(bigint,integer)')")" = "30611b8e0b46fec74122317b0b073007" ] && ok "rollback: class_system_notices() về đúng bản production (md5)" || fail "rollback md5 RPC thông báo"
 mig tva_bc "$ROOT/db/broadcast_v1_setup.sql" >/dev/null || fail "cài lại"; ok "cài lại sau rollback"
 
 echo "── Cổng nền"

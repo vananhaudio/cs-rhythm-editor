@@ -40,7 +40,7 @@ end $gate$;
 -- 1) Nới CHECK kind (mọi kind cũ vẫn hợp lệ; dữ liệu cũ đọc được nguyên vẹn)
 alter table public.class_system_notices drop constraint if exists class_system_notices_kind_check;
 alter table public.class_system_notices add constraint class_system_notices_kind_check
-  check (kind in ('checkpoint_graded', 'submission_received', 'question_received', 'question_answered', 'teacher_commented', 'broadcast'));
+  check (kind in ('checkpoint_graded', 'submission_received', 'question_received', 'question_answered', 'teacher_commented', 'feed_comment', 'broadcast'));
 
 -- 2) Thay thân hàm trigger (trigger giữ nguyên, AFTER INSERT trên learning_thread_events)
 create or replace function public.class_system_notice_on_event()

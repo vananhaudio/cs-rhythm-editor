@@ -31,7 +31,7 @@ begin
     end if;
   end if;
 end $t$;
--- Thông báo: đưa RPC về chữ ký V1 (bỏ title/link); cột title/link và kind 'broadcast' còn nguyên nếu đã có hàng broadcast.
+-- Thông báo: đưa RPC về ĐÚNG bản production trước Broadcast (md5 30611b8e…); FE cũ bỏ qua hàng broadcast (ref_type ≠ 'thread'). Cột title/link và kind 'broadcast' còn nguyên.
 drop function if exists public.class_system_notices(bigint, int);
 create function public.class_system_notices(p_before_seq bigint default null, p_limit int default 30)
 returns table(seq bigint, kind text, body text, ref_type text, ref_key text, created_at timestamptz, unread boolean)
@@ -43,7 +43,7 @@ begin
   return query
   select n.seq, n.kind, n.body, n.ref_type, n.ref_key, n.created_at, n.seq > v_read
     from public.class_system_notices n
-   where n.user_id = v_me and n.kind <> 'broadcast' and (p_before_seq is null or n.seq < p_before_seq)
+   where n.user_id = v_me and (p_before_seq is null or n.seq < p_before_seq)
    order by n.seq desc limit v_lim;
 end $$;
 comment on function public.class_system_notices(bigint, int) is 'class_system_chat_v1: thông báo của mình';

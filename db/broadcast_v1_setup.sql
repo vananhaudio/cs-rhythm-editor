@@ -3,7 +3,7 @@
 --   • KHÔNG sửa dm_* / friendships / learning_thread_* / RLS / policy / quyền nhắn tin (dm_rule giữ nguyên: học viên vẫn chỉ nhắn bạn bè).
 --   • Thông báo: thêm kind 'broadcast' + 2 cột tuỳ chọn (title, link) vào class_system_notices; badge/đã đọc/âm thanh dùng nguyên cơ chế seq hiện có.
 --   • Chat: worker (nội bộ, SECURITY DEFINER) tìm-hoặc-tạo hội thoại Owner↔người nhận RỒI ghi tin bằng dm_append — đúng bảng/seq/unread hiện có.
---     Ngoại lệ dm_rule chỉ tồn tại BÊN TRONG worker, người gọi phải là admin đã xác nhận chiến dịch; client không có đường gọi nào tới nó.
+--     Worker dùng đúng dm_open (tìm-hoặc-tạo hội thoại) + dm_append (ghi tin). Ngoại lệ dm_rule chỉ tồn tại BÊN TRONG worker, người gọi phải là admin đã xác nhận chiến dịch; client không có đường gọi nào tới nó.
 --     Người chặn nhau → bỏ qua (skipped: blocked), không vượt quyền chặn. Hội thoại cũ được dùng lại, không tạo trùng (khoá theo cặp).
 --   • Mọi RPC cho client kiểm is_admin() phía server. Danh sách người nhận do SERVER chụp tại lúc xác nhận (snapshot trong broadcast_recipients).
 --   • Chống trùng: unique (campaign, user); khoá idempotency (người tạo, key); thông báo có unique (user, dedupe_key); trạng thái người nhận
@@ -15,16 +15,39 @@ do $gate$
 begin
   if to_regclass('public.class_system_notices') is null or to_regclass('public.class_system_notice_reads') is null
      or to_regclass('public.dm_conversations') is null or to_regclass('public.dm_participants') is null or to_regclass('public.dm_messages') is null
-     or to_regprocedure('public.dm_append(uuid,uuid,text)') is null or to_regprocedure('public.is_admin()') is null
+     or to_regprocedure('public.dm_append(uuid,uuid,text,text,text)') is null or to_regprocedure('public.dm_open(uuid,uuid)') is null
+     or to_regprocedure('public.is_admin()') is null
      or to_regprocedure('public.class_ugc_pair_blocked(uuid,uuid)') is null or to_regprocedure('public.class_public_identity(uuid)') is null
      or to_regclass('tva_private.class_memberships') is null or to_regclass('public.class_schedule') is null
      or to_regclass('public.teamlab_band_members') is null or to_regclass('public.teamlab_bands') is null or to_regclass('public.projects') is null
      or to_regclass('public.edu_students') is null or to_regclass('public.app_users') is null then
     raise exception 'DỪNG — thiếu nền (System Chat, Chat V1, is_admin, UGC safety, lớp/Band)';
   end if;
-  if not exists (select 1 from pg_constraint where conname = 'class_system_notices_kind_check' and conrelid = 'public.class_system_notices'::regclass) then
-    raise exception 'DỪNG — thiếu CHECK class_system_notices_kind_check';
-  end if;
+  -- Drift: ràng buộc thông báo trên production phải chỉ gồm các kind/ref_type ĐÃ BIẾT (kể cả feed_comment của Feed Comments); lạ → dừng, không ghi đè
+  declare v_def text; v_lit text;
+  begin
+    for v_def in select pg_get_constraintdef(oid) from pg_constraint where conrelid = 'public.class_system_notices'::regclass and conname = 'class_system_notices_kind_check' loop
+      for v_lit in select m[1] from regexp_matches(v_def, '''([a-z_]+)''', 'g') m loop
+        if v_lit not in ('checkpoint_graded', 'submission_received', 'question_received', 'question_answered', 'teacher_commented', 'feed_comment', 'broadcast') then
+          raise exception 'DỪNG — kind thông báo lạ trên production: % (cập nhật Broadcast V1 cho khớp trước)', v_lit;
+        end if;
+      end loop;
+    end loop;
+    if not exists (select 1 from pg_constraint where conrelid = 'public.class_system_notices'::regclass and conname = 'class_system_notices_kind_check') then
+      raise exception 'DỪNG — thiếu CHECK class_system_notices_kind_check';
+    end if;
+    for v_def in select pg_get_constraintdef(oid) from pg_constraint where conrelid = 'public.class_system_notices'::regclass and conname = 'class_system_notices_ref_check' loop
+      for v_lit in select m[1] from regexp_matches(v_def, '''([a-z_]+)''', 'g') m loop
+        if v_lit not in ('thread', 'feed_comment', 'post', 'teamlab_publication', 'broadcast') then
+          raise exception 'DỪNG — ref_type thông báo lạ trên production: %', v_lit;
+        end if;
+      end loop;
+    end loop;
+    if not exists (select 1 from pg_proc p where p.oid = to_regprocedure('public.class_system_notices(bigint,integer)')
+                    and (md5(p.prosrc) = '30611b8e0b46fec74122317b0b073007' or 'title' = any (p.proargnames))) then
+      raise exception 'DỪNG — class_system_notices() trên production khác repo';
+    end if;
+  end;
   if exists (select 1 from pg_class c join pg_namespace n on n.oid = c.relnamespace
               where n.nspname = 'public' and c.relname in ('broadcast_campaigns', 'broadcast_recipients')
                 and coalesce(obj_description(c.oid, 'pg_class'), '') not like 'broadcast_v1:%') then
@@ -44,13 +67,15 @@ alter table public.class_system_notices add column if not exists title text;
 alter table public.class_system_notices add column if not exists link text;
 alter table public.class_system_notices drop constraint if exists class_system_notices_kind_check;
 alter table public.class_system_notices add constraint class_system_notices_kind_check
-  check (kind in ('checkpoint_graded', 'submission_received', 'question_received', 'question_answered', 'teacher_commented', 'broadcast'));
+  check (kind in ('checkpoint_graded', 'submission_received', 'question_received', 'question_answered', 'teacher_commented', 'feed_comment', 'broadcast'));
 alter table public.class_system_notices drop constraint if exists class_system_notices_body_check;
 alter table public.class_system_notices add constraint class_system_notices_body_check
   check (char_length(body) between 1 and (case when kind = 'broadcast' then 2000 else 300 end));
 alter table public.class_system_notices drop constraint if exists class_system_notices_ref_check;
 alter table public.class_system_notices add constraint class_system_notices_ref_check
-  check ((ref_type = 'thread' and ref_key ~ '^[0-9a-f-]{36}$') or (kind = 'broadcast' and ref_type = 'broadcast' and ref_key ~ '^[0-9a-f-]{36}$'));
+  check (ref_key ~ '^[0-9a-f-]{36}$' and (ref_type = 'thread'
+         or (kind = 'feed_comment' and ref_type in ('post', 'teamlab_publication'))
+         or (kind = 'broadcast' and ref_type = 'broadcast')));
 alter table public.class_system_notices drop constraint if exists class_system_notices_title_link_check;
 alter table public.class_system_notices add constraint class_system_notices_title_link_check
   check ((title is null or char_length(title) between 1 and 80) and (link is null or (link ~ '^/[^/\\ ]' and char_length(link) <= 300)));
@@ -355,7 +380,7 @@ grant execute on function public.broadcast_cancel(uuid) to authenticated;
 -- 5) Phân phối MỘT người (nội bộ; gọi trong worker). Ném lỗi → worker retry. Trả (status, error, ref_seq, conversation).
 create or replace function public.broadcast_deliver(c public.broadcast_campaigns, p_uid uuid)
 returns table(status text, error text, ref_seq bigint, ref_conversation uuid) language plpgsql security definer set search_path = '' as $$
-declare v_reason text; v_conv uuid; v_seq bigint; v_a uuid; v_b uuid;
+declare v_reason text; v_conv uuid; v_seq bigint;
 begin
   v_reason := public.broadcast_classify(c.channel, c.audience_kind, p_uid, c.created_by);   -- kiểm lại NGAY trước khi phát
   if v_reason is not null then return query select 'skipped'::text, v_reason, null::bigint, null::uuid; return; end if;
@@ -366,13 +391,7 @@ begin
     select n.seq into v_seq from public.class_system_notices n where n.user_id = p_uid and n.dedupe_key = 'broadcast:' || c.id::text;
     return query select 'sent'::text, null::text, v_seq, null::uuid;
   else
-    v_a := least(c.created_by, p_uid); v_b := greatest(c.created_by, p_uid);
-    perform pg_advisory_xact_lock(hashtextextended(v_a::text || v_b::text, 11));   -- cùng khoá với dm_start: không tạo hội thoại trùng
-    select d.id into v_conv from public.dm_conversations d where d.user_lo = v_a and d.user_hi = v_b;
-    if v_conv is null then
-      insert into public.dm_conversations (user_lo, user_hi) values (v_a, v_b) returning id into v_conv;
-      insert into public.dm_participants (conversation_id, user_id) values (v_conv, c.created_by), (v_conv, p_uid);
-    end if;
+    v_conv := public.dm_open(c.created_by, p_uid);   -- Chat V1: tìm-hoặc-tạo hội thoại chuẩn tắc (khoá theo cặp), KHÔNG nhân đôi logic
     v_seq := public.dm_append(v_conv, c.created_by, c.body);
     return query select 'sent'::text, null::text, v_seq, v_conv;
   end if;
