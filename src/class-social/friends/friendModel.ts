@@ -125,3 +125,50 @@ export function lockedWallText(rel: Relationship, name: string): string {
   if (rel === 'incoming') return `Xác nhận lời mời để xem bài đăng của ${name}.`
   return `Kết bạn với ${name} để xem bài đăng trên trang này.`
 }
+
+// ── Tìm kiếm + gợi ý (Friends V3) ────────────────────────────────────────────
+// Khớp không dấu, KHỚP LUẬT DB (friends_fold): đ→d, bỏ dấu tiếng Việt, chữ thường, mọi từ khoá phải có trong tên.
+export function foldName(s: string | null | undefined): string {
+  return (s ?? '').normalize('NFC').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase()
+}
+/** Chuỗi tìm đã chuẩn hoá; < 2 ký tự → '' (không tìm) */
+export function searchTerm(raw: string): string {
+  const q = foldName(raw.slice(0, 80)).replace(/\s+/g, ' ').trim()
+  return q.length >= 2 ? q : ''
+}
+export function nameMatches(name: string, term: string): boolean {
+  if (!term) return true
+  const n = foldName(name)
+  return term.split(' ').every(tk => !tk || n.includes(tk))
+}
+
+export type SearchPerson = PersonCard & { relationship: Relationship; mutualCount: number; sameClass: boolean; sameBand: boolean }
+type SearchRow = PersonRow & { relationship: string | null; mutual_count: number | null; same_class: boolean | null; same_band: boolean | null }
+export function toSearchResults(rows: SearchRow[] | null | undefined): SearchPerson[] {
+  return (rows ?? []).filter(r => !!r?.user_id).map(r => ({
+    ...person(r), relationship: toRelationship(r.relationship), mutualCount: Math.max(0, r.mutual_count ?? 0),
+    sameClass: r.same_class === true, sameBand: r.same_band === true,
+  }))
+}
+export type SuggestionReason = 'class' | 'band' | 'mutual'
+export type Suggestion = PersonCard & { reason: SuggestionReason; sharedLabel: string | null; mutualCount: number }
+type SuggestionRow = PersonRow & { reason: string | null; shared_label: string | null; mutual_count: number | null }
+export function toSuggestions(rows: SuggestionRow[] | null | undefined): Suggestion[] {
+  return (rows ?? []).filter(r => !!r?.user_id).map(r => ({
+    ...person(r),
+    reason: r.reason === 'class' || r.reason === 'band' ? r.reason : 'mutual',
+    sharedLabel: r.shared_label?.trim() || null,
+    mutualCount: Math.max(0, r.mutual_count ?? 0),
+  }))
+}
+export const mutualText = (n: number) => (n > 0 ? `${n} bạn chung` : '')
+/** Dòng phụ dưới tên: lý do gợi ý (chỉ từ dữ liệu DB trả về) */
+export function suggestionSub(s: Suggestion): string {
+  const base = s.reason === 'class' ? (s.sharedLabel ? `Cùng lớp ${s.sharedLabel}` : 'Cùng lớp')
+    : s.reason === 'band' ? (s.sharedLabel ? `Cùng Band ${s.sharedLabel}` : 'Cùng Band') : ''
+  return [base, mutualText(s.mutualCount)].filter(Boolean).join(' · ')
+}
+/** Dòng phụ cho kết quả tìm kiếm */
+export function searchSub(p: SearchPerson): string {
+  return [p.sameClass ? 'Cùng lớp' : '', p.sameBand ? 'Cùng Band' : '', mutualText(p.mutualCount)].filter(Boolean).join(' · ')
+}

@@ -4,8 +4,8 @@ import { supabase } from '../../supabase'
 import { friendlyError, toFeedEntries, toFeedPosts, type FeedEntry, type FeedPost, type FeedRow, type MixedRow } from '../posts/postModel'
 import { FEED_PAGE, type Result } from '../posts/postsApi'
 import {
-  toPeople, toProfile, toRelationship,
-  type FriendAction, type FriendRow, type PersonCard, type ProfileRow, type PublicProfile, type RequestRow, type Relationship,
+  toPeople, toProfile, toRelationship, toSearchResults, toSuggestions,
+  type SearchPerson, type Suggestion, type FriendAction, type FriendRow, type PersonCard, type ProfileRow, type PublicProfile, type RequestRow, type Relationship,
 } from './friendModel'
 
 const online = () => (typeof navigator === 'undefined' ? true : navigator.onLine !== false)
@@ -50,6 +50,18 @@ export async function fetchIncomingRequests(): Promise<Result<PersonCard[]>> {
 export async function fetchOutgoingRequests(): Promise<Result<PersonCard[]>> {
   const r = await rpc<RequestRow[]>('outgoing_friend_requests', {}, 'load')
   return r.ok ? { ok: true, value: toPeople(r.value) } : r
+}
+
+/** Tìm thành viên Class theo tên (có dấu/không dấu) — DB lọc, chặn người chặn nhau */
+export async function searchPeople(term: string): Promise<Result<SearchPerson[]>> {
+  const r = await rpc<Parameters<typeof toSearchResults>[0]>('friend_search', { p_query: term, p_limit: 20 }, 'load')
+  return r.ok ? { ok: true, value: toSearchResults(r.value) } : r
+}
+
+/** Gợi ý kết bạn: chỉ người cùng lớp / cùng Band / có bạn chung (DB quyết) */
+export async function fetchSuggestions(): Promise<Result<Suggestion[]>> {
+  const r = await rpc<Parameters<typeof toSuggestions>[0]>('friend_suggestions', { p_limit: 20 }, 'load')
+  return r.ok ? { ok: true, value: toSuggestions(r.value) } : r
 }
 
 /** null = không có thành viên này (hoặc mình không phải thành viên Class) */

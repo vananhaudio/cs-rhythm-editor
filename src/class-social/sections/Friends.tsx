@@ -5,13 +5,15 @@
 import { useEffect, useState } from 'react'
 import { MessageCircle, Users } from 'lucide-react'
 import { runFriendAction } from '../friends/friendsApi'
-import { unfriendConfirm, type PersonCard } from '../friends/friendModel'
+import { needsConfirm, nameMatches, unfriendConfirm, type FriendAction, type PersonCard } from '../friends/friendModel'
+import { useFriendDiscovery } from '../friends/useFriendDiscovery'
 import type { FriendRequests } from '../friends/useFriendRequests'
 import { useFriendLists, withPerson, without, type PeopleList } from '../friends/useFriendLists'
 import { relativeTime } from '../posts/postModel'
 import { Avatar, ConfirmDialog, EmptyState, MoreMenu, PersonLink } from '../ui'
 import FriendRequestList from './FriendRequestList'
 import { IdentityBadges } from '../identity/IdentityBadges'
+import { FriendSearchBox, FriendSearchResults, FriendSuggestions } from './FriendDiscovery'
 
 export default function Friends({ requests, onOpenProfile, onMessage }: {
   requests: FriendRequests
@@ -22,6 +24,7 @@ export default function Friends({ requests, onOpenProfile, onMessage }: {
   const lists = useFriendLists()
   const { friends, outgoing, reloadFriends, reloadOutgoing, patchFriends, patchOutgoing } = lists
   const { refresh: refreshRequests } = requests
+  const discovery = useFriendDiscovery(() => { void reloadOutgoing(); void refreshRequests(); void reloadFriends() })
   const [busyId, setBusyId] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -56,12 +59,23 @@ export default function Friends({ requests, onOpenProfile, onMessage }: {
   const unfriend = async (p: PersonCard) => {
     begin(p.userId)
     const r = await runFriendAction('unfriend', p.userId)
-    if (r.ok) { patchFriends(without(p.userId)); setNotice(`Đã huỷ kết bạn với ${p.name}.`) } else setError(r.message)
+    if (r.ok) { patchFriends(without(p.userId)); discovery.setRelationship(p.userId, 'none'); void discovery.reloadSuggestions(); setNotice(`Đã huỷ kết bạn với ${p.name}.`) } else setError(r.message)
     setConfirming(null)
     await reloadFriends()
     setBusyId(null)
   }
 
+  // Hành động từ kết quả tìm kiếm / gợi ý: Huỷ kết bạn luôn hỏi lại; còn lại làm ngay rồi báo theo trạng thái DB trả về
+  const discover = async (p: PersonCard, action: FriendAction) => {
+    if (anyBusy || discovery.busyId) return
+    setNotice(null); setError(null)
+    if (needsConfirm(action)) { setConfirming(p); return }
+    if (await discovery.act(p.userId, action)) {
+      setNotice(action === 'send' ? `Đã gửi lời mời tới ${p.name}.` : action === 'accept' ? `Bạn và ${p.name} đã là bạn bè.` : action === 'cancel' ? 'Đã huỷ lời mời.' : 'Đã xoá lời mời.')
+    }
+  }
+
+  const friendItems = friends.status === 'ready' ? friends.items.filter(p => nameMatches(p.name, discovery.term)) : []
   const confirm = confirming ? unfriendConfirm(confirming.name) : null
   const outgoingItems = outgoing.status === 'ready' ? outgoing.items : []
 
@@ -69,7 +83,11 @@ export default function Friends({ requests, onOpenProfile, onMessage }: {
     <div className="cs-col cs-home cs-friends-page">
       <h1 className="cs-page-title">Bạn bè</h1>
       {notice && <p className="cs-rel-notice" role="status">{notice}</p>}
-      {(error || requests.actionError) && <p className="cs-form-error" role="alert">{error ?? requests.actionError}</p>}
+      {(error || requests.actionError || discovery.actionError) && <p className="cs-form-error" role="alert">{error ?? requests.actionError ?? discovery.actionError}</p>}
+
+      <FriendSearchBox value={discovery.query} onChange={discovery.setQuery} />
+      <FriendSearchResults state={discovery.search} busyId={discovery.busyId} onAct={(p, a) => void discover(p, a)}
+        onOpenProfile={onOpenProfile} onMessage={onMessage} onRetry={discovery.retrySearch} />
 
       {(requests.count > 0 || (requests.loaded && requests.error)) && (
         <section className="cs-card cs-friends-card" aria-labelledby="cs-req-title">
@@ -117,6 +135,12 @@ export default function Friends({ requests, onOpenProfile, onMessage }: {
         </section>
       )}
 
+      {!discovery.term && (
+        <FriendSuggestions state={discovery.suggestions} hidden={discovery.hidden} busyId={discovery.busyId}
+          onAdd={p => void discover(p, 'send')} onHide={discovery.hide} onOpenProfile={onOpenProfile}
+          onRetry={() => void discovery.reloadSuggestions()} />
+      )}
+
       <section className="cs-card cs-friends-card" aria-labelledby="cs-fr-title">
         <h2 id="cs-fr-title" className="cs-friends-title">
           Tất cả bạn bè{friends.status === 'ready' && friends.items.length > 0 && <span className="cs-friends-total">{friends.items.length}</span>}
@@ -130,9 +154,12 @@ export default function Friends({ requests, onOpenProfile, onMessage }: {
               : 'Bấm vào tên một bạn trong Trang chủ hoặc trong lớp để kết bạn.'}
           </EmptyState>
         )}
-        {friends.status === 'ready' && friends.items.length > 0 && (
+        {friends.status === 'ready' && friends.items.length > 0 && discovery.term && friendItems.length === 0 && (
+          <p className="cs-friends-empty">Không có bạn bè nào khớp "{discovery.query.trim()}".</p>
+        )}
+        {friends.status === 'ready' && friendItems.length > 0 && (
           <ul className="cs-people">
-            {friends.items.map(p => (
+            {friendItems.map(p => (
               <li key={p.userId} className="cs-person cs-person-friend">
                 <PersonLink userId={p.userId} onOpen={onOpenProfile} label={`Trang cá nhân của ${p.name}`} className="cs-person-main">
                   <Avatar name={p.name} url={p.avatarUrl} size={48} />

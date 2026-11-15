@@ -1964,3 +1964,20 @@ button.cs-subs-title:hover { color: var(--cs-accent); }
 .cs-cmts-end { margin: 0; padding: 4px 0; font-size: 13px; color: var(--cs-muted); text-align: center; }
 .cs-cmts-more { min-height: 44px; }
 .cs-cmts-more:disabled { opacity: 0.7; }
+
+/* ── Friends V3: tìm bạn + gợi ý (iOS HIG Light, đồng bộ /me) ───────────────── */
+.cs-friend-search { position: relative; display: flex; align-items: center; margin: 0 0 12px; }
+.cs-friend-search-ico { position: absolute; left: 12px; color: var(--cs-faint); pointer-events: none; }
+.cs-friend-search-input {
+  width: 100%; height: 44px; padding: 0 40px 0 38px; border: 0; border-radius: 12px;
+  background: var(--cs-fill, rgba(120, 120, 128, 0.12)); color: inherit; font: inherit; font-size: 16px;   /* 16px: iOS không tự zoom */
+  -webkit-appearance: none; appearance: none;
+}
+.cs-friend-search-input::-webkit-search-cancel-button { display: none; }
+.cs-friend-search-input:focus-visible { outline: 2px solid var(--cs-p, #007aff); outline-offset: 1px; }
+.cs-friend-search-clear {
+  position: absolute; right: 4px; width: 36px; height: 36px; display: grid; place-items: center;
+  border: 0; background: transparent; color: var(--cs-muted); border-radius: 50%; cursor: pointer;
+}
+.cs-person-actions .cs-rel-actions { display: contents; }
+.cs-person-actions .cs-btn svg { flex: none; }
