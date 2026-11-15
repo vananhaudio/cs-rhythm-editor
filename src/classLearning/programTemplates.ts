@@ -10,6 +10,7 @@ import { SOLO01_BUOI02 } from '../data/solo01/buoi02'
 import { SOLO01_BUOI03 } from '../data/solo01/buoi03'
 import { SOLO01_BUOI04 } from '../data/solo01/buoi04'
 import { SOLO01_BUOI05 } from '../data/solo01/buoi05'
+import { SOLO01_BUOI06 } from '../data/solo01/buoi06'
 import { CB1_BUOI00 } from '../data/cb1/buoi00'
 import { CB1_BUOI01 } from '../data/cb1/buoi01'
 import { CB1_BUOI02 } from '../data/cb1/buoi02'
@@ -46,7 +47,7 @@ export const PROGRAM_TEMPLATES: Record<string, ProgramTemplate> = {
   'SOLO01.TH01': {
     perStage: 8,
     stages: SOLO01_STAGES.map(s => ({ no: s.no, title: s.title.trim(), summary: s.goal })),
-    lessons: { 1: SOLO01_BUOI01, 2: SOLO01_BUOI02, 3: SOLO01_BUOI03, 4: SOLO01_BUOI04, 5: SOLO01_BUOI05 },
+    lessons: { 1: SOLO01_BUOI01, 2: SOLO01_BUOI02, 3: SOLO01_BUOI03, 4: SOLO01_BUOI04, 5: SOLO01_BUOI05, 6: SOLO01_BUOI06 },
   },
   'HT2027.TH01': {
     perStage: 8,

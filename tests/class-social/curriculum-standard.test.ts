@@ -1,3 +1,4 @@
+import { SOLO01_BUOI06 } from "../../src/data/solo01/buoi06";
 /**
  * GIÁO TRÌNH CHUẨN — SOLO01 là Golden Reference (docs/GIAO-TRINH-CHUAN.md).
  * Mọi buổi SOLO01 (kể cả Buổi 06+ soạn sau) phải qua bộ kiểm này: đúng loại khối, đúng mạch, bài trả đúng luật.
@@ -15,7 +16,7 @@ import { HT2027_BUOI03 } from "../../src/data/ht2027/buoi03";
 import { KNOWN_SECTION_KINDS, solo01DocProblems, solo01Problems } from "../../src/lesson/curriculumStandard";
 import type { LessonSection } from "../../src/lesson/lessonTypes";
 
-const SOLO = [SOLO01_BUOI01, SOLO01_BUOI02, SOLO01_BUOI03, SOLO01_BUOI04, SOLO01_BUOI05];
+const SOLO = [SOLO01_BUOI01, SOLO01_BUOI02, SOLO01_BUOI03, SOLO01_BUOI04, SOLO01_BUOI05, SOLO01_BUOI06];
 
 test("mọi buổi SOLO01 đã soạn đạt chuẩn Golden Reference (khối · mạch · bài trả)", () => {
   SOLO.forEach((doc, i) => {
