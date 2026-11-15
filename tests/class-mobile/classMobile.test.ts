@@ -129,12 +129,12 @@ test("MobileStudentPortal/StudentOnboarding: embed là prop tùy chọn, mặc �
   assert.match(o, /!embed && !IS_NATIVE_CAPACITOR/);
 });
 
-test("khung 5 tab: thanh tab dưới có Safe Area, vùng chạm ≥ 44, hỗ trợ chế độ tối và giảm chuyển động", () => {
+test("khung 5 tab: thanh tab dưới có Safe Area, vùng chạm ≥ 44, luôn sáng (không dark) và giảm chuyển động", () => {
   const css = read("src/class-mobile/classMobile.css");
   assert.match(css, /safe-area-inset-bottom/);
   assert.match(css, /safe-area-inset-top/);
   assert.match(css, /min-height: 44px/);
-  assert.match(css, /prefers-color-scheme: dark/);
+  assert.doesNotMatch(css, /prefers-color-scheme: dark/);
   assert.match(css, /prefers-reduced-motion/);
 });
 
@@ -422,4 +422,16 @@ test("UI-shell: TopBar render — thương hiệu / tên tab / '‹' + tên màn
   assert.doesNotMatch(deep, /class="cm-brand"/, "màn sâu: không lặp thương hiệu");
   assert.match(deep, /aria-label="Thông báo"/);
   assert.match(deep, /Chức năng khác/);
+});
+
+// ── Light Mode Only: Class và /me luôn sáng, không theo giao diện hệ điều hành ──
+test("Light Mode Only: không có quy tắc dark / color-scheme tối trong src, HTML khoá light", () => {
+  const walk = (d: string): string[] => readdirSync(d, { withFileTypes: true }).flatMap(e =>
+    e.isDirectory() ? walk(`${d}/${e.name}`) : [`${d}/${e.name}`]);
+  const bad = walk("src")
+    .filter(f => /\.(css|tsx?|html)$/.test(f))
+    .filter(f => /prefers-color-scheme\s*:\s*dark|color-scheme\s*:\s*[^;}]*\bdark\b/.test(readFileSync(f, "utf8")));
+  assert.deepEqual(bad, []);
+  assert.match(readFileSync("index.html", "utf8"), /<meta name="color-scheme" content="light"\s*\/?>/);
+  assert.match(readFileSync("src/index.css", "utf8"), /:root\s*\{[^}]*color-scheme:\s*light;/s);
 });
