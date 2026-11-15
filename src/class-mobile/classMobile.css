@@ -148,24 +148,6 @@
 /* ── Trò chuyện / Thông báo toàn màn hình: nằm TRÊN thanh tab (đã có sẵn ở Chat: fixed theo viewport thật) ── */
 .cm-root .cs-chat-pane.is-open { z-index: 50; }
 
-/* ── Chế độ tối (theo hệ thống) ── */
-@media (prefers-color-scheme: dark) {
-  .cm-root {
-    --cs-p: #a78bfa; --cs-p-strong: #c4b5fd; --cs-p-soft: #2b2154; --cs-p-softer: #211a40;
-    --cs-bg: #0e0e12; --cs-surface: #1a1a20; --cs-text: #f4f4f5; --cs-muted: #b4b4be; --cs-faint: #8b8b97;
-    --cs-border: #2e2e36; --cs-hover: #25252d; --cs-neutral-soft: #25252d; --cs-neutral-line: #3b3b45;
-    --cs-ok: #4ade80; --cs-ok-soft: #12301f; --cs-warn: #fbbf24; --cs-warn-soft: #3a2a0c;
-    --cs-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-    color-scheme: dark;
-  }
-  /* các chỗ Class Social đặt màu sáng cố định → theo token tối */
-  .cm-root .cs-share-input, .cm-root .cs-tool-share, .cm-root .cs-cmt-bubble, .cm-root .cs-cmt-inputwrap,
-  .cm-root .cs-cmt.is-teacher .cs-cmt-bubble, .cm-root .lt-page .lt-ev-bubble, .cm-root .lt-ev.is-teacher .lt-ev-bubble,
-  .cm-root .cs-btn-soft { background: var(--cs-neutral-soft); color: var(--cs-text); }
-  .cm-root .cs-btn-soft:hover, .cm-root .cs-btn-soft:hover:not(:disabled) { background: var(--cs-hover); }
-  .cm-root .cs-share-input.is-open { background: var(--cs-surface); }
-}
-
 /* ── Cỡ chữ lớn / màn nhỏ ── */
 @media (max-width: 360px) { .cm-tab span.cm-tab-l { font-size: 0.5625rem; } .cm-tools { grid-template-columns: repeat(2, 1fr); } }
 
