@@ -2034,3 +2034,12 @@ button.cs-subs-title:hover { color: var(--cs-accent); }
 .cs-md-code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .92em; padding: 1px 5px; border-radius: 5px; background: var(--cs-fill, rgba(120,120,128,.14)); }
 .cs-md-link { color: var(--cs-p, #007aff); text-decoration: underline; text-underline-offset: 2px; overflow-wrap: anywhere; }
 .cs-bc-body { white-space: normal; }
+
+/* Logo khóa học trên dòng lớp (/me, Home → Lớp): ô vuông cố định, ảnh contain (không méo/cắt); thiếu logo → biểu tượng mặc định */
+.cs-classrow { flex-direction: row; align-items: center; gap: 12px; }
+.cs-classrow-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; }
+.cs-classrow-logo { flex: 0 0 auto; width: 44px; height: 44px; border-radius: 10px; background: var(--cs-neutral-soft);
+  border: 1px solid var(--cs-border); display: flex; align-items: center; justify-content: center; overflow: hidden; color: var(--cs-muted); }
+.cs-classrow-logo img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.cs-classrow.is-quiet .cs-classrow-logo { width: 36px; height: 36px; border-radius: 8px; }
+.cs-home-classes .cs-classrow-logo { width: 40px; height: 40px; }

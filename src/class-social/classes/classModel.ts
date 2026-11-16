@@ -154,3 +154,18 @@ export function scErrorText(msg: string | undefined): string {
   if (/failed to fetch|network|load failed/i.test(msg ?? '')) return 'Không có kết nối mạng. Kiểm tra mạng rồi thử lại.'
   return 'Chưa tải được lớp học. Hãy thử lại.'
 }
+
+/** Logo khóa học: bảng mã khóa → URL https (edu_courses.image_url). Mọi lớp cùng khóa dùng chung MỘT logo gốc
+ *  (không bản sao theo lớp). URL không an toàn/trống bị bỏ → lớp hiện biểu tượng mặc định. */
+export type CourseLogoMap = ReadonlyMap<string, string>
+export function toCourseLogoMap(rows: unknown): CourseLogoMap {
+  const m = new Map<string, string>()
+  for (const r of Array.isArray(rows) ? rows : []) {
+    const o = obj(r)
+    const code = str(o.code), url = safeImageUrl(str(o.image_url))
+    if (code && url && !url.startsWith('data:') && !url.startsWith('blob:')) m.set(code, url)
+  }
+  return m
+}
+export const classLogoUrl = (c: Pick<ClassCard, 'course'>, logos: CourseLogoMap): string | null =>
+  (c.course?.code && logos.get(c.course.code)) || null
