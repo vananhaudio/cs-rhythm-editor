@@ -4,9 +4,10 @@ import { supabase } from '../../supabase'
 import type { Result } from '../posts/postsApi'
 import type { ShareRef } from '../../share/shareRef'
 import {
-  bandIdOf, chatErrorText, isBandConversation, mergeConversationLists, toBandConversations, toBandMembers, toBandMessages,
+  bandIdOf, chatErrorText, classIdOf, isBandConversation, isClassConversation, mergeConversationLists, toBandConversations, toBandMembers, toBandMessages,
+  toClassConversations,
   toConversations, toMessages, toSystemNotices, toSystemSummary, NOTICE_PAGE, PAGE,
-  type BandMember, type BandMemberRow, type BandMessageRow, type BandRoomRow,
+  type BandMember, type BandMemberRow, type BandMessageRow, type BandRoomRow, type ClassRoomRow,
   type ChatMessage, type ConversationItem, type ConversationRow, type MessageRow,
   type SystemNotice, type SystemNoticeRow, type SystemSummary, type SystemSummaryRow,
 } from './chatModel'
@@ -26,14 +27,21 @@ async function rpc<T>(fn: string, args: Record<string, unknown>, ctx?: 'share'):
   }
 }
 
-/** Hội thoại cá nhân (dm_*) + nhóm Band (bandchat_*). Nhóm Band là phần BỔ SUNG: lỗi/chưa có tính năng ở server → danh sách cá nhân vẫn hiện bình thường. */
+/** Hội thoại cá nhân (dm_*) + nhóm Band (bandchat_*) + phòng lớp (classchat_*). Band/lớp là phần BỔ SUNG: lỗi/chưa có tính năng ở server → danh sách cá nhân vẫn hiện bình thường. */
 export async function fetchConversations(limit = 50): Promise<Result<ConversationItem[]>> {
-  const [r, b] = await Promise.all([
+  const [r, b, c] = await Promise.all([
     rpc<ConversationRow[]>('dm_conversations_safe', { p_limit: limit }),
     rpc<BandRoomRow[]>('bandchat_rooms', { p_limit: limit }),
+    rpc<ClassRoomRow[]>('classchat_rooms', { p_limit: limit }),
   ])
   if (!r.ok) return r
-  return { ok: true, value: mergeConversationLists(toConversations(r.value), b.ok ? toBandConversations(b.value) : []) }
+  return { ok: true, value: mergeConversationLists(toConversations(r.value), b.ok ? toBandConversations(b.value) : [], c.ok ? toClassConversations(c.value) : []) }
+}
+
+/** Chỉ các phòng lớp mình thấy được (classchat_rooms: thành viên lớp, hoặc Thầy/Admin xem hỗ trợ). Không tạo phòng, chỉ đọc. */
+export async function fetchClassRooms(limit = 50): Promise<Result<ConversationItem[]>> {
+  const c = await rpc<ClassRoomRow[]>('classchat_rooms', { p_limit: limit })
+  return c.ok ? { ok: true, value: toClassConversations(c.value) } : c
 }
 
 /** Chỉ các nhóm Band mình thấy được (bandchat_rooms: thành viên, hoặc Thầy/Admin xem hỗ trợ). Không tạo phòng, chỉ đọc. */
@@ -42,18 +50,24 @@ export async function fetchBandRooms(limit = 50): Promise<Result<ConversationIte
   return b.ok ? { ok: true, value: toBandConversations(b.value) } : b
 }
 
-/** Chưa đọc tách theo nguồn: dm_unread_count (lỗi → lỗi) và bandchat_unread_count (lỗi/chưa có → 0, như trước). */
-export async function fetchUnreadBreakdown(): Promise<Result<{ dm: number; band: number }>> {
-  const [r, b] = await Promise.all([rpc<number>('dm_unread_count', {}), rpc<number>('bandchat_unread_count', {})])
+/** Chưa đọc tách theo nguồn: dm_unread_count (lỗi → lỗi); bandchat_/classchat_unread_count (lỗi/chưa có → 0). */
+export async function fetchUnreadBreakdown(): Promise<Result<{ dm: number; band: number; class: number }>> {
+  const [r, b, c] = await Promise.all([rpc<number>('dm_unread_count', {}), rpc<number>('bandchat_unread_count', {}), rpc<number>('classchat_unread_count', {})])
   if (!r.ok) return r
   const n = (v: unknown) => Math.max(0, Number(v) || 0)
-  return { ok: true, value: { dm: n(r.value), band: b.ok ? n(b.value) : 0 } }
+  return { ok: true, value: { dm: n(r.value), band: b.ok ? n(b.value) : 0, class: c.ok ? n(c.value) : 0 } }
 }
 
-/** Tổng Trò chuyện (dm + band) — không gồm thông báo hệ thống */
+/** Tổng Trò chuyện (dm + band + lớp) — không gồm thông báo hệ thống */
 export async function fetchUnreadCount(): Promise<Result<number>> {
   const r = await fetchUnreadBreakdown()
-  return r.ok ? { ok: true, value: r.value.dm + r.value.band } : r
+  return r.ok ? { ok: true, value: r.value.dm + r.value.band + r.value.class } : r
+}
+
+/** Thành viên hiện hành của một phòng lớp (id hội thoại dạng `class:<id>`): học viên + Thầy phụ trách */
+export async function fetchClassMembers(conversationId: string): Promise<Result<BandMember[]>> {
+  const r = await rpc<BandMemberRow[]>('classchat_members', { p_class: classIdOf(conversationId) })
+  return r.ok ? { ok: true, value: toBandMembers(r.value, 'Thành viên lớp') } : r
 }
 
 /** Thành viên hiện hành của một nhóm Band (id hội thoại dạng `band:<id>`) */
@@ -64,6 +78,15 @@ export async function fetchBandMembers(conversationId: string): Promise<Result<B
 
 /** Tin của một hội thoại. afterSeq → chỉ tin mới (polling); beforeSeq → trang cũ hơn; không có → trang mới nhất */
 export async function fetchMessages(conversationId: string, opts: { afterSeq?: number; beforeSeq?: number; limit?: number } = {}): Promise<Result<ChatMessage[]>> {
+  if (isClassConversation(conversationId)) {
+    const c = await rpc<BandMessageRow[]>('classchat_messages_safe', {
+      p_class: classIdOf(conversationId),
+      p_after_seq: opts.afterSeq ?? null,
+      p_before_seq: opts.beforeSeq ?? null,
+      p_limit: opts.limit ?? PAGE,
+    })
+    return c.ok ? { ok: true, value: toBandMessages(c.value, 'Thành viên lớp') } : c
+  }
   if (isBandConversation(conversationId)) {
     const b = await rpc<BandMessageRow[]>('bandchat_messages_safe', {
       p_band: bandIdOf(conversationId),
@@ -83,6 +106,10 @@ export async function fetchMessages(conversationId: string, opts: { afterSeq?: n
 }
 
 export async function sendMessage(conversationId: string, body: string): Promise<Result<number>> {
+  if (isClassConversation(conversationId)) {
+    const c = await rpc<number>('classchat_send', { p_class: classIdOf(conversationId), p_body: body })
+    return c.ok ? { ok: true, value: Number(c.value) } : c
+  }
   if (isBandConversation(conversationId)) {
     const b = await rpc<number>('bandchat_send', { p_band: bandIdOf(conversationId), p_body: body })
     return b.ok ? { ok: true, value: Number(b.value) } : b
@@ -100,6 +127,10 @@ export async function startConversation(userId: string, body: string): Promise<R
 }
 
 export async function markRead(conversationId: string, seq: number): Promise<Result<number>> {
+  if (isClassConversation(conversationId)) {
+    const c = await rpc<number>('classchat_mark_read', { p_class: classIdOf(conversationId), p_seq: seq })
+    return c.ok ? { ok: true, value: Number(c.value) } : c
+  }
   if (isBandConversation(conversationId)) {
     const b = await rpc<number>('bandchat_mark_read', { p_band: bandIdOf(conversationId), p_seq: seq })
     return b.ok ? { ok: true, value: Number(b.value) } : b

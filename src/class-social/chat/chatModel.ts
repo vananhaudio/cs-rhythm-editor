@@ -13,6 +13,12 @@ export const PAGE = 30
 export const BAND_PREFIX = 'band:'
 export const isBandConversation = (id: string): boolean => id.startsWith(BAND_PREFIX)
 export const bandIdOf = (id: string): string => id.slice(BAND_PREFIX.length)
+/** Id hội thoại của phòng lớp = `class:<class id>` (khớp resolveMeRoute.CLASS_CONVERSATION_PREFIX và conv_key của chat_inbox) */
+export const CLASS_PREFIX = 'class:'
+export const isClassConversation = (id: string): boolean => id.startsWith(CLASS_PREFIX)
+export const classIdOf = (id: string): string => id.slice(CLASS_PREFIX.length)
+/** Nhóm (nhiều người gửi): Band hoặc lớp — dùng chung khung tin có tên + ảnh người gửi */
+export const isGroupConversation = (id: string): boolean => isBandConversation(id) || isClassConversation(id)
 
 export type ConversationItem = {
   id: string
@@ -68,6 +74,13 @@ export type BandRoomRow = {
   last_seq: number | string | null; last_body: string | null; last_sender_name: string | null; last_mine: boolean | null; last_at: string | null
   unread: number | null; member_count: number | null
   /** Server quyết: gửi được / Band đã lưu trữ / nhóm xem với tư cách Thầy-Admin hỗ trợ (không phải thành viên) */
+  can_send?: boolean | null; archived?: boolean | null; support?: boolean | null
+}
+export type ClassRoomRow = {
+  class_id: string; class_name: string | null
+  last_seq: number | string | null; last_body: string | null; last_sender_name: string | null; last_mine: boolean | null; last_at: string | null
+  unread: number | null; member_count: number | null
+  /** Server quyết: gửi được / lớp huỷ-gộp-nháp (chỉ đọc) / Thầy-Admin xem hỗ trợ (không phải thành viên) */
   can_send?: boolean | null; archived?: boolean | null; support?: boolean | null
 }
 export type BandMessageRow = {
@@ -128,16 +141,38 @@ export function toBandConversations(rows: BandRoomRow[] | null | undefined): Con
   }))
 }
 
-export function toBandMessages(rows: BandMessageRow[] | null | undefined): ChatMessage[] {
+/** Phòng lớp → hàng trong danh sách. Lớp không có ảnh riêng (chữ cái đầu). Phòng chưa có tin vẫn hiện. */
+export function toClassConversations(rows: ClassRoomRow[] | null | undefined): ConversationItem[] {
+  return (Array.isArray(rows) ? rows : []).filter(r => !!r?.class_id && !!(r.class_name ?? '').trim()).map(r => ({
+    kind: 'class' as const,
+    id: CLASS_PREFIX + String(r.class_id).toLowerCase(),
+    peerId: '',
+    name: (r.class_name ?? '').trim(),
+    avatarUrl: null,
+    isTeacher: false,
+    lastSeq: Number(r.last_seq) || 0,
+    lastBody: r.last_body ?? '',
+    lastMine: r.last_mine === true,
+    lastSender: (r.last_sender_name ?? '').trim(),
+    lastAt: r.last_at ?? '',
+    unread: Math.max(0, Number(r.unread) || 0),
+    canSend: r.can_send === true,   // server quyết; không biết = KHÔNG gửi được
+    readOnly: r.support === true ? 'support' as const : r.archived === true ? 'archived' as const : null,
+    memberCount: Math.max(0, Number(r.member_count) || 0),
+    projectId: null,
+  }))
+}
+
+export function toBandMessages(rows: BandMessageRow[] | null | undefined, fallbackName = 'Thành viên Band'): ChatMessage[] {
   return (rows ?? []).filter(r => r?.seq != null).map(r => ({
     seq: Number(r.seq), mine: r.mine === true, body: r.body ?? '', at: r.created_at ?? '', ref: null,
-    sender: { id: r.sender_id ?? '', name: (r.sender_name ?? '').trim() || 'Thành viên Band', avatarUrl: safeImageUrl(r.sender_avatar_url) },
+    sender: { id: r.sender_id ?? '', name: (r.sender_name ?? '').trim() || fallbackName, avatarUrl: safeImageUrl(r.sender_avatar_url) },
   })).sort((a, b) => a.seq - b.seq)
 }
 
-export function toBandMembers(rows: BandMemberRow[] | null | undefined): BandMember[] {
+export function toBandMembers(rows: BandMemberRow[] | null | undefined, fallbackName = 'Thành viên Band'): BandMember[] {
   return (rows ?? []).filter(r => !!r?.user_id).map(r => ({
-    id: r.user_id, name: (r.name ?? '').trim() || 'Thành viên Band', avatarUrl: safeImageUrl(r.avatar_url), isTeacher: r.role === 'teacher',
+    id: r.user_id, name: (r.name ?? '').trim() || fallbackName, avatarUrl: safeImageUrl(r.avatar_url), isTeacher: r.role === 'teacher',
     groupRole: r.group_role == null ? null : r.group_role === 'owner' ? 'owner' as const : r.group_role === 'admin' ? 'admin' as const : 'member' as const,
   }))
 }
@@ -150,9 +185,9 @@ export function bandRoomsOfTeam(rooms: ConversationItem[] | null | undefined, te
   return (rooms ?? []).filter(r => r.kind === 'band' && !!r.projectId && r.projectId.toLowerCase() === t)
 }
 
-export function mergeConversationLists(dm: ConversationItem[], bands: ConversationItem[]): ConversationItem[] {
+export function mergeConversationLists(dm: ConversationItem[], bands: ConversationItem[], classes: ConversationItem[] = []): ConversationItem[] {
   const t = (c: ConversationItem) => { const n = Date.parse(c.lastAt); return Number.isNaN(n) ? -Infinity : n }
-  return [...dm, ...bands].sort((a, b) => (t(b) - t(a)) || a.name.localeCompare(b.name, 'vi') || a.id.localeCompare(b.id))
+  return [...dm, ...bands, ...classes].sort((a, b) => (t(b) - t(a)) || a.name.localeCompare(b.name, 'vi') || a.id.localeCompare(b.id))
 }
 
 /** Trần số hội thoại khi lấy "hộp thư" toàn cục — bằng trần của RPC dm_conversations (least(p_limit, 100)) */
@@ -164,20 +199,20 @@ export function inboxUnread(rows: ConversationItem[]): number {
 }
 
 /** Chưa đọc theo TỪNG nguồn độc lập — Trò chuyện (dm + band) và Thông báo hệ thống không bao giờ cộng vào nhau. */
-export type UnreadCounts = { dm: number; band: number; notice: number; chatTotal: number; noticeTotal: number }
+export type UnreadCounts = { dm: number; band: number; class: number; notice: number; chatTotal: number; noticeTotal: number }
 
 const safeCount = (n: unknown): number => { const v = Math.floor(Number(n)); return Number.isFinite(v) && v > 0 ? v : 0 }
 
-export function buildUnread(dm: unknown, band: unknown, notice: unknown): UnreadCounts {
-  const d = safeCount(dm), b = safeCount(band), n = safeCount(notice)
-  return { dm: d, band: b, notice: n, chatTotal: d + b, noticeTotal: n }
+export function buildUnread(dm: unknown, band: unknown, notice: unknown, cls: unknown = 0): UnreadCounts {
+  const d = safeCount(dm), b = safeCount(band), n = safeCount(notice), c = safeCount(cls)
+  return { dm: d, band: b, class: c, notice: n, chatTotal: d + b + c, noticeTotal: n }
 }
 
 /** Tách hộp thư gộp (dm + nhóm Band) thành hai nguồn — cùng ngữ nghĩa đếm hội thoại có tin chưa đọc */
-export function inboxUnreadSplit(rows: ConversationItem[]): { dm: number; band: number } {
-  let dm = 0, band = 0
-  for (const c of rows) if (c.unread > 0) { if (c.kind === 'band') band++; else dm++ }
-  return { dm, band }
+export function inboxUnreadSplit(rows: ConversationItem[]): { dm: number; band: number; class: number } {
+  let dm = 0, band = 0, cls = 0
+  for (const c of rows) if (c.unread > 0) { if (c.kind === 'band') band++; else if (c.kind === 'class') cls++; else dm++ }
+  return { dm, band, class: cls }
 }
 
 export function toMessages(rows: MessageRow[] | null | undefined): ChatMessage[] {

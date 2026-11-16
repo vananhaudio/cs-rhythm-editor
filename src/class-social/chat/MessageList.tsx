@@ -7,7 +7,7 @@ import ShareMessageCard from './ShareMessageCard'
 import SafetyMenu from '../../class-safety/SafetyMenu'
 import { useBlockedSet } from '../../class-safety/blockedStore'
 import { messageReportKind } from '../../class-safety/model'
-import { isBandConversation, firstSeqOf, lastSeqOf, layoutMessages, type ChatMessage, type PendingMessage } from './chatModel'
+import { isBandConversation, isClassConversation, firstSeqOf, lastSeqOf, layoutMessages, type ChatMessage, type PendingMessage } from './chatModel'
 
 const NEAR_BOTTOM = 96
 
@@ -76,8 +76,12 @@ export default function MessageList({ conversationId, messages, pending, hasMore
             ? <div className="cs-msg-share"><ShareMessageCard shareRef={m.ref} onSettle={settle} /></div>
             : <div className="cs-msg-bubble">{m.body}</div>
           const menu = !m.mine && conversationId && (
-            <SafetyMenu className="csafe-msg-menu" label="Tuỳ chọn tin nhắn" kind={messageReportKind(isBandConversation(conversationId))}
-              targetId={`${conversationId}:${m.seq}`} userId={who?.id || null} userName={who?.name} noBlock={!who?.id} />
+            isClassConversation(conversationId)
+              // Phòng lớp: báo cáo/chặn NGƯỜI GỬI (kind 'profile'); báo cáo riêng từng tin cần mở rộng hạ tầng báo cáo dùng chung — chưa có ở V1
+              ? <SafetyMenu className="csafe-msg-menu" label="Tuỳ chọn về người gửi" kind="profile" targetId={who?.id || ''}
+                  userId={who?.id || null} userName={who?.name} noBlock={!who?.id} />
+              : <SafetyMenu className="csafe-msg-menu" label="Tuỳ chọn tin nhắn" kind={messageReportKind(isBandConversation(conversationId))}
+                  targetId={`${conversationId}:${m.seq}`} userId={who?.id || null} userName={who?.name} noBlock={!who?.id} />
           )
           return (
             <div key={m.seq}>

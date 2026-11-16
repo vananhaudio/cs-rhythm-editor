@@ -1,6 +1,6 @@
 // Chat List V2 — model THUẦN (không mạng/DOM) cho danh sách Trò chuyện: bộ lọc, gấp dấu tìm kiếm, ánh xạ hàng RPC chat_inbox → ConversationItem,
 // con trỏ phân trang, ghép trang, và lọc cục bộ cho chế độ "legacy" (server chưa có chat_inbox). Quyền/tìm kiếm thật do DB quyết (db/chat_list_v2_setup.sql).
-import { toBandConversations, toConversations, type BandRoomRow, type ConversationItem, type ConversationRow } from './chatModel'
+import { toBandConversations, toClassConversations, toConversations, type BandRoomRow, type ClassRoomRow, type ConversationItem, type ConversationRow } from './chatModel'
 
 /** Số hội thoại mỗi trang (server chặn ở 50) */
 export const INBOX_PAGE = 30
@@ -71,6 +71,12 @@ export function toInboxItems(rows: InboxRow[] | null | undefined): ConversationI
         last_seq: r.last_seq, last_body: r.last_body, last_sender_name: r.last_sender_name, last_mine: r.last_mine, last_at: r.last_at, unread: r.unread,
         member_count: r.member_count, can_send: r.can_send, archived: r.archived, support: r.support,
       } as BandRoomRow])[0]
+    } else if (r.kind === 'class') {
+      it = toClassConversations([{
+        class_id: r.conv_key.replace(/^class:/, ''), class_name: r.name,
+        last_seq: r.last_seq, last_body: r.last_body, last_sender_name: r.last_sender_name, last_mine: r.last_mine, last_at: r.last_at, unread: r.unread,
+        member_count: r.member_count, can_send: r.can_send, archived: r.archived, support: r.support,
+      } as ClassRoomRow])[0]
     } else if (r.kind === 'dm' && r.peer_id) {
       it = toConversations([{
         conversation_id: r.conv_key, peer_id: r.peer_id, peer_name: r.name, peer_avatar_url: r.avatar_url, peer_role: r.peer_role,
@@ -120,9 +126,12 @@ export function filterLocal(items: ConversationItem[], f: InboxFilter): Conversa
 
 /** Tóm tắt tính từ danh sách đã tải (legacy) */
 export function summarizeLocal(items: ConversationItem[], support: number): InboxSummary {
-  let dm = 0, band = 0, uDm = 0, uBand = 0
-  for (const c of items) { if (kindOf(c) === 'band') { band++; if (c.unread > 0) uBand++ } else { dm++; if (c.unread > 0) uDm++ } }
-  return { dm, band, class: 0, unreadDm: uDm, unreadBand: uBand, unreadClass: 0, pinned: 0, support }
+  let dm = 0, band = 0, cls = 0, uDm = 0, uBand = 0, uCls = 0
+  for (const c of items) {
+    const k = kindOf(c)
+    if (k === 'band') { band++; if (c.unread > 0) uBand++ } else if (k === 'class') { cls++; if (c.unread > 0) uCls++ } else { dm++; if (c.unread > 0) uDm++ }
+  }
+  return { dm, band, class: cls, unreadDm: uDm, unreadBand: uBand, unreadClass: uCls, pinned: 0, support }
 }
 
 /** Lý do danh sách trống → nội dung trạng thái trống phù hợp (THUẦN, để test) */
