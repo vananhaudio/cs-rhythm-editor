@@ -5,11 +5,12 @@
 // Thầy/admin (classes.all có giá trị): "Tất cả lớp học" — MỌI lớp theo quyền server (social_all_classes), cùng dòng lớp,
 // cùng lối vào; không "Nhập mã lớp" (Thầy không tự thành học viên), không "Các lớp khác".
 import { useState } from 'react'
-import { Plus } from 'lucide-react'
-import { classMetaLine, currentClasses, filterClasses, PAST_CLASS_STATUSES, type ClassCard } from './classModel'
+import { Music, Plus } from 'lucide-react'
+import { classLogoUrl, classMetaLine, currentClasses, filterClasses, PAST_CLASS_STATUSES, type ClassCard } from './classModel'
 import { classPath } from '../resolveMeRoute'
 import type { SocialClasses } from './useSocialClasses'
 import JoinClassByCode from './JoinClassByCode'
+import { useCourseLogos } from './useCourseLogos'
 
 const SEARCH_MIN = 7   // ít lớp khác thì không cần ô tìm
 
@@ -18,13 +19,19 @@ const SEARCH_MIN = 7   // ít lớp khác thì không cần ô tìm
 export function ClassRow({ c, onOpen, quiet = false, meta = classMetaLine(c) }: {
   c: ClassCard; onOpen: (id: string) => void; quiet?: boolean; meta?: string | null
 }) {
+  const logo = classLogoUrl(c, useCourseLogos())
   return (
     <li className={'cs-classrow' + (quiet ? ' is-quiet' : '')}>
-      <a className="cs-classrow-name" href={classPath(c.id)} onClick={e => {
-        if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
-        e.preventDefault(); onOpen(c.id)
-      }}>{c.name}</a>
-      {meta && <span className="cs-classrow-meta">{meta}</span>}
+      <span className="cs-classrow-logo" aria-hidden="true">
+        {logo ? <img src={logo} alt="" loading="lazy" decoding="async" /> : <Music size={20} />}
+      </span>
+      <span className="cs-classrow-body">
+        <a className="cs-classrow-name" href={classPath(c.id)} onClick={e => {
+          if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
+          e.preventDefault(); onOpen(c.id)
+        }}>{c.name}</a>
+        {meta && <span className="cs-classrow-meta">{meta}</span>}
+      </span>
     </li>
   )
 }
