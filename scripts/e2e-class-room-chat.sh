@@ -43,6 +43,13 @@ insert into public.teamlab_band_members (band_id, user_id, created_at) values
 delete from public.friendships;
 insert into public.friendships (requester_id, addressee_id, status, responded_at)
   values ('aaaaaaaa-0000-4000-8000-00000000000a', 'bbbbbbbb-0000-4000-8000-00000000000b', 'accepted', now());
+insert into auth.users (id, email) values ('ffffffff-0000-4000-8000-00000000000f', 't2@test.local') on conflict do nothing;
+insert into public.app_users (id, role, name, email) values ('ffffffff-0000-4000-8000-00000000000f', 'admin', 'Admin Hỗ trợ', 't2@test.local') on conflict do nothing;
+insert into public.class_schedule (id, code, name, status, cohort_group_id) values
+  ('22222222-0000-4000-8000-0000000000e7', 'KD27', 'Lớp KD27 chưa có tin', 'upcoming', null),
+  ('22222222-0000-4000-8000-0000000000e5', 'KD25', 'Lớp KD25 đã huỷ', 'cancelled', null);
+insert into public.projects values ('11111111-0000-4000-8000-0000000000b2', 'Team Hai', null);
+insert into public.teamlab_bands values ('11111111-0000-4000-8000-0000000000a2', '11111111-0000-4000-8000-0000000000b2', 'Band Y', null);
 do $$
 declare a uuid := 'aaaaaaaa-0000-4000-8000-00000000000a'; b uuid := 'bbbbbbbb-0000-4000-8000-00000000000b'; cid uuid;
 begin
@@ -56,6 +63,6 @@ cat "$ROOT/db/account_avatar_v1_setup.sql" "$ROOT/db/friends_ux_v2_setup.sql" "$
     "$ROOT/db/band_chat_v1_setup.sql" "$ROOT/db/band_chat_v1_1_roles_setup.sql" "$ROOT/db/band_chat_v1_2_support_list_setup.sql" "$ROOT/db/band_chat_v1_3_companion_setup.sql" \
     "$TMPX/blocked.sql" "$ROOT/db/class_ugc_safety_v1_setup.sql" \
     "$ROOT/db/chat_list_v2_setup.sql" "$TMPX/view.sql" "$ROOT/db/class_room_chat_v1_setup.sql" "$ROOT/db/class_room_chat_v1_safety_setup.sql" \
-    "$ROOT/db/class_room_chat_v1_inbox_setup.sql" > "$TMPX/pre.sql"
+    "$ROOT/db/class_room_chat_v1_inbox_setup.sql" "$ROOT/db/class_room_chat_v1_1_support_list_setup.sql" > "$TMPX/pre.sql"
 E2E_CHECKPOINTS=1 E2E_SKIP_BASE=1 E2E_PRE_SQL="$TMPX/pre.sql" E2E_EXTRA_SQL="$TMPX/extra.sql" \
   E2E_EXTRA_RUNNER="$ROOT/tests/e2e-learning-thread/run-class-room-chat.mjs" bash "$ROOT/scripts/e2e-learning-thread.sh"

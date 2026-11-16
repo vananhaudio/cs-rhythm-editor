@@ -23,12 +23,17 @@ export default function InboxList({ inbox, source, selectedId, onSelect, onOpenF
   trailing?: ReactNode
 }) {
   const { state, filter, busy } = inbox
-  const [manager, setManager] = useState(false)
+  const [manager, setManager] = useState<SupportKind | null>(null)
   const [editing, setEditing] = useState(false)
-  if (manager) return <BandManager source={source} selectedId={selectedId} onSelect={onSelect} onBack={() => setManager(false)} />
   const summary = state.summary
   const canPin = state.mode === 'server'
-  const showManage = !!summary && summary.support > 0 && !inbox.searching && state.mode === 'server'
+  // Hỗ trợ (Thầy/Admin ngoài Band/lớp) — đếm RIÊNG theo loại, không gộp Band với lớp
+  const supportOn = !!summary && summary.support > 0 && state.mode === 'server'
+  const support = useSupportCounts(source, supportOn, String(summary?.support ?? 0))
+  if (manager) return <SupportManager kind={manager} source={source} selectedId={selectedId} onSelect={onSelect} onBack={() => setManager(null)} />
+  const showBandManage = supportOn && !inbox.searching && support.band > 0 && (filter.kind === 'all' || filter.kind === 'band')
+  const showClassManage = supportOn && !inbox.searching && support.class > 0 && filter.kind === 'all'
+  const showClassSupport = supportOn && !inbox.searching && support.class > 0 && filter.kind === 'class'
   const unread = summary ? unreadTotal(summary) : 0
 
   return (
@@ -67,10 +72,17 @@ export default function InboxList({ inbox, source, selectedId, onSelect, onOpenF
         )}
         {state.status === 'ready' && (
           <>
-            {showManage && (
-              <button type="button" className="cs-inbox-manage" onClick={() => setManager(true)} data-testid="open-band-manager">
+            {showBandManage && (
+              <button type="button" className="cs-inbox-manage" onClick={() => setManager('band')} data-testid="open-band-manager">
                 <span className="cs-inbox-manage-ic" aria-hidden="true"><Users size={18} /></span>
-                <span className="cs-inbox-manage-text"><b>Quản lý Band</b><small>{summary!.support} Band khác · chỉ xem</small></span>
+                <span className="cs-inbox-manage-text"><b>Quản lý Band</b><small>{support.band} Band khác · chỉ xem</small></span>
+                <ChevronRight size={18} aria-hidden="true" className="cs-inbox-chev" />
+              </button>
+            )}
+            {showClassManage && (
+              <button type="button" className="cs-inbox-manage" onClick={() => setManager('class')} data-testid="open-class-manager">
+                <span className="cs-inbox-manage-ic" aria-hidden="true"><GraduationCap size={18} /></span>
+                <span className="cs-inbox-manage-text"><b>Hỗ trợ lớp học</b><small>{support.class} lớp · chỉ xem</small></span>
                 <ChevronRight size={18} aria-hidden="true" className="cs-inbox-chev" />
               </button>
             )}
@@ -87,9 +99,11 @@ export default function InboxList({ inbox, source, selectedId, onSelect, onOpenF
                 <ul className="cs-inbox-list">{state.items.map(c => <Row key={c.id} c={c} showKind={filter.kind === 'all'} active={c.id === selectedId} canPin={canPin} editing={editing} onSelect={onSelect} onTogglePin={inbox.togglePin} />)}</ul>
               </section>
             )}
-            {state.items.length === 0 && state.pinned.length === 0 && (
+            {showClassSupport && <SupportClassSection source={source} selectedId={selectedId} onSelect={onSelect} hasOwn={state.items.length + state.pinned.length > 0} />}
+            {state.items.length === 0 && state.pinned.length === 0 && !showClassSupport && (
               <Empty filter={filter} summary={summary} onOpenFriends={onOpenFriends} onClear={inbox.clearFilters}
-                hasManager={!!summary && summary.support > 0 && state.mode === 'server'} onManage={() => setManager(true)} />
+                manager={supportOn ? (filter.kind === 'class' ? (support.class > 0 ? 'class' : null) : filter.kind === 'band' ? (support.band > 0 ? 'band' : null) : (support.band > 0 ? 'band' : support.class > 0 ? 'class' : null)) : null}
+                onManage={k => setManager(k)} />
             )}
             <Footer inbox={inbox} />
           </>
@@ -157,14 +171,15 @@ function Footer({ inbox }: { inbox: Inbox }) {
   return null
 }
 
-function Empty({ filter, summary, onOpenFriends, onClear, hasManager, onManage }: {
-  filter: Inbox['filter']; summary: InboxSummary | null; onOpenFriends: () => void; onClear: () => void; hasManager: boolean; onManage: () => void
+function Empty({ filter, summary, onOpenFriends, onClear, manager, onManage }: {
+  filter: Inbox['filter']; summary: InboxSummary | null; onOpenFriends: () => void; onClear: () => void; manager: SupportKind | null; onManage: (k: SupportKind) => void
 }) {
+  const hasManager = manager !== null
   const r = emptyReason(filter, summary)
   const friends = <button type="button" className="cs-btn cs-btn-soft cs-btn-sm" onClick={onOpenFriends}>Mở Bạn bè</button>
   const all = <button type="button" className="cs-btn cs-btn-soft cs-btn-sm" onClick={onClear}>Xem tất cả</button>
   const cfg: Record<string, { title: string; body: string; action?: ReactNode }> = {
-    search: { title: `Không tìm thấy “${filter.query.trim()}”`, body: hasManager ? 'Thử tên khác. Muốn tìm Band bạn không thuộc, mở Quản lý Band.' : 'Thử tên khác hoặc gõ không dấu.', action: hasManager ? <button type="button" className="cs-btn cs-btn-soft cs-btn-sm" onClick={onManage}>Mở Quản lý Band</button> : all },
+    search: { title: `Không tìm thấy “${filter.query.trim()}”`, body: hasManager ? (manager === 'class' ? 'Thử tên khác. Muốn tìm lớp bạn không thuộc, mở Hỗ trợ lớp học.' : 'Thử tên khác. Muốn tìm Band bạn không thuộc, mở Quản lý Band.') : 'Thử tên khác hoặc gõ không dấu.', action: hasManager ? <button type="button" className="cs-btn cs-btn-soft cs-btn-sm" onClick={() => onManage(manager)}>{manager === 'class' ? 'Mở Hỗ trợ lớp học' : 'Mở Quản lý Band'}</button> : all },
     unread: { title: 'Bạn đã đọc hết', body: 'Không còn cuộc trò chuyện nào chưa đọc.', action: all },
     'kind-dm': { title: 'Chưa có cuộc trò chuyện cá nhân', body: 'Vào Bạn bè và chọn Nhắn tin để bắt đầu.', action: friends },
     'kind-band': { title: 'Bạn chưa thuộc Band nào', body: 'Khi bạn thuộc một Band, nhóm chat của Band sẽ hiện ở đây.' },
@@ -195,7 +210,8 @@ function Row({ c, showKind, active, canPin, editing = false, onSelect, onToggleP
   }, [menu])
   const startPress = () => { if (pinnable) timer.current = setTimeout(() => { held.current = true; setMenu(true); setTimeout(() => { held.current = false }, 900) }, 480) }
   const endPress = () => { if (timer.current) { clearTimeout(timer.current); timer.current = null } }
-  const tag = kind === 'band' ? (c.readOnly === 'archived' ? 'Band · lưu trữ' : c.readOnly === 'support' ? 'Band · xem' : KIND_LABEL.band) : KIND_LABEL[kind]
+  const tag = kind === 'band' ? (c.readOnly === 'archived' ? 'Band · lưu trữ' : c.readOnly === 'support' ? 'Band · xem' : KIND_LABEL.band)
+    : kind === 'class' ? (c.readOnly === 'archived' ? 'Lớp học · chỉ đọc' : c.readOnly === 'support' ? 'Lớp học · hỗ trợ' : KIND_LABEL.class) : KIND_LABEL[kind]
   return (
     <li className="cs-inbox-li">
       <div className={'cs-inbox-row cs-inbox-menu-host' + (active ? ' is-active' : '') + (unread ? ' is-unread' : '')}
@@ -242,25 +258,62 @@ function Row({ c, showKind, active, canPin, editing = false, onSelect, onToggleP
   )
 }
 
-/** Thầy/Admin: quản lý nhiều Band (chỉ xem) — tìm kiếm + phân trang riêng, không lẫn danh sách cá nhân */
-function BandManager({ source, selectedId, onSelect, onBack }: { source: InboxSource; selectedId: string | null; onSelect: (id: string) => void; onBack: () => void }) {
-  const inbox = useInbox(source, { scope: 'support' })
-  const { state, busy } = inbox
+type SupportKind = 'band' | 'class'
+
+/** Số Band / lớp hỗ trợ (Thầy/Admin không thuộc) — đếm riêng theo loại từ RPC chat_inbox (scope support); không đổi DB */
+function useSupportCounts(source: InboxSource, enabled: boolean, reloadKey: string) {
+  const [n, setN] = useState({ band: 0, class: 0 })
+  useEffect(() => {
+    if (!enabled) { setN(p => (p.band === 0 && p.class === 0 ? p : { band: 0, class: 0 })); return }
+    let off = false
+    const count = async (kind: SupportKind) => {
+      const r = await source.page({ scope: 'support', filter: { kind, unreadOnly: false, query: '' }, pinned: 'any', cursor: null, limit: 100 })
+      return r.ok ? r.value.items.filter(c => kindOf(c) === kind).length : 0
+    }
+    void Promise.all([count('band'), count('class')]).then(([band, cls]) => { if (!off) setN({ band, class: cls }) })
+    return () => { off = true }
+  }, [source, enabled, reloadKey])
+  return n
+}
+
+/** Thầy/Admin: lớp học ngoài lớp của mình (chỉ xem / hỗ trợ) — hiện ngay trong tab "Lớp học", cùng một danh sách với Hỗ trợ lớp học */
+function SupportClassSection({ source, selectedId, onSelect, hasOwn }: { source: InboxSource; selectedId: string | null; onSelect: (id: string) => void; hasOwn: boolean }) {
+  const inbox = useInbox(source, { scope: 'support', kind: 'class' })
+  const { state } = inbox
+  if (state.status === 'loading') return <Skeleton />
+  if (state.status === 'error') return <div className="cs-feed-error" role="alert"><p>{state.error}</p><button type="button" className="cs-btn cs-btn-soft" onClick={inbox.retry}>Thử lại</button></div>
+  if (state.items.length === 0) return null
   return (
-    <div className="cs-chat-list cs-inbox cs-inbox-manager" data-testid="band-manager">
+    <section aria-label="Hỗ trợ lớp học" data-testid="class-support">
+      <h2 className="cs-inbox-sec"><GraduationCap size={12} aria-hidden="true" /> {hasOwn ? 'Hỗ trợ lớp học' : `Lớp học · hỗ trợ (${state.items.length}${state.hasMore ? '+' : ''})`}</h2>
+      <ul className="cs-inbox-list">{state.items.map(c => <Row key={c.id} c={c} showKind={false} active={c.id === selectedId} canPin={false} onSelect={onSelect} onTogglePin={() => {}} />)}</ul>
+      <Footer inbox={inbox} />
+    </section>
+  )
+}
+
+/** Thầy/Admin: quản lý nhiều Band / lớp (chỉ xem) — tìm kiếm + phân trang riêng, không lẫn danh sách cá nhân và KHÔNG lẫn Band với lớp */
+function SupportManager({ kind, source, selectedId, onSelect, onBack }: { kind: SupportKind; source: InboxSource; selectedId: string | null; onSelect: (id: string) => void; onBack: () => void }) {
+  const inbox = useInbox(source, { scope: 'support', kind })
+  const { state, busy } = inbox
+  const isClass = kind === 'class'
+  const noun = isClass ? 'lớp' : 'Band'
+  const Icon = isClass ? GraduationCap : Users
+  return (
+    <div className="cs-chat-list cs-inbox cs-inbox-manager" data-testid={isClass ? 'class-manager' : 'band-manager'}>
       <div className="cs-inbox-head">
         <div className="cs-inbox-mgr-bar">
           <button type="button" className="cs-inbox-back" onClick={onBack} data-testid="manager-back"><ChevronLeft size={20} aria-hidden="true" />Trò chuyện</button>
-          <h2 className="cs-inbox-mgr-title">Quản lý Band</h2>
+          <h2 className="cs-inbox-mgr-title">{isClass ? 'Hỗ trợ lớp học' : 'Quản lý Band'}</h2>
         </div>
         <SearchField value={inbox.rawQuery} onChange={inbox.setQuery} />
-        <p className="cs-inbox-note cs-inbox-mgr-note">Các Band bạn không thuộc — chỉ xem để hỗ trợ.</p>
+        <p className="cs-inbox-note cs-inbox-mgr-note">Các {noun} bạn không thuộc — chỉ xem để hỗ trợ.</p>
       </div>
       <div className={'cs-inbox-scroll' + (busy ? ' is-busy' : '')}>
         {state.status === 'loading' && <Skeleton />}
         {state.status === 'error' && <div className="cs-feed-error" role="alert"><p>{state.error}</p><button type="button" className="cs-btn cs-btn-soft" onClick={inbox.retry}>Thử lại</button></div>}
         {state.status === 'ready' && state.items.length === 0 && (
-          <EmptyState icon={Users} title={inbox.searching ? `Không tìm thấy “${inbox.filter.query}”` : 'Không có Band nào'} quiet>{inbox.searching ? 'Thử tên khác.' : 'Chưa có Band để quản lý.'}</EmptyState>
+          <EmptyState icon={Icon} title={inbox.searching ? `Không tìm thấy “${inbox.filter.query}”` : `Không có ${noun} nào`} quiet>{inbox.searching ? 'Thử tên khác.' : `Chưa có ${noun} để hỗ trợ.`}</EmptyState>
         )}
         {state.status === 'ready' && state.items.length > 0 && (
           <ul className="cs-inbox-list">{state.items.map(c => <Row key={c.id} c={c} showKind={false} active={c.id === selectedId} canPin={false} onSelect={onSelect} onTogglePin={() => {}} />)}</ul>

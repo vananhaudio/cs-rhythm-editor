@@ -41,3 +41,8 @@ thành viên lớp hiện hành → `send` (lớp draft/cancelled/merged → `re
 
 ## Rollback
 (a) mềm: revert frontend → phòng lớp biến khỏi UI, bảng + tin giữ nguyên; (b) cứng: `db/class_room_chat_v1_rollback.sql` XOÁ 3 bảng + tin lớp (xuất trước bằng `prod-db.py query`). Band Chat/DM không bị ảnh hưởng ở cả hai.
+
+## V1.2 — phân loại Hỗ trợ trong Hộp thư (16/11/2026)
+- Lỗi V1.1: phòng lớp hỗ trợ hiện trong "Quản lý Band" (danh sách hỗ trợ không lọc loại, đếm gộp Band + lớp) và tab "Lớp học" chỉ lấy `scope: 'mine'` nên rỗng với Thầy/Admin không thuộc lớp. DB đã đúng — chỉ sửa frontend.
+- Sửa (`InboxList.tsx`, `useInbox.ts`): `SupportManager` lọc theo loại — "Quản lý Band" chỉ Band, "Hỗ trợ lớp học" chỉ lớp; đếm riêng theo loại (`useSupportCounts`, qua `chat_inbox` scope support, không đổi DB); tab "Lớp học" hiện mục "Lớp học · hỗ trợ (n)" ngay trong tab; không còn "sắp có" khi có phòng. Học viên không có mục hỗ trợ.
+- Test: E2E Chrome thật bước 11c–11f (admin ngoài lớp, học viên, mobile).
