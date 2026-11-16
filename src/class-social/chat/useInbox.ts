@@ -8,6 +8,7 @@ import {
   type InboxFilter, type InboxKind, type InboxScope, type InboxSummary,
 } from './inboxModel'
 import { POLL_MS, startPolling } from './polling'
+import { loadInboxHead } from './inboxLoad'
 
 export type InboxState = {
   status: 'loading' | 'ready' | 'error'
@@ -55,37 +56,30 @@ export function useInbox(source: InboxSource = defaultInboxSource, opts: { scope
   useEffect(() => {
     let alive = true
     let first = true
-    const fetchHead = async () => {
-      if (searching) {
-        const r = await source.page({ scope, filter, pinned: 'any', cursor: null, limit: pageSize })
-        return r.ok ? { ok: true as const, pinned: [] as ConversationItem[], page: r.value } : r
-      }
-      const [p, m] = await Promise.all([
-        scope === 'mine' ? source.page({ scope, filter, pinned: 'only', cursor: null, limit: pageSize }) : Promise.resolve({ ok: true as const, value: { items: [] as ConversationItem[], hasMore: false } }),
-        source.page({ scope, filter, pinned: 'exclude', cursor: null, limit: pageSize }),
-      ])
-      if (!m.ok) return m
-      return { ok: true as const, pinned: p.ok ? p.value.items : [], page: m.value }
-    }
     const tick = async (): Promise<boolean> => {
       const fresh = first; first = false
-      const [head, sum] = await Promise.all([fetchHead(), scope === 'mine' ? source.summary() : Promise.resolve(null)])
-      if (!alive) return head.ok
-      if (!head.ok) {
-        setState(s => s.status === 'ready' && !fresh ? s : ({ ...s, status: s.items.length || s.pinned.length ? 'ready' : 'error', error: head.message }))
-        return false
-      }
-      setState(s => {
-        const keepDeep = !fresh && s.items.length > pageSize
-        return {
-          ...s, status: 'ready', error: null, loadedKey: filterKey, loadMoreError: null, mode: source.mode(),
-          pinned: head.pinned,
-          items: fresh ? head.page.items : mergePages(s.items, head.page.items),
-          hasMore: keepDeep ? s.hasMore : head.page.hasMore,
-          summary: sum && sum.ok ? sum.value : s.summary,
-        }
+      return loadInboxHead({
+        source, scope, filter, searching, pageSize, alive: () => alive,
+        on: {
+          // danh sách chính hiện NGAY khi chat_inbox trả về
+          onMain: page => setState(s => {
+            const keepDeep = !fresh && s.items.length > pageSize
+            const pinnedIds = new Set(s.pinned.map(x => x.id))
+            const merged = fresh ? page.items : mergePages(s.items, page.items)
+            return {
+              ...s, status: 'ready', error: null, loadedKey: filterKey, loadMoreError: null, mode: source.mode(),
+              items: merged.filter(x => !pinnedIds.has(x.id)),
+              hasMore: keepDeep ? s.hasMore : page.hasMore,
+            }
+          }),
+          onMainError: message => setState(s => s.status === 'ready' && !fresh ? s : ({ ...s, status: s.items.length || s.pinned.length ? 'ready' : 'error', error: message })),
+          onPinned: items => setState(s => {
+            const ids = new Set(items.map(x => x.id))
+            return { ...s, pinned: items, items: s.items.filter(x => !ids.has(x.id)) }
+          }),
+          onSummary: sum => setState(s => ({ ...s, summary: sum })),
+        },
       })
-      return true
     }
     refreshRef.current = async () => { first = false; await tick() }
     const stop = startPolling(tick, POLL_MS.list)
