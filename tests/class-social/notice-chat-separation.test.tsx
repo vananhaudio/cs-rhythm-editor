@@ -11,11 +11,11 @@ const conv = (id: string, kind: "dm" | "band", unread: number): ConversationItem
 
 test("buildUnread: chatTotal = dm + band; noticeTotal tách riêng; ba nguồn cùng có dữ liệu", () => {
   const u = buildUnread(2, 3, 4);
-  assert.deepEqual(u, { dm: 2, band: 3, notice: 4, chatTotal: 5, noticeTotal: 4 });
+  assert.deepEqual(u, { dm: 2, band: 3, class: 0, notice: 4, chatTotal: 5, noticeTotal: 4 });
 });
 
 test("buildUnread: một nguồn = 0 không ảnh hưởng nguồn khác; đọc nguồn này không đổi nguồn kia", () => {
-  assert.deepEqual(buildUnread(0, 3, 4), { dm: 0, band: 3, notice: 4, chatTotal: 3, noticeTotal: 4 });
+  assert.deepEqual(buildUnread(0, 3, 4), { dm: 0, band: 3, class: 0, notice: 4, chatTotal: 3, noticeTotal: 4 });
   assert.equal(buildUnread(2, 0, 4).chatTotal, 2);
   assert.equal(buildUnread(2, 3, 0).noticeTotal, 0);
   // đọc thông báo (4→0) không đổi Trò chuyện; đọc DM (2→0) không đổi Thông báo / Band
@@ -25,16 +25,16 @@ test("buildUnread: một nguồn = 0 không ảnh hưởng nguồn khác; đọc
 });
 
 test("buildUnread: không số âm / NaN / số lẻ / null (nguồn lỗi hoặc timeout → 0)", () => {
-  assert.deepEqual(buildUnread(-5, Number.NaN, undefined), { dm: 0, band: 0, notice: 0, chatTotal: 0, noticeTotal: 0 });
-  assert.deepEqual(buildUnread("3", null, 2.9), { dm: 3, band: 0, notice: 2, chatTotal: 3, noticeTotal: 2 });
+  assert.deepEqual(buildUnread(-5, Number.NaN, undefined), { dm: 0, band: 0, class: 0, notice: 0, chatTotal: 0, noticeTotal: 0 });
+  assert.deepEqual(buildUnread("3", null, 2.9), { dm: 3, band: 0, class: 0, notice: 2, chatTotal: 3, noticeTotal: 2 });
 });
 
 test("inboxUnreadSplit: tách dm / band từ hộp thư gộp, đếm hội thoại (không đếm tin), không tính trùng", () => {
   const rows = [conv("a", "dm", 5), conv("b", "dm", 0), conv("c", "band", 2), conv("d", "band", 9), conv("e", "band", 0)];
-  assert.deepEqual(inboxUnreadSplit(rows), { dm: 1, band: 2 });
-  assert.deepEqual(inboxUnreadSplit([]), { dm: 0, band: 0 });
+  assert.deepEqual(inboxUnreadSplit(rows), { dm: 1, band: 2, class: 0 });
+  assert.deepEqual(inboxUnreadSplit([]), { dm: 0, band: 0, class: 0 });
   const legacy = { ...conv("f", "dm", 1), kind: undefined } as ConversationItem;
-  assert.deepEqual(inboxUnreadSplit([legacy]), { dm: 1, band: 0 }, "hàng cũ không có kind → tính là dm");
+  assert.deepEqual(inboxUnreadSplit([legacy]), { dm: 1, band: 0, class: 0 }, "hàng cũ không có kind → tính là dm");
 });
 
 test("Hook: badge chat KHÔNG gồm thông báo; không phép trừ thủ công; nguồn lỗi giữ số cũ", () => {

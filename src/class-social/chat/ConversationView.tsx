@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { ExternalLink, RefreshCw, X } from 'lucide-react'
 import { Avatar } from '../ui'
-import { fetchBandMembers } from './chatApi'
+import { fetchBandMembers, fetchClassMembers } from './chatApi'
 import type { BandGroupRole, BandMember } from './chatModel'
 import { bandHomeHref } from '../mybands/myBandsModel'
 import ChatHeader from './ChatHeader'
@@ -14,7 +14,7 @@ import SafetyMenu from '../../class-safety/SafetyMenu'
 export type Peer = {
   id: string; name: string; avatarUrl: string | null; isTeacher: boolean
   /** Nhóm Band: tên/ảnh là của Band; số thành viên cho dòng phụ ở header */
-  kind?: 'dm' | 'band'; memberCount?: number
+  kind?: 'dm' | 'band' | 'class'; memberCount?: number
   readOnly?: 'archived' | 'support' | null
   /** Nhóm Band: Team chứa Band — đường dẫn "Quản lý tại TeamLab" */
   projectId?: string | null
@@ -31,7 +31,8 @@ export default function ConversationView({ id, peer, canSend, onBack, onOpenProf
   onActivity: () => void
 }) {
   const c = useConversation(id, onActivity)
-  const isBand = peer?.kind === 'band'
+  const isClass = peer?.kind === 'class'
+  const isBand = peer?.kind === 'band' || isClass   // nhóm nhiều người (Band hoặc lớp): cùng khung header/thành viên/ghi chú chỉ-đọc
   const [showMembers, setShowMembers] = useState(false)
 
   return (
@@ -39,10 +40,10 @@ export default function ConversationView({ id, peer, canSend, onBack, onOpenProf
       <ChatHeader name={peer?.name ?? null} avatarUrl={peer?.avatarUrl ?? null} isTeacher={isBand ? false : peer?.isTeacher}
         onBack={onBack}
         onOpenProfile={peer ? (isBand ? () => setShowMembers(v => !v) : () => onOpenProfile(peer.id)) : undefined}
-        tag={isBand ? `Nhóm Band${peer?.readOnly === 'archived' ? ' · Lưu trữ' : peer?.readOnly === 'support' ? ' · Chế độ hỗ trợ' : ''}${peer?.memberCount ? ` · ${peer.memberCount} thành viên` : ''}` : undefined}
+        tag={isClass ? `Lớp học${peer?.readOnly === 'archived' ? ' · Chỉ đọc' : peer?.readOnly === 'support' ? ' · Chế độ hỗ trợ' : ''}${peer?.memberCount ? ` · ${peer.memberCount} thành viên` : ''}` : isBand ? `Nhóm Band${peer?.readOnly === 'archived' ? ' · Lưu trữ' : peer?.readOnly === 'support' ? ' · Chế độ hỗ trợ' : ''}${peer?.memberCount ? ` · ${peer.memberCount} thành viên` : ''}` : undefined}
         actionLabel={isBand && peer ? `Thành viên nhóm ${peer.name}` : undefined}
         menu={!isBand && peer ? <SafetyMenu label={`Tuỳ chọn về ${peer.name}`} kind="profile" targetId={peer.id} userId={peer.id} userName={peer.name} /> : undefined} />
-      {isBand && showMembers && <BandMembers id={id} projectId={peer?.projectId ?? null} onClose={() => setShowMembers(false)} onOpenProfile={onOpenProfile} />}
+      {isBand && showMembers && <BandMembers id={id} isClass={isClass} projectId={peer?.projectId ?? null} onClose={() => setShowMembers(false)} onOpenProfile={onOpenProfile} />}
 
       {c.status === 'loading' && <div className="cs-chat-body-state"><div className="cs-spinner" role="status" aria-label="Đang tải" /></div>}
       {c.status === 'notfound' && (
@@ -69,6 +70,7 @@ export default function ConversationView({ id, peer, canSend, onBack, onOpenProf
                 {isBand
                   ? <p>{peer?.readOnly === 'support'
                       ? 'Bạn đang xem nhóm này với tư cách Thầy/Admin để hỗ trợ — chỉ đọc, không gửi tin vào nhóm.'
+                      : isClass ? 'Lớp này đã kết thúc, gộp hoặc chưa mở nên phòng chỉ đọc. Lịch sử trò chuyện vẫn được giữ.'
                       : 'Band đã được lưu trữ nên nhóm chỉ đọc. Lịch sử trò chuyện vẫn được giữ.'}</p>
                   : <p>Bạn chưa thể gửi tin mới cho {peer?.name ?? 'người này'}. Lịch sử trò chuyện vẫn được giữ.</p>}
                 {peer && !isBand && <button type="button" className="cs-btn cs-btn-soft cs-btn-sm" onClick={() => onOpenProfile(peer.id)}>Xem trang cá nhân</button>}
@@ -84,19 +86,23 @@ export default function ConversationView({ id, peer, canSend, onBack, onOpenProf
 /** Danh sách thành viên hiện hành của nhóm Band (server trả theo quyền thành viên). Bấm một người → trang cá nhân. */
 const GROUP_ROLE_LABEL: Record<BandGroupRole, string> = { owner: 'Chủ nhóm', admin: 'Quản trị viên', member: 'Thành viên' }
 
-function BandMembers({ id, projectId, onClose, onOpenProfile }: { id: string; projectId: string | null; onClose: () => void; onOpenProfile: (userId: string) => void }) {
+function BandMembers({ id, isClass, projectId, onClose, onOpenProfile }: { id: string; isClass: boolean; projectId: string | null; onClose: () => void; onOpenProfile: (userId: string) => void }) {
   const [state, setState] = useState<{ status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; items: BandMember[] }>({ status: 'loading' })
   const [rev, setRev] = useState(0)
   useEffect(() => {
     let alive = true
-    void fetchBandMembers(id).then(r => { if (alive) setState(r.ok ? { status: 'ready', items: r.value } : { status: 'error', message: r.message }) })
+    void (isClass ? fetchClassMembers(id) : fetchBandMembers(id)).then(r => { if (alive) setState(r.ok ? { status: 'ready', items: r.value } : { status: 'error', message: r.message }) })
     return () => { alive = false }
   }, [id, rev])
   return (
     <section className="cs-chat-members" aria-label="Thành viên nhóm">
-      <p className="cs-chat-members-note">Thành viên và vai trò của nhóm lấy từ Band trên TeamLab: Trưởng Band là Chủ nhóm, Phó Band là Quản trị viên.</p>
-      <p className="cs-chat-members-note">Thầy/Admin có thể xem nhóm Band để hỗ trợ và quản lý. Họ chỉ xem, không gửi tin thay thành viên.</p>
-      {projectId && (
+      {isClass
+        ? <p className="cs-chat-members-note">Thành viên lấy từ danh sách lớp hiện hành: học viên và Thầy phụ trách. Thầy/Admin ngoài lớp chỉ xem để hỗ trợ, không gửi tin thay thành viên.</p>
+        : <>
+            <p className="cs-chat-members-note">Thành viên và vai trò của nhóm lấy từ Band trên TeamLab: Trưởng Band là Chủ nhóm, Phó Band là Quản trị viên.</p>
+            <p className="cs-chat-members-note">Thầy/Admin có thể xem nhóm Band để hỗ trợ và quản lý. Họ chỉ xem, không gửi tin thay thành viên.</p>
+          </>}
+      {!isClass && projectId && (
         <a className="cs-link-btn cs-chat-manage-link" href={bandHomeHref(projectId)} data-testid="band-manage-link">
           Quản lý tại TeamLab <ExternalLink size={14} aria-hidden="true" />
         </a>
@@ -109,7 +115,7 @@ function BandMembers({ id, projectId, onClose, onOpenProfile }: { id: string; pr
       {state.status === 'error' && (
         <p role="alert">{state.message} <button type="button" className="cs-link-btn" onClick={() => { setState({ status: 'loading' }); setRev(x => x + 1) }}>Thử lại</button></p>
       )}
-      {state.status === 'ready' && state.items.length > 0 && state.items.every(m => m.groupRole !== null) && !state.items.some(m => m.groupRole === 'owner') && (
+      {!isClass && state.status === 'ready' && state.items.length > 0 && state.items.every(m => m.groupRole !== null) && !state.items.some(m => m.groupRole === 'owner') && (
         <p className="cs-chat-members-note" data-testid="band-no-owner">Band này chưa có Trưởng Band. Việc bổ nhiệm được thực hiện tại TeamLab.</p>
       )}
       {state.status === 'ready' && state.items.map(m => (

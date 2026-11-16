@@ -6,18 +6,18 @@ import { createDmSoundTracker, createNoticeSoundGate, getSoundEnabled, installAu
 import { PAGE, lastSeqOf, firstSeqOf, mergeMessages, buildUnread, mergeNotices, applyReadCursor, normalizeBody, NOTICE_PAGE, type ChatMessage, type ConversationItem, type PendingMessage, type SystemNotice, type SystemSummary, type UnreadCounts } from './chatModel'
 
 /** Chưa đọc — MỘT nguồn ở shell, TÁCH theo nguồn: `unread.dm` · `unread.band` · `unread.notice`.
- *  `unread.chatTotal` = dm + band (badge Trò chuyện); `unread.noticeTotal` = thông báo hệ thống (badge chuông).
+ *  `unread.chatTotal` = dm + band + lớp (badge Trò chuyện); `unread.noticeTotal` = thông báo hệ thống (badge chuông).
  *  Hai badge không bao giờ cộng vào nhau. `count` = chatTotal (tương thích nơi dùng cũ; KHÔNG còn gồm thông báo). */
 export function useChatUnread(live: ChatLive = pollingLive) {
-  const [chat, setChat] = useState({ dm: 0, band: 0 })
+  const [chat, setChat] = useState({ dm: 0, band: 0, class: 0 })
   const [system, setSystem] = useState<SystemSummary | null>(null)
   // Sound V1.2: gate DM riêng (theo lastSeq từng hội thoại), tạo lại mỗi lần đăng ký → đăng nhập lại/đổi live = mốc mới
   const dmTracker = useRef(createDmSoundTracker())
   useEffect(() => {
-    if (!live.watchInbox) return live.watchUnread(n => setChat({ dm: n, band: 0 }))   // live không có hộp thư (test/realtime cũ): chỉ badge, tổng Trò chuyện
+    if (!live.watchInbox) return live.watchUnread(n => setChat({ dm: n, band: 0, class: 0 }))   // live không có hộp thư (test/realtime cũ): chỉ badge, tổng Trò chuyện
     dmTracker.current = createDmSoundTracker()
     return live.watchInbox((rows, unread, split) => {
-      setChat(split ?? { dm: unread, band: 0 })
+      setChat(split ?? { dm: unread, band: 0, class: 0 })
       dmTracker.current.observe(rows)
       playPendingNotice(dmTracker.current.gate)
     })
@@ -49,7 +49,7 @@ export function useChatUnread(live: ChatLive = pollingLive) {
     if (a.ok) setChat(a.value)
     setSystem(b.ok ? b.value : null)
   }, [])
-  const unread: UnreadCounts = buildUnread(chat.dm, chat.band, system?.unread ?? 0)
+  const unread: UnreadCounts = buildUnread(chat.dm, chat.band, system?.unread ?? 0, chat.class)
   return { count: unread.chatTotal, unread, system, refresh }
 }
 

@@ -1,6 +1,6 @@
 // Danh sách hội thoại (mới nhất trước): avatar · tên · xem trước tin cuối · giờ · badge chưa đọc.
 import type { ReactNode } from 'react'
-import { MessagesSquare, Users } from 'lucide-react'
+import { GraduationCap, MessagesSquare, Users } from 'lucide-react'
 import { Avatar, EmptyState } from '../ui'
 import { previewText, shortTime, type ConversationItem } from './chatModel'
 import type { ListState } from './useChat'
@@ -58,11 +58,12 @@ function Item({ c, active, onSelect }: { c: ConversationItem; active: boolean; o
     <li>
       <button type="button" className={'cs-chat-item' + (active ? ' is-active' : '') + (unread ? ' is-unread' : '')}
         aria-current={active ? 'true' : undefined}
-        aria-label={`${c.kind === 'band' ? 'Nhóm Band ' : ''}${c.name}${unread ? `, ${c.unread} tin chưa đọc` : ''}`} onClick={() => onSelect(c.id)}>
+        aria-label={`${c.kind === 'band' ? 'Nhóm Band ' : c.kind === 'class' ? 'Lớp ' : ''}${c.name}${unread ? `, ${c.unread} tin chưa đọc` : ''}`} onClick={() => onSelect(c.id)}>
         <Avatar name={c.name} url={c.avatarUrl} size={48} />
         <span className="cs-chat-item-text">
           <span className="cs-chat-item-top">
             <span className="cs-chat-item-name">{c.name}</span>
+            {c.kind === 'class' && <span className="cs-chat-item-tag"><GraduationCap size={12} aria-hidden="true" />{c.readOnly === 'archived' ? 'Lớp · chỉ đọc' : c.readOnly === 'support' ? 'Lớp · xem' : 'Lớp'}</span>}
             {c.kind === 'band' && <span className="cs-chat-item-tag"><Users size={12} aria-hidden="true" />{c.readOnly === 'archived' ? 'Band · lưu trữ' : c.readOnly === 'support' ? 'Band · xem' : 'Band'}</span>}
             <span className="cs-chat-item-time">{shortTime(c.lastAt)}</span>
           </span>

@@ -91,7 +91,7 @@ export default function Chat({ meId, selection, onOpenConversation, onBackToList
   let canSend: boolean | undefined
   if (selection.kind === 'conversation') {
     const hit = loaded ?? (remote && remote.id === selection.id ? remote : undefined)
-    if (hit) { peer = { id: hit.peerId, name: hit.name, avatarUrl: hit.avatarUrl, isTeacher: hit.isTeacher, kind: hit.kind === 'class' ? undefined : hit.kind, memberCount: hit.memberCount, readOnly: hit.readOnly, projectId: hit.projectId }; canSend = hit.canSend }
+    if (hit) { peer = { id: hit.peerId, name: hit.name, avatarUrl: hit.avatarUrl, isTeacher: hit.isTeacher, kind: hit.kind, memberCount: hit.memberCount, readOnly: hit.readOnly, projectId: hit.projectId }; canSend = hit.canSend }
     else if (hint?.conversationId === selection.id) peer = hint
   }
 
