@@ -16,7 +16,7 @@ const K1 = '22222222-0000-4000-8000-0000000000c1'
 const K2 = '22222222-0000-4000-8000-0000000000c2'
 const G1 = '33333333-0000-4000-8000-0000000000c1'
 const K1_NAME = 'Guitar Cơ Bản KD21 — Thứ 3 · 19h00 · Hà Nội 2026'
-const EMAIL = { A: 'a@test.local', B: 'b@test.local', C: 'c@test.local', T: 't@test.local', N: 'n@test.local' }
+const EMAIL = { A: 'a@test.local', B: 'b@test.local', C: 'c@test.local', T: 't@test.local', N: 'n@test.local', M: 't2@test.local' }
 const SHOTS = process.env.SHOTS
 mkdirSync(SHOTS, { recursive: true })
 const sql = q => execFileSync(`${process.env.E2E_PG_BIN}/psql`, ['-X', '-q', '-tA', '-h', process.env.E2E_PG_SOCK, '-p', process.env.E2E_PG_PORT, '-U', 'postgres', '-d', 'e2e', '-v', 'ON_ERROR_STOP=1', '-c', q], { encoding: 'utf8' }).trim()
@@ -248,6 +248,57 @@ try {
   assert.equal(sql(`select count(*) from public.bandchat_messages where band_id = '${BAND_X}'`), '1')
   assert.equal(sql(`select count(*) from public.classchat_messages where body = 'tin Band, không lẫn lớp'`), '0')
   ok('11b Band Chat cạnh phòng lớp: nhãn Band, gửi qua bandchat_* (không qua classchat_*), tin không lẫn giữa hai hệ')
+
+  // ── 11c. Admin ngoài mọi lớp (M): tab Lớp học có phòng hỗ trợ; Quản lý Band chỉ có Band; Hỗ trợ lớp học chỉ có lớp ──
+  const M = await open('M')
+  await chat(M)
+  const tab = (P, id) => P.evaluate(i => document.querySelector(`[data-testid="tab-${i}"]`).click(), id)
+  const bodyText = P => P.evaluate(() => document.querySelector('.cs-inbox-scroll').innerText)
+  await tab(M, 'class')
+  await waitFor(M, () => document.querySelector('[data-testid="class-support"]'))
+  assert.ok(!/sắp có/i.test(await bodyText(M)), 'tab Lớp học KHÔNG còn "sắp có" khi có phòng')
+  let cl = await rows(M)
+  assert.ok(cl.length >= 3 && cl.every(i => i.kind === 'class'), `tab Lớp học chỉ có lớp (${JSON.stringify(cl.map(i => i.kind))})`)
+  assert.ok(cl.some(i => i.name === 'Lớp KD27 chưa có tin') && cl.some(i => i.name === K1_NAME), 'thấy cả lớp chưa có tin lẫn lớp đã có tin')
+  assert.ok(!cl.some(i => i.name === 'Lớp KD25 đã huỷ'), 'lớp huỷ chưa có tin không tự hiện')
+  assert.match(await M.$eval('[data-testid="class-support"] .cs-inbox-sec', e => e.textContent), /Lớp học · hỗ trợ \(\d+\)/, 'tiêu đề mục: lớp hỗ trợ + số lượng')
+  await M.screenshot({ path: `${SHOTS}/class-support-tab-class.png` })
+  await tab(M, 'band')
+  await waitFor(M, () => document.querySelector('[data-testid="open-band-manager"]'))
+  const bl = await rows(M)
+  assert.ok(bl.every(i => i.kind === 'band'), 'tab Band chỉ có Band')
+  ok('11c admin ngoài lớp: tab Lớp học hiện phòng hỗ trợ (kể cả chưa có tin), không "sắp có"; tab Band chỉ Band')
+  await tab(M, 'all')
+  await waitFor(M, () => document.querySelector('[data-testid="open-class-manager"]'))
+  const mgrTexts = await M.$$eval('.cs-inbox-manage', es => es.map(e => e.innerText.replace(/\s+/g, ' ')))
+  assert.ok(mgrTexts.some(t => /Quản lý Band 2 Band khác/.test(t)) && mgrTexts.some(t => /Hỗ trợ lớp học \d+ lớp/.test(t)), 'hai mục hỗ trợ tách riêng: ' + JSON.stringify(mgrTexts))
+  await M.evaluate(() => document.querySelector('[data-testid="open-band-manager"]').click())
+  await waitFor(M, () => document.querySelector('[data-testid="band-manager"] .cs-inbox-main'))
+  const bm = await rows(M)
+  assert.ok(bm.length >= 1 && bm.every(i => i.kind === 'band'), 'Quản lý Band KHÔNG chứa phòng lớp ' + JSON.stringify(bm.map(i => i.kind)))
+  await M.evaluate(() => document.querySelector('[data-testid="manager-back"]').click())
+  await waitFor(M, () => document.querySelector('[data-testid="open-class-manager"]'))
+  await M.evaluate(() => document.querySelector('[data-testid="open-class-manager"]').click())
+  await waitFor(M, () => document.querySelector('[data-testid="class-manager"] .cs-inbox-main'))
+  const cm = await rows(M)
+  assert.ok(cm.length >= 3 && cm.every(i => i.kind === 'class'), 'Hỗ trợ lớp học chỉ chứa lớp')
+  await M.screenshot({ path: `${SHOTS}/class-support-manager.png` })
+  ok('11d Quản lý Band chỉ có Band · Hỗ trợ lớp học chỉ có lớp · hai mục đếm riêng')
+  await M.evaluate(() => [...document.querySelectorAll('.cs-inbox-main')].find(e => e.querySelector('.cs-inbox-name').textContent === 'Lớp KD27 chưa có tin').click())
+  await waitFor(M, () => /\/me\/chat\/c\/[0-9a-f-]{36}$/.test(location.pathname) && !document.querySelector('.cs-chat-body-state .cs-spinner'))
+  assert.match(await M.$eval('.cs-chat-peer-tag', e => e.textContent), /Chế độ hỗ trợ/)
+  assert.equal(await M.$('.cs-chat-input'), null, 'admin không phải Thầy đồng hành: không có ô soạn (chỉ đọc)')
+  ok('11e mở phòng hỗ trợ lớp chưa có tin từ danh sách: Chế độ hỗ trợ, chỉ đọc, không có ô soạn')
+  // học viên A: tab Lớp học chỉ lớp mình, không có mục hỗ trợ
+  await chat(A)
+  await tab(A, 'class')
+  await sleep(800)
+  const al = await rows(A)
+  const mine = Number(sql("select count(*) from tva_private.class_memberships where user_id = 'aaaaaaaa-0000-4000-8000-00000000000a'"))
+  assert.ok(mine >= 2 && al.length === mine && al.some(i => i.name === K1_NAME) && !al.some(i => i.name === 'Lớp KD27 chưa có tin'), `học viên thấy đúng ${mine} lớp mình tham gia (thấy ${al.length}), không thấy lớp ngoài`)
+  assert.ok(!(await A.$('[data-testid="class-support"]')) && !(await A.$('[data-testid="open-class-manager"]')), 'học viên không có mục hỗ trợ')
+  ok('11f học viên: tab Lớp học đúng số lớp mình tham gia (theo class_memberships), không có mục hỗ trợ, không thấy lớp ngoài')
+  await M.ctx.close()
 
   // ── 12. Ma trận kích thước (phòng K2 của C) ──
   for (const [w, h] of [[320, 640], [360, 740], [390, 844], [430, 932], [1120, 800], [1280, 900], [1440, 900]]) {

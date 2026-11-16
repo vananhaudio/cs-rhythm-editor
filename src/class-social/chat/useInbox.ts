@@ -26,11 +26,11 @@ export type InboxState = {
 }
 const INITIAL: InboxState = { status: 'loading', error: null, pinned: [], items: [], hasMore: false, loadingMore: false, loadedKey: '', loadMoreError: null, summary: null, mode: 'server' }
 
-export function useInbox(source: InboxSource = defaultInboxSource, opts: { scope?: InboxScope; pageSize?: number } = {}) {
+export function useInbox(source: InboxSource = defaultInboxSource, opts: { scope?: InboxScope; pageSize?: number; kind?: InboxKind } = {}) {
   const scope: InboxScope = opts.scope ?? 'mine'
   const pageSize = opts.pageSize ?? INBOX_PAGE
   const [state, setState] = useState<InboxState>(INITIAL)
-  const [kind, setKindState] = useState<InboxKind>('all')
+  const [kind, setKindState] = useState<InboxKind>(opts.kind ?? 'all')
   const [unreadOnly, setUnreadOnly] = useState(false)
   const [rawQuery, setRawQuery] = useState('')
   const [debounced, setDebounced] = useState('')   // đã debounce
