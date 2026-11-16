@@ -40,6 +40,9 @@ function load(): Promise<ClassDisplayMap> {
   return pending
 }
 
+/** Nạp sớm (song song với danh sách hội thoại) để logo/lịch có sẵn khi hàng lớp hiện, không đợi sau RPC danh sách. */
+export const prefetchClassDisplay = (): void => { void load() }
+
 export function useClassDisplay(): ClassDisplayMap {
   const [map, setMap] = useState<ClassDisplayMap>(cached ?? EMPTY)
   useEffect(() => {

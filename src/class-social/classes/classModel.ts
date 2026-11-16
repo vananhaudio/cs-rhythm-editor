@@ -195,3 +195,12 @@ export function classBadge(courseCode: string | null | undefined, className: str
   for (const ch of label) h = (h * 31 + ch.codePointAt(0)!) % 360
   return { label, hue: h }
 }
+
+/** Ảnh logo hiển thị ở ô nhỏ: xin bản thu nhỏ từ Supabase Storage (render/image, 2× cho màn Retina) thay vì tải ảnh gốc
+ *  (logo khóa nặng 130 KB–1 MB cho ô 48 px). URL không phải Storage công khai → giữ nguyên. */
+export function logoThumbUrl(url: string, px: number): string {
+  const m = /^(https:\/\/[^/\s]+)\/storage\/v1\/object\/public\/([^?\s]+)$/.exec(url)
+  if (!m) return url
+  const w = Math.min(512, Math.max(32, Math.round(px * 2)))
+  return `${m[1]}/storage/v1/render/image/public/${m[2]}?width=${w}&height=${w}&resize=contain`
+}

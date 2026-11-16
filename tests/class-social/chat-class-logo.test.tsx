@@ -3,7 +3,7 @@ import React from "react";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { renderToStaticMarkup } from "react-dom/server";
-import { classBadge, formatClassSchedule } from "../../src/class-social/classes/classModel";
+import { classBadge, formatClassSchedule, logoThumbUrl } from "../../src/class-social/classes/classModel";
 import { buildClassDisplayMap } from "../../src/class-social/classes/useClassDisplay";
 import ClassLogo from "../../src/class-social/classes/ClassLogo";
 import ConversationList from "../../src/class-social/chat/ConversationList";
@@ -64,4 +64,16 @@ test("InboxList.Row: hàng lớp dùng ClassLogo + dòng lịch; DM/Band vẫn A
   assert.match(src, /: <Avatar name=\{c\.name\} url=\{c\.avatarUrl\}/);
   assert.match(src, /kind === 'class' && display\?\.schedule && <span className="cs-chat-item-schedule">/);
   assert.match(src, /group && kind !== 'class' && <span className=\{'cs-inbox-av-badge/);
+});
+
+test("logoThumbUrl: Storage công khai → bản thu nhỏ 2×; URL khác giữ nguyên; có giới hạn", () => {
+  const u = "https://abc.supabase.co/storage/v1/object/public/course-logos/x-1.png";
+  assert.equal(logoThumbUrl(u, 48), "https://abc.supabase.co/storage/v1/render/image/public/course-logos/x-1.png?width=96&height=96&resize=contain");
+  assert.match(logoThumbUrl(u, 1000), /width=512/);
+  assert.equal(logoThumbUrl("https://cdn.example.com/a.png", 48), "https://cdn.example.com/a.png");
+  assert.equal(logoThumbUrl("https://abc.supabase.co/storage/v1/object/public/a.png?x=1", 48), "https://abc.supabase.co/storage/v1/object/public/a.png?x=1");
+});
+test("ClassLogo có logo: dùng bản thu nhỏ, kích thước cố định", () => {
+  const h = renderToStaticMarkup(<ClassLogo url="https://abc.supabase.co/storage/v1/object/public/course-logos/x.png" size={48} />);
+  assert.match(h, /render\/image\/public\/course-logos\/x\.png\?width=96/); assert.match(h, /width:48px;height:48px/);
 });
