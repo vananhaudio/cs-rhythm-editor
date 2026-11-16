@@ -30,7 +30,7 @@ thành viên lớp hiện hành → `send` (lớp draft/cancelled/merged → `re
 ## Giới hạn đã biết của V1
 - **Báo cáo riêng từng tin** trong phòng lớp CHƯA có: `class_reports.kind`/`class_report_submit` là hạ tầng dùng chung, mở rộng cần Owner duyệt. V1: báo cáo/chặn **người gửi** (`profile` + `class_block_user`). Chặn người vẫn ẩn tin của họ ở người chặn (hai chiều).
 - Lớp huỷ/gộp mà nhóm lớp bị gỡ hết thành viên → học viên mất quyền đọc (Thầy/Admin vẫn đọc). V1 không chụp ảnh thành viên như `bandchat_frozen`.
-- Thầy đồng hành chỉ thấy ở "Hỗ trợ" các lớp ĐÃ có tin (không liệt kê lớp trống).
+- ~~Thầy/Admin chỉ thấy ở "Hỗ trợ" các lớp đã có tin~~ — **sửa ở V1.1** (`db/class_room_chat_v1_1_support_list_setup.sql`, rollback kèm theo): Thầy/Admin thấy mọi lớp chưa draft/huỷ (kể cả chưa có tin), như Band V1.2. Lớp nháp/huỷ chỉ hiện khi đã có tin. Quyền (`classchat_access`) không đổi. Lỗi V1: Owner (admin, không thuộc lớp nào) thấy tab "Lớp học" trống.
 - Thông báo = badge + âm thanh qua polling như DM/Band (không push thật).
 
 ## Kiểm thử

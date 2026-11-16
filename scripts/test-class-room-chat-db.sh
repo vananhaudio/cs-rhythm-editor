@@ -180,6 +180,19 @@ echo "── Hộp thư V2 có lớp (lọc/ghim/đếm/tìm/info)"
 run_t tva_cr "$ROOT/db/tests/class_room_chat_v1_inbox_test.sql" || fail "test hộp thư"
 ok "test hộp thư: $(grep -c '^PASS' "$TMP/t.out") PASS, 0 FAIL"
 
+echo "── V1.1: Thầy/Admin thấy mọi lớp còn hoạt động ở Hỗ trợ (+ idempotent + rollback)"
+mig tva_cr "$ROOT/db/class_room_chat_v1_1_support_list_setup.sql" >/dev/null || fail "V1.1 migration lần 1"
+mig tva_cr "$ROOT/db/class_room_chat_v1_1_support_list_setup.sql" >/dev/null || fail "V1.1 migration lần 2 (idempotent)"
+run_t tva_cr "$ROOT/db/tests/class_room_chat_v1_1_test.sql" || fail "test V1.1"
+ok "test V1.1: $(grep -c '^PASS' "$TMP/t.out") PASS, 0 FAIL"
+mig tva_cr "$ROOT/db/class_room_chat_v1_1_support_list_rollback.sql" >/dev/null || fail "V1.1 rollback 1"
+mig tva_cr "$ROOT/db/class_room_chat_v1_1_support_list_rollback.sql" >/dev/null || fail "V1.1 rollback 2 (idempotent)"
+[ "$(psqld tva_cr -Atc "select count(*) from pg_proc where proname in ('classchat_rooms','chat_inbox_base') and prosrc like '%cs2.id%'")" = "0" ] \
+  && ok "V1.1 rollback: hết mệnh đề union lớp (về đúng V1)" || fail "V1.1 rollback còn sót"
+mig tva_cr "$ROOT/db/class_room_chat_v1_1_support_list_setup.sql" >/dev/null || fail "V1.1 cài lại sau rollback"
+[ "$(psqld tva_cr -Atc "select count(*) from pg_proc where proname in ('classchat_rooms','chat_inbox_base') and prosrc like '%cs2.id%'")" = "2" ] \
+  && ok "V1.1 cài lại: cả 2 hàm có mệnh đề union" || fail "V1.1 cài lại không vá đủ"
+
 echo "── Gửi ĐỒNG THỜI (8 phiên, một phòng)"
 classbase tva_cc; for f in setup safety_setup inbox_setup; do mig tva_cc "$ROOT/db/class_room_chat_v1_${f}.sql" >/dev/null; done
 for i in 1 2 3 4 5 6 7 8; do
