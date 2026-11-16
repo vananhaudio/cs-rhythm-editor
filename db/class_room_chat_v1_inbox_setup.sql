@@ -95,6 +95,7 @@ begin
          (select count(*)::int from tva_private.class_memberships k where k.class_id = c.class_id),
          (acc.a = 'send'), (coalesce(cs.status, '') in ('draft', 'cancelled', 'merged')), (me.user_id is null)
     from (select m0.class_id from tva_private.class_memberships m0 where p_scope = 'mine' and m0.user_id = v_me
+          union select cs2.id from public.class_schedule cs2 where p_scope = 'support' and coalesce(cs2.status, '') not in ('draft', 'cancelled')
           union select rr.class_id from public.classchat_rooms rr where p_scope = 'support' and rr.last_seq > 0) c
     cross join lateral (select public.classchat_access(c.class_id) a) acc
     left join public.class_schedule cs on cs.id = c.class_id
