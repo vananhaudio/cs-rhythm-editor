@@ -41,7 +41,7 @@ export default function ConversationView({ id, peer, canSend, onBack, onOpenProf
   return (
     <>
       <ChatHeader name={peer?.name ?? null} avatarUrl={peer?.avatarUrl ?? null} isTeacher={isBand ? false : peer?.isTeacher}
-        avatar={isClass ? <ClassLogo url={classDisplay?.logo ?? null} size={40} /> : undefined}
+        avatar={isClass ? <ClassLogo url={classDisplay?.logo ?? null} courseCode={classDisplay?.code} name={peer?.name} size={40} /> : undefined}
         onBack={onBack}
         onOpenProfile={peer ? (isBand ? () => setShowMembers(v => !v) : () => onOpenProfile(peer.id)) : undefined}
         tag={isClass ? `${classDisplay?.schedule ? classDisplay.schedule + ' · ' : ''}Lớp học${peer?.readOnly === 'archived' ? ' · Chỉ đọc' : peer?.readOnly === 'support' ? ' · Chế độ hỗ trợ' : ''}${peer?.memberCount ? ` · ${peer.memberCount} thành viên` : ''}` : isBand ? `Nhóm Band${peer?.readOnly === 'archived' ? ' · Lưu trữ' : peer?.readOnly === 'support' ? ' · Chế độ hỗ trợ' : ''}${peer?.memberCount ? ` · ${peer.memberCount} thành viên` : ''}` : undefined}

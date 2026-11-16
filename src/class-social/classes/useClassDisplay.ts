@@ -4,17 +4,19 @@
 import { useEffect, useState } from 'react'
 import { formatClassSchedule, toCourseLogoMap } from './classModel'
 
-export type ClassDisplay = { logo: string | null; schedule: string | null }
+export type ClassDisplay = { logo: string | null; code: string | null; schedule: string | null }
 export type ClassDisplayMap = ReadonlyMap<string, ClassDisplay>
 
 export function buildClassDisplayMap(classes: unknown, courses: unknown): ClassDisplayMap {
-  const logoById = new Map<string, string>()
+  const logoById = new Map<string, string>(), codeById = new Map<string, string>()
   for (const [id, url] of toCourseLogoMap((Array.isArray(courses) ? courses : []).map(c => ({ code: c?.id, image_url: c?.image_url })))) logoById.set(id, url)
+  for (const c of Array.isArray(courses) ? courses : []) if (c && typeof c.id === 'string' && typeof c.code === 'string' && c.code.trim()) codeById.set(c.id, c.code.trim())
   const m = new Map<string, ClassDisplay>()
   for (const r of Array.isArray(classes) ? classes : []) {
     if (!r || typeof r.id !== 'string') continue
     m.set(r.id.toLowerCase(), {
       logo: (typeof r.main_course_id === 'string' && logoById.get(r.main_course_id)) || null,
+      code: (typeof r.main_course_id === 'string' && codeById.get(r.main_course_id)) || null,
       schedule: formatClassSchedule(r.weekday, r.start_time, r.duration_minutes),
     })
   }
@@ -30,7 +32,7 @@ function load(): Promise<ClassDisplayMap> {
   pending ??= import('../../supabase').then(async ({ supabase }) => {
     const [cls, crs] = await Promise.all([
       supabase.from('class_schedule').select('id,main_course_id,weekday,start_time,duration_minutes'),
-      supabase.from('edu_courses').select('id,image_url').not('image_url', 'is', null),
+      supabase.from('edu_courses').select('id,code,image_url'),
     ])
     if (cls.error) throw cls.error
     return (cached = buildClassDisplayMap(cls.data, crs.error ? [] : crs.data))

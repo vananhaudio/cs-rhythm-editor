@@ -23,7 +23,7 @@ export function ClassRow({ c, onOpen, quiet = false, meta = classMetaLine(c) }: 
   const logo = classLogoUrl(c, useCourseLogos())
   return (
     <li className={'cs-classrow' + (quiet ? ' is-quiet' : '')}>
-      <ClassLogo url={logo} />
+      <ClassLogo url={logo} courseCode={c.course?.code} name={c.name} />
       <span className="cs-classrow-body">
         <a className="cs-classrow-name" href={classPath(c.id)} onClick={e => {
           if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return

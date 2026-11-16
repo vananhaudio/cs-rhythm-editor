@@ -2047,3 +2047,4 @@ button.cs-subs-title:hover { color: var(--cs-accent); }
 /* Chat Lớp: logo khóa học thay chữ cái; dòng lịch học giữa tên và tin cuối (chỉ hàng lớp) */
 .cs-chat-item .cs-classrow-logo, .cs-chat-head .cs-classrow-logo { border-radius: 50%; }
 .cs-chat-item-schedule { display: block; font-size: 12.5px; color: var(--cs-muted); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cs-classrow-logo-text { font-weight: 800; letter-spacing: .01em; line-height: 1; }

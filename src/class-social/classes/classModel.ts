@@ -184,3 +184,14 @@ export function formatClassSchedule(weekday: unknown, startTime: unknown, durati
   const dur = typeof durationMinutes === 'number' && Number.isFinite(durationMinutes) && durationMinutes > 0 ? Math.round(durationMinutes) : null
   return `${WEEKDAY_VI[wd]} · ${hhmm(start)}${dur ? '–' + hhmm(start + dur) : ''}`
 }
+
+/** Avatar dự phòng khi khóa chưa có logo ảnh: chữ = MÃ KHÓA (CB1, DH3…); lớp chưa gắn khóa → viết tắt từ tên lớp
+ *  (không gán mã khóa). Màu nền ổn định theo chữ (hue băm từ chuỗi) → mọi lớp cùng khóa cùng màu, cùng chữ. */
+export function classBadge(courseCode: string | null | undefined, className: string | null | undefined): { label: string; hue: number } {
+  const code = (courseCode ?? '').trim().toUpperCase()
+  const initials = (className ?? '').normalize('NFC').split(/[\s\-–—·.]+/).filter(w => /^\p{L}/u.test(w)).slice(0, 3).map(w => [...w][0]).join('').toUpperCase()
+  const label = (code || initials || '?').slice(0, 4)
+  let h = 0
+  for (const ch of label) h = (h * 31 + ch.codePointAt(0)!) % 360
+  return { label, hue: h }
+}

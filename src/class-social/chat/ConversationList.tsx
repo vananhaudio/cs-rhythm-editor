@@ -63,7 +63,7 @@ function Item({ c, active, onSelect }: { c: ConversationItem; active: boolean; o
       <button type="button" className={'cs-chat-item' + (active ? ' is-active' : '') + (unread ? ' is-unread' : '')}
         aria-current={active ? 'true' : undefined}
         aria-label={`${c.kind === 'band' ? 'Nhóm Band ' : c.kind === 'class' ? 'Lớp ' : ''}${c.name}${unread ? `, ${c.unread} tin chưa đọc` : ''}`} onClick={() => onSelect(c.id)}>
-        {isClass ? <ClassLogo url={display?.logo ?? null} size={48} /> : <Avatar name={c.name} url={c.avatarUrl} size={48} />}
+        {isClass ? <ClassLogo url={display?.logo ?? null} courseCode={display?.code} name={c.name} size={48} /> : <Avatar name={c.name} url={c.avatarUrl} size={48} />}
         <span className="cs-chat-item-text">
           <span className="cs-chat-item-top">
             <span className="cs-chat-item-name" title={c.name}>{c.name}</span>
