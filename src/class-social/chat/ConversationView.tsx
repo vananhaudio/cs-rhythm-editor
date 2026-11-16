@@ -2,8 +2,10 @@
 import { useEffect, useState } from 'react'
 import { ExternalLink, RefreshCw, X } from 'lucide-react'
 import { Avatar } from '../ui'
+import ClassLogo from '../classes/ClassLogo'
+import { useClassDisplay } from '../classes/useClassDisplay'
 import { fetchBandMembers, fetchClassMembers } from './chatApi'
-import type { BandGroupRole, BandMember } from './chatModel'
+import { classIdOf, type BandGroupRole, type BandMember } from './chatModel'
 import { bandHomeHref } from '../mybands/myBandsModel'
 import ChatHeader from './ChatHeader'
 import Composer from './Composer'
@@ -34,13 +36,15 @@ export default function ConversationView({ id, peer, canSend, onBack, onOpenProf
   const isClass = peer?.kind === 'class'
   const isBand = peer?.kind === 'band' || isClass   // nhóm nhiều người (Band hoặc lớp): cùng khung header/thành viên/ghi chú chỉ-đọc
   const [showMembers, setShowMembers] = useState(false)
+  const classDisplay = useClassDisplay().get(isClass ? classIdOf(id) : '')
 
   return (
     <>
       <ChatHeader name={peer?.name ?? null} avatarUrl={peer?.avatarUrl ?? null} isTeacher={isBand ? false : peer?.isTeacher}
+        avatar={isClass ? <ClassLogo url={classDisplay?.logo ?? null} size={40} /> : undefined}
         onBack={onBack}
         onOpenProfile={peer ? (isBand ? () => setShowMembers(v => !v) : () => onOpenProfile(peer.id)) : undefined}
-        tag={isClass ? `Lớp học${peer?.readOnly === 'archived' ? ' · Chỉ đọc' : peer?.readOnly === 'support' ? ' · Chế độ hỗ trợ' : ''}${peer?.memberCount ? ` · ${peer.memberCount} thành viên` : ''}` : isBand ? `Nhóm Band${peer?.readOnly === 'archived' ? ' · Lưu trữ' : peer?.readOnly === 'support' ? ' · Chế độ hỗ trợ' : ''}${peer?.memberCount ? ` · ${peer.memberCount} thành viên` : ''}` : undefined}
+        tag={isClass ? `${classDisplay?.schedule ? classDisplay.schedule + ' · ' : ''}Lớp học${peer?.readOnly === 'archived' ? ' · Chỉ đọc' : peer?.readOnly === 'support' ? ' · Chế độ hỗ trợ' : ''}${peer?.memberCount ? ` · ${peer.memberCount} thành viên` : ''}` : isBand ? `Nhóm Band${peer?.readOnly === 'archived' ? ' · Lưu trữ' : peer?.readOnly === 'support' ? ' · Chế độ hỗ trợ' : ''}${peer?.memberCount ? ` · ${peer.memberCount} thành viên` : ''}` : undefined}
         actionLabel={isBand && peer ? `Thành viên nhóm ${peer.name}` : undefined}
         menu={!isBand && peer ? <SafetyMenu label={`Tuỳ chọn về ${peer.name}`} kind="profile" targetId={peer.id} userId={peer.id} userName={peer.name} /> : undefined} />
       {isBand && showMembers && <BandMembers id={id} isClass={isClass} projectId={peer?.projectId ?? null} onClose={() => setShowMembers(false)} onOpenProfile={onOpenProfile} />}
