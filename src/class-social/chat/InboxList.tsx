@@ -4,7 +4,9 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { ChevronLeft, ChevronRight, GraduationCap, MessagesSquare, MoreHorizontal, Pin, Search, Users, X } from 'lucide-react'
 import { Avatar, EmptyState } from '../ui'
-import { previewText, shortTime, type ConversationItem } from './chatModel'
+import { classIdOf, previewText, shortTime, type ConversationItem } from './chatModel'
+import ClassLogo from '../classes/ClassLogo'
+import { useClassDisplay } from '../classes/useClassDisplay'
 import type { InboxSource } from './inboxApi'
 import { KIND_LABEL, KIND_TABS, emptyReason, kindOf, unreadTotal, type InboxKind, type InboxSummary } from './inboxModel'
 import { useInbox } from './useInbox'
@@ -191,7 +193,7 @@ function Empty({ filter, summary, onOpenFriends, onClear, manager, onManage }: {
   return <EmptyState icon={r === 'kind-class' ? GraduationCap : r === 'search' ? Search : MessagesSquare} title={c.title} quiet action={c.action}>{c.body}</EmptyState>
 }
 
-function Row({ c, showKind, active, canPin, editing = false, onSelect, onTogglePin }: {
+export function Row({ c, showKind, active, canPin, editing = false, onSelect, onTogglePin }: {
   c: ConversationItem; showKind: boolean; active: boolean; canPin: boolean; editing?: boolean; onSelect: (id: string) => void; onTogglePin: (c: ConversationItem) => void
 }) {
   const [menu, setMenu] = useState(false)
@@ -200,6 +202,7 @@ function Row({ c, showKind, active, canPin, editing = false, onSelect, onToggleP
   const unread = c.unread > 0
   const kind = kindOf(c)
   const group = kind !== 'dm'
+  const display = useClassDisplay().get(kind === 'class' ? classIdOf(c.id) : '')
   const pinnable = canPin && c.readOnly !== 'support'
   useEffect(() => {
     if (!menu) return
@@ -221,15 +224,18 @@ function Row({ c, showKind, active, canPin, editing = false, onSelect, onToggleP
           aria-label={`${kind === 'band' ? 'Nhóm Band ' : kind === 'class' ? 'Nhóm lớp ' : ''}${c.name}${c.pinned ? ', đã ghim' : ''}${unread ? `, ${c.unread} tin chưa đọc` : ''}`}
           onClick={() => { endPress(); if (held.current) { held.current = false; return } onSelect(c.id) }}>
           <span className={'cs-inbox-av' + (group ? ' is-group' : '')}>
-            <Avatar name={c.name} url={c.avatarUrl} size={48} className={group ? 'cs-avatar-sq' : undefined} />
-            {group && <span className={'cs-inbox-av-badge is-' + kind} aria-hidden="true">{kind === 'class' ? <GraduationCap size={11} /> : <Users size={11} />}</span>}
+            {kind === 'class'
+              ? <ClassLogo url={display?.logo ?? null} courseCode={display?.code} name={c.name} size={48} />
+              : <Avatar name={c.name} url={c.avatarUrl} size={48} className={group ? 'cs-avatar-sq' : undefined} />}
+            {group && kind !== 'class' && <span className={'cs-inbox-av-badge is-' + kind} aria-hidden="true"><Users size={11} /></span>}
           </span>
           <span className="cs-inbox-text">
             <span className="cs-inbox-top">
-              <span className="cs-inbox-name">{c.name}</span>
+              <span className="cs-inbox-name" title={c.name}>{c.name}</span>
               {showKind && group && <span className={'cs-inbox-tag is-' + kind}>{tag}</span>}
               <span className="cs-inbox-time">{shortTime(c.lastAt)}</span>
             </span>
+            {kind === 'class' && display?.schedule && <span className="cs-chat-item-schedule">{display.schedule}</span>}
             <span className="cs-inbox-bottom">
               <span className="cs-inbox-preview">{previewText(c)}</span>
               {c.pinned && !unread && <Pin size={13} className="cs-inbox-pin" aria-hidden="true" />}

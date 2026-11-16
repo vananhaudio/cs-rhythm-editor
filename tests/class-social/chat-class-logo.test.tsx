@@ -54,3 +54,14 @@ test("ClassLogo: không logo → chữ mã khóa; có logo → ảnh", () => {
   assert.match(a, />CB2</); assert.doesNotMatch(a, /<img/);
   assert.match(renderToStaticMarkup(<ClassLogo url="https://x/a.png" courseCode="CB2" />), /<img/);
 });
+
+// Hồi quy 16/11: danh sách THẬT của /me/chat là InboxList.Row (Chat List V2), không phải ConversationList (chỉ dự phòng cũ).
+// InboxList kéo supabase (import.meta.env) nên không render được trong node → kiểm ở mức nguồn; giao diện đã chụp bằng Chrome thật.
+import { readFileSync } from "node:fs";
+test("InboxList.Row: hàng lớp dùng ClassLogo + dòng lịch; DM/Band vẫn Avatar", () => {
+  const src = readFileSync(new URL("../../src/class-social/chat/InboxList.tsx", import.meta.url), "utf8");
+  assert.match(src, /kind === 'class'\s*\n?\s*\? <ClassLogo url=\{display\?\.logo \?\? null\} courseCode=\{display\?\.code\} name=\{c\.name\}/);
+  assert.match(src, /: <Avatar name=\{c\.name\} url=\{c\.avatarUrl\}/);
+  assert.match(src, /kind === 'class' && display\?\.schedule && <span className="cs-chat-item-schedule">/);
+  assert.match(src, /group && kind !== 'class' && <span className=\{'cs-inbox-av-badge/);
+});
