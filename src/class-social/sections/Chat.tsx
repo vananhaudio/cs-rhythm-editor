@@ -16,6 +16,7 @@ import MiraPreparingView from '../chat/MiraPreparingView'
 import SoundSwitch from '../chat/SoundSwitch'
 import { MIRA_CONVERSATION_ID, miraPreviewVisible, previewBuild, useMiraEnabled } from '../chat/miraApi'
 import { classPath } from '../resolveMeRoute'
+import { prefetchClassDisplay } from '../classes/useClassDisplay'
 
 /** Điện thoại: khi mở một hội thoại, khung phủ toàn màn hình → theo chiều cao THẬT khi bàn phím mở (iOS không co 100dvh) */
 function useOpenPaneViewport(open: boolean) {
@@ -65,6 +66,7 @@ export default function Chat({ meId, selection, onOpenConversation, onBackToList
   const miraPreview = !miraOn && miraPreviewVisible(previewBuild(), isAdmin)   // chế độ thật (pilot) luôn thắng
   const isMira = selection.kind === 'conversation' && selection.id === MIRA_CONVERSATION_ID
   const openClass = onOpenClass ?? ((id: string) => window.location.assign(classPath(id)))
+  useEffect(() => { prefetchClassDisplay() }, [])   // logo/lịch lớp tải SONG SONG với danh sách (không nối đuôi sau RPC)
   const inbox = useInbox(source)
   const sound = useNoticeSound()
   const { reload } = inbox
