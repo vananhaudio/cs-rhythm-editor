@@ -169,3 +169,18 @@ export function toCourseLogoMap(rows: unknown): CourseLogoMap {
 }
 export const classLogoUrl = (c: Pick<ClassCard, 'course'>, logos: CourseLogoMap): string | null =>
   (c.course?.code && logos.get(c.course.code)) || null
+
+/** Lịch học từ cột có cấu trúc của class_schedule (weekday 0=CN…6=T7, start_time "HH:MM[:SS]", duration_minutes):
+ *  "Thứ 3 · 20:30–22:00". Thiếu thứ/giờ → null (không tự tạo); thiếu thời lượng → chỉ giờ bắt đầu. */
+const WEEKDAY_VI = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7']
+export function formatClassSchedule(weekday: unknown, startTime: unknown, durationMinutes: unknown): string | null {
+  const wd = typeof weekday === 'number' && Number.isInteger(weekday) && weekday >= 0 && weekday <= 6 ? weekday : null
+  const m = typeof startTime === 'string' ? /^(\d{1,2}):(\d{2})/.exec(startTime) : null
+  if (wd == null || !m) return null
+  const h = Number(m[1]), min = Number(m[2])
+  if (h > 23 || min > 59) return null
+  const hhmm = (t: number) => `${String(Math.floor(t / 60) % 24).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`
+  const start = h * 60 + min
+  const dur = typeof durationMinutes === 'number' && Number.isFinite(durationMinutes) && durationMinutes > 0 ? Math.round(durationMinutes) : null
+  return `${WEEKDAY_VI[wd]} · ${hhmm(start)}${dur ? '–' + hhmm(start + dur) : ''}`
+}

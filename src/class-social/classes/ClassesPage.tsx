@@ -5,11 +5,12 @@
 // Thầy/admin (classes.all có giá trị): "Tất cả lớp học" — MỌI lớp theo quyền server (social_all_classes), cùng dòng lớp,
 // cùng lối vào; không "Nhập mã lớp" (Thầy không tự thành học viên), không "Các lớp khác".
 import { useState } from 'react'
-import { Music, Plus } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { classLogoUrl, classMetaLine, currentClasses, filterClasses, PAST_CLASS_STATUSES, type ClassCard } from './classModel'
 import { classPath } from '../resolveMeRoute'
 import type { SocialClasses } from './useSocialClasses'
 import JoinClassByCode from './JoinClassByCode'
+import ClassLogo from './ClassLogo'
 import { useCourseLogos } from './useCourseLogos'
 
 const SEARCH_MIN = 7   // ít lớp khác thì không cần ô tìm
@@ -22,9 +23,7 @@ export function ClassRow({ c, onOpen, quiet = false, meta = classMetaLine(c) }: 
   const logo = classLogoUrl(c, useCourseLogos())
   return (
     <li className={'cs-classrow' + (quiet ? ' is-quiet' : '')}>
-      <span className="cs-classrow-logo" aria-hidden="true">
-        {logo ? <img src={logo} alt="" loading="lazy" decoding="async" /> : <Music size={20} />}
-      </span>
+      <ClassLogo url={logo} />
       <span className="cs-classrow-body">
         <a className="cs-classrow-name" href={classPath(c.id)} onClick={e => {
           if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return

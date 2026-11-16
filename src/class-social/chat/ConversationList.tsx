@@ -2,7 +2,9 @@
 import type { ReactNode } from 'react'
 import { GraduationCap, MessagesSquare, Users } from 'lucide-react'
 import { Avatar, EmptyState } from '../ui'
-import { previewText, shortTime, type ConversationItem } from './chatModel'
+import { classIdOf, previewText, shortTime, type ConversationItem } from './chatModel'
+import ClassLogo from '../classes/ClassLogo'
+import { useClassDisplay } from '../classes/useClassDisplay'
 import type { ListState } from './useChat'
 
 export default function ConversationList({ state, selectedId, onSelect, onRetry, onOpenFriends, top }: {
@@ -54,19 +56,22 @@ export default function ConversationList({ state, selectedId, onSelect, onRetry,
 
 function Item({ c, active, onSelect }: { c: ConversationItem; active: boolean; onSelect: (id: string) => void }) {
   const unread = c.unread > 0
+  const display = useClassDisplay().get(classIdOf(c.id))
+  const isClass = c.kind === 'class'
   return (
     <li>
       <button type="button" className={'cs-chat-item' + (active ? ' is-active' : '') + (unread ? ' is-unread' : '')}
         aria-current={active ? 'true' : undefined}
         aria-label={`${c.kind === 'band' ? 'Nhóm Band ' : c.kind === 'class' ? 'Lớp ' : ''}${c.name}${unread ? `, ${c.unread} tin chưa đọc` : ''}`} onClick={() => onSelect(c.id)}>
-        <Avatar name={c.name} url={c.avatarUrl} size={48} />
+        {isClass ? <ClassLogo url={display?.logo ?? null} size={48} /> : <Avatar name={c.name} url={c.avatarUrl} size={48} />}
         <span className="cs-chat-item-text">
           <span className="cs-chat-item-top">
-            <span className="cs-chat-item-name">{c.name}</span>
+            <span className="cs-chat-item-name" title={c.name}>{c.name}</span>
             {c.kind === 'class' && <span className="cs-chat-item-tag"><GraduationCap size={12} aria-hidden="true" />{c.readOnly === 'archived' ? 'Lớp · chỉ đọc' : c.readOnly === 'support' ? 'Lớp · xem' : 'Lớp'}</span>}
             {c.kind === 'band' && <span className="cs-chat-item-tag"><Users size={12} aria-hidden="true" />{c.readOnly === 'archived' ? 'Band · lưu trữ' : c.readOnly === 'support' ? 'Band · xem' : 'Band'}</span>}
             <span className="cs-chat-item-time">{shortTime(c.lastAt)}</span>
           </span>
+          {isClass && display?.schedule && <span className="cs-chat-item-schedule">{display.schedule}</span>}
           <span className="cs-chat-item-bottom">
             <span className="cs-chat-item-preview">{previewText(c)}</span>
             {unread && <span className="cs-nav-badge cs-chat-item-badge" aria-hidden="true">{c.unread > 99 ? '99+' : c.unread}</span>}
