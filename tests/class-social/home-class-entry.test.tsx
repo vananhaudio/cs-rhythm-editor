@@ -39,7 +39,9 @@ test("tab Lớp: heading 'Lớp của tôi' → đủ lớp hiện tại đúng 
   assert.match(h, /<button type="button" class="cs-linkbtn cs-join-open">.*Nhập mã lớp<\/button>/, "hành động thật = nút nhẹ, không hero");
   for (const c of MINE.slice(0, 2)) assert.match(h, new RegExp(`<a class="cs-classrow-name" href="/me/classes/${c.id}">`), "dòng lớp = link tới Class Page");
   assert.match(h, /Chủ nhật · 14:00–15:00/); assert.match(h, /Thứ 5 · 19:00/);
-  assert.doesNotMatch(h, /Khoá \d|Z\d·|K\d|thành viên|học viên|Buổi|bài trả|Hoạt động mới/, "chỉ tên + lịch: không khoá/mã/sĩ số/buổi/tiến độ");
+  // Avatar dự phòng (mã khóa/viết tắt trong ô logo) là chủ ý — loại ô logo khỏi phép kiểm "không mã/khoá".
+  const noLogo = h.replace(/<span class="cs-classrow-logo"[\s\S]*?<\/span><\/span>/g, "");
+  assert.doesNotMatch(noLogo, /Khoá \d|Z\d·|K\d|thành viên|học viên|Buổi|bài trả|Hoạt động mới/, "chỉ tên + lịch: không khoá/mã/sĩ số/buổi/tiến độ");
   assert.doesNotMatch(h, /Đang học|Tiếp tục học|Vào lớp|Xem lớp|Mở lớp|cs-card|cs-btn-primary/);
   assert.equal((h.match(/<button/g) || []).length, 1, "nút duy nhất = Nhập mã lớp");
 });
