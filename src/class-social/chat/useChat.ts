@@ -1,5 +1,6 @@
 // Hook Trò chuyện V1a. Chỉ biết interface ChatLive (polling hôm nay, realtime sau này) — không đụng timer/mạng trực tiếp.
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { dropSwr, peekSwr, putSwr } from '../swr/swrCache'
 import { fetchConversations, fetchMessages, fetchSystemNotices, fetchSystemSummary, fetchUnreadBreakdown, markRead, markSystemRead, sendMessage } from './chatApi'
 import { pollingLive, type ChatLive } from './chatLive'
 import { createDmSoundTracker, createNoticeSoundGate, getSoundEnabled, installAudioUnlock, onNoticeAudioReady, playPendingNotice, subscribeSound, tryResumeNoticeAudio, writeSoundEnabled } from './noticeSound'
@@ -94,11 +95,14 @@ const NOT_FOUND = 'Không tìm thấy cuộc trò chuyện.'
 
 /** Một hội thoại đang mở: trang mới nhất → polling chỉ tin mới → đánh dấu đã đọc → gửi tin (lạc quan, tuần tự) */
 export function useConversation(id: string, onActivity: () => void, live: ChatLive = pollingLive): ConversationState {
-  const [status, setStatus] = useState<ConversationState['status']>('loading')
+  // Hội thoại đã mở một lần → lần sau hiện NGAY tin đã có (SWR), server + polling làm mới ở nền. Khoá theo tài khoản (swrCache).
+  const cacheKey = `chat:conv:${id}`
+  const [seed] = useState(() => peekSwr<{ messages: ChatMessage[]; hasMore: boolean }>(cacheKey))
+  const [status, setStatus] = useState<ConversationState['status']>(seed ? 'ready' : 'loading')
   const [error, setError] = useState<string | null>(null)
-  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [messages, setMessages] = useState<ChatMessage[]>(seed?.messages ?? [])
   const [pending, setPending] = useState<PendingMessage[]>([])
-  const [hasMore, setHasMore] = useState(false)
+  const [hasMore, setHasMore] = useState(seed?.hasMore ?? false)
   const [loadingOlder, setLoadingOlder] = useState(false)
   const [rev, setRev] = useState(0)
 
@@ -115,15 +119,22 @@ export function useConversation(id: string, onActivity: () => void, live: ChatLi
   useEffect(() => {
     let alive = true
     markedRef.current = 0
-    messagesRef.current = []
+    messagesRef.current = peekSwr<{ messages: ChatMessage[] }>(cacheKey)?.messages ?? []
     void fetchMessages(id, { limit: PAGE }).then(r => {
       if (!alive) return
+      if (!r.ok && messagesRef.current.length > 0 && typeof navigator !== 'undefined' && navigator.onLine === false) return   // offline: giữ tin đang hiện
+      if (!r.ok) dropSwr(cacheKey)   // lỗi/mất quyền: không giữ bản đệm
       if (r.ok) { setMessages(r.value); messagesRef.current = r.value; setHasMore(r.value.length >= PAGE && firstSeqOf(r.value) > 1); setStatus('ready') }
       else if (r.message === NOT_FOUND) setStatus('notfound')
       else { setError(r.message); setStatus('error') }
     })
     return () => { alive = false }
-  }, [id, rev])
+  }, [id, rev, cacheKey])
+
+  // Ghi đệm (tối đa 60 tin mới nhất) mỗi khi danh sách thay đổi
+  useEffect(() => {
+    if (status === 'ready') putSwr(cacheKey, { messages: messages.slice(-60), hasMore })
+  }, [status, messages, hasMore, cacheKey])
 
   // Tin mới (polling): chỉ hỏi seq > đã có
   useEffect(() => {

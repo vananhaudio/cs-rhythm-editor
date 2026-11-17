@@ -3,7 +3,7 @@
 //  /me/bands/<slug>   → bàn điều hành Band (BandManage.tsx); tab Ứng tuyển dùng BandApplicationsView ở đây:
 //                        lọc theo trạng thái, đổi NEW/REVIEWING/REJECTED; Chấp nhận = xác nhận → thêm vào Band
 // CSS (band.css) nạp ở container ClassSocialPage. Cột câu hỏi KHÔNG hardcode: dịch key → nhãn bằng config đợt tuyển server trả kèm.
-import { useEffect, useState } from 'react'
+import { useSwrLoad } from '../class-social/swr/useSwrLoad'
 import { CheckCircle2, Inbox, Users } from 'lucide-react'
 import { EmptyState } from '../class-social/ui'
 import { fetchAdminBands } from './bandApi'
@@ -12,7 +12,6 @@ import {
   type AdminApplication, type AdminBand, type AdminBandDetail, type AdminRecruitment, type ApplicationStatus, type BandMember,
 } from './bandModel'
 
-type Load<T> = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; value: T }
 
 export function BandsAdminView({ bands, onOpenBand }: { bands: AdminBand[]; onOpenBand: (slug: string) => void }) {
   if (bands.length === 0) {
@@ -40,12 +39,7 @@ export function BandsAdminView({ bands, onOpenBand }: { bands: AdminBand[]; onOp
 }
 
 export function BandsAdminPage({ onOpenBand }: { onOpenBand: (slug: string) => void }) {
-  const [state, setState] = useState<Load<AdminBand[]>>({ status: 'loading' })
-  useEffect(() => {
-    let alive = true
-    void fetchAdminBands().then(r => { if (alive) setState(r.ok ? { status: 'ready', value: r.value } : { status: 'error', message: r.message }) })
-    return () => { alive = false }
-  }, [])
+  const { state } = useSwrLoad<AdminBand[]>('band:admin:list', fetchAdminBands)   // mở lại → hiện ngay, làm mới ở nền
   return (
     <div className="cs-col cs-band-admin">
       <h1 className="cs-page-title">Quản lý Band</h1>

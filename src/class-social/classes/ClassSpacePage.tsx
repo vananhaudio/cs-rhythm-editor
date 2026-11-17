@@ -5,6 +5,7 @@
 // giữ nguyên — server quyết can_view_members). Không hệ Social mới. "Giáo trình" (thanh phân đoạn) về đúng trang học của lớp.
 // Hai phạm vi rõ: Home → tab "Lớp" = hoạt động mọi lớp của tôi · Lớp → Không gian lớp = hoạt động của một lớp.
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useSwrLoad } from '../swr/useSwrLoad'
 import '../../learning-thread/styles'
 import { respondFriendRequest, sendFriendRequest } from '../friends/friendsApi'
 import { programKeyOfClass } from '../identity/learningIdentity'
@@ -31,38 +32,28 @@ export default function ClassSpacePage({ classId, tab = 'space', isTeacher, onOp
   onOpenThread: (id: string) => void
   onOpenProfile: (userId: string) => void
 }) {
-  const [detail, setDetail] = useState<Load<ClassCard>>({ status: 'loading' })
-  useEffect(() => {
-    let alive = true
-    void fetchClassDetail(classId).then(r => { if (alive) setDetail(r.ok ? { status: 'ready', value: r.value } : { status: 'error', message: r.message }) })
-    return () => { alive = false }
-  }, [classId])
+  // Cùng khoá đệm với useClassLearning → từ Trang Lớp sang Không gian lớp (và ngược lại) hiện tên lớp ngay
+  const { state: detail } = useSwrLoad<ClassCard>(`class:${classId}:detail`, () => fetchClassDetail(classId))
   const c = detail.status === 'ready' ? detail.value : null
   useEffect(() => { if (c?.name) document.title = `${tab === 'members' ? 'Thành viên' : 'Không gian lớp'} · ${c.name} · Thầy Văn Anh Guitar` }, [c?.name, tab])
 
   const fetchPage = useCallback((cur?: { createdAt: string; id: string; key: string }) => fetchClassActivityPage(classId, cur), [classId])
-  const { state: feed, loadMore } = usePostsFeed(fetchPage)
+  const { state: feed, loadMore } = usePostsFeed(fetchPage, `class:${classId}:activity`)
   const now = useMemo(() => new Date(), [])
   const items = feed.status === 'ready' ? feed.posts.filter(isThreadEntry) : []
 
   // quyền xem danh sách do SERVER quyết (social_class_detail.can_view_members)
   const canViewMembers = !!c && c.canViewMembers
-  const [members, setMembers] = useState<Load<ClassMember[]> | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [actError, setActError] = useState<string | null>(null)
-  useEffect(() => {
-    if (!canViewMembers || members) return
-    let alive = true
-    void fetchClassMembers(classId).then(r => { if (alive) setMembers(r.ok ? { status: 'ready', value: r.value } : { status: 'error', message: r.message }) })
-    return () => { alive = false }
-  }, [canViewMembers, members, classId])
+  const { state: membersState, mutate: mutateMembers } = useSwrLoad<ClassMember[]>(`class:${classId}:members`, () => fetchClassMembers(classId), { enabled: canViewMembers })
+  const members: Load<ClassMember[]> | null = canViewMembers ? membersState : null
   const act = async (m: ClassMember, action: 'send' | 'accept') => {
     setBusyId(m.userId); setActError(null)
     const r = action === 'send' ? await sendFriendRequest(m.userId) : await respondFriendRequest(m.userId, true)
     setBusyId(null)
     if (!r.ok) { setActError(r.message); return }
-    setMembers(cur => cur && cur.status === 'ready'
-      ? { status: 'ready', value: cur.value.map(x => (x.userId === m.userId ? { ...x, relationship: r.value } : x)) } : cur)
+    mutateMembers(list => list.map(x => (x.userId === m.userId ? { ...x, relationship: r.value } : x)))
   }
 
   return (

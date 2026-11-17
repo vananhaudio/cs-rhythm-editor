@@ -36,7 +36,7 @@ test('nối dây: Chat truyền meId, đăng xuất xoá cache, hook khởi tạ
   const hook = readFileSync('src/class-social/chat/useInbox.ts', 'utf8')
   const sess = readFileSync('src/class-social/useClassSession.ts', 'utf8')
   assert.match(chat, /useInbox\(source, \{ cacheUser: meId \}\)/)
-  assert.match(sess, /SIGNED_OUT[\s\S]{0,80}clearInboxCache\(\)/)
+  assert.match(sess, /SIGNED_OUT[\s\S]{0,120}clearSwr\(\)/)   // clearSwr cũng xoá đệm Chat (xem me-swr-cache.test)
   assert.match(hook, /getInboxCache\(opts\.cacheUser/)
   assert.match(hook, /startPolling\(tick/)
 })
