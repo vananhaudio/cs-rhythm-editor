@@ -17,4 +17,7 @@
 # App Teamlab build với base /teamlab/ và tự phục vụ đúng đường dẫn /teamlab/ nên giữ nguyên tiền tố.
 /teamlab https://teamlab-vananhaudio.netlify.app/teamlab/ 200
 /teamlab/* https://teamlab-vananhaudio.netlify.app/teamlab/:splat 200
+# ── Asset băm thiếu (tab cũ sau deploy) phải là 404 THẬT, không phải index.html 200: HTML trả về cho .js bị trình duyệt báo lỗi MIME và bị cache nhầm.
+# Quy tắc không-force: file thật trong /assets/ vẫn được phục vụ bình thường; chỉ khi KHÔNG có file mới rơi vào đây.
+/assets/* /asset-missing.txt 404
 /* /index.html 200

@@ -22,7 +22,7 @@ function spaRoutes(): string[] {
 function redirectSources(): string[] {
   return read('public/_redirects').split('\n')
     .map(l => l.trim().split(/\s+/)[0])
-    .filter(s => s && !s.startsWith('#') && s !== '/*')
+    .filter(s => s && !s.startsWith('#') && s !== '/*' && s !== '/assets/*')   // /assets/* = 404 thật cho asset băm thiếu (không phải proxy)
     .map(s => norm(s.replace(/\/\*$/, '')))
 }
 

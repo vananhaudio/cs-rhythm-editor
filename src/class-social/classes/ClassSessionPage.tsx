@@ -5,6 +5,8 @@
 // NHỊP HỌC: một buổi có N nhịp HỌC → THỰC HÀNH → TRẢ BÀI. Nhịp KHÔNG phải model riêng: nó hình thành bởi VỊ TRÍ khối
 // checkpoint mà Owner đặt trong LessonSection[] (xem docs/GIAO-TRINH-CHUAN.md). Trang này chỉ render đúng thứ tự đó.
 import ShareButton from '../../share/ShareButton'
+import ChunkErrorBoundary from '../../lib/ChunkErrorBoundary'
+import { clearDraft, importWithRetry, peekDraft, stashDraft } from '../../lib/chunkRecovery'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { ScoreShareSlot, type ScoreShareContext } from '../../lesson/scoreShareSlot'
 import { barRangeText, isBarsOpen, isRegionOpen, isTextOpen, openShareNote, type BarRange, type ScoreKey, type ShareNoteOpen, type ShareNoteTextOpen } from '../../share/shareNoteApi'
@@ -26,7 +28,10 @@ import { CheckpointStatusView, LockedNote, SessionStatusLine } from './LearnPart
 import QuizCheckpoint from './QuizCheckpoint'
 import { takeCheckpointFocus, useClassLearning, type LearnReady } from './useClassLearning'
 
-const ShareNoteComposer = lazy(() => import('../../share/ShareNoteComposer'))
+const ShareNoteComposer = lazy(() => importWithRetry(() => import('../../share/ShareNoteComposer')))
+/** Vùng đã khoanh giữ qua lần tải lại (tab mở trước deploy → chunk khung hỏi không còn): khôi phục đúng vùng, không bắt khoanh lại. */
+type AskDraft = { ask: { score: ScoreKey; bars: BarRange } | null; askText: { anchor: TextAnchor; quote: string } | null; askRegion: { parts: RegionPart[]; summary: string } | null }
+const askDraftKey = (sessionId: string) => `ask:${sessionId}`
 type NoteLoad = { status: 'loading' } | { status: 'error' } | ShareNoteOpen
 
 /** Mở từ liên kết chia sẻ (?note=<id>): câu hỏi + trạng thái; vùng tô do LessonScore (ô nhịp) hoặc <mark> (văn bản) vẽ khi đã xác nhận và đúng buổi.
@@ -167,9 +172,15 @@ function SessionContent({ state, s, onReload, onOpenThread, focus, regionFocus, 
   sessionLabel: string
 }) {
   // "Khoanh để hỏi": chọn dải ô ở một bản nhạc → khung soạn câu hỏi / chia sẻ (Share Note V1)
-  const [ask, setAsk] = useState<{ score: ScoreKey; bars: BarRange } | null>(null)
-  const [askText, setAskText] = useState<{ anchor: TextAnchor; quote: string } | null>(null)   // V2: hỏi về vùng văn bản đã chọn
-  const [askRegion, setAskRegion] = useState<{ parts: RegionPart[]; summary: string } | null>(null)   // V3: hỏi về vùng khoanh hỗn hợp
+  const [restoredAsk] = useState(() => peekDraft<AskDraft>(askDraftKey(s.sessionId)))
+  const [ask, setAsk] = useState<{ score: ScoreKey; bars: BarRange } | null>(restoredAsk?.ask ?? null)
+  const [askText, setAskText] = useState<{ anchor: TextAnchor; quote: string } | null>(restoredAsk?.askText ?? null)   // V2: hỏi về vùng văn bản đã chọn
+  const [askRegion, setAskRegion] = useState<{ parts: RegionPart[]; summary: string } | null>(restoredAsk?.askRegion ?? null)   // V3: hỏi về vùng khoanh hỗn hợp
+  useEffect(() => {   // giữ vùng đang hỏi cho lần tải lại; đóng khung hỏi = xoá
+    if (ask || askText || askRegion) stashDraft(askDraftKey(s.sessionId), { ask, askText, askRegion } satisfies AskDraft)
+    else clearDraft(askDraftKey(s.sessionId))
+  }, [s.sessionId, ask, askText, askRegion])
+  useEffect(() => () => clearDraft(askDraftKey(s.sessionId)), [s.sessionId])   // rời trang bằng điều hướng = bỏ nháp (tải lại trang KHÔNG chạy cleanup)
   const [textFocus, setTextFocus] = useState<TextAnchor | null>(null)
   const shareCtx = useMemo<ScoreShareContext>(() => ({ onAsk: (score, bars) => setAsk({ score, bars }), focus, onAskText: (anchor, quote) => setAskText({ anchor, quote }), textFocus: textNote ? textFocus : null,
     onAskRegion: (parts, summary) => setAskRegion({ parts, summary }), regionFocus }), [focus, textFocus, textNote, regionFocus])
@@ -270,14 +281,15 @@ function SessionContent({ state, s, onReload, onOpenThread, focus, regionFocus, 
     )
   }
   // Chế độ giáo trình (chưa có bài trả): chỉ cắm phần hiển thị cho khung XEM TRƯỚC của giáo viên; học viên không thấy nút nộp nào.
+  const closeAsk = () => { setAsk(null); setAskText(null); setAskRegion(null) }
   const composer = (ask || askText || askRegion) && (
-    <Suspense fallback={null}>
+    <ChunkErrorBoundary overlay onDismiss={closeAsk}><Suspense fallback={null}>
       {askRegion
         ? <ShareNoteComposer sessionId={s.sessionId} sessionLabel={sessionLabel} region={askRegion} onClose={() => setAskRegion(null)} />
         : ask
         ? <ShareNoteComposer sessionId={s.sessionId} sessionLabel={sessionLabel} score={ask.score} bars={ask.bars} onClose={() => setAsk(null)} />
         : askText && <ShareNoteComposer sessionId={s.sessionId} sessionLabel={sessionLabel} text={askText} onClose={() => setAskText(null)} />}
-    </Suspense>
+    </Suspense></ChunkErrorBoundary>
   )
   if (state.mode === 'curriculum') {
     return (

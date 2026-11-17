@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import AppRouter from './AppRouter.tsx'
 import { migrateLegacySession } from './migrateLegacySession'
+import { claimAutoReload, isChunkLoadError } from './lib/chunkRecovery'
 
 // ── Fail-safe: KHÔNG BAO GIỜ màn trắng ──────────────────────────────────────
 // Crash render (React) hoặc lỗi JS chưa bắt → hiện màn hình lỗi có nút thử lại
@@ -11,8 +12,24 @@ import { migrateLegacySession } from './migrateLegacySession'
 class RootErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
   state = { error: null as Error | null }
   static getDerivedStateFromError(error: Error) { return { error } }
+  componentDidCatch(error: Error) {
+    // Chunk không tải được (tab mở trước deploy) mà không có ranh giới cục bộ: tải lại ĐÚNG trang hiện tại một lần (chốt chống vòng lặp) thay vì màn hình lỗi.
+    if (isChunkLoadError(error) && claimAutoReload()) window.location.reload()
+  }
   render() {
     if (!this.state.error) return this.props.children
+    if (isChunkLoadError(this.state.error)) {
+      return (
+        <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, padding: 24, background: '#F0F2F5', fontFamily: 'system-ui, sans-serif', textAlign: 'center' }}>
+          <div style={{ fontWeight: 800, fontSize: 18, color: '#211C32' }}>Lớp học vừa có bản cập nhật</div>
+          <div style={{ fontSize: 14, color: '#464160', lineHeight: 1.6, maxWidth: 420 }}>Bấm tải lại để dùng bản mới. Dữ liệu tài khoản của bạn vẫn an toàn.</div>
+          <button onClick={() => window.location.reload()}
+            style={{ background: '#4338CA', color: '#fff', border: 'none', borderRadius: 12, padding: '13px 26px', fontSize: 15, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
+            Tải lại trang
+          </button>
+        </div>
+      )
+    }
     const message = `${this.state.error.name}: ${this.state.error.message}`
     return (
       <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, padding: 24, background: '#F0F2F5', fontFamily: 'system-ui, sans-serif', textAlign: 'center' }}>

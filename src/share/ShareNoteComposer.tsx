@@ -5,8 +5,13 @@ import { barRangeText, createShareNote, createShareRegion, createShareText, newC
 import type { TextAnchor } from './textAnchor'
 import type { RegionPart } from './regionAnchor'
 import { shareNoteRef } from './shareRef'
+import ChunkErrorBoundary from '../lib/ChunkErrorBoundary'
+import { clearDraft, importWithRetry, peekDraft, stashDraft } from '../lib/chunkRecovery'
 
-const ShareToFriendSheet = lazy(() => import('./ShareToFriendSheet'))
+const ShareToFriendSheet = lazy(() => importWithRetry(() => import('./ShareToFriendSheet')))
+/** Bản nháp giữ qua lần tải lại khi một chunk không tải được (tab mở trước deploy): câu hỏi đang soạn + khoá idempotent + note đã tạo. */
+type ComposerDraft = { text: string; noteId: string | null; clientKey: string; phase: 'edit' | 'friends' }
+const composerDraftKey = (sessionId: string) => `composer:${sessionId}`
 const FONT = `'Be Vietnam Pro',system-ui,sans-serif`
 const S = {
   overlay: { position: 'fixed', inset: 0, zIndex: 2000, background: 'rgba(8,10,16,.62)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', fontFamily: FONT } as const,
@@ -31,11 +36,20 @@ export default function ShareNoteComposer({ sessionId, sessionLabel, score, bars
 }) {
   const isText = !!textSel
   const isRegion = !!region
-  const [text, setText] = useState('')
-  const [phase, setPhase] = useState<'edit' | 'busy' | 'friends' | 'posted'>('edit')
+  const [restored] = useState(() => peekDraft<ComposerDraft>(composerDraftKey(sessionId)))
+  const [text, setText] = useState(restored?.text ?? '')
+  const [phase, setPhase] = useState<'edit' | 'busy' | 'friends' | 'posted'>(restored?.noteId && restored.phase === 'friends' ? 'friends' : 'edit')
   const [error, setError] = useState<string | null>(null)
-  const [noteId, setNoteId] = useState<string | null>(null)
-  const clientKey = useRef(newClientKey())                    // MỘT lần soạn = MỘT note dù bấm lại / thử lại
+  const [noteId, setNoteId] = useState<string | null>(restored?.noteId ?? null)
+  const clientKey = useRef(restored?.clientKey ?? newClientKey())   // MỘT lần soạn = MỘT note dù bấm lại / thử lại (kể cả sau khi tải lại trang)
+  // Giữ nháp để tải lại trang (cập nhật phiên bản) không làm mất câu hỏi đang soạn; đóng/đăng xong thì xoá.
+  useEffect(() => {
+    if (phase === 'posted') { clearDraft(composerDraftKey(sessionId)); return }
+    if (phase === 'busy') return
+    if (!text && !noteId) { clearDraft(composerDraftKey(sessionId)); return }
+    stashDraft(composerDraftKey(sessionId), { text, noteId, clientKey: clientKey.current, phase: phase === 'friends' ? 'friends' : 'edit' } satisfies ComposerDraft)
+  }, [sessionId, text, noteId, phase])
+  useEffect(() => () => clearDraft(composerDraftKey(sessionId)), [sessionId])   // đóng khung = bỏ nháp (tải lại trang KHÔNG chạy cleanup nên nháp còn)
   const busyRef = useRef(false)
   const taRef = useRef<HTMLTextAreaElement>(null)
   useEffect(() => { taRef.current?.focus() }, [])
@@ -72,7 +86,8 @@ export default function ShareNoteComposer({ sessionId, sessionLabel, score, bars
   }
 
   if (phase === 'friends' && noteId) {
-    return <Suspense fallback={null}><ShareToFriendSheet target={shareNoteRef(noteId)} title={`${title} — ${note}`} onClose={onClose} /></Suspense>
+    // Chunk khung chọn bạn không tải được: nháp + note đã tạo nằm trong sessionStorage (effect trên) → tải lại sẽ mở lại đúng bước này.
+    return <ChunkErrorBoundary overlay onDismiss={() => setPhase('edit')}><Suspense fallback={null}><ShareToFriendSheet target={shareNoteRef(noteId)} title={`${title} — ${note}`} onClose={onClose} /></Suspense></ChunkErrorBoundary>
   }
   return (
     <div style={S.overlay} onMouseDown={e => { if (e.target === e.currentTarget && phase !== 'busy') onClose() }}>
