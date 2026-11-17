@@ -11,14 +11,17 @@ const swap = (s: string, a: string, b: string): string => {
   if (!s.includes(a)) throw new Error(`swap: không thấy "${a}"`)
   return s.replace(a, b)
 }
+// Biến thể kỹ thuật THAY cung luyến Slur của bản chuẩn bằng ký hiệu kỹ thuật cụ thể (Hammer-on/Slide/Pull-off) → bỏ Slur của ô đó trước khi thay,
+// để khuông không vẽ hai cung chồng nhau. Bản chuẩn (CDX_BARS) không bị đổi.
+const noSlur = (s: string): string => s.replace(/ slur s\d+/g, '').replace(/\{slur s\d+\}/g, '')
 const bars = (list: string[]): string => '\\ts 4 4\n.\n' + list.join('\n')
 
 // Ô 7: Mi (dây 1 buông) → Fa (dây 1 ngăn 1): Hammer-on TỪ DÂY BUÔNG
-const B7_HAM = swap(CDX_BARS[6], '0.1.16 1.1.16', '0.1{h}.16 1.1{lf 2}.16')
+const B7_HAM = swap(noSlur(CDX_BARS[6]), '0.1.16 1.1.16', '0.1{h}.16 1.1{lf 2}.16')
 // Ô 8: nốt Si tròn (dây 1 ngăn 7) — nốt bấm, rung được
 const B8_VIB = swap(CDX_BARS[7], '7.1{ch "E"}.1', '7.1{lf 4 v ch "E"}.1')
 // Ô 9: Sol♯ → La trên cùng dây 1 (ngăn 4 → ngăn 5), MỘT ngón trượt
-const B9_SLIDE = swap(CDX_BARS[8], '4.1.8{tu 3} 5.1.8{tu 3}', '4.1{lf 2 ss}.8{tu 3} 5.1{lf 2}.8{tu 3}')
+const B9_SLIDE = swap(noSlur(CDX_BARS[8]), '4.1.8{tu 3} 5.1.8{tu 3}', '4.1{lf 2 ss}.8{tu 3} 5.1{lf 2}.8{tu 3}')
 // Ô 18: Mi → Rê (dây 1 ngăn 12 → ngăn 10): Pull-off. Luyến đặt ở nốt TRƯỚC.
 const B18_PLAIN = CDX_BARS[17]
 const B18_PO = swap(CDX_BARS[17], '12.1.4{tu 3} 10.1.4{tu 3}', '12.1{lf 5 h}.4{tu 3} 10.1{lf 3}.4{tu 3}')
@@ -84,9 +87,11 @@ export const SOLO01_BUOI09: LessonDoc = {
       tempo: 'Tempo: ♩ = 60',
       tex: cdxFingered(1, 8),
       marks: [
-        { at: 'Ô 1', text: 'ô vào: nghỉ một phách, rồi 4 nốt, có chùm ba (ba nốt chia đều trong hai phách)' },
+        { at: 'Ô 1', text: 'ô vào: nghỉ một phách, rồi 5 nốt: hai nốt đen, sau đó chùm ba (ba nốt chia đều trong hai phách). Cung luyến (Slur) nối Sol → La, hai nốt khác cao độ' },
         { at: 'Ô 2', text: 'nốt đen chấm đầu ô = 1,5 phách' },
         { at: 'Ô 4', text: 'một nốt tròn (4 phách) trên dây 1 BUÔNG — nốt dài đầu tiên của bài, nhưng dây buông nên không rung được (xem Nhịp 2)' },
+        { at: 'Ô 4 → 5', text: 'cung nối (Tie): hai nốt Mi CÙNG cao độ nối thành một nốt dài 5 phách — gảy MỘT lần ở ô 4, giữ qua ô 5, không gảy lại (trong TAB nốt thứ hai ghi trong ngoặc)' },
+        { at: 'Ô 3, 5, 7', text: 'cung luyến (Slur) nối hai nốt KHÁC cao độ thành một nhóm liền tiếng, không đổi trường độ. Slur là ký hiệu ký âm, chưa nói sẵn là Hammer-on hay Pull-off — kỹ thuật cụ thể do bạn chọn ở Nhịp 3' },
         { at: 'Ô 8', text: 'nốt Si dây 1 ngăn 7, tròn, kéo dài cả ô' },
       ],
       guidance: [
@@ -195,7 +200,7 @@ export const SOLO01_BUOI09: LessonDoc = {
         options: [
           { id: 'a', text: 'Si — dây 1 ngăn 7 (nốt tròn ô 8)' },
           { id: 'b', text: 'Mi — dây 1 buông (nốt tròn ô 4)' },
-          { id: 'c', text: 'La — dây 1 ngăn 5 (nốt trắng ô 16)' },
+          { id: 'c', text: 'La — dây 1 ngăn 5 (nốt tròn ô 16, nối sang ô 17)' },
           { id: 'd', text: 'Rê — dây 1 ngăn 10 (ô 18)' },
         ],
         hint: 'Vibrato làm đổi cao độ nhờ tay trái ép dây. Nốt nào không có ngón nào đang ép dây?',
@@ -224,7 +229,7 @@ export const SOLO01_BUOI09: LessonDoc = {
       pieces: [
         { title: 'Ô 7 — Mi → Fa (dây 1, buông → ngăn 1)', composer: 'Châu Kỳ & Hồ Đình Phương', note: 'Gợi ý: Hammer-on từ dây buông lên Fa. Hai nốt rất ngắn (nốt 16), luyến cho gọn.', barsPerRow: 1, tex: bars([B7_HAM]) },
         { title: 'Ô 8 — nốt Si dài 4 phách (dây 1 ngăn 7)', composer: 'Châu Kỳ & Hồ Đình Phương', note: 'Gợi ý: Vibrato. Nốt tròn bấm ở ngăn 7 — chỗ rung rõ nhất của đoạn đầu. (Nốt tròn ô 4 là Mi dây buông nên không rung được.)', barsPerRow: 1, tex: bars([B8_VIB]) },
-        { title: 'Ô 9 — Sol♯ → La (dây 1, ngăn 4 → ngăn 5)', composer: 'Châu Kỳ & Hồ Đình Phương', note: 'Gợi ý: Slide một ngón từ ngăn 4 sang ngăn 5. Ô 9 nằm ngoài ô 1–8, nhưng gặp lại ở ô 34.', barsPerRow: 1, tex: bars([B9_SLIDE]) },
+        { title: 'Ô 9 — Sol♯ → La (dây 1, ngăn 4 → ngăn 5)', composer: 'Châu Kỳ & Hồ Đình Phương', note: 'Gợi ý: Slide một ngón từ ngăn 4 sang ngăn 5. Ô 9 nằm ngoài ô 1–8, nhưng gặp lại ở ô 33.', barsPerRow: 1, tex: bars([B9_SLIDE]) },
         { title: 'Ô 18 — Mi → Rê (dây 1, ngăn 12 → ngăn 10)', composer: 'Châu Kỳ & Hồ Đình Phương', note: 'Gợi ý: Pull-off từ Mi xuống Rê, hai ngón khác nhau (ngón 4 → ngón 2). Cả cụm ba nốt chùm ba vẫn phải đều.', barsPerRow: 1, tex: bars([B18_PO]) },
       ],
       annotationTypes: ['Kỹ thuật bạn chọn', 'Ô nhịp', 'Ngón tay trái', 'Lý do chọn', 'Ghi chú của giáo viên'],
@@ -262,7 +267,7 @@ export const SOLO01_BUOI09: LessonDoc = {
           'Một cung = hai ngăn; nửa cung = một ngăn. Bend "một cung" nâng cao độ bằng hai ngăn.',
           'Nên đàn nốt đích thật (ở ngăn khác) để tai nhớ cao độ trước khi tay đẩy dây.',
         ] },
-        { b: 'callout', label: 'CẦN OWNER XEM LẠI', text: 'MusicXML không ghi kỹ thuật (luyến, trượt, rung, bend). Mọi chỗ gắn kỹ thuật trong buổi này (ô 7, 8, 9, 18) là gợi ý của giáo án, chưa phải bản phối đã xác nhận.' },
+        { b: 'callout', label: 'CẦN OWNER XEM LẠI', text: 'Bản nhạc chuẩn có cung nối (Tie) và cung luyến (Slur) nhưng không ghi kỹ thuật (Hammer-on, Pull-off, trượt, rung, bend). Mọi chỗ gắn kỹ thuật trong buổi này (ô 7, 8, 9, 18) là gợi ý của giáo án, chưa phải bản phối đã xác nhận; ở ô 7 và 9 gợi ý thay cho cung luyến của bản chuẩn.' },
       ],
     },
     {

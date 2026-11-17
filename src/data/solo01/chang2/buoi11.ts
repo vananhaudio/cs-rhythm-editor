@@ -51,7 +51,7 @@ export const SOLO01_BUOI11: LessonDoc = {
       tex: cdxFingered(1, 8),
       marks: [
         { at: 'Ô 1', text: 'dịch từ Vị trí I (Đô dây 2 ngăn 1, Sol ngăn 3) lên Vị trí V (La ngăn 5)' },
-        { at: 'Ô 3', text: 'Vị trí I cho Rê, Đô (dây 2); La ngăn 5 bằng ngón 3 ở Vị trí III' },
+        { at: 'Ô 3', text: 'Vị trí III cho Rê và Mi (dây 2 ngăn 3 và ngăn 5; Mi → Rê luyến CÙNG dây), về Vị trí I cho Đô (ngăn 1), lại Vị trí III cho Rê, rồi La ngăn 5 bằng ngón 3' },
         { at: 'Ô 4', text: 'nốt tròn Mi dây buông: tay trái hoàn toàn rảnh — chỗ dịch về Vị trí I' },
         { at: 'Ô 7', text: 'Vị trí I (Mi → Fa) rồi dịch lên Vị trí V cho La – Đô trong chùm ba cuối ô' },
       ],

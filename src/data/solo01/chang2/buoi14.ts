@@ -185,7 +185,7 @@ export const SOLO01_BUOI14: LessonDoc = {
         {
           title: 'Ô 26–33 — melody (tự ghép Bass và hợp âm)',
           composer: 'Châu Kỳ & Hồ Đình Phương · giọng Am',
-          note: 'Ô 26–31 giống ô 18–23 nên dùng lại bản phác nếu bạn muốn. Ô 32 CẦN RÀ SOÁT (xem cảnh báo) — bạn có thể bỏ qua ô này khi làm bài. Ô 33 là E7 với melody Si dây 1 ngăn 7.',
+          note: 'Ô 26–31 giống ô 18–23 nên dùng lại bản phác nếu bạn muốn. Ô 32 CẦN RÀ SOÁT (xem cảnh báo) — bạn có thể bỏ qua ô này khi làm bài. Ô 33 là E7: melody mở bằng hai nốt Si dây 1 ngăn 7, rồi chùm ba Mi – Sol♯ – La – La; từ đây câu tên bài "Con đường xưa em" bắt đầu.',
           barsPerRow: 2,
           tex: cdxFingered(26, 33),
           guidance: [
@@ -221,7 +221,7 @@ export const SOLO01_BUOI14: LessonDoc = {
         { b: 'h', text: 'Ghép tầng làm đổi xếp ngón' },
         { b: 'p', text: 'Khi thêm Bass và hợp âm, ngón tay trái làm việc ở nhiều dây cùng lúc, nên xếp ngón của melody ở Buổi 3 có thể phải đổi. Có chỗ khớp rất đẹp: ô 18, La dây 1 ngăn 5 (ngón 1) cùng lúc với Triad Am xx755x — ngón 1 ép cả dây 3, 2, 1 ở ngăn 5 (thế xx7555) và ngón 3 giữ ngăn 7 dây 4. Ô 20: Sol dây 1 ngăn 3 với Triad G xx543x — ngón 1 ép dây 2 và dây 1 ở ngăn 3. Chỗ khác thì phải đổi ngón; đó là bước hoàn thiện bình thường, không phải lỗi ở Buổi 3.' },
         { b: 'h', text: 'Điệp khúc và cấu trúc bài' },
-        { b: 'p', text: 'Phần ô 18–33 dài 16 ô, gồm hai nửa 8 ô giống nhau ở bảy ô đầu (Am F G C Am Dm …) và khác ở nửa cuối. Cấu trúc này gợi ý đó là Chorus (điệp khúc). Còn ô 34–41 hát lại câu tên bài nên gọi là đoạn kết (có tính chất Refrain). Việc đặt tên đoạn là gợi ý của giáo án, Owner xác nhận.' },
+        { b: 'p', text: 'Phần ô 18–33 dài 16 ô, gồm hai nửa 8 ô giống nhau ở bảy ô đầu (Am F G C Am Dm …) và khác ở nửa cuối. Cấu trúc này gợi ý đó là Chorus (điệp khúc). Còn từ giữa ô 33 đến ô 41 hát lại câu tên bài nên gọi là đoạn kết (có tính chất Refrain). Việc đặt tên đoạn là gợi ý của giáo án, Owner xác nhận.' },
         { b: 'callout', label: 'CẦN OWNER XEM LẠI', text: 'Ô 32 (hợp âm F, giai điệu Đô – Mi – La – Sol♯) nghi ngờ trong nguồn. Giữ nguyên, chưa sửa. Bản phác 2 bè ở ô 18–25 chưa được người chơi kiểm từng thế tay.' },
       ],
     },

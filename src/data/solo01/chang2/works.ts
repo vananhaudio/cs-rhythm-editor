@@ -1,54 +1,14 @@
 // ── SOLO-01 · CHẶNG 2 (Solo Bolero) — bài mẫu xuyên suốt: Con Đường Xưa em Đi ──
-// NGUỒN: thư viện MusicXML production (musicxml_library id 6cfffd59-346d-4fe2-a781-6519bff28e2b,
-// "Con Đường Xưa em Đi" — Châu Kỳ & Hồ Đình Phương), md5 file a080ffd6b25734d09780ec287bfe50eb.
-// Sinh bằng: node scripts/musicxml-to-alphatex.mjs <file> (giọng gốc, KHÔNG dịch giọng, hợp âm lấy từ XML).
-// CDX_SRC_BARS = NGUYÊN VĂN từ MusicXML (cao độ gốc), KHÔNG sửa tay. Bản dạy trong Chặng 2 là BẢN PHỐI DẪN XUẤT: nâng cả giai điệu lên MỘT QUÃNG 8 (CDX_BARS, bên dưới). Không nhân đôi asset: đây là bản alphaTex dẫn xuất, file XML vẫn ở thư viện.
-// 41 ô · 4/4 · giọng Am (không dấu hoá) · 1 bè guitar (melody) + tên hợp âm. KHÔNG có nốt Bass / hợp âm đầy đủ trong nguồn.
-// Cấu trúc suy từ hợp âm + lời (ĐỀ XUẤT, Owner xác nhận): ô 1 vào · ô 2–8 đoạn A1 · ô 9–15 đoạn A2 · ô 16–17 nối ·
-// ô 18–25 điệp khúc (nửa 1) · ô 26–33 điệp khúc (nửa 2) · ô 34–41 đoạn kết (hát lại tên bài).
-export const CDX_SRC_BARS: string[] = [
-  "r.4 2.4.4 3.5.4{tu 3} 0.3.8{tu 3} 2.3.8{tu 3} 2.3.4{tu 3} |",
-  "2.3{ch \"Am\"}.4{d} 2.4.8 2.3.8 1.2.4 2.4.8 |",
-  "0.4{ch \"Dm\"}.4{d} 2.4.16 0.4.16 3.5.4{tu 3} 2.4.4{tu 3} 2.4.8{tu 3} 2.3.8{tu 3} |",
-  "2.4{ch \"Am\"}.1 |",
-  "2.4.4 2.4.4 0.5.4{tu 3} 3.5.8{tu 3} 0.4.8{tu 3} 0.4.4{tu 3} |",
-  "0.4{ch \"Dm\"}.4{d} 2.4.8 0.4.8 3.5.4 3.4.8 |",
-  "2.4{ch \"Am\"}.4{d} 2.4.16 3.4.16 2.4.4{tu 3} 2.3.4{tu 3} 1.2.4{tu 3} |",
-  "0.2{ch \"E\"}.1 |",
-  "0.2.4 0.2.4 2.4.4{tu 3} 1.3.8{tu 3} 2.3.8{tu 3} 2.3.4{tu 3} |",
-  "2.3{ch \"Am\"}.4{d} 2.4.8 2.3.8 1.2.4 2.4.8 |",
-  "0.4{ch \"Dm\"}.4{d} 2.4.16 0.4.16 3.5.4{tu 3} 2.4.4{tu 3} 2.4.8{tu 3} 2.3.8{tu 3} |",
-  "2.4{ch \"Am\"}.1 |",
-  "2.4.4 2.4.4 0.5.4{tu 3} 3.5.8{tu 3} 0.4.8{tu 3} 0.4.4{tu 3} |",
-  "0.4{ch \"Dm\"}.4{d} 2.4.8 0.4.8 3.5.4 3.4.8 |",
-  "2.4{ch \"E\"}.4{d} 2.4.16 3.4.16 2.4.4{tu 3} 1.3.4{tu 3} 0.2.4{tu 3} |",
-  "2.3{ch \"Am\"}.2 2.3{ch \"Dm\"}.2 |",
-  "2.3{ch \"Am\"}.4 r.4 r.4 2.3.4 |",
-  "2.3{ch \"Am\"}.2 2.3.4{tu 3} 0.1.4{tu 3} 3.2.4{tu 3} |",
-  "1.2{ch \"F\"}.2 2.3.4{tu 3} 3.2.4{tu 3} 1.2.4{tu 3} |",
-  "0.3{ch \"G\"}.4{d} 0.3.8 0.3.4{tu 3} 2.3.4{tu 3} 1.2.4{tu 3} |",
-  "2.4{ch \"C\"}.2 r.4 2.4.4 |",
-  "2.4{ch \"Am\"}.2 2.4.4{tu 3} 2.3.4{tu 3} 2.4.4{tu 3} |",
-  "0.4{ch \"Dm\"}.2 0.4.4{tu 3} 2.4.4{tu 3} 0.4.4{tu 3} |",
-  "3.5{ch \"C\"}.4{d} 3.5.8 3.5.8 3.4.4 2.4.8 |",
-  "0.5{ch \"Am\"}.2 r.4 2.3.4 |",
-  "2.3{ch \"Am\"}.2 2.3.4{tu 3} 0.1.4{tu 3} 3.2.4{tu 3} |",
-  "1.2{ch \"F\"}.2 2.3.4{tu 3} 3.2.4{tu 3} 1.2.4{tu 3} |",
-  "0.3{ch \"G\"}.4{d} 0.3.8 0.3.4{tu 3} 2.3.4{tu 3} 1.2.4{tu 3} |",
-  "2.4{ch \"C\"}.2 r.4 2.4.4 |",
-  "2.4{ch \"Am\"}.2 2.4.4{tu 3} 2.3.4{tu 3} 2.4.4{tu 3} |",
-  "0.4{ch \"Dm\"}.2 0.4.4{tu 3} 2.4.4{tu 3} 0.4.4{tu 3} |",
-  "3.5{ch \"F\"}.4{d} 3.5.8 2.4.8 2.3.4 1.3.8 |",
-  "0.2{ch \"E7\"}.4 r.4 0.2.4 0.2.4 |",
-  "2.4.4{tu 3} 1.3.8{tu 3} 2.3.8{tu 3} 2.3.4{tu 3} 2.3{ch \"Am\"}.4{d} 2.4.8 |",
-  "2.3.8 1.2.4 2.4.8 0.4{ch \"Dm\"}.4{d} 2.4.16 0.4.16 |",
-  "3.5.4{tu 3} 2.4.4{tu 3} 2.4.8{tu 3} 2.3.8{tu 3} 2.4{ch \"Am\"}.2 |",
-  "2.4{t}.2 2.4.4 2.4.4 |",
-  "0.5.4{tu 3} 3.5.8{tu 3} 0.4.8{tu 3} 0.4.4{tu 3} 0.4{ch \"Dm\"}.4{d} 2.4.8 |",
-  "0.4.8 3.5.4 3.4.8 2.4{ch \"E\"}.4{d} 2.4.16 3.4.16 |",
-  "2.4.4{tu 3} 1.3.4{tu 3} 0.2.4{tu 3} 2.3{ch \"Am\"}.2 |",
-  "2.3.2 r.2"
-]
+// NGUỒN DUY NHẤT: assets/con-duong-xua-em-di.ts (bản nhạc chuẩn Owner đã nghiệm thu, có phiên bản + SHA-256). Mọi bản đầy đủ/trích đoạn
+// trong 8 buổi đều SINH TỪ đây; KHÔNG sửa tay ở file khác. Gốc: MusicXML thư viện production (id 6cfffd59-346d-4fe2-a781-6519bff28e2b,
+// md5 a080ffd6b25734d09780ec287bfe50eb), đã hiệu đính theo bản ảnh tham chiếu (xem đầu file asset). Giọng Am (không dấu hoá), 4/4, 41 ô,
+// 1 bè guitar (melody) + tên hợp âm gốc + Tie/Slur + lời. KHÔNG có nốt Bass / hợp âm đầy đủ trong nguồn.
+// Cấu trúc suy từ hợp âm + lời (ĐỀ XUẤT, Owner xác nhận): ô 1 vào · ô 2–8 đoạn A1 · ô 9–15 đoạn A2 · ô 16–17 nối · ô 18–25 điệp khúc (nửa 1) ·
+// ô 26–33 điệp khúc (nửa 2, ô 33 đã sang "Con đường xưa em" của đoạn kết) · ô 33–41 đoạn kết (hát lại tên bài).
+import { CDX_ASSET_BARS, CDX_ASSET_LYRICS } from './assets/con-duong-xua-em-di'
+
+/** 41 ô, CAO ĐỘ NGUYÊN BẢN (giọng Am), đã hiệu đính — lấy nguyên từ asset chuẩn. */
+export const CDX_SRC_BARS: string[] = CDX_ASSET_BARS
 
 
 // ── BẢN PHỐI DẪN XUẤT: nâng giai điệu lên một quãng 8 ──────────────────────────────────────────────
@@ -59,20 +19,49 @@ export const CDX_SRC_BARS: string[] = [
 const OPEN_PITCH = [0, 64, 59, 55, 50, 45, 40] // cao độ MIDI dây buông, chỉ số = số dây (1 = e cao)
 const NOTE_RE = /(\d+)\.(\d)(\{[^}]*\})?\.(\d+)/g
 
-/** Nâng MỘT ô nhịp lên một quãng 8 theo luật trên. */
-export const raiseOctaveBar = (bar: string): string =>
-  bar.replace(NOTE_RE, (_m, fret: string, str: string, braces: string | undefined, dur: string) => {
+/** Nâng MỘT ô nhịp lên một quãng 8 theo luật trên. Sau khi nâng: mỗi cặp Slur phải CÙNG DÂY (luyến thực hiện được trên Guitar) — nếu lệch dây,
+ *  nốt đầu chuyển sang dây của nốt sau, cùng cao độ (vd. Mi→Rê ô 3·11·35: dây 1 buông → dây 2 ngăn 5, rồi Rê dây 2 ngăn 3). */
+export const raiseOctaveBar = (bar: string): string => {
+  const raised = bar.replace(NOTE_RE, (_m, fret: string, str: string, braces: string | undefined, dur: string) => {
     const p = OPEN_PITCH[Number(str)] + Number(fret) + 12
     const [s, f] = p >= 64 ? [1, p - 64] : p >= 59 ? [2, p - 59] : p >= 55 ? [3, p - 55] : [4, p - 50]
     return `${f}.${s}${braces ?? ''}.${dur}`
   })
+  const bySlur = new Map<string, RegExpMatchArray[]>()
+  for (const m of raised.matchAll(NOTE_RE)) {
+    const id = /slur (s\d+)/.exec(m[3] ?? '')?.[1]
+    if (id) bySlur.set(id, [...(bySlur.get(id) ?? []), m])
+  }
+  let out = raised
+  for (const [, [a, c]] of bySlur) {
+    if (a[2] === c[2]) continue
+    const pitch = OPEN_PITCH[Number(a[2])] + Number(a[1])
+    const fret = pitch - OPEN_PITCH[Number(c[2])]
+    if (fret < 0) throw new Error(`Slur không cùng dây được: ${bar}`)
+    out = out.replace(a[0], `${fret}.${c[2]}${a[3] ?? ''}.${a[4]}`)
+  }
+  return out
+}
+
+/** Nốt đích của Tie (`{t}` có thể đi kèm `ch "…"`, `lf n`, `slur sN`). */
+export const isTieDest = (braces: string | undefined): boolean => !!braces && /(^\{|\s)t(\s|\})/.test(braces)
 
 /** 41 ô nhịp ĐÃ NÂNG MỘT QUÃNG 8 — bản dạy. */
 export const CDX_BARS: string[] = CDX_SRC_BARS.map(raiseOctaveBar)
 
+/** Trích đoạn không được BẮT ĐẦU ở ô có nốt đích Tie (nốt gốc nằm ngoài đoạn → cung nối vô nghĩa/AlphaTab lỗi): phải lùi về ô chứa nốt gốc. */
+const assertExcerptStart = (from: number): void => {
+  for (const m of CDX_BARS[from - 1].matchAll(NOTE_RE)) {
+    if (isTieDest(m[3])) throw new Error(`Trích đoạn bắt đầu ở ô ${from} cắt ngang dấu nối — hãy bắt đầu từ ô ${from - 1}`)
+    break
+  }
+}
+
 /** alphaTex cho ô nhịp [from..to] (đếm từ 1, gồm cả hai đầu). */
-export const cdxTex = (from: number, to: number): string =>
-  "\\ts 4 4\n.\n" + CDX_BARS.slice(from - 1, to).join("\n")
+export const cdxTex = (from: number, to: number): string => {
+  assertExcerptStart(from)
+  return "\\ts 4 4\n.\n" + CDX_BARS.slice(from - 1, to).join("\n")
+}
 
 
 // ── XẾP NGÓN MẶC ĐỊNH ──────────────────────────────────────────────────────────────────────────────
@@ -83,7 +72,7 @@ export const cdxTex = (from: number, to: number): string =>
 interface FretNote { bar: number; fret: number }
 const fretted = (): FretNote[] => {
   const out: FretNote[] = []
-  CDX_BARS.forEach((b, i) => { for (const m of b.matchAll(NOTE_RE)) { if (Number(m[1]) > 0 && m[3] !== '{t}') out.push({ bar: i, fret: Number(m[1]) }) } })
+  CDX_BARS.forEach((b, i) => { for (const m of b.matchAll(NOTE_RE)) { if (Number(m[1]) > 0 && !isTieDest(m[3])) out.push({ bar: i, fret: Number(m[1]) }) } })
   return out
 }
 const POSITIONS = [1, 3, 5, 7, 9] // chỉ dùng Vị trí I · III · V · VII · IX (ngón 1 ở ngăn 1, 3, 5, 7, 9)
@@ -127,10 +116,11 @@ export const CDX_BAR_POSITIONS: number[][] = (() => {
  * Như cdxTex nhưng ghi ngón tay trái theo vị trí tay ở trên. alphaTex: lf 2 = ngón 1 … lf 5 = ngón 4 (lf 1 là ngón cái).
  */
 export const cdxFingered = (from: number, to: number): string => {
+  assertExcerptStart(from)
   let idx = 0
-  for (let b = 0; b < from - 1; b++) idx += [...CDX_BARS[b].matchAll(NOTE_RE)].filter(m => Number(m[1]) > 0 && m[3] !== '{t}').length
+  for (let b = 0; b < from - 1; b++) idx += [...CDX_BARS[b].matchAll(NOTE_RE)].filter(m => Number(m[1]) > 0 && !isTieDest(m[3])).length
   const add = (bar: string) => bar.replace(NOTE_RE, (m, fret: string, str: string, braces: string | undefined, dur: string) => {
-    if (Number(fret) < 1 || braces === '{t}') return m
+    if (Number(fret) < 1 || isTieDest(braces)) return m
     const lf = `lf ${Number(fret) - POS_OF_NOTE[idx++] + 2}`
     const b = braces ? braces.replace(/^\{/, `{${lf} `) : `{${lf}}`
     return `${fret}.${str}${b}.${dur}`
@@ -138,8 +128,29 @@ export const cdxFingered = (from: number, to: number): string => {
   return "\\ts 4 4\n.\n" + CDX_BARS.slice(from - 1, to).map(add).join("\n")
 }
 
+/** Lời ca theo từng phách của cả bài (alphaTex `\\lyrics`): nốt đích Tie, nốt thứ hai của Slur → "_" (không âm tiết mới); nốt nghỉ bị bỏ qua. */
+const buildLyrics = (): string => {
+  const out: string[] = []
+  CDX_BARS.forEach((bar, i) => {
+    const syl = (CDX_ASSET_LYRICS[i] ?? '').split(' ').filter(Boolean)
+    let k = 0, units = 0, openSlur: string | null = null
+    for (const m of bar.matchAll(NOTE_RE)) {
+      const br = m[3] ?? ''
+      const slur = /slur (s\d+)/.exec(br)?.[1] ?? null
+      const second = !!slur && openSlur === slur
+      if (slur && !second) openSlur = slur
+      if (second) openSlur = null
+      if (isTieDest(br) || second) { out.push('_'); continue }
+      units++
+      out.push(syl[k++] ?? '_')
+    }
+    if (units !== syl.length) throw new Error(`Lời ca ô ${i + 1}: ${units} nốt cần lời / ${syl.length} âm tiết`)
+  })
+  return out.join(' ')
+}
+
 /** Cả bài, có lời. */
-export const WORK_CDX_FULL = "\\ts 4 4\n" + "\\lyrics \"Con đường xưa _ em đi Vàng lên mái tóc thề ngõ _ hồn dâng tái _ tê _ Anh làm thơ _ vu quy khách qua đường lắng nghe Chuyện _ tình ta đã ghi _ Những mùa trăng _ vu quy Vì mưa gió không về Chiến _ trường anh bước _ đi. _ Có nàng hoen _ đôi mi Ngóng theo đường vắng hoe Hỏi _ còn ai cố tri _ _ Em ơi! nhìn gió lên khơi lòng cố trông vời một người xa cuối trời Nơi đây phiên gác canh dài e ấp đôi lời mình còn nhớ thương hoài Em ơi! Màu áo phong sương mình ước huy hoàng được bàn tay chính nàng Dâng hoa dâng hết ân tình Tính đến bao giờ hỏi đường xưa mà nhớ Con đường xưa em _ _ đi Thời gian có quên gì Đá _ mòn kia vẫn _ ghi _ _ Ghi một đêm _ trăng thanh quán bên đường vắng tanh chỉ _ còn em với anh. _\"" + "\n.\n" + CDX_BARS.join("\n")
+export const WORK_CDX_FULL = "\\ts 4 4\n" + `\\lyrics "${buildLyrics()}"\n.\n` + CDX_BARS.join("\n")
 
 // ── BASS VÀ THẾ HỢP ÂM CHO BẢN PHỐI QUÃNG 8 CAO (ĐỀ XUẤT CỦA GIÁO ÁN — chờ Owner xác nhận) ──────────────────────
 // Ba tầng, ba vùng dây: Bass ở DÂY 6–5 · hợp âm ở DÂY 4–3–2 (khu vực ngăn 3–8, sát vị trí tay của melody) · melody ở DÂY 1 (dây 2 khi nốt thấp).

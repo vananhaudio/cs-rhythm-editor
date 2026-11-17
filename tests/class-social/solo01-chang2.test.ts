@@ -4,7 +4,9 @@ import assert from "node:assert/strict";
 import * as alphaTab from "@coderline/alphatab";
 import { SOLO01_CHANG2 } from "../../src/data/solo01/chang2";
 import { solo01DocProblems } from "../../src/lesson/curriculumStandard";
-import { CDX_BARS, CDX_SRC_BARS, cdxFingered, TRIAD, DYAD, BASS, type ChordShape } from "../../src/data/solo01/chang2/works";
+import { CDX_BARS, CDX_SRC_BARS, cdxFingered, cdxTex, isTieDest, WORK_CDX_FULL, TRIAD, DYAD, BASS, type ChordShape } from "../../src/data/solo01/chang2/works";
+import { CDX_ASSET_DERIVED_SHA256, CDX_ASSET_VERSION } from "../../src/data/solo01/chang2/assets/con-duong-xua-em-di";
+import { createHash } from "node:crypto";
 
 test("Chặng 2: 8 buổi đúng thứ tự 9–16 và đạt chuẩn Golden Reference", () => {
   assert.equal(SOLO01_CHANG2.length, 8);
@@ -56,7 +58,7 @@ const NOTE_RE = /(\d+)\.(\d)(\{[^}]*\})?\.(\d+)/g;
 const OPEN = [0, 64, 59, 55, 50, 45, 40];
 const pitchOf = (fret: number, str: number): number => OPEN[str] + fret;
 
-test("Chặng 2: nguồn MusicXML (CDX_SRC_BARS) — 41 ô, mọi nốt ở ngăn 0–3, KHÔNG bị sửa", () => {
+test("Chặng 2: asset bản nhạc chuẩn (CDX_SRC_BARS) — 41 ô, mọi nốt ở ngăn 0–3", () => {
   assert.equal(CDX_SRC_BARS.length, 41);
   for (const b of CDX_SRC_BARS) for (const m of b.matchAll(NOTE_RE)) assert.ok(Number(m[1]) <= 3, b);
 });
@@ -74,13 +76,16 @@ test("Chặng 2: bản phối nâng đúng MỘT QUÃNG 8 — nhịp điệu gi�
       const po = pitchOf(Number(m[1]), Number(m[2]));
       assert.equal(po, ps + 12, `ô ${i + 1} nốt ${k + 1}: đúng một quãng 8`);
       const str = Number(m[2]);
-      if (po >= 64) assert.equal(str, 1, `ô ${i + 1}: nốt từ Mi4 trở lên phải ở dây 1`);
+      // Ngoại lệ DUY NHẤT: nốt đầu của cặp Slur Mi→Rê (ô 3·11·35) nằm dây 2 ngăn 5 để luyến CÙNG dây với Rê (dây 2 ngăn 3)
+      const slurDown = po === 64 && str === 2 && /slur/.test(m[3] ?? "");
+      if (slurDown) assert.ok([3, 11, 35].includes(i + 1), `ô ${i + 1}: ngoại lệ Mi dây 2 chỉ ở ô 3·11·35`);
+      else if (po >= 64) assert.equal(str, 1, `ô ${i + 1}: nốt từ Mi4 trở lên phải ở dây 1`);
       else if (po >= 59) assert.equal(str, 2, `ô ${i + 1}: Si3–Rê♯4 ở dây 2`);
       else { assert.equal(str, 3); assert.equal(po, 57, "dây 3 chỉ dành cho La3"); s3++; }
       assert.ok(Number(m[1]) <= 12, `ô ${i + 1}: không quá ngăn 12`);
     });
   });
-  assert.equal(s3, 4 + 0, "La3 xuất hiện đúng ở 4 ô (5, 13, 25, 38)");
+  assert.equal(s3, 4 + 0, "La3 xuất hiện đúng ở 4 ô (5, 13, 25, 37)");
 });
 
 test("Chặng 2: xếp ngón — mỗi nốt có bấm đúng ngón 1–4 và đúng Vị trí I·III·V·VII·IX", () => {
@@ -172,4 +177,57 @@ test("Chặng 2: bản phác 2 bè — mọi nốt Bass/hợp âm THẤP HƠN n�
     }
   }
   assert.ok(pairs >= 12, `chỉ kiểm ${pairs} cặp`);
+});
+
+// ── Asset chuẩn: Tie, Slur, lời ca, phiên bản ──────────────────────────────────────────────────────
+test("Chặng 2: asset chuẩn không bị sửa lệch — SHA-256 41 ô bản dạy khớp phiên bản đã nghiệm thu", () => {
+  assert.equal(CDX_ASSET_VERSION, "v5-2026-11-17");
+  assert.equal(createHash("sha256").update(CDX_BARS.join("\n")).digest("hex"), CDX_ASSET_DERIVED_SHA256);
+});
+
+test("Chặng 2: Tie — đúng 6 nốt đích ở ô 5·9·13·17·37·41, cùng cao độ với nốt cuối ô trước", () => {
+  const dest: number[] = [];
+  CDX_BARS.forEach((b, i) => {
+    const ms = [...b.matchAll(NOTE_RE)];
+    ms.forEach((m, k) => {
+      if (!isTieDest(m[3])) return;
+      assert.equal(k, 0, `ô ${i + 1}: nốt đích Tie phải là nốt đầu ô`);
+      const prev = [...CDX_BARS[i - 1].matchAll(NOTE_RE)].pop()!;
+      assert.equal(pitchOf(Number(m[1]), Number(m[2])), pitchOf(Number(prev[1]), Number(prev[2])), `ô ${i + 1}: Tie phải cùng cao độ`);
+      assert.equal(`${m[1]}.${m[2]}`, `${prev[1]}.${prev[2]}`, `ô ${i + 1}: Tie phải cùng dây/ngăn`);
+      dest.push(i + 1);
+    });
+  });
+  assert.deepEqual(dest, [5, 9, 13, 17, 37, 41]);
+});
+
+test("Chặng 2: Slur — đúng 15 cặp, hai nốt liền nhau cùng ô, KHÁC cao độ, CÙNG DÂY (luyến thực hiện được)", () => {
+  const byId = new Map<string, { bar: number; k: number; str: number; fret: number }[]>();
+  CDX_BARS.forEach((b, i) => [...b.matchAll(NOTE_RE)].forEach((m, k) => {
+    const id = /slur (s\d+)/.exec(m[3] ?? "")?.[1];
+    if (id) byId.set(id, [...(byId.get(id) ?? []), { bar: i + 1, k, str: Number(m[2]), fret: Number(m[1]) }]);
+  }));
+  assert.equal(byId.size, 15);
+  for (const [id, [a, c, ...rest]] of byId) {
+    assert.equal(rest.length, 0, id);
+    assert.equal(a.bar, c.bar, `${id}: cùng ô`);
+    assert.equal(c.k, a.k + 1, `${id}: hai nốt liền nhau`);
+    assert.notEqual(pitchOf(a.fret, a.str), pitchOf(c.fret, c.str), `${id}: Slur phải khác cao độ (cùng cao độ là Tie)`);
+    assert.equal(a.str, c.str, `${id}: cặp Slur phải cùng dây`);
+  }
+});
+
+test("Chặng 2: lời ca cả bài parse được; số âm tiết đúng; nối nghỉ không có lời", () => {
+  const imp = new alphaTab.importer.AlphaTexImporter();
+  imp.initFromString(WORK_CDX_FULL, new alphaTab.Settings());
+  const score = imp.readScore();
+  assert.equal(score.tracks[0].staves[0].bars.length, 41);
+  const words = (WORK_CDX_FULL.match(/\\lyrics "([^"]*)"/)?.[1] ?? "").split(" ").filter(w => w !== "_");
+  assert.equal(words.length, 150, "150 âm tiết = 171 nốt − 6 nốt đích Tie − 15 nốt thứ hai của Slur");
+});
+
+test("Chặng 2: trích đoạn không bắt đầu ở nốt đích Tie (cắt ngang cung nối)", () => {
+  assert.throws(() => cdxTex(5, 8), /cắt ngang dấu nối/);
+  assert.throws(() => cdxFingered(37, 41), /cắt ngang dấu nối/);
+  assert.doesNotThrow(() => cdxTex(4, 8));
 });
