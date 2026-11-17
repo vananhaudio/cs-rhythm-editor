@@ -74,7 +74,7 @@ test("Logo chuẩn Thầy Văn Anh Guitar trên top bar (cùng cặp với trang
 test("Thầy/admin KHÔNG có hồ sơ học sinh vẫn tự đổi ảnh: cùng bucket, qua RPC chỉ-của-mình, không tạo edu_students", () => {
   const api = read("class-social/profile/profileApi.ts");
   const editor = read("class-social/profile/useProfileMediaEditor.tsx");
-  const session = read("class-social/useClassSession.ts");
+  const session = read("class-social/useClassSession.ts") + read("class-social/loadSessionCore.ts");
   // cùng bucket + quy ước tên, ghi qua RPC (app_users vẫn chỉ-đọc với client)
   assert.match(api, /upload\(avatarPath\(userId\), blob\)/);
   assert.match(api, /rpc\('class_set_my_avatar', \{ p_url: up\.value \}\)/);

@@ -6,6 +6,7 @@ import { clearInboxCache } from './chat/inboxCache'
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../supabase'
 import { fetchCover } from './profile/profileApi'
+import { displayNameOf, loadSessionWith, type StudentRow } from './loadSessionCore'
 
 export type ClassIdentity = {
   role: 'student' | 'teacher'
@@ -31,23 +32,7 @@ export type ClassSession =
   | { status: 'no-profile'; userId: string; email: string | null }   // có phiên nhưng không phải học sinh/thầy
   | { status: 'ready'; me: ClassIdentity }
 
-type StudentRow = {
-  id: string
-  full_name: string | null
-  display_name: string | null
-  email: string | null
-  avatar_url: string | null
-  level: string | null
-  enrolled_at: string | null
-  ht_member: boolean | null
-}
-
-/** Tên hiển thị: ưu tiên display_name, bỏ phần @… nếu tên là email. */
-export function displayNameOf(r: { display_name?: string | null; full_name?: string | null; email?: string | null }): string {
-  const raw = (r.display_name || r.full_name || r.email || '').trim()
-  if (!raw) return 'Học viên'
-  return raw.includes('@') ? raw.split('@')[0] : raw
-}
+export { displayNameOf }
 
 /** role + ảnh của tài khoản. Cột avatar_url chưa có (DB chưa migrate) → đọc lại chỉ role, không mất chế độ giáo viên. */
 async function fetchAppUser(userId: string): Promise<{ role: string | null; avatar_url: string | null } | null> {
@@ -57,49 +42,21 @@ async function fetchAppUser(userId: string): Promise<{ role: string | null; avat
   return data ? { role: data.role, avatar_url: null } : null
 }
 
-async function loadSession(): Promise<ClassSession> {
-  const { data: { session } } = await supabase.auth.getSession()
-  const user = session?.user
-  if (!user?.id) return { status: 'signed-out' }
-
-  const appUser = await fetchAppUser(user.id)
-  const isTeacher = appUser?.role === 'teacher' || appUser?.role === 'admin'
-  const isAdmin = appUser?.role === 'admin'
-  const coverUrl = await fetchCover(user.id)
-
-  const { data: stu } = await supabase
+async function fetchStudent(userId: string): Promise<StudentRow | null | undefined> {
+  const { data } = await supabase
     .from('edu_students')
     .select('id,full_name,display_name,email,avatar_url,level,enrolled_at,ht_member')
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .order('enrolled_at', { ascending: false, nullsFirst: false })   // user_id không unique → lấy hồ sơ mới nhất
     .limit(1)
     .maybeSingle<StudentRow>()
-  if (stu) {
-    return {
-      status: 'ready',
-      me: {
-        role: 'student', userId: user.id, studentId: stu.id,
-        name: displayNameOf(stu), email: stu.email ?? user.email ?? null,
-        avatarUrl: stu.avatar_url, level: stu.level, enrolledAt: stu.enrolled_at,
-        htMember: !!stu.ht_member, isTeacher, isAdmin, coverUrl,
-      },
-    }
-  }
-
-  if (isTeacher) {
-    // Ảnh của tài khoản không có hồ sơ học sinh = app_users.avatar_url (bậc dự phòng của class_public_identity)
-    const meta = (user.user_metadata ?? {}) as { full_name?: string }
-    return {
-      status: 'ready',
-      me: {
-        role: 'teacher', userId: user.id, studentId: null,
-        name: meta.full_name?.trim() || 'Thầy Văn Anh', email: user.email ?? null,
-        avatarUrl: appUser?.avatar_url ?? null, level: null, enrolledAt: null, htMember: false, isTeacher: true, isAdmin, coverUrl,
-      },
-    }
-  }
-  return { status: 'no-profile', userId: user.id, email: user.email ?? null }
+  return data
 }
+
+const loadSession = (): Promise<ClassSession> => loadSessionWith({
+  getUser: async () => (await supabase.auth.getSession()).data.session?.user,
+  fetchAppUser, fetchCover, fetchStudent,
+})
 
 function userIdOf(s: ClassSession): string | null {
   if (s.status === 'ready') return s.me.userId

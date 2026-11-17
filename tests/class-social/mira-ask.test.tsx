@@ -87,7 +87,7 @@ test('xem trước: rào chắn nguồn — màn chuẩn bị không có đườ
   assert.ok(!/askMira|useMiraChat|useMiraConsent|supabase|fetch\(|\.rpc\(|\.invoke\(|miraApi'.*transport/.test(prep), 'MiraPreparingView không có đường gọi mạng')
   const chat = code('src/class-social/sections/Chat.tsx')
   assert.ok(/miraPreviewVisible\(previewBuild\(\), isAdmin\)/.test(chat) && /!miraOn && miraPreview/.test(chat), 'cổng hiển thị = cờ build + admin; chế độ thật thắng')
-  assert.ok(/const isAdmin = appUser\?\.role === 'admin'/.test(code('src/class-social/useClassSession.ts')), 'admin lấy từ app_users.role')
+  assert.ok(/const isAdmin = appUser\?\.role === 'admin'/.test(code('src/class-social/useClassSession.ts') + code('src/class-social/loadSessionCore.ts')), 'admin lấy từ app_users.role')
   assert.ok(/isAdmin=\{me\.isAdmin\}/.test(code('src/class-social/ClassSocialPage.tsx')))
 })
 test('Owner V1.2: build có PREVIEW → chỉ admin mới hỏi server pilot (người khác không gọi RPC); cờ ENABLED chỉ ở production', () => {
