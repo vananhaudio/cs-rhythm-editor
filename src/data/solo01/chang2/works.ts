@@ -172,7 +172,7 @@ export const DYAD: Record<string, ChordShape> = {
   E7: { code: 'xx67xx', tex: '6.4 7.3', notes: ['Sol♯', 'Rê'], kind: 'Dyad · 3rd + 7th' },
   F: { code: 'xx32xx', tex: '3.4 2.3', notes: ['Fa', 'La'], kind: 'Dyad · Root + 3rd' },
   G: { code: 'xx54xx', tex: '5.4 4.3', notes: ['Sol', 'Si'], kind: 'Dyad · Root + 3rd' },
-  C: { code: 'xx25xx', tex: '2.4 5.3', notes: ['Mi', 'Đô'], kind: 'Dyad · 3rd + Root (giãn ngón 1–4)' },
+  C: { code: 'xxx55x', tex: '5.3 5.2', notes: ['Đô', 'Mi'], kind: 'Dyad · Root + 3rd (cùng ngăn 5, ngón 1 bấm ngang)' },
 }
 /** Bass trên dây 6–5: nốt gốc và nốt đổi (quãng 5). Dm dùng Rê dây 5 ngăn 5 để NHƯỜNG dây 4 cho hợp âm. */
 export const BASS: Record<string, { root: string; fifth: string }> = {
