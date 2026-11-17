@@ -25,6 +25,8 @@
     "test:nhipphach-ui": "tsc -p tests/nhipphach-ui/tsconfig.json && node --experimental-strip-types --test tests/nhipphach-ui/ui.test.ts",
     "test:nhipphach-history": "tsc -p tests/nhipphach-history/tsconfig.json && node --experimental-strip-types --test tests/nhipphach-history/history.test.ts",
     "test:nhipphach-cloud": "tsc -p tests/nhipphach-cloud/tsconfig.json && node --experimental-strip-types --test tests/nhipphach-cloud/cloud.test.ts",
+    "test:chunk-recovery": "tsc -p tests/chunk-recovery/tsconfig.json && node --experimental-strip-types --test tests/chunk-recovery/chunkRecovery.test.ts",
+    "test:chunk-recovery:e2e": "node tests/chunk-recovery/e2e/run.mjs",
     "test:admin-nav": "tsc -p tests/admin-nav/tsconfig.json && node --experimental-strip-types --test tests/admin-nav/adminNav.test.ts",
     "test:e2e-students-guard": "node tests/e2e-students-guard/run.mjs",
     "test:admin-ai-schedule": "tsc -p tests/admin-ai-schedule/tsconfig.json && TZ=Asia/Ho_Chi_Minh node --experimental-strip-types --test tests/admin-ai-schedule/schedule.test.ts",
