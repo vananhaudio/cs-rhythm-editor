@@ -9,6 +9,7 @@ import {
 } from './inboxModel'
 import { POLL_MS, startPolling } from './polling'
 import { loadInboxHead } from './inboxLoad'
+import { getInboxCache, putInboxCache } from './inboxCache'
 
 export type InboxState = {
   status: 'loading' | 'ready' | 'error'
@@ -27,10 +28,14 @@ export type InboxState = {
 }
 const INITIAL: InboxState = { status: 'loading', error: null, pinned: [], items: [], hasMore: false, loadingMore: false, loadedKey: '', loadMoreError: null, summary: null, mode: 'server' }
 
-export function useInbox(source: InboxSource = defaultInboxSource, opts: { scope?: InboxScope; pageSize?: number; kind?: InboxKind } = {}) {
+export function useInbox(source: InboxSource = defaultInboxSource, opts: { scope?: InboxScope; pageSize?: number; kind?: InboxKind; /** id người dùng — bật bộ nhớ đệm mở-lần-sau (không có = không cache) */ cacheUser?: string } = {}) {
   const scope: InboxScope = opts.scope ?? 'mine'
   const pageSize = opts.pageSize ?? INBOX_PAGE
-  const [state, setState] = useState<InboxState>(INITIAL)
+  const [state, setState] = useState<InboxState>(() => {
+    const k = `${scope}|${opts.kind ?? 'all'}|false|`
+    const c = source.mode() === 'server' ? getInboxCache(opts.cacheUser, k) : null
+    return c ? { ...INITIAL, ...c, status: 'ready', loadedKey: k, mode: 'server' } : INITIAL
+  })
   const [kind, setKindState] = useState<InboxKind>(opts.kind ?? 'all')
   const [unreadOnly, setUnreadOnly] = useState(false)
   const [rawQuery, setRawQuery] = useState('')
@@ -52,6 +57,13 @@ export function useInbox(source: InboxSource = defaultInboxSource, opts: { scope
   const filter: InboxFilter = useMemo(() => ({ kind, unreadOnly, query }), [kind, unreadOnly, query])
   const searching = query !== ''
   const filterKey = `${scope}|${kind}|${unreadOnly}|${query}`
+
+  // ghi đệm mỗi khi dữ liệu của bộ lọc hiện tại đã sẵn sàng (lần sau mở Chat hiện ngay)
+  useEffect(() => {
+    if (state.status === 'ready' && state.loadedKey === filterKey && source.mode() === 'server')
+      putInboxCache(opts.cacheUser, filterKey, { pinned: state.pinned, items: state.items, hasMore: state.hasMore, summary: state.summary })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state, filterKey, opts.cacheUser])
 
   useEffect(() => {
     let alive = true
