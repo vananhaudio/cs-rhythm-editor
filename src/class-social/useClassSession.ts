@@ -2,7 +2,7 @@
 // Dùng CHUNG client `supabase` (cookie .vananhaudio.com) với App học → không đăng nhập lại.
 // Cùng cách nhận diện như StudentOnboarding (edu_students theo user_id; không có hồ sơ
 // học sinh mà là thầy/admin → chế độ giáo viên). CHỈ ĐỌC — không ghi gì.
-import { clearInboxCache } from './chat/inboxCache'
+import { clearSwr, setSwrOwner } from './swr/swrCache'
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../supabase'
 import { fetchCover } from './profile/profileApi'
@@ -77,6 +77,7 @@ export function useClassSession(): ClassSession {
         .then(s => {
           if (!alive || mine !== seq) return
           loadedUser.current = userIdOf(s)
+          setSwrOwner(userIdOf(s))   // bộ đệm SWR chỉ thuộc về tài khoản của phiên này
           setState(s)
         })
     }
@@ -86,7 +87,8 @@ export function useClassSession(): ClassSession {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!alive) return
       if (event === 'SIGNED_OUT') {
-        clearInboxCache()   // không để lại danh sách trò chuyện của người vừa đăng xuất
+        clearSwr()   // không để lại danh sách trò chuyện / dữ liệu lớp của người vừa đăng xuất
+        setSwrOwner(null)
         seq++
         loadedUser.current = null
         setState({ status: 'signed-out' })
@@ -94,6 +96,7 @@ export function useClassSession(): ClassSession {
       }
       if (event === 'SIGNED_IN' && session?.user?.id && session.user.id !== loadedUser.current) {
         loadedUser.current = session.user.id
+        clearSwr(); setSwrOwner(null)   // đổi tài khoản: bỏ đệm của người trước ngay lập tức
         setState({ status: 'loading' })
         // KHÔNG gọi supabase bên trong callback (supabase-js có thể treo) → dời sang lượt sau
         setTimeout(load, 0)

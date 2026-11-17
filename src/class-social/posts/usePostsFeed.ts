@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Result } from './postsApi'
 import { entryKey, mergePosts, type FeedEntry } from './postModel'
+import { dropSwr, peekSwr, putSwr } from '../swr/swrCache'
 
 export type FeedState =
   | { status: 'loading' }
@@ -19,15 +20,26 @@ function firstPageState(r: Result<{ posts: FeedEntry[]; hasMore: boolean }>): Fe
 export type PageFetcher = (cursor?: { createdAt: string; id: string; key: string }) => Promise<Result<{ posts: FeedEntry[]; hasMore: boolean }>>
 
 /** fetchPage phải ỔN ĐỊNH (useCallback) — đổi fetchPage (vd. sang tường người khác) = tải lại từ đầu. */
-export function usePostsFeed(fetchPage: PageFetcher) {
-  const [state, setState] = useState<FeedState>({ status: 'loading' })
+export function usePostsFeed(fetchPage: PageFetcher, cacheKey?: string) {
+  // cacheKey (tuỳ chọn): trang đầu đã tải một lần → lần sau hiện NGAY, server làm mới ở nền (SWR). Lỗi → bỏ đệm + báo lỗi.
+  const seedOf = (): FeedState => {
+    const c = cacheKey ? peekSwr<{ posts: FeedEntry[]; hasMore: boolean }>(cacheKey) : undefined
+    return c ? { status: 'ready', posts: c.posts, hasMore: c.hasMore, loadingMore: false, moreError: null } : { status: 'loading' }
+  }
+  const remember = (r: Result<{ posts: FeedEntry[]; hasMore: boolean }>) => {
+    if (!cacheKey) return
+    if (r.ok) putSwr(cacheKey, { posts: r.value.posts, hasMore: r.value.hasMore })
+    else if (typeof navigator === 'undefined' || navigator.onLine !== false) dropSwr(cacheKey)   // offline: giữ đệm đang hiện
+  }
+  const [state, setState] = useState<FeedState>(seedOf)
   const req = useRef(0)   // bỏ kết quả của lần tải cũ khi đã có lần tải mới
 
   const reload = useCallback(async (opts?: { quiet?: boolean }) => {
     const id = ++req.current
     if (!opts?.quiet) setState({ status: 'loading' })
     const r = await fetchPage()
-    if (id === req.current) setState(firstPageState(r))
+    if (id === req.current) { remember(r); setState(firstPageState(r)) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchPage])
 
   const loadMore = useCallback(async () => {
@@ -47,11 +59,12 @@ export function usePostsFeed(fetchPage: PageFetcher) {
   const [source, setSource] = useState(() => fetchPage)
   if (source !== fetchPage) {   // đổi tường: về trạng thái đang tải ngay trong lượt render
     setSource(() => fetchPage)
-    setState({ status: 'loading' })
+    setState(seedOf())
   }
   useEffect(() => {
     const id = ++req.current
-    void fetchPage().then(r => { if (id === req.current) setState(firstPageState(r)) })
+    void fetchPage().then(r => { if (id === req.current) { remember(r); setState(s0 => (!r.ok && s0.status === 'ready' && typeof navigator !== 'undefined' && navigator.onLine === false) ? s0 : firstPageState(r)) } })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchPage])
 
   return { state, reload, loadMore }

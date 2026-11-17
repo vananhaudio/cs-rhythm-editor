@@ -3,6 +3,7 @@
 // vị trí âm nhạc và vai trò vận hành đều đến từ dữ liệu Band (band_admin_overview) — không có gì riêng một Band.
 // CSS (band.css) nạp ở container ClassSocialPage.
 import { useCallback, useEffect, useState } from 'react'
+import { dropSwr, peekSwr, putSwr } from '../class-social/swr/swrCache'
 import { ArrowLeft, ExternalLink, Phone, Plus, UserPlus, Users, X } from 'lucide-react'
 import { EmptyState } from '../class-social/ui'
 import EntityImageField from '../EntityImageField'
@@ -320,16 +321,24 @@ export function OrgView({ o, onSetRole, onOpenMembers }: {
 
 // ── Trang ────────────────────────────────────────────────────────────────────
 export default function BandManagePage({ slug, onBack }: { slug: string; onBack: () => void }) {
-  const [ov, setOv] = useState<Load<BandOverview>>({ status: 'loading' })
-  const [apps, setApps] = useState<Load<AdminBandDetail>>({ status: 'loading' })
+  // Mở lại một Band đã xem → hiện ngay từ bộ đệm SWR; mọi lần mở và sau mỗi thao tác ghi vẫn nạp lại từ server
+  const seedOf = <T,>(k: string): Load<T> => { const c = peekSwr<T>(k); return c !== undefined ? { status: 'ready', value: c } : { status: 'loading' } }
+  const [ov, setOv] = useState<Load<BandOverview>>(() => seedOf(`band:${slug}:overview`))
+  const [apps, setApps] = useState<Load<AdminBandDetail>>(() => seedOf(`band:${slug}:apps`))
   const [tab, setTab] = useState<BandTab>('applications')
   const [filter, setFilter] = useState<ApplicationStatus | 'ALL'>('ALL')
   const [busyId, setBusyId] = useState<string | null>(null)
   const [confirmId, setConfirmId] = useState<string | null>(null)
   const [err, setErr] = useState<{ id: string; text: string } | null>(null)
 
-  const loadOverview = useCallback(() => fetchBandOverview(slug).then(r => setOv(r.ok ? { status: 'ready', value: r.value } : { status: 'error', message: r.message })), [slug])
-  const loadApps = useCallback(() => fetchAdminBandDetail(slug).then(r => setApps(r.ok ? { status: 'ready', value: r.value } : { status: 'error', message: r.message })), [slug])
+  const loadOverview = useCallback(() => fetchBandOverview(slug).then(r => {
+    if (r.ok) putSwr(`band:${slug}:overview`, r.value); else dropSwr(`band:${slug}:overview`)
+    setOv(r.ok ? { status: 'ready', value: r.value } : { status: 'error', message: r.message })
+  }), [slug])
+  const loadApps = useCallback(() => fetchAdminBandDetail(slug).then(r => {
+    if (r.ok) putSwr(`band:${slug}:apps`, r.value); else dropSwr(`band:${slug}:apps`)
+    setApps(r.ok ? { status: 'ready', value: r.value } : { status: 'error', message: r.message })
+  }), [slug])
   useEffect(() => { void loadOverview(); void loadApps() }, [loadOverview, loadApps])
   useEffect(() => { if (ov.status === 'ready') document.title = `${ov.value.band.name} · Quản lý Band` }, [ov])
 
