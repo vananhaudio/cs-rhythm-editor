@@ -67,7 +67,7 @@ export default function Chat({ meId, selection, onOpenConversation, onBackToList
   const isMira = selection.kind === 'conversation' && selection.id === MIRA_CONVERSATION_ID
   const openClass = onOpenClass ?? ((id: string) => window.location.assign(classPath(id)))
   useEffect(() => { prefetchClassDisplay() }, [])   // logo/lịch lớp tải SONG SONG với danh sách (không nối đuôi sau RPC)
-  const inbox = useInbox(source)
+  const inbox = useInbox(source, { cacheUser: meId })
   const sound = useNoticeSound()
   const { reload } = inbox
   const [hint, setHint] = useState<(Peer & { conversationId: string }) | null>(null)

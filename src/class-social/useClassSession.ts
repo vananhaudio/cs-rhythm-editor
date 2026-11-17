@@ -2,6 +2,7 @@
 // Dùng CHUNG client `supabase` (cookie .vananhaudio.com) với App học → không đăng nhập lại.
 // Cùng cách nhận diện như StudentOnboarding (edu_students theo user_id; không có hồ sơ
 // học sinh mà là thầy/admin → chế độ giáo viên). CHỈ ĐỌC — không ghi gì.
+import { clearInboxCache } from './chat/inboxCache'
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../supabase'
 import { fetchCover } from './profile/profileApi'
@@ -128,6 +129,7 @@ export function useClassSession(): ClassSession {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!alive) return
       if (event === 'SIGNED_OUT') {
+        clearInboxCache()   // không để lại danh sách trò chuyện của người vừa đăng xuất
         seq++
         loadedUser.current = null
         setState({ status: 'signed-out' })
