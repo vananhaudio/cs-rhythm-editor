@@ -1,5 +1,6 @@
 // ── SOLO-01 · CHẶNG 2 · BUỔI 7/8 — hệ thống đánh số là BUỔI 15 ──
 // Chủ đề: Tự dựng bài Solo Bolero — vận dụng quy trình đã học để tự xây dựng bản Solo.
+// Bản phối nâng MỘT QUÃNG 8: melody ở dây 1–2 ngăn cao, Bass dây 6–5, hợp âm Triad/Dyad ngăn cao dây 4–2.
 // Học viên TỰ dựng một đoạn của Con Đường Xưa em Đi (gợi ý ô 2–8 hoặc ô 34–41) bằng quy trình 6 bước của Chặng 2.
 // Giáo án KHÔNG đưa bản dựng mẫu: Buổi này là buổi học viên làm, giáo viên chấm. Chỉ có melody (nguồn) và bảng dựng trống.
 import type { LessonDoc } from '../../../lesson/lessonTypes'
@@ -49,10 +50,10 @@ export const SOLO01_BUOI15: LessonDoc = {
       blocks: [
         { b: 'ol', items: [
           'MELODY: đàn đúng cao độ, trường độ đoạn đã chọn; chọn 1–2 chỗ thêm kỹ thuật (Hammer-on, Pull-off, Slide, Vibrato…).',
-          'BASS: ghi nốt thấp nhất của melody mỗi ô; chọn Bass thuộc hợp âm và THẤP HƠN nó; đổi sang quãng 5/3 khi gốc trùng hoặc cao hơn.',
-          'XẾP NGÓN: chọn vị trí và ngón tay trái cho melody; để ý Guide Finger và nhìn trước.',
-          'HỢP ÂM BẤM TẮT: chọn thế rút gọn cho từng hợp âm; ghi ký hiệu sáu ký tự dây 6 → 1.',
-          'CHÈN THEO MÔ HÌNH BOLERO: tìm nốt dài / phách nghỉ của melody; đặt Bass – hợp âm – Bass đổi – hợp âm ở chỗ trống; chỗ đầy thì chỉ để Bass.',
+          'BASS: ghi nốt thấp nhất của melody mỗi ô; chọn Bass thuộc hợp âm, ở dây 6–5 và THẤP HƠN nó; đổi sang quãng 5/3 khi gốc trùng hoặc cao hơn.',
+          'XẾP NGÓN: chọn vị trí (I, III, V, VII, IX…) và ngón tay trái cho melody; để ý Guide Finger, chỗ đổi vị trí và nhìn trước.',
+          'HỢP ÂM BẤM TẮT: chọn thế rút gọn ở ngăn cao (Triad 3 nốt hoặc Dyad 2 nốt) cho từng hợp âm; ghi ký hiệu sáu ký tự dây 6 → 1.',
+          'CHÈN THEO MÔ HÌNH BOLERO: tìm nốt dài / phách nghỉ của melody; đặt Bass – hợp âm – Bass đổi – hợp âm ở chỗ trống (hợp âm luôn dưới melody); chỗ đầy thì chỉ để Bass.',
           'GHÉP VÀ KIỂM: đàn từng tầng, rồi ghép; nghe melody có còn là nốt cao nhất; sửa; đàn trọn đoạn.',
         ] },
         { b: 'callout', label: 'NHẮC LẠI', text: 'Đây là quy trình của Chặng 2, không phải luật cho mọi bản nhạc. Cùng một đoạn, mỗi người sẽ ra một bản dựng khác — Thầy chấm bạn nói được vì sao, không chấm bạn giống Thầy.' },
@@ -88,14 +89,14 @@ export const SOLO01_BUOI15: LessonDoc = {
       status: 'ready',
       pieces: [
         {
-          title: 'Đoạn A — ô 2–8 (melody nguyên văn, ngón mặc định)',
+          title: 'Đoạn A — ô 2–8 (melody nâng quãng 8, ngón mặc định)',
           composer: 'Châu Kỳ & Hồ Đình Phương · giọng Am',
-          note: 'Hợp âm theo MusicXML: Am · Dm · Am · (Am) · Dm · Am · E. Đã dùng bảng Bass ở Buổi 2.',
+          note: 'Hợp âm theo MusicXML: Am · Dm · Am · (Am) · Dm · Am · E. Melody là bản nâng một quãng 8 (dây 1–2). Dùng bảng Bass ở Buổi 2 và bảng thế ở Buổi 4.',
           barsPerRow: 2,
           tex: cdxFingered(2, 8),
         },
         {
-          title: 'Đoạn B — ô 34–41 (melody nguyên văn, ngón mặc định)',
+          title: 'Đoạn B — ô 34–41 (melody nâng quãng 8, ngón mặc định)',
           composer: 'Châu Kỳ & Hồ Đình Phương · giọng Am',
           note: 'Hợp âm theo MusicXML: Am · Dm · Am · (Am) · Dm · E · Am · (Am). Đoạn kết hát lại câu tên bài; nốt cuối là La dài.',
           barsPerRow: 2,
@@ -147,7 +148,7 @@ export const SOLO01_BUOI15: LessonDoc = {
       kind: 'checkpoint',
       id: '15.3',
       title: 'Bài trả 15.3 — Bản dựng của tôi',
-      prompt: 'Chơi trọn đoạn (ô 2–8 hoặc ô 34–41) do bạn tự dựng bằng sáu bước. Trong phần chữ: dán bảng dựng (ô, hợp âm, Bass, thế hợp âm sáu ký tự dây 6 → 1, chỗ chèn, kỹ thuật) và viết ‘Lựa chọn tôi tâm đắc nhất là … vì…’. Tiêu chí Đạt: (1) melody đúng cao độ, trường độ; (2) Bass thuộc hợp âm và dưới melody; (3) hợp âm chèn đúng chỗ, melody vẫn rõ; (4) bảng dựng đầy đủ, ký hiệu đúng quy ước; (5) lý do dựa vào nguyên tắc đã học.',
+      prompt: 'Chơi trọn đoạn (ô 2–8 hoặc ô 34–41) do bạn tự dựng bằng sáu bước. Trong phần chữ: dán bảng dựng (ô, hợp âm, Bass, thế hợp âm sáu ký tự dây 6 → 1, chỗ chèn, kỹ thuật) và viết ‘Lựa chọn tôi tâm đắc nhất là … vì…’. Tiêu chí Đạt: (1) melody đúng cao độ, trường độ; (2) Bass thuộc hợp âm, ở dây 6–5 và dưới melody; (3) hợp âm chèn đúng chỗ, melody vẫn rõ; (4) bảng dựng đầy đủ, ký hiệu đúng quy ước; (5) lý do dựa vào nguyên tắc đã học.',
       required: true,
       accepts: ['video_link', 'text'],
     },
@@ -188,7 +189,7 @@ export const SOLO01_BUOI15: LessonDoc = {
       items: [
         'Tôi chạy đủ sáu bước cho đoạn của mình.',
         'Tôi có bảng dựng ghi đủ lựa chọn.',
-        'Bass của tôi thuộc hợp âm và nằm dưới melody.',
+        'Bass của tôi thuộc hợp âm, ở dây 6–5 và nằm dưới melody.',
         'Melody vẫn là nốt cao nhất và rõ nhất.',
         '⭐ Tôi nói được vì sao mình chọn từng thứ.',
       ],
