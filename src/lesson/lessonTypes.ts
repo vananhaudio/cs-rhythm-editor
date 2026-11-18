@@ -167,6 +167,7 @@ export type StudyBlock =
   | { b: 'table'; rows: string[][] }                 // hàng đầu = tiêu đề cột
   | { b: 'callout'; label: string; text: string }   // hộp nhấn (MỤC TIÊU, LỖI DỄ MẮC…)
   | { b: 'write'; label?: string; lines: number }   // chỗ trống để viết
+  | { b: 'download'; title: string; note?: string; label: string; href: string }  // tệp PDF tải về (href tuyệt đối https)
 
 export interface LessonDoc {
   meta: LessonMeta

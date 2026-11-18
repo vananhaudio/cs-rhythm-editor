@@ -351,6 +351,14 @@ function renderStudyBlock(bl: StudyBlock, j: number, si: number) {
     case 'ol': return <ol key={j} className="lsn-st-list">{bl.items.map((t, k) => <li key={k}><T si={si} path={['blocks', j, 'items', k]} text={t} /></li>)}</ol>
     case 'callout':
       return <div key={j} className="lsn-st-callout"><strong>{bl.label}</strong><p><T si={si} path={['blocks', j, 'text']} text={bl.text} /></p></div>
+    case 'download':
+      return (
+        <div key={j} className="lsn-st-download">
+          <strong>{bl.title}</strong>
+          {bl.note && <p>{bl.note}</p>}
+          {/^https:\/\//.test(bl.href) && <a className="lsn-st-dlbtn" href={bl.href} target="_blank" rel="noopener noreferrer" download>{bl.label}</a>}
+        </div>
+      )
     case 'write':
       return (
         <div key={j} className="lsn-st-write">
@@ -568,6 +576,11 @@ const CSS = `
 .lsn-st-p{margin:0 0 10px;font-size:15px;color:${P.inkSoft};white-space:pre-line;}
 .lsn-st-list{margin:0 0 12px;padding-left:22px;font-size:15px;color:${P.inkSoft};}
 .lsn-st-list li{margin:3px 0;}
+.lsn-st-download{margin:12px 0;padding:12px 14px;border-radius:12px;border:1.5px solid ${P.purple};break-inside:avoid;}
+.lsn-st-download strong{display:block;font-size:15px;color:${P.ink};}
+.lsn-st-download p{margin:4px 0 8px;font-size:14px;color:${P.ink};}
+.lsn-st-dlbtn{display:inline-block;padding:9px 16px;border-radius:10px;background:${P.purple};color:#fff;font-weight:700;font-size:14px;text-decoration:none;}
+.is-printing .lsn-st-dlbtn{display:none;}
 .lsn-st-callout{margin:12px 0;padding:12px 14px;border-radius:12px;background:${P.purpleTint};border-left:4px solid ${P.purple};}
 .lsn-st-callout strong{display:block;font-size:12.5px;letter-spacing:.07em;color:${P.purple};margin-bottom:3px;}
 .lsn-st-callout p{margin:0;font-size:15px;color:${P.ink};white-space:pre-line;}
