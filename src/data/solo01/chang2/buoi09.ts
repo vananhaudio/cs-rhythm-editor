@@ -6,6 +6,7 @@
 // ⚠️ BẢN NHÁP. Mọi chỗ "gợi ý" là LỰA CHỌN PHỐI KHÍ, không phải quy luật — Owner rà soát trước khi xuất bản.
 import type { LessonDoc } from '../../../lesson/lessonTypes'
 import { CDX_BARS, cdxFingered } from './works'
+import { CDX_PDF_URL } from './assets/con-duong-xua-em-di'
 
 const swap = (s: string, a: string, b: string): string => {
   if (!s.includes(a)) throw new Error(`swap: không thấy "${a}"`)
@@ -268,6 +269,7 @@ export const SOLO01_BUOI09: LessonDoc = {
           'Nên đàn nốt đích thật (ở ngăn khác) để tai nhớ cao độ trước khi tay đẩy dây.',
         ] },
         { b: 'callout', label: 'CẦN OWNER XEM LẠI', text: 'Bản nhạc chuẩn có cung nối (Tie) và cung luyến (Slur) nhưng không ghi kỹ thuật (Hammer-on, Pull-off, trượt, rung, bend). Mọi chỗ gắn kỹ thuật trong buổi này (ô 7, 8, 9, 18) là gợi ý của giáo án, chưa phải bản phối đã xác nhận; ở ô 7 và 9 gợi ý thay cho cung luyến của bản chuẩn.' },
+        { b: 'download', title: 'Bản nhạc thực hành – Con Đường Xưa Em Đi (PDF A4)', note: 'In ra và tự ghi thêm Bass, hợp âm, kỹ thuật diễn tấu bằng bút chì. Bản chuẩn có lời ca, Tie/Slur và TAB (v5-2026-11-17).', label: 'Tải bản nhạc PDF', href: CDX_PDF_URL },
       ],
     },
     {

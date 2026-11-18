@@ -7,6 +7,9 @@
 // Cao độ ở dạng NGUYÊN BẢN (chưa nâng quãng 8). Bản dạy = nâng đúng 12 bán cung + cặp Slur cùng dây (works.ts).
 // Quy ước alphaTex: {t} = Tie ở NỐT ĐÍCH (cùng cao độ, không gảy lại) · {slur sN} = cung luyến Slur, hai nốt khác cao độ, id duy nhất.
 export const CDX_ASSET_VERSION = "v5-2026-11-17"
+/** PDF A4 chuẩn (3 trang) — MỘT tệp dùng chung mọi buổi; bucket public `lessons` của Class. */
+export const CDX_PDF_URL = "https://wojmdilyflffvdtpovmq.supabase.co/storage/v1/object/public/lessons/solo01/chang2/con-duong-xua-em-di_v5-co-loi.pdf"
+export const CDX_PDF_SHA256 = "489a51a0c3fbc3e466afb649d34781b0ef65f4380d681aba3b15dd8b116f2e4c"
 /** SHA-256 của 41 ô bản dạy (đã nâng 8ve, nối bằng \n) — test so khớp để chặn sửa lệch nguồn. */
 export const CDX_ASSET_DERIVED_SHA256 = "6703b8fd1f89d45ee63c954b46c142ca962f0ff094309e1e67447d4e4f2b7df2"
 
