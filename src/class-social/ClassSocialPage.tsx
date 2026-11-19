@@ -25,6 +25,7 @@ import { useFriendRequests } from './friends/useFriendRequests'
 import { useChatUnread } from './chat/useChat'
 import type { ChatSelection } from './chat/chatModel'
 import ThreadPage from '../learning-thread/ThreadPage'
+import { MIRA_CONVERSATION_ID } from './chat/miraApi'
 import MiraDock from '../mira-grading/MiraDock'
 import TeacherQueue from '../learning-thread/TeacherQueue'
 import { useSocialClasses } from './classes/useSocialClasses'
@@ -266,7 +267,7 @@ function SignedInShell({ base, view, onSection, onOpenProfile, onOpenThread, onO
       {section === 'home' && <MeHome key={visit} me={me} identityRev={identityRev} canEditAvatar={editor.canEditAvatar} onEditMedia={editor.pick}
         onOpenProfile={onOpenProfile} requests={requests} onSeeAllRequests={() => onSection('friends')}
         onOpenThread={onOpenThread} onOpenQueue={onOpenQueue} classes={classes} onOpenClass={onOpenClass}
-        onJoinedClass={() => { classes.reload(); refreshLearningIdentity(me.userId) }} onOpenBands={onOpenBands} onOpenBroadcast={me.isAdmin ? onOpenBroadcast : undefined} />}
+        onJoinedClass={() => { classes.reload(); refreshLearningIdentity(me.userId) }} onOpenBands={onOpenBands} onOpenBroadcast={me.isAdmin ? onOpenBroadcast : undefined} onOpenMira={() => onOpenConversation(MIRA_CONVERSATION_ID)} />}
       {section === 'friends' && <Friends requests={requests} onOpenProfile={onOpenProfile} onMessage={onOpenChatWith} />}
       {section === 'chat' && <Chat meId={me.userId} selection={chatSelection} onOpenConversation={onOpenConversation}
         soundToggle={chatUnread.system != null} onOpenClass={onOpenClass} isAdmin={me.isAdmin}

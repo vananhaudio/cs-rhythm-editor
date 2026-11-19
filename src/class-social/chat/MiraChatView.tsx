@@ -7,6 +7,8 @@ import Composer from './Composer'
 import { MIRA_NAME, type MiraAction } from './miraApi'
 import MiraInfo from './MiraInfo'
 import MiraGreeting from './MiraGreeting'
+import MiraInvitationBanner from './MiraInvitationBanner'
+import MiraProactiveToggle from './MiraProactiveToggle'
 import { useMiraChat } from './useMiraChat'
 import { useMiraConsent } from './useMiraConsent'
 
@@ -29,6 +31,7 @@ export default function MiraChatView({ onBack, onOpenClass }: { onBack: () => vo
       <div className="cs-chat-scroll-wrap">
         <div ref={box} className="cs-chat-scroll" role="log" aria-live="polite" aria-label="Trò chuyện với Mira">
           <MiraGreeting />
+          <MiraInvitationBanner mode="pending" onStart={chat.seed} />
           {chat.messages.map(m => (
             <div key={m.id}>
               <div className={'cs-msg-row ' + (m.role === 'user' ? 'is-mine' : 'is-theirs')}>
@@ -44,6 +47,7 @@ export default function MiraChatView({ onBack, onOpenClass }: { onBack: () => vo
           {chat.busy && <div className="cs-msg-row is-theirs"><div className="cs-msg-bubble is-pending" role="status">Mira đang soạn…</div></div>}
         </div>
       </div>
+      <MiraProactiveToggle />
       <Composer onSend={chat.send} placeholder="Hỏi Mira về bài học, luyện tập…" label="Tin nhắn gửi Mira" />
     </>
   )

@@ -1,6 +1,7 @@
 // Trạng thái phiên "Hỏi Mira": CHỈ trong RAM (React state). Không localStorage/sessionStorage/IndexedDB, không DB. Đóng/rời màn là mất.
 // Gửi kèm tối đa 6 lượt gần nhất; ctx_fp (dấu vân tay dữ liệu) để server bỏ lượt cũ của Mira khi dữ liệu đã đổi (vd. fact bị thu hồi).
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { takeInviteHandoff } from './miraInviteApi'
 import { askMira, MIRA_MAX_CHARS, type MiraAction, type MiraTurn } from './miraApi'
 
 export interface MiraMessage { id: number; role: 'user' | 'assistant'; text: string; kind?: 'error' | 'notice'; actions?: MiraAction[] }
@@ -59,6 +60,12 @@ export function useMiraChat({ onConsentRequired }: { onConsentRequired?: () => v
     }
     return true
   }, [onConsentRequired])
+  /** Lời mời của Mira đã mở: hiện làm câu mở đầu của Mira và nối hội thoại đã lưu (Owner thấy cùng một hội thoại) */
+  const seed = useCallback((r: { text: string; conversationId: string | null }) => {
+    setMessages(xs => [...xs, { id: ++seq.current, role: 'assistant' as const, text: r.text }].slice(-KEEP))
+    if (r.conversationId) conv.current = r.conversationId
+  }, [])
+  useEffect(() => { const h = takeInviteHandoff(); if (h) seed(h) }, [seed])   // mở từ thẻ ở /me: lời mời chuyển sang khung chat một lần
   const clear = useCallback(() => { setMessages([]); hist.current = []; fp.current = ''; conv.current = undefined }, [])
-  return { messages, busy, send, clear }
+  return { messages, busy, send, clear, seed }
 }
