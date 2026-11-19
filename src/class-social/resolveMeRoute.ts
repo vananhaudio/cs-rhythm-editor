@@ -72,6 +72,8 @@ export function profileUserIdFromPath(pathname: string): string | null {
 // Quyền xem do server quyết định (RPC lt_detail / lt_teacher_queue) — route chỉ nhận UUID hợp lệ.
 export const THREAD_PREFIX = '/me/t/'
 export const QUEUE_PATH = '/me/queue'
+/** Hội thoại học viên ↔ Mira — CHỈ Owner (quyền do RPC mira_owner_* quyết; route chỉ là đường vào). */
+export const MIRA_OWNER_PATH = '/me/mira-owner'
 
 export function threadPath(threadId: string): string {
   return THREAD_PREFIX + threadId
@@ -199,6 +201,7 @@ export type MeView =
   | { kind: 'profile'; userId: string }
   | { kind: 'thread'; threadId: string; focus?: 'ket-qua' | 'bai-moi' }   // focus: chỉ Mobile (không có URL); Web đọc ?focus= từ URL
   | { kind: 'queue' }
+  | { kind: 'miraOwner' }
   | { kind: 'classes' }
   | { kind: 'class'; classId: string }
   | { kind: 'session'; classId: string; sessionNo: number }
@@ -237,6 +240,7 @@ export function viewFromPath(pathname: string): MeView {
   if (p === BANDS_PATH) return { kind: 'bands' }
   if (p === BROADCAST_PATH) return { kind: 'broadcast' }
   if (p === QUEUE_PATH) return { kind: 'queue' }
+  if (p === MIRA_OWNER_PATH) return { kind: 'miraOwner' }
   if (p === CLASSES_PATH) return { kind: 'classes' }
   return { kind: 'section', section: sectionFromPath(pathname) }
 }
@@ -250,6 +254,7 @@ export function sameView(a: MeView, b: MeView): boolean {
     case 'classSpace': return b.kind === 'classSpace' && a.classId === b.classId
     case 'classMembers': return b.kind === 'classMembers' && a.classId === b.classId
     case 'queue': return b.kind === 'queue'
+    case 'miraOwner': return b.kind === 'miraOwner'
     case 'classes': return b.kind === 'classes'
     case 'bands': return b.kind === 'bands'
     case 'broadcast': return b.kind === 'broadcast'
@@ -271,6 +276,7 @@ export function viewPath(view: MeView): string {
     case 'classSpace': return classSpacePath(view.classId)
     case 'classMembers': return classMembersPath(view.classId)
     case 'queue': return QUEUE_PATH
+    case 'miraOwner': return MIRA_OWNER_PATH
     case 'classes': return CLASSES_PATH
     case 'bands': return BANDS_PATH
     case 'broadcast': return BROADCAST_PATH
@@ -292,7 +298,7 @@ export function canonicalView(view: MeView): MeView {
 export function keepsPathForGuest(view: MeView): boolean {
   return view.kind === 'thread' || view.kind === 'class' || view.kind === 'classes' || view.kind === 'session'
     || view.kind === 'classSpace' || view.kind === 'classMembers'
-    || view.kind === 'bands' || view.kind === 'bandAdmin' || view.kind === 'broadcast'
+    || view.kind === 'bands' || view.kind === 'bandAdmin' || view.kind === 'broadcast' || view.kind === 'miraOwner'
 }
 
 export function resolveMeRoute(input: {

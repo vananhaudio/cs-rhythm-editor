@@ -1,4 +1,4 @@
-// "Hỏi Mira" — gọi Edge Function mira-student-chat bằng JWT của chính học viên (supabase-js tự gắn). Mira CHỈ ĐỌC, không lưu lịch sử.
+// "Hỏi Mira" — gọi Edge Function mira-student-chat bằng JWT của chính học viên (supabase-js tự gắn). Mira CHỈ ĐỌC dữ liệu học tập; V2: hội thoại được server lưu cho Owner khi học viên đã đồng ý (client chỉ giữ conversation_id).
 // Cờ build VITE_MIRA_STUDENT_ENABLED=1 mới có mục Mira; mặc định TẮT (không gọi mạng, không hiện gì). Pilot do server quyết (mira_student_pilot_enabled).
 import { useEffect, useState } from 'react'
 
@@ -28,6 +28,8 @@ export interface MiraReply {
   reply: string
   actions: MiraAction[]
   ctxFp: string
+  /** Hội thoại đã lưu cho Owner (chỉ có khi học viên đã đồng ý thông báo có lưu hội thoại). */
+  conversationId?: string
 }
 export interface MiraTurn { role: 'user' | 'assistant'; text: string }
 
@@ -39,11 +41,11 @@ export async function fetchMiraPilot(): Promise<boolean> {
   } catch { return false }
 }
 
-export async function askMira(args: { message: string; history: MiraTurn[]; historyFp: string }): Promise<MiraReply> {
+export async function askMira(args: { message: string; history: MiraTurn[]; historyFp: string; conversationId?: string }): Promise<MiraReply> {
   const fail = (status: MiraReply['status'], reply = ''): MiraReply => ({ status, reply, actions: [], ctxFp: '' })
   try {
-    const { data, error } = await transport.invoke('mira-student-chat', { message: args.message, history: args.history, history_fp: args.historyFp })
-    let j = data as Partial<{ status: MiraReply['status']; reply: string; actions: MiraAction[]; ctx_fp: string }> | null
+    const { data, error } = await transport.invoke('mira-student-chat', { message: args.message, history: args.history, history_fp: args.historyFp, ...(args.conversationId ? { conversation_id: args.conversationId } : {}) })
+    let j = data as Partial<{ status: MiraReply['status']; reply: string; actions: MiraAction[]; ctx_fp: string; conversation_id: string }> | null
     if (error) {
       // supabase-js ném FunctionsHttpError cho 4xx/5xx; thân JSON nằm trong error.context (Response)
       const ctx = (error as { context?: unknown }).context
@@ -52,7 +54,7 @@ export async function askMira(args: { message: string; history: MiraTurn[]; hist
     }
     if (!j || typeof j.status !== 'string') return fail('network')
     const actions = Array.isArray(j.actions) ? j.actions.filter((a): a is MiraAction => !!a && typeof a.label === 'string' && /^\/me\/classes\/[0-9a-f-]{36}$/i.test(a.path ?? '')) : []
-    return { status: j.status, reply: typeof j.reply === 'string' ? j.reply : '', actions, ctxFp: typeof j.ctx_fp === 'string' ? j.ctx_fp : '' }
+    return { status: j.status, reply: typeof j.reply === 'string' ? j.reply : '', actions, ctxFp: typeof j.ctx_fp === 'string' ? j.ctx_fp : '', ...(typeof j.conversation_id === 'string' && /^[0-9a-f-]{36}$/i.test(j.conversation_id) ? { conversationId: j.conversation_id } : {}) }
   } catch { return fail('network') }
 }
 
