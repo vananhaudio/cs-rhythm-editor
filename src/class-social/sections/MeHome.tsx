@@ -34,7 +34,11 @@ function useFeedScope(): [FeedScope, (s: FeedScope) => void] {
 /** Home chỉ hiện vài lời mời mới nhất; đủ danh sách ở trang Bạn bè. */
 const HOME_REQUESTS_MAX = 3
 
-export default function MeHome({ me, identityRev = 0, onOpenProfile, requests, onSeeAllRequests, onOpenThread, onOpenQueue, classes, onOpenClass, onJoinedClass, onOpenBands, onOpenBroadcast }: {
+import MiraInvitationBanner from '../chat/MiraInvitationBanner'
+import { setInviteHandoff } from '../chat/miraInviteApi'
+import { useMiraEnabled } from '../chat/miraApi'
+
+export default function MeHome({ me, identityRev = 0, onOpenProfile, requests, onSeeAllRequests, onOpenThread, onOpenQueue, classes, onOpenClass, onJoinedClass, onOpenBands, onOpenBroadcast, onOpenMira }: {
   me: ClassIdentity
   identityRev?: number
   /** (không dùng trên Home nữa — đổi ảnh ở Trang cá nhân / menu tài khoản) */
@@ -57,7 +61,10 @@ export default function MeHome({ me, identityRev = 0, onOpenProfile, requests, o
   onOpenBands?: () => void
   /** Chỉ truyền khi là Owner/admin (server vẫn kiểm quyền) */
   onOpenBroadcast?: () => void
+  /** Học viên bấm "Trò chuyện với Mira" ở thẻ lời mời → mở Mira trong Trò chuyện */
+  onOpenMira?: () => void
 }) {
+  const miraOn = useMiraEnabled(!me.isTeacher)   // thẻ lời mời chỉ cho học viên trong pilot (server còn kiểm đồng ý + tần suất)
   const [scope, setScope] = useFeedScope()
   const myClassIds = useMemo(() => (classes?.mine ?? []).map(c => c.id), [classes?.mine])
   const { state, reload, loadMore } = useCommunityFeed(scope, myClassIds)
@@ -101,6 +108,7 @@ export default function MeHome({ me, identityRev = 0, onOpenProfile, requests, o
 
   return (
     <div className="cs-col cs-home cs-home-feedfirst">
+      {onOpenMira && <MiraInvitationBanner mode="ensure" enabled={miraOn && !me.isTeacher} onStart={r => { setInviteHandoff(r); onOpenMira() }} />}
       <HomeComposer me={me} onPosted={onPosted} onOpenProfile={onOpenProfile} />
       {me.isTeacher && onOpenThread && onOpenQueue && <MeThreadsBlock isTeacher onOpenThread={onOpenThread} onOpenQueue={onOpenQueue} />}
       {me.isTeacher && onOpenBands && (

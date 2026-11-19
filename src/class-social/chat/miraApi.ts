@@ -12,6 +12,8 @@ let transport: MiraTransport = {
   invoke: async (fn, body) => (await import('../../supabase')).supabase.functions.invoke(fn, { body: body as Record<string, unknown> }),
 }
 export function setMiraTransport(t: MiraTransport) { transport = t }
+/** RPC dưới JWT học viên qua cùng đường truyền (dùng cho lời mời chủ động) */
+export const miraRpc = (fn: string, args?: Record<string, unknown>) => transport.rpc(fn, args)
 
 export const MIRA_CONVERSATION_ID = 'mira'
 export const MIRA_NAME = 'Mira'
