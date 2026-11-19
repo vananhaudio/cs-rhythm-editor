@@ -1,7 +1,7 @@
 // Khung (shell) của Class Social: top bar tối giản + sidebar (desktop) / menu sheet (mobile).
 // Logo = Trang chủ (/me); "Trang chủ" cũng là mục đầu tiên của menu. Nhóm LỚP HỌC (động) chèn ngay sau CỘNG ĐỒNG.
 import { Suspense, lazy, useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
-import { Bell, Lock, Menu, Sparkles, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react'
+import { Bell, Lock, Menu, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react'
 import { NAV_GROUPS, type NavItem } from './nav'
 import { SECTION_PATHS, type SocialSection } from './resolveMeRoute'
 import type { ClassIdentity } from './useClassSession'
@@ -81,15 +81,8 @@ const withLibrary = (item: NavItem, open: boolean | undefined): NavItem =>
     ? { kind: 'destination', id: item.id, label: item.label, icon: item.icon, href: '/thuvien', hint: 'Thư viện bản nhạc và hợp âm chuẩn hóa' }
     : item
 
-/** Mục Owner: hội thoại học viên với Mira. Chỉ HIỆN cho admin; quyền thật do RPC mira_owner_* quyết. */
-const MIRA_OWNER_ITEM: NavItem = { kind: 'destination', id: 'mira-owner', label: 'Hội thoại với Mira', icon: Sparkles, href: '/me/mira-owner', hint: 'Chỉ Owner: đọc và tìm hội thoại học viên với Mira' }
-function groupsFor(miraOwner?: boolean) {
-  return miraOwner ? NAV_GROUPS.map(g => g.id === 'community' ? { ...g, items: [...g.items, MIRA_OWNER_ITEM] } : g) : NAV_GROUPS
-}
-
-function NavGroups({ section, collapsed, onSection, badges, classNav, onNavigate, libraryOpen, miraOwner }: {
+function NavGroups({ section, collapsed, onSection, badges, classNav, onNavigate, libraryOpen }: {
   libraryOpen?: boolean
-  miraOwner?: boolean
   section: SocialSection | null
   collapsed: boolean
   onSection: (s: SocialSection) => void
@@ -99,7 +92,7 @@ function NavGroups({ section, collapsed, onSection, badges, classNav, onNavigate
 }) {
   return (
     <>
-      {groupsFor(miraOwner).map(g => (
+      {NAV_GROUPS.map(g => (
         <div key={g.id} className="cs-nav-block">
           <nav className="cs-nav-group" aria-label={g.title}>
             <div className="cs-nav-title">{g.title}</div>
@@ -115,9 +108,8 @@ function NavGroups({ section, collapsed, onSection, badges, classNav, onNavigate
   )
 }
 
-function MobileMenu({ section, onClose, onSection, badges, classNav, libraryOpen, miraOwner }: {
+function MobileMenu({ section, onClose, onSection, badges, classNav, libraryOpen }: {
   libraryOpen?: boolean
-  miraOwner?: boolean
   section: SocialSection | null
   onClose: () => void
   onSection: (s: SocialSection) => void
@@ -138,7 +130,7 @@ function MobileMenu({ section, onClose, onSection, badges, classNav, libraryOpen
           <h2>Menu</h2>
           <button type="button" className="cs-icon-btn" onClick={onClose} aria-label="Đóng menu"><X size={22} /></button>
         </div>
-        <NavGroups section={section} collapsed={false} onSection={s => { onSection(s); onClose() }} badges={badges} classNav={classNav} onNavigate={onClose} libraryOpen={libraryOpen} miraOwner={miraOwner} />
+        <NavGroups section={section} collapsed={false} onSection={s => { onSection(s); onClose() }} badges={badges} classNav={classNav} onNavigate={onClose} libraryOpen={libraryOpen} />
       </div>
     </>
   )
@@ -249,12 +241,12 @@ export default function ClassSocialLayout({ me, section, onSection, children, ca
 
       <div className="cs-body">
         <aside className={'cs-sidebar' + (collapsed ? ' is-collapsed' : '')}>
-          <NavGroups section={section} collapsed={collapsed} onSection={onSection} badges={badges} classNav={classNav} libraryOpen={libraryOpen} miraOwner={me.isAdmin === true} />
+          <NavGroups section={section} collapsed={collapsed} onSection={onSection} badges={badges} classNav={classNav} libraryOpen={libraryOpen} />
         </aside>
         <main className="cs-main">{children}</main>
       </div>
 
-      {menuOpen && <MobileMenu section={section} onClose={() => setMenuOpen(false)} onSection={onSection} badges={badges} classNav={classNav} libraryOpen={libraryOpen} miraOwner={me.isAdmin === true} />}
+      {menuOpen && <MobileMenu section={section} onClose={() => setMenuOpen(false)} onSection={onSection} badges={badges} classNav={classNav} libraryOpen={libraryOpen} />}
     </div>
   )
 }

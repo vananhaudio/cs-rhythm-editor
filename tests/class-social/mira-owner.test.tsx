@@ -12,9 +12,11 @@ Object.defineProperties(globalThis, {
   navigator: { configurable: true, value: dom.window.navigator }, IS_REACT_ACT_ENVIRONMENT: { configurable: true, writable: true, value: true },
 })
 const { render, cleanup, fireEvent, waitFor } = await import('@testing-library/react')
-const { default: MiraOwnerPage } = await import('../../src/class-social/mira-owner/MiraOwnerPage')
+const { default: MiraOwnerThread } = await import('../../src/class-social/mira-owner/MiraOwnerThread')
+const { default: MiraOwnerList } = await import('../../src/class-social/mira-owner/MiraOwnerList')
+const { default: MiraOwnerEntry } = await import('../../src/class-social/mira-owner/MiraOwnerEntry')
 const api = await import('../../src/class-social/mira-owner/miraOwnerApi')
-const { viewFromPath, viewPath, sameView, MIRA_OWNER_PATH } = await import('../../src/class-social/resolveMeRoute')
+const { viewFromPath, viewPath, sameView, MIRA_OWNER_PATH, chatConversationPath, chatConversationIdFromPath } = await import('../../src/class-social/resolveMeRoute')
 const { askMira, setMiraTransport } = await import('../../src/class-social/chat/miraApi')
 void React
 const read = (f: string) => readFileSync(new URL(`../../${f}`, import.meta.url), 'utf8')
@@ -32,40 +34,59 @@ api.setMiraOwnerRpc(async (fn, args = {}) => {
 })
 afterEach(() => { cleanup(); calls = []; mode = 'ok' })
 
-test('route /me/mira-owner: viewFromPath ↔ viewPath ↔ sameView', () => {
-  assert.deepEqual(viewFromPath(MIRA_OWNER_PATH), { kind: 'miraOwner' }); assert.equal(viewPath({ kind: 'miraOwner' }), '/me/mira-owner')
-  assert.ok(sameView({ kind: 'miraOwner' }, { kind: 'miraOwner' })); assert.ok(!sameView({ kind: 'miraOwner' }, { kind: 'queue' }))
+test('route: /me/chat/m/<id> ↔ id miraowner:<id>; /me/mira-owner giữ làm đường dẫn tương thích', () => {
+  assert.equal(chatConversationPath('miraowner:' + CONV), '/me/chat/m/' + CONV); assert.equal(chatConversationIdFromPath('/me/chat/m/' + CONV.toUpperCase()), 'miraowner:' + CONV)
+  assert.equal(chatConversationIdFromPath('/me/chat/m/khong-phai-uuid'), null)
+  assert.deepEqual(viewFromPath(MIRA_OWNER_PATH), { kind: 'miraOwner' }); assert.equal(viewPath({ kind: 'miraOwner' }), '/me/mira-owner'); assert.ok(sameView({ kind: 'miraOwner' }, { kind: 'miraOwner' }))
 })
-test('danh sách hiện học viên + đoạn trích; mở hội thoại hiện đủ tin và liên kết hồ sơ Student 360°', async () => {
-  const r = render(<MiraOwnerPage onBack={() => {}} />)
-  await waitFor(() => r.getByText('Lan')); assert.ok(r.getByText('Em muốn luyện hợp âm Am'))
-  fireEvent.click(r.getByText('Lan'))
+test('mục Mira-Owner chỉ được dựng khi InboxList nhận miraOwner (Chat truyền isAdmin === true); bấm → mở danh sách', async () => {
+  let n = 0; const r = render(<MiraOwnerEntry onOpen={() => n++} />); fireEvent.click(r.getByTestId('mira-owner-entry')); assert.equal(n, 1)
+  const il = read('src/class-social/chat/InboxList.tsx')
+  assert.match(il, /miraOwner && !inbox\.searching && <MiraOwnerEntry/); assert.match(il, /miraOwner = false/)
+  assert.match(read('src/class-social/sections/Chat.tsx'), /miraOwner=\{isAdmin === true\}/)
+})
+test('Owner: danh sách học viên gọi server; chọn học viên → mở hội thoại bằng id miraowner:<id>', async () => {
+  const opened: string[] = []; let back = 0
+  const r = render(<MiraOwnerList selectedId={null} onSelect={id => opened.push('miraowner:' + id)} onBack={() => back++} />)
+  await waitFor(() => r.getByText('Lan')); fireEvent.click(r.getByTestId('mira-owner-row'))
+  assert.deepEqual(opened, ['miraowner:' + CONV]); assert.equal(calls[0].fn, 'mira_owner_conversations'); fireEvent.click(r.getByTestId('manager-back')); assert.equal(back, 1)
+})
+test('Khung hội thoại: tin học viên ≠ tin Mira, có thời gian, liên kết Student 360°, CHỈ ĐỌC (không ô nhập, không nút gửi)', async () => {
+  const r = render(<MiraOwnerThread conversationId={CONV} onBack={() => {}} />)
   await waitFor(() => r.getByText('Bạn thử đổi hợp âm chậm.'))
-  const a = r.getByText(/Hồ sơ Student 360°/) as HTMLAnchorElement
-  assert.equal(a.getAttribute('href'), `/student?id=${EDU}`)
-  assert.deepEqual(calls.map(c => c.fn), ['mira_owner_conversations', 'mira_owner_conversation_get'])
+  const rows = Array.from(r.container.querySelectorAll('[data-role]')).map(e => e.getAttribute('data-role')); assert.deepEqual(rows, ['user', 'assistant'])
+  assert.equal((r.getByTestId('mira-360-link') as HTMLAnchorElement).getAttribute('href'), `/student?id=${EDU}`)
+  assert.equal(r.container.querySelectorAll('textarea, input, [contenteditable]').length, 0, 'không có ô nhập')
+  assert.ok(r.getByText(/Chỉ đọc/)); assert.deepEqual(calls.map(c => c.fn), ['mira_owner_conversation_get'])
 })
-test('tìm kiếm gửi q lên server (không lọc phía client)', async () => {
-  const r = render(<MiraOwnerPage onBack={() => {}} />); await waitFor(() => r.getByText('Lan'))
-  fireEvent.change(r.getByLabelText('Tìm hội thoại'), { target: { value: 'hop am' } }); fireEvent.submit(r.getByLabelText('Tìm hội thoại').closest('form')!)
-  await waitFor(() => assert.equal(calls.length, 2)); assert.deepEqual((calls[1].args.p_args as Record<string, unknown>).q, 'hop am')
+test('Chat chỉ dựng khung Mira-Owner khi isAdmin === true; Mira của học viên giữ nguyên', () => {
+  const chat = read('src/class-social/sections/Chat.tsx')
+  assert.match(chat, /isMiraOwnerConv = isAdmin === true && /); assert.match(chat, /!isMira && !isMiraOwnerConv/)
+  assert.match(chat, /miraOwner=\{isAdmin === true\}/)
 })
-test('server từ chối (không phải Owner) ⇒ màn "chỉ dành cho Owner", không lộ gì', async () => {
-  mode = 'forbidden'; const r = render(<MiraOwnerPage onBack={() => {}} />)
+test('server từ chối (không phải Owner) ⇒ báo "chỉ dành cho Owner", không lộ gì', async () => {
+  mode = 'forbidden'; const r = render(<MiraOwnerThread conversationId={CONV} onBack={() => {}} />)
   await waitFor(() => r.getByText('Mục này chỉ dành cho Owner.')); assert.ok(!r.queryByText('Lan'))
+  const l = render(<MiraOwnerList selectedId={null} onSelect={() => {}} />); await waitFor(() => l.getByText('Chỉ dành cho Owner'))
 })
-test('lỗi mạng ⇒ báo lỗi + nút thử lại', async () => {
-  mode = 'fail'; const r = render(<MiraOwnerPage onBack={() => {}} />); await waitFor(() => r.getByText(/Chưa tải được/)); assert.ok(r.getByText('Thử lại'))
+test('tìm kiếm: gõ xong gửi q lên server (không lọc phía client); lỗi mạng ⇒ nút thử lại', async () => {
+  const r = render(<MiraOwnerList selectedId={null} onSelect={() => {}} />); await waitFor(() => r.getByText('Lan'))
+  fireEvent.change(r.getByTestId('mira-owner-search'), { target: { value: 'hop am' } })
+  await waitFor(() => assert.equal(calls.length, 2)); assert.equal((calls[1].args.p_args as Record<string, unknown>).q, 'hop am')
+  cleanup(); mode = 'fail'; const f = render(<MiraOwnerList selectedId={null} onSelect={() => {}} />); await waitFor(() => f.getByText('Thử lại'))
 })
 test('student360Href chỉ nhận UUID', () => {
   assert.equal(api.student360Href(EDU), `/student?id=${EDU}`); assert.equal(api.student360Href(null), null); assert.equal(api.student360Href('x"><script>'), null)
 })
-test('nav "Hội thoại với Mira" chỉ gắn khi me.isAdmin === true; trang kiểm isAdmin lần nữa; route private cho OG', () => {
-  const layout = read('src/class-social/ClassSocialLayout.tsx'); assert.equal((layout.match(/miraOwner=\{me\.isAdmin === true\}/g) ?? []).length, 2)
-  assert.match(read('src/class-social/ClassSocialPage.tsx'), /view\.kind === 'miraOwner' && \(me\.isAdmin/)
+test('không còn menu riêng; trang cũ chuyển vào Hộp thư; route OG giữ; không bảng/RPC mới', () => {
+  assert.ok(!/mira-owner|MIRA_OWNER_ITEM/.test(read('src/class-social/ClassSocialLayout.tsx')))
+  assert.match(read('src/class-social/ClassSocialPage.tsx'), /view\.kind === 'miraOwner'[\s\S]{0,140}section: 'chat'[\s\S]{0,60}\?mira=1/)
   assert.match(read('netlify/og/routes.ts'), /'\/me\/mira-owner'/)
+  const code = ['MiraOwnerList', 'MiraOwnerThread', 'miraOwnerApi'].map(f => read(`src/class-social/mira-owner/${f}.${f === 'miraOwnerApi' ? 'ts' : 'tsx'}`)).join('\n')
+  assert.deepEqual([...new Set([...code.matchAll(/rpc\('([a-z_0-9]+)'/g)].map(m => m[1]))].sort(), ['mira_owner_conversation_get', 'mira_owner_conversations'])
+  assert.ok(!/\.insert\(|\.update\(|\.delete\(|mira_owner_delete|sendMessage|dm_send/.test(code), 'Owner chỉ đọc')
 })
-test('client chỉ gửi/giữ conversation_id (UUID); id lạ từ server bị bỏ; không lưu trình duyệt', async () => {
+test('client học viên: chỉ gửi/giữ conversation_id (UUID); id lạ từ server bị bỏ; không lưu trình duyệt', async () => {
   const sent: Array<Record<string, unknown>> = []
   setMiraTransport({ rpc: async () => ({ data: null, error: null }), invoke: async (_f, body) => { sent.push(body as Record<string, unknown>); return { data: { status: 'ok', reply: 'ok', actions: [], ctx_fp: 'f', conversation_id: sent.length === 1 ? CONV : '<script>' }, error: null } } })
   const a = await askMira({ message: 'hi', history: [], historyFp: '' }); assert.equal(a.conversationId, CONV); assert.ok(!('conversation_id' in sent[0]))

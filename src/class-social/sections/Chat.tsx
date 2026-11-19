@@ -15,7 +15,8 @@ import MiraListItem from '../chat/MiraListItem'
 import MiraPreparingView from '../chat/MiraPreparingView'
 import SoundSwitch from '../chat/SoundSwitch'
 import { MIRA_CONVERSATION_ID, miraPreviewVisible, previewBuild, useMiraEnabled } from '../chat/miraApi'
-import { classPath } from '../resolveMeRoute'
+import { classPath, MIRA_OWNER_CONVERSATION_PREFIX } from '../resolveMeRoute'
+import MiraOwnerThread from '../mira-owner/MiraOwnerThread'
 import { prefetchClassDisplay } from '../classes/useClassDisplay'
 
 /** Điện thoại: khi mở một hội thoại, khung phủ toàn màn hình → theo chiều cao THẬT khi bàn phím mở (iOS không co 100dvh) */
@@ -77,12 +78,14 @@ export default function Chat({ meId, selection, onOpenConversation, onBackToList
   const activity = useCallback(() => { void reload(); onUnreadChanged() }, [reload, onUnreadChanged])
   const items = inbox.state.status === 'ready' ? [...inbox.state.pinned, ...inbox.state.items] : []
   const selectedId = selection.kind === 'conversation' ? selection.id : null
+  // Owner: hội thoại học viên ↔ Mira (chỉ đọc) nằm cạnh Chat Lớp / Chat Band; id `miraowner:<id>` không phải hội thoại dm_*
+  const isMiraOwnerConv = isAdmin === true && !!selectedId && selectedId.startsWith(MIRA_OWNER_CONVERSATION_PREFIX)
 
   // Hội thoại đang mở có thể nằm NGOÀI các trang đã tải (liên kết trực tiếp, Band ở khu Quản lý): hỏi server đúng một hội thoại đó
   const [remote, setRemote] = useState<ConversationItem | null>(null)
   const loaded = selectedId ? items.find(c => c.id === selectedId) : undefined
   useEffect(() => {
-    if (!selectedId || loaded || inbox.state.status !== 'ready') return
+    if (!selectedId || loaded || isMiraOwnerConv || inbox.state.status !== 'ready') return
     let alive = true
     void source.info(selectedId).then(r => { if (alive && r.ok) setRemote(r.value) })
     return () => { alive = false }
@@ -108,7 +111,7 @@ export default function Chat({ meId, selection, onOpenConversation, onBackToList
     <div className={'cs-col-wide cs-chat-wrap' + (open ? ' has-open' : '')}>
       <h1 className="cs-page-title cs-sr-only">Trò chuyện</h1>
       <section className="cs-card cs-chat">
-        <InboxList inbox={inbox} source={source} trailing={soundToggle ? <SoundSwitch enabled={sound.enabled} onChange={sound.set} /> : undefined} selectedId={selectedId} onSelect={id => onOpenConversation(id)} onOpenFriends={onOpenFriends}
+        <InboxList inbox={inbox} source={source} miraOwner={isAdmin === true} miraOwnerOpen={isAdmin === true && new URLSearchParams(window.location.search).get('mira') === '1'} trailing={soundToggle ? <SoundSwitch enabled={sound.enabled} onChange={sound.set} /> : undefined} selectedId={selectedId} onSelect={id => onOpenConversation(id)} onOpenFriends={onOpenFriends}
           top={miraOn || miraPreview ? <MiraListItem active={isMira} onSelect={() => onOpenConversation(MIRA_CONVERSATION_ID)} /> : undefined} />
         <div className={'cs-chat-pane' + (open ? ' is-open' : '')}>
           {selection.kind === 'none' && (
@@ -121,7 +124,8 @@ export default function Chat({ meId, selection, onOpenConversation, onBackToList
           {isMira && !miraOn && !miraPreview && (
             <div className="cs-chat-pane-empty"><EmptyState icon={MessagesSquare} title="Mira chưa sẵn sàng">Mục này chưa mở cho tài khoản của bạn.</EmptyState></div>
           )}
-          {selection.kind === 'conversation' && !isMira && (
+          {isMiraOwnerConv && selectedId && <MiraOwnerThread key={selectedId} conversationId={selectedId.slice(MIRA_OWNER_CONVERSATION_PREFIX.length)} onBack={onBackToList} />}
+          {selection.kind === 'conversation' && !isMira && !isMiraOwnerConv && (
             <ConversationView key={selection.id} id={selection.id} peer={peer} canSend={canSend}
               onBack={onBackToList} onOpenProfile={onOpenProfile} onActivity={activity} />
           )}

@@ -160,6 +160,9 @@ export const BAND_CONVERSATION_PREFIX = 'band:'
 /** Phòng chat của lớp: /me/chat/c/<class id>. Id hội thoại trong ứng dụng là `class:<class id>`. */
 export const CHAT_CLASS_PREFIX = CHAT_PREFIX + 'c/'
 export const CLASS_CONVERSATION_PREFIX = 'class:'
+/** Hội thoại học viên ↔ Mira (Owner, chỉ đọc): /me/chat/m/<mira_conversations.id>. Id trong ứng dụng là `miraowner:<id>`. Quyền do RPC mira_owner_* quyết. */
+export const CHAT_MIRA_OWNER_PREFIX = CHAT_PREFIX + 'm/'
+export const MIRA_OWNER_CONVERSATION_PREFIX = 'miraowner:'
 /** Đường dẫn CŨ của thông báo hệ thống (khi còn nằm trong Trò chuyện) — vẫn nhận (bookmark, thông báo cũ, app Mobile) và chuyển sang NOTICES_PATH, không bao giờ 404 */
 export const CHAT_SYSTEM_PATH = CHAT_PREFIX + 'system'
 /** Thông báo = khu vực RIÊNG, tách khỏi Trò chuyện (chuông trên thanh trên) */
@@ -167,6 +170,7 @@ export const NOTICES_PATH = '/me/notices'
 
 export function chatConversationPath(conversationId: string): string {
   if (conversationId.startsWith(BAND_CONVERSATION_PREFIX)) return CHAT_BAND_PREFIX + conversationId.slice(BAND_CONVERSATION_PREFIX.length)
+  if (conversationId.startsWith(MIRA_OWNER_CONVERSATION_PREFIX)) return CHAT_MIRA_OWNER_PREFIX + conversationId.slice(MIRA_OWNER_CONVERSATION_PREFIX.length)
   if (conversationId.startsWith(CLASS_CONVERSATION_PREFIX)) return CHAT_CLASS_PREFIX + conversationId.slice(CLASS_CONVERSATION_PREFIX.length)
   return CHAT_PREFIX + conversationId
 }
@@ -178,6 +182,10 @@ export function chatConversationIdFromPath(pathname: string): string | null {
   if (p.startsWith(CHAT_BAND_PREFIX)) {
     const band = p.slice(CHAT_BAND_PREFIX.length)
     return UUID_RE.test(band) ? BAND_CONVERSATION_PREFIX + band.toLowerCase() : null
+  }
+  if (p.startsWith(CHAT_MIRA_OWNER_PREFIX)) {
+    const m = p.slice(CHAT_MIRA_OWNER_PREFIX.length)
+    return UUID_RE.test(m) ? MIRA_OWNER_CONVERSATION_PREFIX + m.toLowerCase() : null
   }
   if (p.startsWith(CHAT_CLASS_PREFIX)) {
     const cls = p.slice(CHAT_CLASS_PREFIX.length)
