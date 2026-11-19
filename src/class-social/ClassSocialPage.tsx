@@ -27,7 +27,6 @@ import type { ChatSelection } from './chat/chatModel'
 import ThreadPage from '../learning-thread/ThreadPage'
 import MiraDock from '../mira-grading/MiraDock'
 import TeacherQueue from '../learning-thread/TeacherQueue'
-import MiraOwnerPage from './mira-owner/MiraOwnerPage'
 import { useSocialClasses } from './classes/useSocialClasses'
 import ClassNav from './classes/ClassNav'
 import MyBandNavItem from './mybands/MyBandNavItem'
@@ -153,6 +152,9 @@ export default function ClassSocialPage({ initialSection }: { initialSection: So
   const openConversation = (conversationId: string, opts?: { replace?: boolean }) => navigate({ kind: 'chatConversation', conversationId }, opts)
   const openNotices = () => navigate({ kind: 'notices' })
 
+  // Đường dẫn cũ /me/mira-owner: không còn màn riêng — chuyển vào Hộp thư (khu Mira, chỉ Owner thấy; người khác thấy Hộp thư bình thường)
+  useEffect(() => { if (view.kind === 'miraOwner') navigate({ kind: 'section', section: 'chat' }, { replace: true, search: '?mira=1' }) }, [view.kind]) // eslint-disable-line react-hooks/exhaustive-deps
+
   if (session.status === 'signed-out') return <MeGuestGate signIn={signInWithPassword} />
   if (session.status === 'no-profile') return <MeNoProfile email={session.email} onSignOut={() => void signOut()} />
   if (session.status !== 'ready') return <Splash text="Đang mở Class…" />
@@ -241,9 +243,6 @@ function SignedInShell({ base, view, onSection, onOpenProfile, onOpenThread, onO
       {view.kind === 'queue' && (me.isTeacher
         ? <TeacherQueue onOpenThread={onOpenThread} onBack={() => onBack(HOME)} />
         : <div className="cs-col cs-home"><div className="cs-card lt-empty">Mục này dành cho giáo viên.</div></div>)}
-      {view.kind === 'miraOwner' && (me.isAdmin
-        ? <MiraOwnerPage onBack={() => onBack(HOME)} />
-        : <div className="cs-col cs-home"><div className="cs-card lt-empty">Mục này chỉ dành cho Owner.</div></div>)}
       {view.kind === 'classes' && <ClassesPage classes={classes} onOpenClass={onOpenClass}
         onJoined={id => { classes.reload(); refreshLearningIdentity(me.userId); onOpenClass(id) }} />}
       {view.kind === 'class' && (

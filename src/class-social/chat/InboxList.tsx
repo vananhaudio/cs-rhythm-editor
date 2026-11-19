@@ -10,10 +10,13 @@ import { useClassDisplay } from '../classes/useClassDisplay'
 import type { InboxSource } from './inboxApi'
 import { KIND_LABEL, KIND_TABS, emptyReason, kindOf, unreadTotal, type InboxKind, type InboxSummary } from './inboxModel'
 import { useInbox } from './useInbox'
+import MiraOwnerList from '../mira-owner/MiraOwnerList'
+import MiraOwnerEntry from '../mira-owner/MiraOwnerEntry'
+import { MIRA_OWNER_CONVERSATION_PREFIX } from '../resolveMeRoute'
 
 type Inbox = ReturnType<typeof useInbox>
 
-export default function InboxList({ inbox, source, selectedId, onSelect, onOpenFriends, top, trailing }: {
+export default function InboxList({ inbox, source, selectedId, onSelect, onOpenFriends, top, trailing, miraOwner = false, miraOwnerOpen = false }: {
   inbox: Inbox
   source: InboxSource
   selectedId: string | null
@@ -23,15 +26,23 @@ export default function InboxList({ inbox, source, selectedId, onSelect, onOpenF
   top?: ReactNode
   /** Nút nhỏ cạnh ô tìm kiếm (vd. công tắc âm thanh thông báo) */
   trailing?: ReactNode
+  /** Owner (admin): hiện mục "Mira · học viên" (đọc hội thoại học viên với Mira). Quyền thật do server quyết. */
+  miraOwner?: boolean
+  /** Mở sẵn khu Mira (đường dẫn cũ /me/mira-owner → /me/chat?mira=1) */
+  miraOwnerOpen?: boolean
 }) {
   const { state, filter, busy } = inbox
   const [manager, setManager] = useState<SupportKind | null>(null)
+  const [miraMgr, setMiraMgr] = useState(miraOwner && (miraOwnerOpen || (selectedId ?? '').startsWith(MIRA_OWNER_CONVERSATION_PREFIX)))
   const [editing, setEditing] = useState(false)
   const summary = state.summary
   const canPin = state.mode === 'server'
   // Hỗ trợ (Thầy/Admin ngoài Band/lớp) — đếm RIÊNG theo loại, không gộp Band với lớp
   const supportOn = !!summary && summary.support > 0 && state.mode === 'server'
   const support = useSupportCounts(source, supportOn, String(summary?.support ?? 0))
+  if (miraOwner && miraMgr)
+    return <MiraOwnerList selectedId={selectedId?.startsWith(MIRA_OWNER_CONVERSATION_PREFIX) ? selectedId.slice(MIRA_OWNER_CONVERSATION_PREFIX.length) : null}
+      onSelect={id => onSelect(MIRA_OWNER_CONVERSATION_PREFIX + id)} onBack={() => setMiraMgr(false)} />
   if (manager) return <SupportManager kind={manager} source={source} selectedId={selectedId} onSelect={onSelect} onBack={() => setManager(null)} />
   const showBandManage = supportOn && !inbox.searching && support.band > 0 && (filter.kind === 'all' || filter.kind === 'band')
   const showClassManage = supportOn && !inbox.searching && support.class > 0 && filter.kind === 'all'
@@ -67,6 +78,7 @@ export default function InboxList({ inbox, source, selectedId, onSelect, onOpenF
 
       <div className={'cs-inbox-scroll' + (busy ? ' is-busy' : '')} aria-busy={busy}>
         {top}
+        {miraOwner && !inbox.searching && <MiraOwnerEntry onOpen={() => setMiraMgr(true)} />}
         {state.status === 'loading' && <Skeleton />}
         {state.status === 'error' && (
           <div className="cs-feed-error" role="alert"><p>{state.error}</p>
