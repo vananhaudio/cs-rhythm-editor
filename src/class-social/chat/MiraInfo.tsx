@@ -26,7 +26,7 @@ export default function MiraInfo({ consent, busy, error, onGrant, onWithdraw }: 
             {!granted && offer.state === 'withdrawn' && <p role="status">Bạn đã ngừng chia sẻ trước đó.</p>}
             {!granted && offer.state === 'outdated' && <p role="status">Nội dung đã được cập nhật, bạn đọc lại nhé.</p>}
             {error && <p role="alert" className="cs-feed-error">{error}</p>}
-            {!granted && <button type="button" className="cs-btn cs-btn-soft cs-btn-sm" disabled={busy} onClick={onGrant} data-testid="mira-consent-grant">Cho Mira dùng hồ sơ học tập</button>}
+            {!granted && <button type="button" className="cs-btn cs-btn-soft cs-btn-sm" disabled={busy} onClick={onGrant} data-testid="mira-consent-grant">Tôi đã đọc và đồng ý</button>}
             {granted && !confirming && <button type="button" className="cs-btn cs-btn-soft cs-btn-sm" disabled={busy} onClick={() => setConfirming(true)} data-testid="mira-withdraw">Ngừng chia sẻ hồ sơ học tập</button>}
             {granted && confirming && (
               <div role="alertdialog" aria-label="Ngừng chia sẻ" data-testid="mira-withdraw-confirm" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
