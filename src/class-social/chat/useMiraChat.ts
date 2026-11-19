@@ -34,6 +34,7 @@ export function useMiraChat({ onConsentRequired }: { onConsentRequired?: () => v
   const seq = useRef(0)
   const hist = useRef<MiraTurn[]>([])
   const fp = useRef('')
+  const conv = useRef<string | undefined>(undefined)
   const inflight = useRef(false)
 
   const push = (m: Omit<MiraMessage, 'id'>) => setMessages(xs => [...xs, { ...m, id: ++seq.current }].slice(-KEEP))
@@ -44,19 +45,20 @@ export function useMiraChat({ onConsentRequired }: { onConsentRequired?: () => v
     if ([...t].length > MIRA_MAX_CHARS) { push({ role: 'assistant', kind: 'error', text: STATUS_TEXT.bad_request }); return false }
     inflight.current = true; setBusy(true)
     push({ role: 'user', text: t })
-    const r = await askMira({ message: t, history: hist.current, historyFp: fp.current })
+    const r = await askMira({ message: t, history: hist.current, historyFp: fp.current, conversationId: conv.current })
     inflight.current = false; setBusy(false)
     if (r.status === 'consent_required') onConsentRequired?.()   // đồng ý vừa hết hiệu lực (rút ở thiết bị khác): làm mới trạng thái; trò chuyện phổ thông vẫn dùng được
     if (r.status === 'ok' && r.reply) {
       push({ role: 'assistant', text: r.reply, actions: r.actions })
       hist.current = [...hist.current, { role: 'user' as const, text: t.slice(0, HIST_CHARS) }, { role: 'assistant' as const, text: r.reply.slice(0, HIST_CHARS) }].slice(-HIST)
       fp.current = r.ctxFp
+      if (r.conversationId) conv.current = r.conversationId
     } else {
       push({ role: 'assistant', kind: 'error', text: r.reply || STATUS_TEXT[r.status] || STATUS_TEXT.network })
       if (r.status === 'ok') fp.current = r.ctxFp
     }
     return true
   }, [onConsentRequired])
-  const clear = useCallback(() => { setMessages([]); hist.current = []; fp.current = '' }, [])
+  const clear = useCallback(() => { setMessages([]); hist.current = []; fp.current = ''; conv.current = undefined }, [])
   return { messages, busy, send, clear }
 }

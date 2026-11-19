@@ -27,6 +27,7 @@ import type { ChatSelection } from './chat/chatModel'
 import ThreadPage from '../learning-thread/ThreadPage'
 import MiraDock from '../mira-grading/MiraDock'
 import TeacherQueue from '../learning-thread/TeacherQueue'
+import MiraOwnerPage from './mira-owner/MiraOwnerPage'
 import { useSocialClasses } from './classes/useSocialClasses'
 import ClassNav from './classes/ClassNav'
 import MyBandNavItem from './mybands/MyBandNavItem'
@@ -240,6 +241,9 @@ function SignedInShell({ base, view, onSection, onOpenProfile, onOpenThread, onO
       {view.kind === 'queue' && (me.isTeacher
         ? <TeacherQueue onOpenThread={onOpenThread} onBack={() => onBack(HOME)} />
         : <div className="cs-col cs-home"><div className="cs-card lt-empty">Mục này dành cho giáo viên.</div></div>)}
+      {view.kind === 'miraOwner' && (me.isAdmin
+        ? <MiraOwnerPage onBack={() => onBack(HOME)} />
+        : <div className="cs-col cs-home"><div className="cs-card lt-empty">Mục này chỉ dành cho Owner.</div></div>)}
       {view.kind === 'classes' && <ClassesPage classes={classes} onOpenClass={onOpenClass}
         onJoined={id => { classes.reload(); refreshLearningIdentity(me.userId); onOpenClass(id) }} />}
       {view.kind === 'class' && (
