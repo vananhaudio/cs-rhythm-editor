@@ -17,7 +17,7 @@ export default function MiraListItem({ active, onSelect }: { active: boolean; on
           <span className="cs-chat-item-text">
             <span className="cs-chat-item-top"><span className="cs-chat-item-name">{MIRA_NAME}</span><span className="cs-chat-item-tag">Trợ lý</span></span>
             <span className="cs-chat-item-bottom">
-              <span className="cs-chat-item-preview" data-testid="mira-list-preview">{invite ?? 'Hỏi bài học, luyện tập hôm nay…'}</span>
+              <span className="cs-chat-item-preview" data-testid="mira-list-preview">{invite ?? 'Chào bạn, mình là Mira. Mình ở đây để đồng hành cùng việc học của bạn.'}</span>
               {invite && <span className="cs-nav-badge cs-chat-item-badge" aria-hidden="true" data-testid="mira-list-dot">1</span>}
             </span>
           </span>

@@ -71,7 +71,7 @@ test('Hộp thư: mục Mira hiện lời mời + chấm báo khi có lời đan
   await waitFor(() => assert.equal(a.getByTestId('mira-list-preview').textContent, TEXT)); assert.ok(a.getByTestId('mira-list-dot'))
   assert.deepEqual(calls.map(c => c.fn), ['mira_invitation_pending']); cleanup()
   inv = null; const b = render(<MiraListItem active={false} onSelect={() => {}} />)
-  await waitFor(() => assert.equal(calls.length, 2)); assert.match(b.getByTestId('mira-list-preview').textContent ?? '', /Hỏi bài học/); assert.ok(!b.queryByTestId('mira-list-dot'))
+  await waitFor(() => assert.equal(calls.length, 2)); assert.match(b.getByTestId('mira-list-preview').textContent ?? '', /Chào bạn, mình là Mira/); assert.ok(!b.queryByTestId('mira-list-dot'))
 })
 test('khung Mira: lời mời đang chờ hiện trong chat; bấm Trò chuyện ⇒ lời của Mira thành câu mở đầu, hội thoại nối vào lượt hỏi tiếp theo', async () => {
   const r = render(<MiraChatView onBack={() => {}} onOpenClass={() => {}} />)
@@ -96,4 +96,17 @@ test('rào chắn nguồn: chỉ RPC mira_*; không kênh ngoài; không lưu tr
   assert.deepEqual([...rpcs].sort(), ['mira_invitation_decline', 'mira_invitation_ensure', 'mira_invitation_open', 'mira_invitation_pending', 'mira_proactive_enabled', 'mira_proactive_set'])
   assert.ok(!/localStorage|sessionStorage|indexedDB|Notification|serviceWorker|PushManager|mailto:|sms:|fetch\(/.test(src))
   assert.match(code('src/class-social/sections/MeHome.tsx'), /enabled=\{miraOn && !me\.isTeacher\}/)
+})
+
+// V3.1: đồng ý ngay trong hội thoại — vẫn là lựa chọn của chính học viên; không tự đồng ý.
+const { default: ConsentBubble } = await import('../../src/class-social/chat/MiraConsentBubble')
+const view = (state: string) => ({ status: 'ready', consent: { state, notice: { version: 2, title: 'T', body: 'Đoạn 1\n\nĐoạn 2' } } }) as never
+test('V3.1: chưa đồng ý ⇒ Mira đề nghị trong hội thoại; chỉ khi học viên bấm mới gọi grant', () => {
+  let n = 0; const r = render(<ConsentBubble consent={view('none')} busy={false} error={null} onGrant={() => { n++ }} />)
+  assert.equal(n, 0); fireEvent.click(r.getByTestId('mira-consent-inline-grant')); assert.equal(n, 1)
+})
+test('V3.1: đã đồng ý / thông báo chưa có hiệu lực / lỗi tải ⇒ không hiện đề nghị', () => {
+  for (const v of [view('granted'), view('unavailable'), { status: 'error' } as never, { status: 'loading' } as never]) {
+    const r = render(<ConsentBubble consent={v} busy={false} error={null} onGrant={() => {}} />); assert.ok(!r.queryByTestId('mira-consent-bubble')); cleanup()
+  }
 })
