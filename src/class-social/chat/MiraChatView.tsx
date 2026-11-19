@@ -6,6 +6,7 @@ import MiraAvatar from './MiraAvatar'
 import Composer from './Composer'
 import { MIRA_NAME, type MiraAction } from './miraApi'
 import MiraInfo from './MiraInfo'
+import MiraConsentBubble from './MiraConsentBubble'
 import MiraGreeting from './MiraGreeting'
 import MiraInvitationBanner from './MiraInvitationBanner'
 import MiraProactiveToggle from './MiraProactiveToggle'
@@ -31,6 +32,7 @@ export default function MiraChatView({ onBack, onOpenClass }: { onBack: () => vo
       <div className="cs-chat-scroll-wrap">
         <div ref={box} className="cs-chat-scroll" role="log" aria-live="polite" aria-label="Trò chuyện với Mira">
           <MiraGreeting />
+          <MiraConsentBubble consent={consent.view} busy={consent.busy} error={consent.actionError} onGrant={() => void consent.grant()} />
           <MiraInvitationBanner mode="pending" onStart={chat.seed} />
           {chat.messages.map(m => (
             <div key={m.id}>
