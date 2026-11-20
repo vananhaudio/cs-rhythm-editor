@@ -69,9 +69,9 @@ test('"Tắt lời nhắc": gọi tắt và báo đã tắt', async () => {
 test('Hộp thư: mục Mira hiện lời mời + chấm báo khi có lời đang chờ; không thì giữ câu cũ; chỉ ĐỌC (pending), không tạo', async () => {
   const a = render(<MiraListItem active={false} onSelect={() => {}} />)
   await waitFor(() => assert.equal(a.getByTestId('mira-list-preview').textContent, TEXT)); assert.ok(a.getByTestId('mira-list-dot'))
-  assert.deepEqual(calls.map(c => c.fn), ['mira_invitation_pending']); cleanup()
+  assert.deepEqual(calls.map(c => c.fn).sort(), ['mira_invitation_pending', 'mira_welcome_get']); cleanup()
   inv = null; const b = render(<MiraListItem active={false} onSelect={() => {}} />)
-  await waitFor(() => assert.equal(calls.length, 2)); assert.match(b.getByTestId('mira-list-preview').textContent ?? '', /Chào bạn, mình là Mira/); assert.ok(!b.queryByTestId('mira-list-dot'))
+  await waitFor(() => assert.equal(calls.length, 4)); assert.match(b.getByTestId('mira-list-preview').textContent ?? '', /Chào bạn, mình là Mira/); assert.ok(!b.queryByTestId('mira-list-dot'))
 })
 test('khung Mira: lời mời đang chờ hiện trong chat; bấm Trò chuyện ⇒ lời của Mira thành câu mở đầu, hội thoại nối vào lượt hỏi tiếp theo', async () => {
   const r = render(<MiraChatView onBack={() => {}} onOpenClass={() => {}} />)
@@ -93,7 +93,7 @@ test('bật/tắt lời nhắc trong khung Mira đi qua RPC; ngoài pilot (null)
 test('rào chắn nguồn: chỉ RPC mira_*; không kênh ngoài; không lưu trình duyệt; client không tự sinh nội dung lời mời', () => {
   const src = ['miraInviteApi.ts', 'MiraInvitationBanner.tsx', 'MiraProactiveToggle.tsx', 'MiraListItem.tsx'].map(f => code(`src/class-social/chat/${f}`)).join('\n')
   const rpcs = new Set([...src.matchAll(/'(mira_[a-z_]+)'/g)].map(m => m[1]))
-  assert.deepEqual([...rpcs].sort(), ['mira_invitation_decline', 'mira_invitation_ensure', 'mira_invitation_open', 'mira_invitation_pending', 'mira_proactive_enabled', 'mira_proactive_set'])
+  assert.deepEqual([...rpcs].sort(), ['mira_invitation_decline', 'mira_invitation_ensure', 'mira_invitation_open', 'mira_invitation_pending', 'mira_proactive_enabled', 'mira_proactive_set', 'mira_welcome_get', 'mira_welcome_opened'])
   assert.ok(!/localStorage|sessionStorage|indexedDB|Notification|serviceWorker|PushManager|mailto:|sms:|fetch\(/.test(src))
   assert.match(code('src/class-social/sections/MeHome.tsx'), /enabled=\{miraOn && !me\.isTeacher\}/)
 })
@@ -109,4 +109,19 @@ test('V3.1: đã đồng ý / thông báo chưa có hiệu lực / lỗi tải �
   for (const v of [view('granted'), view('unavailable'), { status: 'error' } as never, { status: 'loading' } as never]) {
     const r = render(<ConsentBubble consent={v} busy={false} error={null} onGrant={() => {}} />); assert.ok(!r.queryByTestId('mira-consent-bubble')); cleanup()
   }
+})
+
+// V3.2: lời chào trước đồng ý — chỉ tên + chấm báo do server; không gọi mô hình / không gửi gì đi
+test('V3.2: mục Mira trong Hộp thư chào đúng tên và có chấm báo khi chưa mở', async () => {
+  inv = null
+  const prev = (globalThis as { __t?: unknown }).__t
+  void prev
+  setMiraTransport({
+    rpc: async (fn, args) => { calls.push({ fn, args }); if (fn === 'mira_welcome_get') return { data: { first_name: 'Hoa', unread: true }, error: null }; if (fn === 'mira_student_pilot_enabled') return { data: true, error: null }; return { data: null, error: null } },
+    invoke: async () => { throw new Error('không được gọi mô hình trước đồng ý') },
+  })
+  const r = render(<MiraListItem active={false} onSelect={() => {}} />)
+  await waitFor(() => assert.match(r.getByTestId('mira-list-preview').textContent ?? '', /Chào Hoa, mình là Mira/))
+  assert.ok(r.getByTestId('mira-list-dot'))
+  assert.ok(calls.every(c => ['mira_invitation_pending', 'mira_welcome_get'].includes(c.fn)), JSON.stringify(calls.map(c => c.fn)))
 })

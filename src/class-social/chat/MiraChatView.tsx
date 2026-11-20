@@ -1,5 +1,5 @@
 // Khung "Hỏi Mira" trong Trò chuyện (V1.3: mở là trò chuyện được — không cổng đồng ý; thông tin AI gọn ở MiraInfo). Tái dùng ChatHeader/Composer và CSS tin nhắn hiện có; KHÔNG phải hội thoại dm_* (không lưu, không tài khoản Mira).
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Trash2 } from 'lucide-react'
 import ChatHeader from './ChatHeader'
 import MiraAvatar from './MiraAvatar'
@@ -10,6 +10,7 @@ import MiraConsentBubble from './MiraConsentBubble'
 import MiraGreeting from './MiraGreeting'
 import MiraInvitationBanner from './MiraInvitationBanner'
 import MiraProactiveToggle from './MiraProactiveToggle'
+import { welcomeGet, welcomeOpened } from './miraInviteApi'
 import { useMiraChat } from './useMiraChat'
 import { useMiraConsent } from './useMiraConsent'
 
@@ -17,6 +18,8 @@ export default function MiraChatView({ onBack, onOpenClass }: { onBack: () => vo
   const consent = useMiraConsent()
   const chat = useMiraChat({ onConsentRequired: consent.refresh })
   const box = useRef<HTMLDivElement>(null)
+  const [name, setName] = useState<string | null>(null)
+  useEffect(() => { let a = true; void welcomeOpened(); void welcomeGet().then(w => { if (a) setName(w?.firstName ?? null) }); return () => { a = false } }, [])
   useEffect(() => { const el = box.current; if (el) el.scrollTop = el.scrollHeight }, [chat.messages.length, chat.busy])
   const open = (a: MiraAction) => { const id = /^\/me\/classes\/([0-9a-f-]{36})$/i.exec(a.path)?.[1]; if (id) onOpenClass(id.toLowerCase()) }
   const header = (menu?: React.ReactNode) => <ChatHeader name={MIRA_NAME} avatarUrl={null} avatar={<MiraAvatar size={40} />} onBack={onBack} tag="Trợ lý AI của Thầy Văn Anh" menu={menu} />
@@ -31,7 +34,7 @@ export default function MiraChatView({ onBack, onOpenClass }: { onBack: () => vo
       <MiraInfo consent={consent.view} busy={consent.busy} error={consent.actionError} onGrant={() => void consent.grant()} onWithdraw={consent.withdraw} />
       <div className="cs-chat-scroll-wrap">
         <div ref={box} className="cs-chat-scroll" role="log" aria-live="polite" aria-label="Trò chuyện với Mira">
-          <MiraGreeting />
+          <MiraGreeting name={name} />
           <MiraConsentBubble consent={consent.view} busy={consent.busy} error={consent.actionError} onGrant={() => void consent.grant()} />
           <MiraInvitationBanner mode="pending" onStart={chat.seed} />
           {chat.messages.map(m => (
