@@ -28,3 +28,13 @@ export const proactiveEnabled = async (): Promise<boolean | null> => { const d =
 let handoff: { text: string; conversationId: string | null } | null = null
 export const setInviteHandoff = (h: { text: string; conversationId: string | null }) => { handoff = h }
 export const takeInviteHandoff = () => { const h = handoff; handoff = null; return h }
+
+/** V3.2: lời chào trước đồng ý — chỉ tên + cờ "chưa mở" do server trả; không đọc hồ sơ, không gọi mô hình. Lỗi ⇒ null (dùng lời chào chung). */
+export interface MiraWelcome { firstName: string | null; unread: boolean }
+export async function welcomeGet(): Promise<MiraWelcome | null> {
+  const d = await call('mira_welcome_get') as { first_name?: unknown; unread?: unknown } | null
+  if (!d || typeof d !== 'object') return null
+  const n = typeof d.first_name === 'string' ? d.first_name.replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 40) : ''
+  return { firstName: n || null, unread: d.unread === true }
+}
+export const welcomeOpened = async () => { await call('mira_welcome_opened') }
