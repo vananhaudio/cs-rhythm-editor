@@ -6,7 +6,7 @@
 // Cột số 01/02/… tách khỏi tên buổi để scan. Buổi khoá: chữ nhạt + ổ khoá (chữ "Chưa mở" cho trình đọc màn hình);
 // lý do mở khoá KHÔNG lặp trong danh sách (panel / Trang Buổi nói). Dấu chân hiện tại: vạch xám rất nhẹ.
 // Không tự cuộn. Thuần hiển thị (không mạng) → test render được.
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronDown, ChevronRight, Lock } from 'lucide-react'
 import { pad2, type ClassLearningState, type SessionState } from '../../classLearning/progress'
 import { BreakDivider } from './LearnParts'
@@ -118,6 +118,14 @@ export default function ClassMap({ state, current, onOpenSession, onOpenThread, 
   const currentKey = (groups.find(g => g.sessions.some(s => s.no === current)) ?? groups[0])?.key
   const [open, setOpen] = useState<Set<string>>(() => new Set(currentKey ? [currentKey] : []))
   const [expanded, setExpanded] = useState<Set<number>>(() => new Set())
+  // Buổi hiện tại chuyển chặng (vd. Thầy vừa mở chặng mới, trạng thái mới đến sau bản đệm) → bung đúng chặng đó, gập chặng cũ.
+  // Chỉ chạy khi ĐỔI chặng, nên thao tác bung/gập của người dùng không bị ghi đè.
+  const shownKey = useRef(currentKey)
+  useEffect(() => {
+    if (shownKey.current === currentKey) return
+    shownKey.current = currentKey
+    if (currentKey) setOpen(new Set([currentKey]))
+  }, [currentKey])
   const flip = <T,>(set: (f: (x: Set<T>) => Set<T>) => void, k: T) => set(cur => {
     const next = new Set(cur); if (next.has(k)) next.delete(k); else next.add(k); return next
   })
