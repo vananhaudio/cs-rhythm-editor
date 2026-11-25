@@ -47,3 +47,20 @@ test('thanh khoá: nêu trạng thái, chưa bấm thì chưa gọi gì; trang b
   const page = readFileSync('src/class-social/classes/ClassSessionPage.tsx', 'utf8')
   assert.match(page, /learn\.role === 'teacher' && learn\.mode === 'checkpoint' && \(\s*<TeacherLockBar/)
 })
+
+test('buổi mở đầu chặng: nhận cờ từ server; Thầy được nói đúng là cả lớp vào ngay', () => {
+  const o = raw('learner'); (o.sessions[1] as { stage_start?: boolean }).stage_start = true
+  const st = toClassLearningState(o, 'c'); assert.ok(st.enabled)
+  assert.equal(st.sessions[1].stageStart, true); assert.equal(st.sessions[0].stageStart, false)
+  const bar = (stageStart: boolean, held: boolean) => renderToStaticMarkup(<TeacherLockBar s={{ no: 9, held, published: true, stageStart }} onSet={async () => ({ ok: true })} onDone={() => {}} />)
+  assert.match(bar(true, false), /Cả lớp vào học được/)
+  assert.match(bar(false, false), /khi tới lượt/)
+  const src = readFileSync('src/class-social/classes/TeacherLockBar.tsx', 'utf8')
+  assert.match(src, /s\.stageStart\s*\? 'Mở cho cả lớp\?[^']*không cần hoàn thành chặng trước/)
+})
+
+test('không hardcode số buổi: luật mở đầu chặng nằm ở cấu trúc class_stages', () => {
+  const sql = readFileSync('db/stage_open_v1_setup.sql', 'utf8').replace(/--.*$/gm, '')
+  assert.match(sql, /class_stages/)
+  assert.doesNotMatch(sql, /session_number\s*(=|in\s*\()\s*(9|17)\b/)
+})

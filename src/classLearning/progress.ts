@@ -28,6 +28,8 @@ export type SessionState = {
   checkpoints: CheckpointState[]
   /** LESSON_HOLD_V2: Thầy đang khoá buổi — người học không đọc được dù đã có tiến độ (server chặn; ở đây chỉ để nói đúng) */
   held?: boolean
+  /** STAGE_OPEN_V1: buổi mở đầu một chặng — Thầy mở là cả lớp vào học, không phụ thuộc chặng trước (server quyết) */
+  stageStart?: boolean
   /** lịch thật của buổi (class_sessions.start_at) — chế độ giáo trình dùng để chọn buổi hiện tại */
   startAt: string | null
 }
@@ -89,6 +91,7 @@ export function toClassLearningState(v: unknown, classId: string): ClassLearning
       completedAt: str(s.completed_at),
       startAt: str(s.start_at),
       held: s.held === true,
+      stageStart: s.stage_start === true,
       checkpoints: (Array.isArray(s.checkpoints) ? s.checkpoints : []).map(obj).filter(c => str(c.id)).map(c => ({
         id: c.id as string,
         title: typeof c.title === 'string' ? c.title : '',

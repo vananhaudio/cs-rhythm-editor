@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { pad2, type SessionState } from '../../classLearning/progress'
 
 export default function TeacherLockBar({ s, onSet, onDone }: {
-  s: Pick<SessionState, 'no' | 'held' | 'published'>
+  s: Pick<SessionState, 'no' | 'held' | 'published' | 'stageStart'>
   onSet: (held: boolean) => Promise<{ ok: true } | { ok: false; message: string }>
   onDone: () => void
 }) {
@@ -24,12 +24,14 @@ export default function TeacherLockBar({ s, onSet, onDone }: {
   return (
     <section className="cs-card cs-lock-bar" aria-label="Khoá hoặc mở buổi học (chỉ giáo viên)">
       <p className="cs-lock-bar-state" role="status">
-        {held ? <><b>🔒 Buổi {n} đang khoá.</b> Học viên không đọc được.</> : <><b>🔓 Buổi {n} không khoá.</b> Học viên đọc được khi tới lượt.</>}
+        {held ? <><b>🔒 Buổi {n} đang khoá.</b> Học viên không đọc được.</> : <><b>🔓 Buổi {n} không khoá.</b> {s.stageStart ? 'Cả lớp vào học được.' : 'Học viên đọc được khi tới lượt.'}</>}
       </p>
       {asking ? (
         <div>
           <p className="cs-lock-bar-note">{held
-            ? 'Mở khoá cho lớp? Học viên đã hoàn thành buổi trước sẽ thấy ngay; người chưa trả đủ bài buổi trước sẽ thấy sau khi trả đủ.'
+            ? s.stageStart
+              ? 'Mở cho cả lớp? Đây là buổi mở đầu chặng: mọi học viên của lớp vào học được ngay, không cần hoàn thành chặng trước. Tiến độ chặng cũ giữ nguyên.'
+              : 'Mở khoá cho lớp? Học viên đã hoàn thành buổi trước sẽ thấy ngay; người chưa trả đủ bài buổi trước sẽ thấy sau khi trả đủ.'
             : 'Khoá lại? Học viên mất quyền đọc ngay, kể cả người đã mở. Tiến độ và bài đã Đạt được giữ nguyên.'}</p>
           <div className="cs-lock-bar-actions">
             <button type="button" className="cs-btn cs-btn-primary cs-btn-sm" disabled={busy} onClick={() => void apply()}>
