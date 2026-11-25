@@ -415,6 +415,8 @@ const LT_ERROR_TEXT: Record<string, string> = {
   LT_BAD_RESOURCES: 'Bài giảng đính kèm không hợp lệ.',
   LT_BAD_VISIBILITY: 'Lựa chọn "ai được xem" không hợp lệ.',
   LT_SESSION_LOCKED: 'Buổi này chưa mở. Bạn cần trả bài buổi trước mới mở khoá được.',
+  LH_TEACHER_ONLY: 'Chỉ Thầy mới mở/khoá được buổi học.',
+  LH_BAD_SESSION: 'Không tìm thấy buổi học để mở/khoá.',
   LT_CHECKPOINT_NOT_FOUND: 'Không tìm thấy bài trả này trong giáo trình. Hãy tải lại trang.',
   LT_CHECKPOINT_UNSUPPORTED: 'Bài trả này cần công cụ nộp bài chưa có. Hãy chờ cập nhật.',
   LT_MEDIA_REQUIRED: 'Bài trả này cần liên kết video.',

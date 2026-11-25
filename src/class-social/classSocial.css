@@ -1114,6 +1114,11 @@ a.cs-share-card:focus-visible { outline: 2px solid var(--cs-p); outline-offset: 
 .cs-learn-status { margin: 0 0 10px; font-size: 13.5px; color: var(--cs-muted); }
 .cs-learn-pace.is-overdue, .cs-learn-pace.is-late { color: #b45309; }
 .cs-learn-locked { margin: 0 0 10px 56px; font-size: 14px; color: var(--cs-muted); }
+.cs-lock-bar { margin: 0 0 12px; padding: 12px 14px; }
+.cs-lock-bar-state, .cs-lock-bar-note { margin: 0 0 8px; font-size: 14px; }
+.cs-lock-bar-note { color: var(--cs-muted); }
+.cs-lock-bar-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.cs-lock-bar-error { margin: 8px 0 0; font-size: 13.5px; color: #b42318; }
 .cs-learn-cp { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
 .cs-learn-cp .lt-compose { width: 100%; }
 .cs-learn-recent { margin-top: 18px; }

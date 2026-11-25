@@ -23,9 +23,10 @@ import { quizOf, submitModes, withTeacherPreview } from '../../lesson/checkpoint
 import { fetchSessionContent } from '../../classLearning/api'
 import { pad2, sessionPhase, type SessionState } from '../../classLearning/progress'
 import StudentComposer from '../../learning-thread/StudentComposer'
-import { answerCheckpoint, submitCheckpoint } from '../../classLearning/progressApi'
+import { answerCheckpoint, setSessionHold, submitCheckpoint } from '../../classLearning/progressApi'
 import { CheckpointStatusView, LockedNote, SessionStatusLine } from './LearnParts'
 import QuizCheckpoint from './QuizCheckpoint'
+import TeacherLockBar from './TeacherLockBar'
 import { takeCheckpointFocus, useClassLearning, type LearnReady } from './useClassLearning'
 
 const ShareNoteComposer = lazy(() => importWithRetry(() => import('../../share/ShareNoteComposer')))
@@ -147,6 +148,9 @@ export default function ClassSessionPage({ classId, sessionNo, isTeacher = false
   if (!s.published) return shell(<>{head(s.title)}<p className="cs-learn-locked">Nội dung buổi này đang được cập nhật.</p>{nav}</>)
   return shell(
     <>
+      {learn.role === 'teacher' && learn.mode === 'checkpoint' && (
+        <TeacherLockBar key={s.sessionId} s={s} onSet={held => setSessionHold(s.sessionId, held)} onDone={reload} />
+      )}
       {learn.role === 'learner' && learn.mode === 'checkpoint' && (
         <SessionStatusLine s={s} now={learn.serverNow ? new Date(learn.serverNow) : new Date()} paceDays={learn.paceDays} />
       )}
