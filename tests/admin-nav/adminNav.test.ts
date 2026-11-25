@@ -8,7 +8,7 @@ test('mọi mục có URL riêng và đọc ngược đúng', () => {
 test('id/slug/nhãn không trùng', () => {
   for (const k of ['id', 'slug', 'label'] as const) eq(new Set(ADMIN_NAV.map(n => n[k])).size, ADMIN_NAV.length)
 })
-test('17 mục cũ + Danh sách lớp (đã bỏ Giáo trình lớp)', () => eq(ADMIN_NAV.length, 18))
+test('17 mục cũ + Danh sách lớp (đã bỏ Giáo trình lớp) + Cập nhật app', () => eq(ADMIN_NAV.length, 19))
 test('URL cũ vẫn vào đúng mục', () => {
   eq(adminSectionFromPath('/admin'), 'dashboard')
   eq(adminSectionFromPath('/admin/'), 'dashboard')
@@ -27,7 +27,7 @@ test('URL không hợp lệ → null; không phải /admin → null', () => {
   eq(adminSectionFromPath('/administrator'), null)
 })
 test('thứ tự nhóm theo quyết định', () => {
-  eq(ADMIN_NAV_GROUPS.map(g => g.title).join('|'), '|Lớp học|Học liệu|Nội dung & truyền thông|Trợ lý AI')
+  eq(ADMIN_NAV_GROUPS.map(g => g.title).join('|'), '|Lớp học|Học liệu|Nội dung & truyền thông|Trợ lý AI|Ứng dụng')
   eq(ADMIN_NAV_GROUPS[1].items.map(i => i.label).join('|'), 'Danh sách lớp|Lớp & lịch|Thực hành HT2027|Học viên|Đăng ký|Nhóm cộng đồng')
 })
 test('Mở nhanh: có TeamLab tuyệt đối, /me theo meBase', () => {

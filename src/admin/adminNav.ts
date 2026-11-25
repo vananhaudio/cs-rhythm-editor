@@ -5,7 +5,7 @@ export type AdminSection =
   | 'dashboard' | 'lop' | 'schedule' | 'ht2027' | 'students' | 'leads' | 'community'
   | 'courses' | 'journey' | 'tools' | 'nhipphach'
   | 'newsfeed' | 'articles' | 'showcase' | 'dailymail' | 'chatmail'
-  | 'aichat' | 'assistant'
+  | 'aichat' | 'assistant' | 'appupdate'
 
 export interface AdminNavItem { id: AdminSection; slug: string; icon: string; label: string }
 export interface AdminNavGroup { title: string | null; items: AdminNavItem[] }
@@ -38,6 +38,9 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
   { title: 'Trợ lý AI', items: [
     { id: 'aichat',    slug: 'aichat',    icon: '💬', label: 'AI tuyển sinh' },
     { id: 'assistant', slug: 'assistant', icon: '🤖', label: 'Trợ lý quản trị' },
+  ] },
+  { title: 'Ứng dụng', items: [
+    { id: 'appupdate', slug: 'app-update', icon: '📲', label: 'Cập nhật app' },
   ] },
 ]
 

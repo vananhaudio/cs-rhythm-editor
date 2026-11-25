@@ -16,6 +16,7 @@ import ChatMailPage from './admin/ChatMailPage'
 import NewsFeedAdmin from './admin/NewsFeedAdmin'
 import JourneyAdmin from './admin/JourneyAdmin'
 import NhipPhachAdmin from './admin/NhipPhachAdmin'
+import AppUpdateAdmin from './admin/AppUpdateAdmin'
 import { ADMIN_NAV_GROUPS, adminSectionFromPath, adminLegacyRedirect, adminPathForSection, adminLabel, adminQuickLinks, type AdminSection } from './admin/adminNav'
 import { isSocialHost } from './class-social/resolveMeRoute'
 import ClassAdminSpace from './admin/ClassAdminSpace'
@@ -294,6 +295,13 @@ export default function TeacherAdminPage() {
         {section === 'community' && (
           <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             <GroupManager />
+          </div>
+        )}
+
+        {/* App Update Manager — server chỉ cho admin đọc/ghi */}
+        {section === 'appupdate' && (
+          <div style={{ flex: 1, overflow: 'auto', padding: isMobile ? 14 : 24 }}>
+            <AppUpdateAdmin />
           </div>
         )}
 

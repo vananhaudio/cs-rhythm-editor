@@ -4,6 +4,7 @@ import { supabase, IS_NATIVE_CAPACITOR } from './supabase'
 import type { User } from '@supabase/supabase-js'
 import { resolveMeRoute, isLearnPath } from './class-social/resolveMeRoute'
 import { isClassMobilePath, nativeOpensClassMobile } from './class-mobile/config'
+import NativeAppUpdate from './app-update/NativeAppUpdate'
 import { blockedRedirect } from './authReturn'
 import { bandSlugFromPublicPath } from './band/bandModel'
 import { PlayerView } from './PlayerView'
@@ -145,7 +146,8 @@ function bounceToStart(signedIn: boolean) {
 }
 
 export default function AppRouter() {
-  return <ToolRouteGate><AppRouterContent /></ToolRouteGate>
+  // App Update Manager: nằm NGOÀI mọi cổng/route để hiện được cả khi chưa đăng nhập; chỉ chạy trong app native
+  return <><ToolRouteGate><AppRouterContent /></ToolRouteGate>{IS_NATIVE_CAPACITOR && <NativeAppUpdate />}</>
 }
 
 function AppRouterContent() {

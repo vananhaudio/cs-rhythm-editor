@@ -4,5 +4,10 @@
   "webDir": "dist",
   "server": {
     "iosScheme": "https"
+  },
+  "plugins": {
+    "SystemBars": {
+      "style": "LIGHT"
+    }
   }
 }
