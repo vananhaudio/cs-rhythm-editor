@@ -6,7 +6,8 @@
 //        • lớp không có bài trả (chế độ giáo trình / không giáo trình): KHÔNG master-detail giả
 //      (Class Reading UI V1: không tiêu đề "Mục lục" lớn; nhãn trả bài cấp buổi nằm bên phải tên buổi)
 //   Không gian lớp (/me/classes/<id>/space) — Feed của lớp + Thành viên ở đó, không preview ở đây
-// Không hệ tab mới (thanh phân đoạn chỉ là hai link route sẵn có), không "Tiếp tục học", không card "Đang học", không tự cuộn. Quyền do server quyết; trang chỉ ĐỌC + trình bày.
+// Không hệ tab mới (thanh phân đoạn chỉ là hai link route sẵn có), không "Tiếp tục học", không card "Đang học", không tự cuộn.
+// Ngoại lệ duy nhất: Thầy mở đầu chặng mới → NewStageEntry (Owner 25/11). Quyền do server quyết; trang chỉ ĐỌC + trình bày.
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import '../../learning-thread/styles'
 import { currentSessionNo } from '../../classLearning/progress'
@@ -16,6 +17,7 @@ import ClassMap, { NoMapNote } from './ClassMap'
 import ClassHead from './ClassHead'
 import { learnerVisibleState } from './classMapModel'
 import SubmissionsPanel from './SubmissionsPanel'
+import NewStageEntry from './NewStageEntry'
 import { rememberCheckpointFocus, useClassLearning } from './useClassLearning'
 
 /** Vùng nội dung tối thiểu cho master-detail (px) — dưới mức này giữ một cột (mobile, tablet, desktop hẹp). */
@@ -95,6 +97,8 @@ export default function ClassPage({ classId, isTeacher = false, onOpenThread, on
       {/* Thông báo theo vai trò nằm ở vùng nội dung, không làm dịch phần đầu */}
       {c && !c.isMember && !isTeacher && <p className="cs-classv2-meta">Bạn đang xem lớp này — bạn chưa tham gia.</p>}
       {learn?.role === 'teacher' && <p className="cs-classv2-meta">Giáo viên xem trước: mọi buổi đều mở.</p>}
+
+      {learn && <NewStageEntry state={learn} onOpenSession={openSession} />}
 
       {/* B — MỤC LỤC SỐNG ↔ BÀI TRẢ CỦA TÔI */}
       <div className={side ? 'cs-learnmap is-split' : 'cs-learnmap'}>

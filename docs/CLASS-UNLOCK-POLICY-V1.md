@@ -44,3 +44,11 @@ Preflight production báo `lsp_sync` md5 `85655a79…` ≠ bản V1 (`c85a6a52�
 - Không áp: lớp `open`, lớp chưa có bài trả (chỉ đọc), buổi đầu của cả chương trình.
 - Gỡ dòng khoá bằng SQL KHÔNG đủ để mở một buổi mở đầu chặng — dùng nút của Thầy.
 - Tiến độ/hoàn thành chặng cũ không bị sửa. Migration `db/stage_open_v1_setup.sql` · hoàn tác `db/stage_open_v1_rollback.sql` (cần `lesson_hold_v2`).
+
+## STAGE_OPEN_SCOPE_V2 — phạm vi và lối vào chặng mới (25/11/2026)
+
+- Quy tắc mở đầu chặng **chỉ áp cho chương trình khai trong `tva_private.stage_open_program`** (đã duyệt: `SOLO01`). Khai `class_stages` không tự làm
+  một lớp có chặng độc lập về sư phạm: CB1/CB2 chia khối 4 buổi và giữ nguyên cơ chế tiến độ. Thêm chương trình mới phải được Thầy duyệt.
+  File: `db/stage_open_scope_v2_setup.sql` (+ `_rollback.sql`). Chạy lại `stage_open_v1_setup.sql` sẽ ghi đè phạm vi → chạy lại file V2 ngay sau đó.
+- Học viên: khi Thầy đã mở đầu chặng mới, buổi hiện tại chỉ xét từ chặng đó trở đi; mục lục bung chặng mới; đầu trang lớp có nút vào buổi mở đầu
+  (ẩn khi đã hoàn thành buổi đó). Chỉ trình bày — bài và tiến độ chặng cũ giữ nguyên, vẫn học tiếp được.
