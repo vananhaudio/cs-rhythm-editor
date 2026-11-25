@@ -328,7 +328,11 @@ export type SystemNoticeRow = {
   title?: string | null; link?: string | null
 }
 /** Một thông báo: chỉ nội dung ngắn + đích điều hướng (thread bài trả). Không giữ nhận xét/kết quả. */
-export type SystemNotice = { seq: number; kind: string; body: string; threadId: string; at: string; unread: boolean; title?: string; link?: string }
+/** Đích của thông báo: 'thread' = bài trả (trang cuộc trao đổi); 'post' / 'teamlab_publication' = bình luận mới trên bài của mình (mở Feed — chưa có trang mở bài đơn lẻ). */
+export type NoticeRefType = 'thread' | 'post' | 'teamlab_publication'
+const NOTICE_REF_TYPES: readonly string[] = ['thread', 'post', 'teamlab_publication']
+/** refType vắng = 'thread' (dữ liệu dựng tay/cũ). threadId = ref_key (id bài trả, hoặc id bài Social / bài TeamLab khi refType khác 'thread'); broadcast: threadId = '' */
+export type SystemNotice = { seq: number; kind: string; body: string; threadId: string; refType?: NoticeRefType; at: string; unread: boolean; title?: string; link?: string }
 
 /** Đường dẫn nội bộ an toàn: bắt đầu bằng một dấu / (không // và không \) */
 export const isInternalLink = (v: unknown): v is string => typeof v === 'string' && /^\/(?![/\\])\S*$/.test(v) && v.length <= 300
@@ -342,8 +346,9 @@ export function toSystemNotices(rows: SystemNoticeRow[] | null | undefined): Sys
   for (const r of rows ?? []) {
     if (r?.seq == null || !(r.body ?? '').trim()) continue
     const base = { seq: Number(r.seq), kind: r.kind ?? '', body: (r.body ?? '').trim(), at: r.created_at ?? '', unread: r.unread === true }
-    if (r.ref_type === 'thread' && !!r.ref_key && UUID_RE.test(r.ref_key)) {
-      out.push({ ...base, threadId: r.ref_key.toLowerCase() })
+    const isTarget = r.ref_type === 'thread' || (r.kind === 'feed_comment' && NOTICE_REF_TYPES.includes(r.ref_type ?? ''))
+    if (isTarget && !!r.ref_key && UUID_RE.test(r.ref_key)) {
+      out.push({ ...base, threadId: r.ref_key.toLowerCase(), refType: r.ref_type as NoticeRefType })
     } else if (r.kind === 'broadcast' && r.ref_type === 'broadcast') {
       // Thông điệp từ Owner: không có thread; đích (nếu có) là đường dẫn NỘI BỘ đã được server kiểm
       out.push({ ...base, threadId: '', title: (r.title ?? '').trim() || undefined, link: isInternalLink(r.link) ? r.link : undefined })
@@ -401,6 +406,7 @@ export function noticeVariant(kind: string, body: string): { tone: NoticeTone; c
     case 'question_received': return { tone: 'question', chip: 'Câu hỏi' }
     case 'question_answered': return { tone: 'answer', chip: 'Trả lời' }
     case 'broadcast': return { tone: 'other', chip: 'Thông điệp' }
+    case 'feed_comment': return { tone: 'comment', chip: 'Bình luận' }
     default: return { tone: 'other', chip: 'Thông báo' }
   }
 }
@@ -425,6 +431,7 @@ export function noticeAction(kind: string): { label: string; search: string } {
     case 'checkpoint_graded': return { label: 'Xem kết quả', search: NOTICE_TARGET_SEARCH }   // ĐẠT hoặc NỘP LẠI: nội dung thông báo nói rõ; đích = phản hồi mới nhất của Thầy
     case 'teacher_commented': return { label: 'Xem nhận xét', search: NOTICE_TARGET_SEARCH }
     case 'broadcast': return { label: 'Mở liên kết', search: '' }
+    case 'feed_comment': return { label: 'Xem bình luận', search: '' }   // thread: mở bài trả; bài Social/TeamLab: mở Feed (SystemNoticeView)
     default: return { label: 'Xem chi tiết', search: '' }   // loại mới hơn FE: vẫn mở được trang, không đoán focus
   }
 }

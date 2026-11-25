@@ -7,11 +7,20 @@ export const SHARE_ORIGIN = 'https://class.vananhaudio.com'
 export const EMBED_MIN_H = 96
 export const EMBED_MAX_H = 640
 export const EMBED_DEFAULT_H = 168
+/** Native không nhận được thông điệp chiều cao (TeamLab chỉ gửi cho cùng origin) → chiều cao cố định đủ cho player, cuộn được. */
+export const EMBED_NATIVE_H = 320
 
 export const isSlug = (s: unknown): s is string => typeof s === 'string' && s.length > 0 && s.length <= 60 && SLUG_RE.test(s)
 export const songPath = (slug: string) => `/teamlab/song/${slug}`
-export const embedSrc = (slug: string) => `${songPath(slug)}?embed=1`
-export const bandPath = (projectSlug: string | null | undefined): string | null => (isSlug(projectSlug) ? `/teamlab/band/${projectSlug}` : null)
+/** Vỏ native (TVA Guitar, Capacitor): app nạp bundle cục bộ nên đường dẫn tương đối /teamlab/... trỏ vào CHÍNH app, không phải TeamLab. */
+export const isNativeShell = (): boolean =>
+  typeof window !== 'undefined' && !!(window as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.()
+/** Gốc web của TeamLab: native → tuyệt đối; web thường → cùng origin (để rỗng). */
+export const webBase = (native: boolean = isNativeShell()): string => (native ? SHARE_ORIGIN : '')
+/** Origin mà thông điệp chiều cao phải đến từ đó. */
+export const embedOrigin = (selfOrigin: string, native: boolean = isNativeShell()): string => (native ? SHARE_ORIGIN : selfOrigin)
+export const embedSrc = (slug: string, native: boolean = isNativeShell()) => `${webBase(native)}${songPath(slug)}?embed=1`
+export const bandPath = (projectSlug: string | null | undefined, native: boolean = isNativeShell()): string | null => (isSlug(projectSlug) ? `${webBase(native)}/teamlab/band/${projectSlug}` : null)
 export const publicSongUrl = (slug: string) => SHARE_ORIGIN + songPath(slug)
 
 /** Thông điệp chiều cao từ iframe: chỉ nhận cùng origin, đúng slug, số hợp lệ; kẹp trong [MIN, MAX]. */

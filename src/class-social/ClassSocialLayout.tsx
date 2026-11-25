@@ -223,7 +223,7 @@ export default function ClassSocialLayout({ me, section, onSection, children, ca
             </button>
             {popOpen && notices.onActivity && notices.onOpenThread && (
               <Suspense fallback={null}>
-                <NoticesPopover bellRef={bellRef} onClose={closePop} onViewAll={notices.onOpen} onActivity={notices.onActivity} onOpenThread={notices.onOpenThread} />
+                <NoticesPopover bellRef={bellRef} onClose={closePop} onViewAll={notices.onOpen} onActivity={notices.onActivity} onOpenThread={notices.onOpenThread} onOpenFeed={() => onSection('home')} />
               </Suspense>
             )}
           </span>

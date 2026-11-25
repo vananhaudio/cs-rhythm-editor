@@ -92,6 +92,13 @@ test("nhúng player: URL chỉ từ slug hợp lệ; thông điệp chiều cao 
   assert.equal(m.embedSrc("mua-thu-cho-em-1a093"), "/teamlab/song/mua-thu-cho-em-1a093?embed=1");
   assert.equal(m.publicSongUrl("a-b"), "https://class.vananhaudio.com/teamlab/song/a-b");
   assert.equal(m.bandPath("x_y"), null);
+  // Vỏ native (TVA Guitar): bundle cục bộ → URL phải tuyệt đối tới TeamLab, thông điệp chỉ nhận từ class.vananhaudio.com.
+  assert.equal(m.embedSrc("mua-thu", true), "https://class.vananhaudio.com/teamlab/song/mua-thu?embed=1");
+  assert.equal(m.embedSrc("mua-thu", false), "/teamlab/song/mua-thu?embed=1");
+  assert.equal(m.bandPath("ban-nhac", true), "https://class.vananhaudio.com/teamlab/band/ban-nhac");
+  assert.equal(m.embedOrigin("https://localhost", true), "https://class.vananhaudio.com");
+  assert.equal(m.embedOrigin("https://localhost", false), "https://localhost");
+  assert.equal(m.webBase(true), "https://class.vananhaudio.com");
   const ok = { type: "teamlab-embed-height", slug: "s", height: 210.2 };
   assert.equal(m.heightFromMessage({ origin: "https://class.vananhaudio.com", data: ok }, "https://class.vananhaudio.com", "s"), 211);
   assert.equal(m.heightFromMessage({ origin: "https://evil.example", data: ok }, "https://class.vananhaudio.com", "s"), null);

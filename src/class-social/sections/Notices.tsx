@@ -26,7 +26,7 @@ export default function Notices({ onUnreadChanged, onOpenThread, onClose }: {
     <div className="cs-col-wide cs-notices-page">
       <h1 className="cs-page-title">Thông báo</h1>
       <section className="cs-card cs-notices">
-        <SystemNoticeView bare onBack={() => undefined} onActivity={onUnreadChanged} onOpenThread={(id, search) => onOpenThread(id, search)} />
+        <SystemNoticeView bare onBack={() => undefined} onActivity={onUnreadChanged} onOpenThread={(id, search) => onOpenThread(id, search)} onOpenFeed={onClose} />
       </section>
     </div>
   )
