@@ -37,3 +37,10 @@ hoàn thành → chuỗi đứng). Hành Trình cần nút Trả bài nhưng h�
 
 ## Hiệu chỉnh 30/10/2026 (phát hiện khi chạy preflight production)
 Preflight production báo `lsp_sync` md5 `85655a79…` ≠ bản V1 (`c85a6a52…`): production đã áp dụng `db/class_session_zero_intro.sql` (Buổi 0). Cổng md5 đã dừng migration đúng thiết kế. Migration + rollback + test nay dựa trên bản **Buổi 0** (md5 `85655a791d24a9a0997d94bcbe6687a3`); `class_learning_state` giữ md5 QUIZ `db9015ea…` (khớp production). Test DB 46 PASS gồm ca Buổi 0 + lớp `open`.
+
+## STAGE_OPEN_V1 — buổi mở đầu chặng (Owner chốt 25/11/2026)
+- Buổi số nhỏ nhất của mỗi chặng (`class_stages`; xếp chặng như `stageOf`: `stage_id`, không có thì khoảng `from_session..to_session`) **chỉ phụ thuộc Thầy mở cho lớp**, không phụ thuộc chặng trước. Các buổi sau trong chặng giữ cơ chế tiến độ.
+- "Mở" = Thầy bấm ở trang buổi (`class_lesson_set_hold(buổi, false)` → ghi `tva_private.class_stage_opening`). **Xuất bản mà chưa bấm mở thì học viên vẫn không đọc được**, dù không có dòng khoá.
+- Không áp: lớp `open`, lớp chưa có bài trả (chỉ đọc), buổi đầu của cả chương trình.
+- Gỡ dòng khoá bằng SQL KHÔNG đủ để mở một buổi mở đầu chặng — dùng nút của Thầy.
+- Tiến độ/hoàn thành chặng cũ không bị sửa. Migration `db/stage_open_v1_setup.sql` · hoàn tác `db/stage_open_v1_rollback.sql` (cần `lesson_hold_v2`).
