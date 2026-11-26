@@ -5,7 +5,7 @@ import { MAX_COMMENT } from './commentModel'
 import type { LikeKind } from '../likes/likeModel'
 
 export type CommentKind = Exclude<LikeKind, 'post'>
-export const isCommentKind = (k: string): k is CommentKind => k === 'learning_thread' || k === 'teamlab_publication'
+export const isCommentKind = (k: string): k is CommentKind => k === 'learning_thread' || k === 'teamlab_publication' || k === 'story'
 
 export type TargetCommentRow = {
   id: string; parent_comment_id: string | null; body: string; created_at: string; edited_at: string | null

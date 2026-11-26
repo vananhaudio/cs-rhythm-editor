@@ -64,6 +64,16 @@ export function ensureLike(kind: LikeKind, id: string) {
   if (!scheduled) { scheduled = true; setTimeout(() => { void flush() }, 0) }
 }
 
+/** Hỏi lại server mọi mục đã nạp (quay lại trang được trình duyệt giữ nguyên / quay lại Feed). */
+export function refreshLikes() {
+  for (const [key, e] of entries) {
+    if (!e.loaded) continue
+    const [kind, id] = key.split(':') as [LikeKind, string]
+    queue.set(key, { kind, id })
+  }
+  if (queue.size && !scheduled) { scheduled = true; setTimeout(() => { void flush() }, 0) }
+}
+
 async function drain(target: LikeTarget) {
   const key = likeKey(target.kind, target.id)
   for (;;) {

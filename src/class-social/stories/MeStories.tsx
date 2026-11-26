@@ -3,10 +3,12 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { BookText, PenLine } from 'lucide-react'
 import { EmptyState } from '../ui'
 import StoryCard from './StoryCard'
+import { useFeedReturn } from '../useFeedReturn'
 import { fetchStoriesPage, type StoryCursor } from './storiesApi'
 import type { StoryCardData } from './storyModel'
 
-export default function MeStories() {
+export default function MeStories({ userId }: { userId: string }) {
+  const listRef = useRef<HTMLDivElement>(null)
   const [items, setItems] = useState<StoryCardData[]>([])
   const [next, setNext] = useState<StoryCursor | null>(null)
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
@@ -33,6 +35,9 @@ export default function MeStories() {
     } catch { if (alive.current) setMore('error') }
   }
 
+  useFeedReturn({ id: 'stories', owner: userId, listRef, keys: items.map(c => c.storyId), count: items.length,
+    ready: status === 'ready', hasMore: next !== null, loadingMore: more === 'loading', loadMore: () => void loadMore() })
+
   return (
     <div className="cs-col cs-stories-page">
       <header className="cs-stories-head">
@@ -54,7 +59,7 @@ export default function MeStories() {
         <EmptyState icon={BookText} title="Chưa có câu chuyện nào" quiet>Câu chuyện được đăng sẽ hiện ở đây.</EmptyState>
       )}
       {status === 'ready' && items.length > 0 && (
-        <div className="cs-post-list">
+        <div className="cs-post-list" ref={listRef}>
           {items.map(c => <StoryCard key={c.storyId} card={c} variant="list" returnTo="/me/stories" />)}
           {more === 'error' && <p className="cs-feed-more-error" role="alert">Chưa tải thêm được. Hãy thử lại.</p>}
           {next && (

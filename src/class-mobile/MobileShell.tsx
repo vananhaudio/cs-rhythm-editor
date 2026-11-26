@@ -167,7 +167,7 @@ export default function MobileShell({ base }: { base: ClassIdentity }) {
         const s: SocialSection = view.section
         if (s === 'friends') return <Friends requests={requests} onOpenProfile={openProfile} onMessage={openChatWith} />
         if (s === 'tools') return <ToolsPage />
-        if (s === 'stories') return <MeStories />
+        if (s === 'stories') return <MeStories userId={me.userId} />
         if (s === 'chat') return chatPage({ kind: 'none' })
         return null
       }

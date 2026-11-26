@@ -1,6 +1,7 @@
 // ── /story — Tạp chí "1001 Câu chuyện cùng Guitar" ──
 // Magazine layout with content blocks: Featured, Latest, Topics
 import { useEffect, useState } from 'react'
+import { retryOriginal, storyImageProps } from './coverImage'
 import { supabase } from '../supabase'
 
 // ── Types ──
@@ -56,12 +57,14 @@ function StoryImg({ img }: { img: string | null }) {
   }
   return (
     <img
-      src={img}
+      {...storyImageProps(img, 'grid')}
       alt=""
       className="sh-card-img"
       loading="lazy"
+      decoding="async"
       onError={(e) => {
         const el = e.currentTarget
+        if (retryOriginal(el, img)) return
         el.style.display = 'none'
         const wrap = el.parentElement
         if (wrap) {

@@ -30,6 +30,13 @@ export function ensureCommentCount(kind: CommentKind, id: string) {
   queue.set(k, { kind, id })
   if (!scheduled) { scheduled = true; setTimeout(() => { void flush() }, 0) }
 }
+export function refreshCommentCounts() {
+  for (const key of loaded) {
+    const [kind, id] = key.split(':') as [CommentKind, string]
+    queue.set(key, { kind, id })
+  }
+  if (queue.size && !scheduled) { scheduled = true; setTimeout(() => { void flush() }, 0) }
+}
 export function setCommentCount(kind: CommentKind, id: string, n: number) {
   const k = likeKey(kind, id)
   if (counts.get(k) === n) return

@@ -1,0 +1,5 @@
+/* Khung Thích · Bình luận trong trang đọc: dùng giao diện Feed, bỏ nền/chiều cao toàn trang của .cs-root. */
+.sd-social.cs-root { min-height: 0; background: transparent; margin-top: 28px; font-family: inherit; line-height: 1.5; }
+.sd-social.cs-root .cs-likebar { margin-top: 0; }
+.sd-social-guest { margin: 28px 0 0; padding: 14px 0; border-top: 1px solid #E5E5EA; font-size: 15px; color: #636366; text-align: center; }
+.sd-social-guest a { color: #5B21B6; font-weight: 600; text-decoration: none; display: inline-block; padding: 6px 2px; }

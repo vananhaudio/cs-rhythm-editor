@@ -1,5 +1,6 @@
 // ── /story/topic/:slug — Stories by topic ──
 import { useEffect, useState } from 'react'
+import { retryOriginal, storyImageProps } from './coverImage'
 import { supabase } from '../supabase'
 
 interface StoryItem {
@@ -106,7 +107,7 @@ export default function TopicPage() {
                   const img = firstPhoto(s.photos)
                   return (
                     <a key={s.id} href={`/story/${s.slug || s.id}`} className="tp-item">
-                      {img && <img src={img} alt="" className="tp-item-img" />}
+                      {img && <img {...storyImageProps(img, 'thumb')} alt="" className="tp-item-img" loading="lazy" decoding="async" onError={e => { retryOriginal(e.currentTarget, img) }} />}
                       {!img && <div className="tp-item-img" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, opacity: 0.3 }}>🎸</div>}
                       <div className="tp-item-body">
                         <h3 className="tp-item-title">{s.title}</h3>

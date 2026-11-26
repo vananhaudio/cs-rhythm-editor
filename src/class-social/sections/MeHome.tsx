@@ -149,6 +149,7 @@ export default function MeHome({ me, identityRev = 0, onOpenProfile, requests, o
           ? <p className="cs-loading" role="status">Đang tải…</p>
           : <CommunityFeed state={state} onRetry={() => void reload()} onLoadMore={() => void loadMore()} social={social}
           todayStory={scope === 'for_you' ? todayStory : null}
+          position={{ id: `home:${scope}`, owner: me.userId, ready: scope !== 'for_you' || todayStory !== undefined }}
           empty={FEED_EMPTY[scope]}
           emptyAction={scope === 'friends' && onSeeAllRequests
               ? <button type="button" className="cs-btn cs-btn-ghost cs-btn-sm cs-empty-action" onClick={onSeeAllRequests}>Đến trang Bạn bè</button>

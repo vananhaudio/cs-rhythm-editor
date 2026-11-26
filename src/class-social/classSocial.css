@@ -2061,7 +2061,10 @@ button.cs-subs-title:hover { color: var(--cs-accent); }
 .cs-inbox-av .cs-classrow-logo { border-radius: 14px; flex: none; }
 
 /* ── 1001 Câu Chuyện: thẻ trên Feed + trang /me/stories (iOS Light, cùng token /me) ── */
-.cs-story-card { overflow: hidden; }
+/* không overflow:hidden ở thẻ — menu bình luận phải hiện đủ; bo góc đặt trên ảnh bìa */
+.cs-story-cover { border-radius: var(--cs-r-lg) var(--cs-r-lg) 0 0; }
+.cs-story-foot { padding: 0 var(--cs-s4) var(--cs-s2); }
+.cs-story-foot .cs-likebar { margin-top: 0; }
 .cs-root .cs-story-link { display: block; color: var(--cs-text); }
 .cs-story-cover { display: block; width: 100%; aspect-ratio: 3 / 2; object-fit: cover; background: var(--cs-hover); }
 .cs-story-body { padding: var(--cs-s3) var(--cs-s4) var(--cs-s4); }

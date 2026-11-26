@@ -10,6 +10,11 @@ import FeedEntryCard from "../../src/class-social/sections/FeedEntryCard";
 import { NAV_GROUPS } from "../../src/class-social/nav";
 import { SECTION_PATHS, keepsPathForGuest, sectionFromPath, viewFromPath, viewPath } from "../../src/class-social/resolveMeRoute";
 import { classifyRoute } from "../../netlify/og/routes";
+import { isLikeKind, likeKey, parseSummary } from "../../src/class-social/likes/likeModel";
+import { isCommentKind } from "../../src/class-social/comments/targetCommentModel";
+import { resizedImage, retryOriginal, storyImageProps } from "../../src/story/coverImage";
+import { POSITION_TTL_MS, anchorIndex, consumeResume, readPosition, requestResume, savePosition } from "../../src/class-social/feedReturn";
+import { mergeMyStories } from "../../src/story/myStories";
 void React;
 
 const ID = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
@@ -72,11 +77,66 @@ test("route /me/stories: nhận đúng, giữ đường dẫn qua đăng nhập,
   assert.equal(classifyRoute("/me/stories")?.kind, "private");
 });
 
-test("giao diện thẻ: liên kết tới trang đọc đã xuất bản; chưa có Thích/Bình luận (chờ Lát 3)", () => {
+test("giao diện thẻ: liên kết tới trang đọc; thanh Thích · Bình luận chung của Feed, đúng khoá story + stories.id", () => {
   const [e] = toFeedEntries([row(1)]);
   const html = renderToStaticMarkup(<FeedEntryCard entry={e} />);
-  assert.match(html, /href="\/story\/chuyen-1\?return=%2Fme"/); assert.match(html, /1001 Câu Chuyện/); assert.doesNotMatch(html, /Thích|Bình luận/);
+  assert.match(html, /href="\/story\/chuyen-1\?return=%2Fme"/); assert.match(html, /1001 Câu Chuyện/);
+  assert.match(html, /data-kind="story"/); assert.match(html, /Thích/); assert.match(html, /Bình luận/);
+  // nút nằm NGOÀI liên kết đọc truyện
+  assert.ok(html.indexOf("</a>") < html.indexOf("cs-likebar"));
+  // /me/stories (không footer) giữ nguyên thẻ đã duyệt
+  assert.doesNotMatch(renderToStaticMarkup(<StoryCard card={card(2)} variant="list" />), /cs-likebar/);
   assert.match(renderToStaticMarkup(<StoryCard card={card(2)} variant="today" />), /Câu chuyện hôm nay/);
+});
+
+test("Thích/Bình luận: 'story' là loại mục hợp lệ trong cùng kho với Feed", () => {
+  assert.equal(isLikeKind("story"), true); assert.equal(isCommentKind("story"), true); assert.equal(isCommentKind("post"), false);
+  assert.equal(parseSummary([{ target_kind: "story", target_id: ID(1), like_count: 2, liked: true }]).get(likeKey("story", ID(1)))!.count, 2);
+});
+
+const COVER = "https://abc.supabase.co/storage/v1/object/public/story-photos/stories/a.png";
+test("ảnh Story: thu nhỏ khi tải, giữ tỉ lệ, cùng một asset; ảnh nguồn khác giữ nguyên", () => {
+  assert.equal(resizedImage(COVER, 480), "https://abc.supabase.co/storage/v1/render/image/public/story-photos/stories/a.png?width=480&resize=contain&quality=72");
+  assert.match(resizedImage(COVER + "?v=2", 480), /a\.png\?v=2&width=480&resize=contain/);
+  const p = storyImageProps(COVER, "card");
+  assert.match(p.srcSet!, / 480w, .* 800w, .* 1200w$/); assert.ok(p.sizes);
+  for (const other of ["https://x/a.png", "https://abc.supabase.co/storage/v1/object/public/lessons/a.png", COVER.replace(".png", ".gif")]) {
+    assert.deepEqual(storyImageProps(other, "card"), { src: other }); assert.equal(resizedImage(other, 480), other);
+  }
+});
+
+test("ảnh Story lỗi dịch vụ thu nhỏ → quay về đúng ảnh gốc MỘT lần", () => {
+  const attrs: Record<string, string> = { src: resizedImage(COVER, 800), srcset: "x 1w", sizes: "1px" };
+  const img = { dataset: {} as Record<string, string>, getAttribute: (k: string) => attrs[k] ?? null, removeAttribute: (k: string) => { delete attrs[k]; }, set src(v: string) { attrs.src = v; } } as unknown as HTMLImageElement;
+  assert.equal(retryOriginal(img, COVER), true); assert.deepEqual(attrs, { src: COVER });
+  assert.equal(retryOriginal(img, COVER), false);
+});
+
+const mem = () => { const m = new Map<string, string>(); return { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => { m.set(k, v); }, removeItem: (k: string) => { m.delete(k); } }; };
+test("vị trí cuộn: đúng tài khoản, còn hạn; chỉ khôi phục khi thật sự quay lại, dùng một lần", () => {
+  const s = mem(); const pos = { owner: "u1", key: "p:1", offset: 12, y: 900, count: 40, at: 1_000_000 };
+  savePosition("home:for_you", pos, s);
+  assert.deepEqual(readPosition("home:for_you", "u1", 1_000_100, s), pos);
+  assert.equal(readPosition("home:for_you", "u2", 1_000_100, s), null);
+  assert.equal(readPosition("home:friends", "u1", 1_000_100, s), null);
+  assert.equal(readPosition("home:for_you", "u1", 1_000_000 + POSITION_TTL_MS + 1, s), null);
+  assert.equal(consumeResume(5000, s, () => false), false);          // bấm menu Trang chủ → không khôi phục
+  requestResume(5000, s);
+  assert.equal(consumeResume(6000, s, () => false), true); assert.equal(consumeResume(6001, s, () => false), false);
+  requestResume(5000, s); assert.equal(consumeResume(5000 + 61_000, s, () => false), false);   // cờ cũ không dùng
+  assert.equal(consumeResume(1, s, () => true), true);               // Back/Forward của trình duyệt
+  assert.equal(anchorIndex([-300, 20, 400, 900]), 2); assert.equal(anchorIndex([]), -1);
+});
+
+test("vị trí cuộn: chỉ lưu khoá mục + toạ độ, không lưu nội dung", () => {
+  const src = readFileSync("src/class-social/useFeedReturn.ts", "utf8");
+  assert.match(src, /savePosition\(cur\.id, \{ owner: cur\.owner, key: cur\.keys\[i\] \?\? null, offset: [^}]*y: window\.scrollY, count: cur\.count, at: Date\.now\(\) \}\)/);
+});
+
+test("Phòng viết: ghép bài đã đăng của mình, không trùng, mới sửa lên trước", () => {
+  const own = [{ id: "a", title: "A", status: "telling", updated_at: "2026-09-01", conversation: [1] }, { id: "b", title: "B", status: "unpublished", updated_at: "2026-08-01", conversation: null }];
+  const out = mergeMyStories(own, [{ id: "c", title: "C", status: "published", updated_at: "2026-09-15" }, { id: "a", title: "A", status: "published", updated_at: "2026-09-02" }]);
+  assert.deepEqual(out.map(x => x.id), ["c", "a", "b"]); assert.deepEqual(out.map(x => x.conversation), [[], [1], []]);
 });
 
 test("migration Feed: không trả mã người dùng, hội thoại, Zalo; lọc chặn trong truy vấn; hàm thẻ không gọi trực tiếp được", () => {
@@ -86,4 +146,14 @@ test("migration Feed: không trả mã người dùng, hội thoại, Zalo; lọ
   assert.equal(sql.match(/class_ugc_pair_blocked\(auth\.uid\(\), (st|s)\.user_id\)/g)!.length, 3);
   assert.match(sql, /revoke all on function public\.story_feed_card\(uuid\) from public, anon, authenticated;/);
   assert.doesNotMatch(readFileSync("db/story_feed_v1_rollback.sql", "utf8"), /stories_own|story_private|grant select/);
+});
+
+test("bản vá riêng tư: lọc chặn theo chủ bài thật; không cấp bảng kín cho client; tính năng hoàn tác không đụng bản vá", () => {
+  const p = readFileSync("db/story_privacy_v1_setup.sql", "utf8");
+  assert.equal(p.match(/class_ugc_pair_blocked\(auth\.uid\(\), public\.story_owner_id\((st|s)\.id\)\)/g)!.length, 3);
+  assert.doesNotMatch(p, /class_ugc_pair_blocked\(auth\.uid\(\), (st|s)\.user_id\)/);
+  assert.match(p, /revoke all on function public\.story_owner_id\(uuid\) from public, anon, authenticated;/);
+  const back = readFileSync("db/story_engagement_v1_rollback.sql", "utf8");
+  assert.doesNotMatch(back, /story_private|stories_seal|user_id drop|grant select|delete from public\.feed_likes\s*;|drop table|drop constraint/);
+  assert.match(readFileSync("db/story_feed_v1_setup.sql", "utf8"), /đã có story_privacy_v1/);
 });

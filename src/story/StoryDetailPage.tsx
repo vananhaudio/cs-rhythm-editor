@@ -1,9 +1,14 @@
 // ── /story/:slug — Trang đọc câu chuyện ──
 // Hiển thị nội dung đầy đủ của một câu chuyện đã xuất bản.
-import React, { useEffect, useState } from 'react'
+import React, { Suspense, lazy, useEffect, useState } from 'react'
 import { supabase } from '../supabase'
 import ReportButton, { REPORT_CSS } from './ReportButton'
 import { safeReturnPath, storyHref } from '../class-social/stories/storyModel'
+import { requestResume } from '../class-social/feedReturn'
+import { retryOriginal, storyImageProps } from './coverImage'
+
+// Thích · Bình luận tải sau (không làm chậm phần đọc của khách).
+const StoryEngagement = lazy(() => import('./StoryEngagement'))
 
 const BACK_LABELS: Record<string, string> = { '/me': 'Trang chủ', '/me/stories': '1001 Câu Chuyện', '/start': 'Về app' }
 
@@ -110,6 +115,8 @@ export default function StoryDetailPage() {
   const [returnTo] = useState(readReturnPath)
   const backHref = returnTo ?? '/story'
   const backLabel = returnTo ? BACK_LABELS[returnTo] : 'Tạp chí'
+  // Quay lại danh sách trong /me → đúng chỗ đang cuộn
+  const onBack = returnTo === '/me' || returnTo === '/me/stories' ? () => requestResume() : undefined
   const [story, setStory] = useState<StoryDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
@@ -190,7 +197,7 @@ export default function StoryDetailPage() {
       {/* Nav */}
       <nav className="sd-nav">
         <div className="sd-nav-inner">
-          <a href={backHref} className="sd-back">‹ {backLabel}</a>
+          <a href={backHref} onClick={onBack} className="sd-back">‹ {backLabel}</a>
           <a href="/story/write" className="sd-cta">Kể chuyện</a>
         </div>
       </nav>
@@ -213,11 +220,14 @@ export default function StoryDetailPage() {
             {story.photos.map((p, i) => (
               <img
                 key={i}
-                src={p.url}
+                {...storyImageProps(p.url, 'article')}
                 alt={p.caption || ''}
                 className="sd-photo"
+                decoding="async"
+                loading={i === 0 ? 'eager' : 'lazy'}
                 onError={(e) => {
                   const el = e.currentTarget
+                  if (retryOriginal(el, p.url)) return
                   el.style.display = 'none'
                   const wrap = el.parentElement
                   if (wrap) {
@@ -243,7 +253,8 @@ export default function StoryDetailPage() {
             <div className="sd-author-label">Đôi nét về người kể</div>
             <div className="sd-author-row">
               {story.author_portrait_url && (
-                <img className="sd-author-photo" src={story.author_portrait_url} alt={story.author_full_name ?? 'Người kể'} />
+                <img className="sd-author-photo" {...storyImageProps(story.author_portrait_url, 'portrait')} alt={story.author_full_name ?? 'Người kể'}
+                  onError={e => { retryOriginal(e.currentTarget, story.author_portrait_url!) }} />
               )}
               <div className="sd-author-main">
                 {story.author_full_name && <div className="sd-author-name">{story.author_full_name}</div>}
@@ -261,6 +272,8 @@ export default function StoryDetailPage() {
             </div>
           </aside>
         )}
+
+        <Suspense fallback={null}><StoryEngagement storyId={story.id} /></Suspense>
 
         {/* Categories & Series */}
         {(categories.length > 0 || seriesList.length > 0 || story.topic) && (
@@ -307,7 +320,7 @@ export default function StoryDetailPage() {
 
         {/* Back to magazine */}
         <div className="sd-back-cta">
-          <a href={backHref} className="sd-back-link">‹ Về {returnTo ? backLabel : 'Tạp chí'}</a>
+          <a href={backHref} onClick={onBack} className="sd-back-link">‹ Về {returnTo ? backLabel : 'Tạp chí'}</a>
         </div>
       </article>
 
@@ -343,6 +356,9 @@ const CSS = REPORT_CSS + `
 @media (max-width: 520px) { .sd-author-row { flex-direction: column; } .sd-author-photo { width: 76px; height: 76px; } }
 .sd-root {
   min-height: 100dvh;
+  /* #root của app là flex-column cao 100% → không để khung bị co còn một màn hình (phần cuộn xuống lộ nền be) */
+  flex: none;
+  width: 100%;
   background: #FFFFFF;
   color: #1C1C1E;
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Be Vietnam Pro', system-ui, sans-serif;

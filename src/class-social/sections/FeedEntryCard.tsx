@@ -12,8 +12,8 @@ import TargetComments from './comments/TargetComments'
 import { ensureCommentCount, useCommentCount } from '../comments/commentCountStore'
 import type { CommentKind } from '../comments/targetCommentModel'
 
-/** Thread / publication: nút Bình luận mở khu bình luận NGAY dưới thanh (không che trình phát — nằm dưới thẻ). */
-function TargetActions({ kind, id, social, now }: { kind: CommentKind; id: string; social?: PostSocial; now?: Date }) {
+/** Thread / publication / story: nút Bình luận mở khu bình luận NGAY dưới thanh (không che trình phát — nằm dưới thẻ). */
+export function TargetActions({ kind, id, social, now }: { kind: CommentKind; id: string; social?: PostSocial; now?: Date }) {
   const [open, setOpen] = useState(false)
   const count = useCommentCount(kind, id)
   useEffect(() => { ensureCommentCount(kind, id) }, [kind, id])
@@ -26,8 +26,7 @@ function TargetActions({ kind, id, social, now }: { kind: CommentKind; id: strin
 }
 
 export default function FeedEntryCard({ entry, now, social }: { entry: FeedEntry; now?: Date; social?: PostSocial }) {
-  // 1001 Câu Chuyện: Thích/Bình luận chung của Feed sẽ nối ở Lát 3.
-  if (isStoryEntry(entry)) return <StoryCard card={entry.card} variant="feed" />
+  if (isStoryEntry(entry)) return <StoryCard card={entry.card} variant="feed" footer={<TargetActions kind="story" id={entry.card.storyId} social={social} now={now} />} />
   // Ôn nhanh: nội dung của Thầy, không tác giả/UGC → KHÔNG có Thích/Bình luận/Báo cáo (feed_likes/feed_comments không có kind này).
   if (isLessonClipEntry(entry)) return <LessonClipCard entry={entry} now={now} />
   if (isPublicationEntry(entry)) return <PublicationCard entry={entry} now={now} footer={<TargetActions kind="teamlab_publication" id={entry.id} social={social} now={now} />} />

@@ -41,6 +41,7 @@ import { BandsAdminPage } from '../band/BandAdmin'
 import BroadcastPage from './broadcast/BroadcastPage'
 import BandManagePage from '../band/BandManage'
 import MeStories from './stories/MeStories'
+import { requestResume } from './feedReturn'
 
 const TITLES: Record<SocialSection, string> = {
   home: 'Trang chủ · Thầy Văn Anh Guitar',
@@ -80,6 +81,7 @@ export default function ClassSocialPage({ initialSection }: { initialSection: So
       const v = viewFromPath(window.location.pathname)
       const c = canonicalView(v)
       if (c !== v) window.history.replaceState(window.history.state, '', viewPath(c))
+      if (c.kind === 'section' && (c.section === 'home' || c.section === 'stories')) requestResume()   // quay lại → giữ vị trí cuộn
       setView(c); setVisit(n => n + 1)
     }
     window.addEventListener('popstate', onPop)
@@ -277,7 +279,7 @@ function SignedInShell({ base, view, onSection, onOpenProfile, onOpenThread, onO
         onOpenFriends={() => onSection('friends')} onUnreadChanged={() => void chatUnread.refresh()} />}
       {view.kind === 'notices' && <Notices onUnreadChanged={() => void chatUnread.refresh()} onOpenThread={onOpenThread} onClose={() => onBack(HOME)} />}
       {section === 'tools' && <ToolsPage />}
-      {section === 'stories' && <MeStories />}
+      {section === 'stories' && <MeStories key={visit} userId={me.userId} />}
       {editor.element}
       {editingProfile && <ProfileEditDialog me={me} onClose={() => setEditingProfile(false)} onSaved={onChanged} />}
     </ClassSocialLayout>
