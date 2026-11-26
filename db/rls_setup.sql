@@ -50,6 +50,8 @@ DECLARE
   ];
   -- Bảng tự quản RLS riêng (policy hẹp do migration tính năng đặt) — BỎ QUA:
   self_managed text[] := ARRAY[
+    -- 1001 Câu chuyện (db/story_security_lat0_setup.sql): quyền hẹp riêng — áp policy rộng = mở lại lỗ hổng.
+    'story_chunks', 'story_private', 'story_categories', 'story_series', 'categories', 'series',
     'edu_groups', 'edu_group_members', 'edu_group_claim_tokens',
     -- Bản tin hôm nay (db/home_feed_v2.sql): anon/auth chỉ ĐỌC item published; teacher mới ghi.
     'home_feed_items',

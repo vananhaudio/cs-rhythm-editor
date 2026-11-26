@@ -1,6 +1,16 @@
 // ── /editorial — Ban biên tập ──
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from './supabase'
+import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from './supabase'
+
+/** publish-story chỉ nhận Ban biên tập đã đăng nhập → luôn gửi phiên hiện tại. */
+async function callPublishStory(payload: unknown): Promise<Response> {
+  const { data } = await supabase.auth.getSession()
+  return fetch(`${SUPABASE_URL}/functions/v1/publish-story`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${data.session?.access_token ?? ''}` },
+    body: JSON.stringify(payload),
+  })
+}
 
 type Tab = 'inbox' | 'categories' | 'series'
 type StoryStatus = 'telling' | 'drafting' | 'submitted' | 'editing' | 'published'
@@ -94,7 +104,7 @@ export default function EditorPage() {
     if (!q.trim()) { setUserSearchRes([]); setShowUserDropdown(false); return }
     setUserSearching(true)
     const { data } = await supabase.functions.invoke('story-ai', {
-      body: { admin_key: 'st-1001-adm-7x9k2', action: 'search_users', q: q.trim() },
+      body: { action: 'search_users', q: q.trim() },
     })
     setUserSearchRes(data?.users || [])
     setShowUserDropdown(true)
@@ -118,7 +128,7 @@ export default function EditorPage() {
     try {
       const { data, error } = await supabase.functions.invoke('story-ai', {
         body: {
-          admin_key: 'st-1001-adm-7x9k2', action: 'admin_insert_story',
+          action: 'admin_insert_story',
           status: 'submitted',                       // vào tab "Chờ đọc", chưa lên Tạp chí
           title: nTitle.trim(), content: nContent.trim(),
           pen_name: nAuthor.trim(), author_name: nAuthor.trim(),
@@ -144,7 +154,7 @@ export default function EditorPage() {
   // Fetch all stories via edge function (bypasses RLS)
   const load = useCallback(() => {
     supabase.functions.invoke('story-ai', {
-      body: { action: 'list_all', admin_key: 'st-1001-adm-7x9k2' },
+      body: { action: 'list_all' },
     }).then(({ data, error }) => {
       if (error || !data?.stories) { console.error('Editor fetch error:', error); setLoading(false); return }
       const mapped: Story[] = (data.stories || []).map((s: any) => ({
@@ -454,7 +464,7 @@ function DetailPanel({ story, onClose, onUpdate }: { story: Story; onClose: () =
     setSaving(true)
     try {
       const { data, error } = await supabase.functions.invoke('story-ai', {
-        body: { admin_key: 'st-1001-adm-7x9k2', action: 'admin_update_story', story_id: story.id, title: editTitle, content: editContent },
+        body: { action: 'admin_update_story', story_id: story.id, title: editTitle, content: editContent },
       })
       console.log('Save result:', { data, error, storyId: story.id })
       if (!error && data?.ok) {
@@ -502,7 +512,7 @@ function DetailPanel({ story, onClose, onUpdate }: { story: Story; onClose: () =
   const toggleFeatured = async () => {
     setFeatBusy(true); setStatusMsg('')
     const { data, error } = await supabase.functions.invoke('story-ai', {
-      body: { admin_key: 'st-1001-adm-7x9k2', action: 'admin_update_story', story_id: story.id, featured: !isFeatured },
+      body: { action: 'admin_update_story', story_id: story.id, featured: !isFeatured },
     })
     if (!error && data?.ok) { setIsFeatured(!isFeatured); story.featured = !isFeatured; setStatusMsg(isFeatured ? 'Đã bỏ nổi bật.' : '⭐ Đã đánh dấu nổi bật!'); if (onUpdate) onUpdate() }
     else setStatusMsg('Lỗi: ' + ((data as any)?.error || error?.message || 'Không cập nhật được'))
@@ -518,7 +528,7 @@ function DetailPanel({ story, onClose, onUpdate }: { story: Story; onClose: () =
     if (!isHidden && !confirm(`Ẩn "${story.title}" khỏi Tạp chí?\n\nBài sẽ không hiển thị công khai nhưng vẫn còn trong hệ thống. Có thể hiện lại sau.`)) return
     setHideBusy(true); setStatusMsg('')
     const { data, error } = await supabase.functions.invoke('story-ai', {
-      body: { admin_key: 'st-1001-adm-7x9k2', action: 'admin_update_story', story_id: story.id, status: newStatus },
+      body: { action: 'admin_update_story', story_id: story.id, status: newStatus },
     })
     if (!error && data?.ok) {
       story.rawStatus = newStatus
@@ -535,7 +545,7 @@ function DetailPanel({ story, onClose, onUpdate }: { story: Story; onClose: () =
     if (!confirm(`Xoá vĩnh viễn câu chuyện "${story.title}"?\n\nHành động này KHÔNG thể hoàn tác.`)) return
     setDelBusy(true); setStatusMsg('')
     const { data, error } = await supabase.functions.invoke('story-ai', {
-      body: { admin_key: 'st-1001-adm-7x9k2', action: 'admin_delete_story', story_id: story.id },
+      body: { action: 'admin_delete_story', story_id: story.id },
     })
     if (!error && (data as any)?.ok) { onClose(); if (onUpdate) onUpdate(); return }
     setStatusMsg('Lỗi: ' + ((data as any)?.error || error?.message || 'Không xoá được'))
@@ -564,10 +574,7 @@ function DetailPanel({ story, onClose, onUpdate }: { story: Story; onClose: () =
     if (!replacePhotoPrompt.trim()) return
     setReplaceGenerating(true); setStatusMsg('Đang tạo ảnh FLUX...')
     try {
-      const res = await fetch('https://wojmdilyflffvdtpovmq.supabase.co/functions/v1/publish-story', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'generate_image', prompt: replacePhotoPrompt, story_id: story.id }),
-      })
+      const res = await callPublishStory({ action: 'generate_image', prompt: replacePhotoPrompt, story_id: story.id })
       const data = await res.json()
       if (data.ok && data.url) { setReplacePhotoPreview(data.url); setReplacePhotoUpload(null); setStatusMsg('Ảnh đã tạo! Nhấn "Thay ảnh" để lưu.') }
       else setStatusMsg('Lỗi: ' + (data.error || 'Không thể tạo ảnh'))
@@ -609,7 +616,7 @@ function DetailPanel({ story, onClose, onUpdate }: { story: Story; onClose: () =
 
       if (b64) {
         const { data, error } = await supabase.functions.invoke('story-ai', {
-          body: { admin_key: 'st-1001-adm-7x9k2', action: 'admin_update_photo', story_id: story.id, image_base64: b64 },
+          body: { action: 'admin_update_photo', story_id: story.id, image_base64: b64 },
         })
         if (!error && data?.ok) {
           story.photos = [{ url: data.url || '', caption: '' }]
@@ -634,7 +641,7 @@ function DetailPanel({ story, onClose, onUpdate }: { story: Story; onClose: () =
     setLinkUserQ(q)
     if (!q.trim()) { setLinkUserRes([]); setLinkUserOpen(false); return }
     const { data } = await supabase.functions.invoke('story-ai', {
-      body: { admin_key: 'st-1001-adm-7x9k2', action: 'search_users', q: q.trim() },
+      body: { action: 'search_users', q: q.trim() },
     })
     setLinkUserRes(data?.users || [])
     setLinkUserOpen(true)
@@ -644,7 +651,7 @@ function DetailPanel({ story, onClose, onUpdate }: { story: Story; onClose: () =
     setLinkUserOpen(false)
     setLinkUserQ(u.name)
     const { data } = await supabase.functions.invoke('story-ai', {
-      body: { admin_key: 'st-1001-adm-7x9k2', action: 'admin_update_story', story_id: story.id, user_id: u.id, pen_name: u.name, author_name: u.name },
+      body: { action: 'admin_update_story', story_id: story.id, user_id: u.id, pen_name: u.name, author_name: u.name },
     })
     if (data?.ok) {
       story.user_id = u.id
@@ -657,7 +664,7 @@ function DetailPanel({ story, onClose, onUpdate }: { story: Story; onClose: () =
   const unlinkUser = async () => {
     setLinkUserBusy(true)
     const { data } = await supabase.functions.invoke('story-ai', {
-      body: { admin_key: 'st-1001-adm-7x9k2', action: 'admin_update_story', story_id: story.id, user_id: null },
+      body: { action: 'admin_update_story', story_id: story.id, user_id: null },
     })
     if (data?.ok) {
       story.user_id = null
@@ -671,7 +678,7 @@ function DetailPanel({ story, onClose, onUpdate }: { story: Story; onClose: () =
   useEffect(() => {
     if (!story.user_id || story.user_id === '00000000-0000-0000-0000-000000000001') { setLinkedUserName(''); return }
     supabase.functions.invoke('story-ai', {
-      body: { admin_key: 'st-1001-adm-7x9k2', action: 'search_users', q: story.user_id },
+      body: { action: 'search_users', q: story.user_id },
     }).then(({ data: d }) => {
       if (d?.users?.[0]) setLinkedUserName(d.users[0].name)
     }, () => {})
@@ -692,7 +699,7 @@ function DetailPanel({ story, onClose, onUpdate }: { story: Story; onClose: () =
     try {
       const { data, error } = await supabase.functions.invoke('story-ai', {
         body: {
-          admin_key: 'st-1001-adm-7x9k2', action: 'admin_update_story', story_id: story.id,
+          action: 'admin_update_story', story_id: story.id,
           author_full_name: bioName.trim() || null,
           author_age: bioAge.trim() || null,
           author_hometown: bioHometown.trim() || null,
@@ -747,11 +754,7 @@ function DetailPanel({ story, onClose, onUpdate }: { story: Story; onClose: () =
     setGenerating(true)
     setStatusMsg('Đang tạo ảnh FLUX...')
     try {
-      const res = await fetch('https://wojmdilyflffvdtpovmq.supabase.co/functions/v1/publish-story', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'generate_image', prompt: fluxPrompt, story_id: story.id }),
-      })
+      const res = await callPublishStory({ action: 'generate_image', prompt: fluxPrompt, story_id: story.id })
       const data = await res.json()
       if (data.ok && data.url) {
         setPreviewUrl(data.url)
@@ -799,11 +802,7 @@ function DetailPanel({ story, onClose, onUpdate }: { story: Story; onClose: () =
         payload.prompt = fluxPrompt || 'Warm editorial photo of a person with acoustic guitar, natural lighting, photorealistic'
       }
 
-      const res = await fetch('https://wojmdilyflffvdtpovmq.supabase.co/functions/v1/publish-story', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
+      const res = await callPublishStory(payload)
       const data = await res.json()
       if (data.ok) {
         setStatusMsg(`Đã xuất bản! Số thứ tự: #${data.story_number}`)
@@ -1028,7 +1027,7 @@ function DetailPanel({ story, onClose, onUpdate }: { story: Story; onClose: () =
                   setBioSaving(true); setStatusMsg('')
                   try {
                     const { data, error } = await supabase.functions.invoke('story-ai', {
-                      body: { admin_key: 'st-1001-adm-7x9k2', action: 'admin_update_story',
+                      body: { action: 'admin_update_story',
                               story_id: story.id, category_ids: [...selectedCategoryIds] },
                     })
                     if (!error && data?.ok) { setStatusMsg('Đã cập nhật chủ đề.'); if (onUpdate) onUpdate() }
@@ -1106,7 +1105,7 @@ function DetailPanel({ story, onClose, onUpdate }: { story: Story; onClose: () =
               setStatusMsg('Đang xuất bản...')
               try {
                 const { data, error } = await supabase.functions.invoke('story-ai', {
-                  body: { admin_key: 'st-1001-adm-7x9k2', action: 'admin_publish', story_id: story.id, category_ids: [...selectedCategoryIds] },
+                  body: { action: 'admin_publish', story_id: story.id, category_ids: [...selectedCategoryIds] },
                 })
                 if (!error && data?.ok) {
                   setStatusMsg(`Đã xuất bản! Số #${data.story_number} — hiện trên Tạp chí ngay.`)
