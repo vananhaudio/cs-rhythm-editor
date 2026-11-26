@@ -147,6 +147,9 @@ const ADMIN_ACTIONS = new Set([
   'admin_insert_story', 'admin_update_photo', 'admin_delete_story',
 ])
 
+const BIO_FIELDS = ['author_full_name', 'author_age', 'author_hometown', 'author_living_in',
+  'author_job', 'author_bio', 'author_portrait_url']
+
 type Msg = { role: 'user' | 'mira'; text: string; at: string }
 
 async function callAnthropic(system: string, messages: { role: string; content: string }[], model: string, maxTokens = 700) {
@@ -198,14 +201,16 @@ Deno.serve(async (req) => {
       const userIds = [...new Set((stories || []).map(s => s.user_id).filter(Boolean))]
       const userMap: Record<string, string> = {}
       if (userIds.length > 0) {
-        const { data: users } = await db.auth.admin.listUsers({ perPage: userIds.length })
-        if (users?.users) for (const u of users.users) userMap[u.id] = u.user_metadata?.name || u.email?.split('@')[0] || u.email || ''
+        const { data: users } = await db.from('app_users').select('id,name').in('id', userIds)
+        for (const u of users || []) if (u.name && !String(u.name).includes('@')) userMap[u.id] = u.name
       }
       // Hội thoại của bài đã đăng nằm ở bảng đóng story_private → ghép lại cho Ban biên tập.
-      const { data: sealed } = await db.from('story_private').select('story_id,conversation')
+      const { data: sealed } = await db.from('story_private').select('story_id,conversation,author_bio')
       const sealedMap = new Map((sealed || []).map(r => [r.story_id, r.conversation]))
+      const bioMap = new Map((sealed || []).map(r => [r.story_id, r.author_bio]))
       const enriched = (stories || []).map(s => ({
         ...s,
+        ...(bioMap.get(s.id) || {}),  // đôi nét chưa được công khai: chỉ Ban biên tập thấy
         conversation: s.conversation?.length ? s.conversation : (sealedMap.get(s.id) || []),
         pen_name: s.pen_name || userMap[s.user_id] || '',
       }))
@@ -214,11 +219,17 @@ Deno.serve(async (req) => {
     if (body.action === 'search_users') {
       const q = (body.q || '').trim().toLowerCase()
       // Lấy tất cả users từ auth (có email/name) + app_users (có role)
-      const { data: authUsers } = await db.auth.admin.listUsers({ perPage: 500 })
+      const authUsers: any[] = []
+      for (let page = 1; page <= 20; page++) {
+        const { data, error } = await db.auth.admin.listUsers({ page, perPage: 500 })
+        if (error) return json({ error: error.message }, 500)
+        authUsers.push(...(data?.users || []))
+        if ((data?.users || []).length < 500) break
+      }
       const { data: appUsers } = await db.from('app_users').select('id,role')
       const roleMap: Record<string, string> = {}
       if (appUsers) for (const u of appUsers) roleMap[u.id] = u.role
-      const results = (authUsers?.users || [])
+      const results = authUsers
         .filter(u => {
           if (!q) return true
           const name = (u.user_metadata?.name || u.email?.split('@')[0] || '').toLowerCase()
@@ -280,6 +291,17 @@ Deno.serve(async (req) => {
       if (body.status !== undefined) {
         if (!['published', 'unpublished'].includes(body.status)) return json({ error: 'Trạng thái không hợp lệ' }, 400)
         updates.status = body.status
+      }
+
+      const bioKeys = Object.keys(updates).filter(k => BIO_FIELDS.includes(k))
+      if (bioKeys.length > 0) {
+        const { data: p } = await db.from('story_private').select('author_bio').eq('story_id', story_id).maybeSingle()
+        if (p?.author_bio) {
+          const rest = Object.fromEntries(Object.entries(p.author_bio).filter(([k]) => !bioKeys.includes(k)))
+          const { error: pErr } = await db.from('story_private')
+            .update({ author_bio: Object.keys(rest).length ? rest : null }).eq('story_id', story_id)
+          if (pErr) return json({ error: pErr.message }, 500)
+        }
       }
 
       if (Object.keys(updates).length > 0) {
@@ -373,14 +395,16 @@ Deno.serve(async (req) => {
     if (!message && !stuck) return json({ error: 'Missing content' }, 400)
     if (message.length > MAX_MSG_LEN) return json({ error: 'Message too long' }, 400)
 
-    let story: { id: string; user_id: string; status: string; conversation: Msg[] } | null = null
+    type ChatStory = { id: string; user_id: string; status: string; conversation: Msg[] }
+    let story: ChatStory | null = null
     if (body.storyId) {
       const { data } = await db.from('stories')
         .select('id,user_id,status,conversation').eq('id', body.storyId).maybeSingle()
-      story = data as typeof story
+      story = data as ChatStory | null
       if (!story) return json({ error: 'Story not found' }, 404)
       if (story.user_id !== user.id) return json({ error: 'Not your story' }, 403)
-      if (!['telling', 'collecting_photos'].includes(story.status)) {
+      // 'user_review' = đang xem bản thảo; bấm "kể thêm" thì quay lại kể tiếp.
+      if (!['telling', 'collecting_photos', 'user_review'].includes(story.status)) {
         return json({ error: 'Story already past telling phase' }, 400)
       }
     } else {
@@ -400,7 +424,7 @@ Deno.serve(async (req) => {
         .insert({ user_id: user.id, status: 'telling', conversation: [] })
         .select('id,user_id,status,conversation').single()
       if (error || !data) return json({ error: 'Could not create story' }, 500)
-      story = data as typeof story
+      story = data as ChatStory
     }
 
     const conv: Msg[] = Array.isArray(story!.conversation) ? story!.conversation : []
@@ -457,7 +481,9 @@ Deno.serve(async (req) => {
     }
 
     conv.push({ role: 'mira', text: reply, at: new Date().toISOString() })
-    await db.from('stories').update({ conversation: conv }).eq('id', story!.id)
+    await db.from('stories')
+      .update(story!.status === 'user_review' ? { conversation: conv, status: 'telling' } : { conversation: conv })
+      .eq('id', story!.id)
 
     return json({ reply, phase, storyId: story!.id })
   }
@@ -578,8 +604,7 @@ Deno.serve(async (req) => {
       return json({ error: 'Already past telling phase' }, 400)
     }
 
-    await db.from('stories').update({ status: 'user_review' }).eq('id', story.id)
-
+    // Không đổi trạng thái ở đây: chưa có bản thảo. Chỉ 'write' mới đưa bài sang 'user_review'.
     const COMPLETE_SYSTEM = `You are Mira. Read the storyteller's complete story below. Evaluate if it has enough material for a draft.
 
 Criteria: clear narrative + specific details + emotional truth.

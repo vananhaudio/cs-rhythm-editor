@@ -10,3 +10,6 @@ P=("$BIN/psql" -h "$T" -U postgres -d postgres -X -q -v ON_ERROR_STOP=1)
 "${P[@]}" -1 -f "$ROOT/db/story_security_lat0_setup.sql"
 "${P[@]}" -1 -f "$ROOT/db/story_security_lat0_setup.sql"   # idempotent
 "${P[@]}" -o /dev/null -f "$ROOT/tests/story-security/db-assert.sql" 2>&1 | sed -E 's/.*NOTICE: +//'
+"${P[@]}" -1 -f "$ROOT/db/story_lat01_setup.sql"
+"${P[@]}" -1 -f "$ROOT/db/story_lat01_setup.sql"   # idempotent
+"${P[@]}" -o /dev/null -f "$ROOT/tests/story-security/db-assert-lat01.sql" 2>&1 | sed -E 's/.*NOTICE: +//'

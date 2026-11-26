@@ -7,7 +7,7 @@ import type { User } from '@supabase/supabase-js'
 import PublishPrep, { PUBLISH_PREP_CSS, type PublishPrefs } from './PublishPrep'
 import { useVoiceInput, appendSpoken } from './useVoiceInput'
 
-type Phase = 'telling' | 'asking' | 'ready_for_draft' | 'draft_loading' | 'draft' | 'editing' | 'publish_prep' | 'submitting' | 'submitted'
+type Phase = 'telling' | 'asking' | 'ready_for_draft' | 'draft_loading' | 'draft' | 'editing' | 'publish_prep' | 'submitted'
 type ChatMsg = { role: 'user' | 'mira'; text: string; at: string }
 
 // ── Helpers ──
@@ -202,6 +202,7 @@ export default function StoryTellPage() {
   const [draftTopic, setDraftTopic] = useState('')
   const [draftContent, setDraftContent] = useState('')
   const [errorMsg, setErrorMsg] = useState('')
+  const [submitErr, setSubmitErr] = useState('')
 
   // ── Refs ──
   const titleInputRef = useRef<HTMLInputElement>(null)
@@ -458,8 +459,9 @@ export default function StoryTellPage() {
   const submitReview = useCallback(async (prefs: PublishPrefs) => {
     if (!storyId || sending) return
     setSending(true)
-    setPhase('submitting')
-    await supabase.from('stories').update({
+    setSubmitErr('')
+    // Giữ nguyên màn "Chuẩn bị xuất bản" trong lúc gửi để lỗi không làm mất phần đã điền.
+    const { data: saved, error: saveErr } = await supabase.from('stories').update({
       status: 'submitted',
       title: storyTitle || draftTitle,
       display_mode: prefs.display_mode,
@@ -480,7 +482,15 @@ export default function StoryTellPage() {
       author_portrait_url: prefs.author_portrait_url,
       consent_bio_edit: prefs.consent_bio_edit,
       consent_bio_publish: prefs.consent_bio_publish,
-    }).eq('id', storyId)
+    }).eq('id', storyId).select('id')
+
+    // Chỉ báo "đã gửi" khi máy chủ xác nhận đã lưu đúng một bài.
+    if (saveErr || !saved?.length) {
+      console.error('submit story', saveErr)
+      setSubmitErr('Câu chuyện CHƯA gửi được. Bạn thử bấm gửi lại; nếu vẫn lỗi, hãy nhắn Ban biên tập.')
+      setSending(false)
+      return
+    }
 
     // Bút danh mặc định cho những câu chuyện sau → lưu vào hồ sơ học viên
     if (prefs.save_pen_name && user) {
@@ -536,12 +546,33 @@ export default function StoryTellPage() {
     setEditingTitle(true)
     setShowMenu(false)
   }, [])
+  // Đổi tên / xoá: máy chủ không cho thì phải báo, không im lặng.
+  const renameOnServer = useCallback(async (sid: string, title: string) => {
+    const { data, error } = await supabase.from('stories').update({ title }).eq('id', sid).select('id')
+    if (error || !data?.length) {
+      console.error('rename story', error)
+      window.alert('Chưa đổi tên được. Bài đã gửi hoặc đã đăng thì cần nhắn Ban biên tập.')
+      return false
+    }
+    return true
+  }, [])
+  const deleteOnServer = useCallback(async (sid: string) => {
+    const { data, error } = await supabase.from('stories').delete().eq('id', sid).select('id')
+    if (error || !data?.length) {
+      console.error('delete story', error)
+      window.alert('Chưa xóa được. Bài đã đăng thì cần nhắn Ban biên tập.')
+      return false
+    }
+    return true
+  }, [])
   const saveTitle = useCallback(async () => {
     setEditingTitle(false)
     if (storyId && storyTitle.trim()) {
-      await supabase.from('stories').update({ title: storyTitle.trim() }).eq('id', storyId)
+      if (!(await renameOnServer(storyId, storyTitle.trim()))) {
+        setStoryTitle(storyList.find(s => s.id === storyId)?.title || '')
+      } else fetchStoryList()
     }
-  }, [storyId, storyTitle])
+  }, [storyId, storyTitle, storyList, renameOnServer, fetchStoryList])
 
   // ── Sidebar rename ──
   const startSidebarRename = (sid: string, currentTitle: string) => {
@@ -552,10 +583,11 @@ export default function StoryTellPage() {
   const submitSidebarRename = async (sid: string) => {
     const t = sidebarRenameInput.trim()
     setSidebarRenameId(null)
-    if (t) {
-      await supabase.from('stories').update({ title: t }).eq('id', sid)
-      if (sid === storyId) setStoryTitle(t)
-      fetchStoryList()
+    if (t && t !== (storyList.find(s => s.id === sid)?.title || '')) {
+      if (await renameOnServer(sid, t)) {
+        if (sid === storyId) setStoryTitle(t)
+        fetchStoryList()
+      }
     }
   }
 
@@ -563,7 +595,7 @@ export default function StoryTellPage() {
   const deleteStoryById = async (sid: string) => {
     setStoryMenuId(null)
     if (!window.confirm('Bạn có chắc muốn xóa câu chuyện này? Hành động này không thể hoàn tác.')) return
-    await supabase.from('stories').delete().eq('id', sid)
+    if (!(await deleteOnServer(sid))) return
     if (sid === storyId) startNew()
     fetchStoryList()
   }
@@ -571,9 +603,10 @@ export default function StoryTellPage() {
   // ── Delete story ──
   const deleteStory = useCallback(async () => {
     if (!storyId || !window.confirm('Bạn có chắc muốn xóa câu chuyện này? Hành động này không thể hoàn tác.')) return
-    await supabase.from('stories').delete().eq('id', storyId)
+    if (!(await deleteOnServer(storyId))) return
     startNew()
-  }, [storyId, startNew])
+    fetchStoryList()
+  }, [storyId, startNew, deleteOnServer, fetchStoryList])
 
   // ── Auth ──
   const submitAuth = async (mode: 'login' | 'signup', email: string, pass: string, name: string) => {
@@ -673,6 +706,7 @@ export default function StoryTellPage() {
             onConfirm={submitReview}
             busy={sending}
           />
+          {submitErr && <div className="sw-error" role="alert">{submitErr}</div>}
         </div>
       ) : phase === 'draft' ? (
         <div className="sw-page">
@@ -684,11 +718,11 @@ export default function StoryTellPage() {
             />
           </div>
         </div>
-      ) : phase === 'draft_loading' || phase === 'submitting' ? (
+      ) : phase === 'draft_loading' ? (
         <div className="sw-page">
           <div className="sw-loading">
             <div className="sw-spinner" />
-            <p>{phase === 'draft_loading' ? 'Mira đang sắp xếp lại câu chuyện của bạn…' : 'Đang gửi câu chuyện…'}</p>
+            <p>Mira đang sắp xếp lại câu chuyện của bạn…</p>
           </div>
         </div>
       ) : (
@@ -748,14 +782,15 @@ export default function StoryTellPage() {
                           <div className="sw-drawer-item-top">
                             <span className="sw-drawer-item-title">{s.title || '✍️ Đang kể câu chuyện'}</span>
                             <span className={`sw-drawer-badge sw-drawer-badge-${s.status === 'published' ? 'done' : s.status === 'submitted' || s.status === 'pending_publish' ? 'done' : 'telling'}`}>
-                              {s.status === 'published' ? 'Đã xuất bản' : s.status === 'submitted' || s.status === 'pending_publish' ? 'Đã hoàn thành' : s.status === 'user_review' ? 'Đã hoàn thành' : 'Đang kể'}
+                              {s.status === 'published' ? 'Đã xuất bản' : s.status === 'unpublished' ? 'Đã gỡ' : s.status === 'submitted' || s.status === 'pending_publish' ? 'Đã gửi' : s.status === 'user_review' ? 'Chờ bạn gửi' : 'Đang kể'}
                             </span>
                           </div>
                           <div className="sw-drawer-item-time">{timeAgo(s.updated_at)}</div>
                         </div>
                       </button>
                     )}
-                    <div className="sw-drawer-item-actions">
+                    {/* Bài đã đăng / đã gỡ do Ban biên tập quản lý — không có đổi tên, xóa */}
+                    {s.status !== 'published' && s.status !== 'unpublished' && <div className="sw-drawer-item-actions">
                       <button
                         className="sw-drawer-item-menu-btn"
                         onClick={e => { e.stopPropagation(); setStoryMenuId(storyMenuId === s.id ? null : s.id) }}
@@ -767,12 +802,13 @@ export default function StoryTellPage() {
                         <>
                           <div className="sw-drawer-item-menu-overlay" onClick={() => setStoryMenuId(null)} />
                           <div className="sw-drawer-item-menu-drop">
-                            <button onClick={() => startSidebarRename(s.id, s.title)}>✎ Đổi tên</button>
+                            {s.status !== 'submitted' && s.status !== 'pending_publish' &&
+                              <button onClick={() => startSidebarRename(s.id, s.title)}>✎ Đổi tên</button>}
                             <button onClick={() => deleteStoryById(s.id)} className="sw-menu-danger">🗑 Xóa</button>
                           </div>
                         </>
                       )}
-                    </div>
+                    </div>}
                   </div>
                 ))
               )}

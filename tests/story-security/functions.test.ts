@@ -93,3 +93,35 @@ Deno.test('publish-story: bài mới được cấp số và đường dẫn', a
   const r = await call(publish, { action: 'publish', story_id: 's1', use_existing_photo: true }, 'tok-teacher')
   eq([r.status, r.body.slug, r.body.story_number], [200, 'bai-cu-1', 1], 'cấp mới')
 })
+// ── Lát 0.1 ──
+const draft = { ...published, status: 'user_review', story_number: null, slug: null, published_at: null }
+const writes = () => state.log.filter(l => l.op !== 'select' && l.table === 'stories')
+Deno.test('0.1 complete: không đổi trạng thái bài (chưa có bản thảo)', async () => {
+  reset({ ...draft, status: 'telling' })
+  const r = await call(storyAi, { action: 'complete', storyId: 's1', rawContent: 'lời kể' }, 'tok-owner')
+  eq(r.status, 200, 'status'); eq(writes(), [], 'không ghi stories')
+})
+Deno.test('0.1 chat: đang xem bản thảo vẫn kể tiếp được, bài quay về "đang kể"', async () => {
+  reset({ ...draft, conversation: [] })
+  const r = await call(storyAi, { action: 'chat', storyId: 's1', message: 'kể thêm' }, 'tok-owner')
+  eq(r.status, 200, JSON.stringify(r.body))
+  eq((writes().at(-1)!.payload as Record<string, unknown>).status, 'telling', 'trạng thái')
+})
+Deno.test('0.1 chat: bài đã gửi / đã đăng / đã gỡ vẫn bị khoá', async () => {
+  for (const status of ['submitted', 'published', 'unpublished']) {
+    reset({ ...published, status })
+    const r = await call(storyAi, { action: 'chat', storyId: 's1', message: 'x' }, 'tok-owner')
+    eq(r.status, 400, status); eq(writes(), [], status)
+  }
+})
+Deno.test('0.1 list_all: Ban biên tập thấy đôi nét chưa công khai', async () => {
+  reset(); state.rows.story_private = [{ story_id: 's1', conversation: null, author_bio: { author_full_name: 'Tên Thử', author_age: 30 } }]
+  const r = await call(storyAi, { action: 'list_all' }, 'tok-teacher')
+  eq([r.body.stories[0].author_full_name, r.body.stories[0].author_age], ['Tên Thử', 30], 'ghép')
+})
+Deno.test('0.1 sửa đôi nét: bỏ bản niêm của đúng trường được gửi, giữ trường khác', async () => {
+  reset(); state.rows.story_private = [{ story_id: 's1', author_bio: { author_full_name: 'Cũ', author_job: 'Giữ' } }]
+  const r = await call(storyAi, { action: 'admin_update_story', story_id: 's1', author_full_name: null }, 'tok-teacher')
+  eq(r.status, 200, JSON.stringify(r.body))
+  eq(state.log.find(l => l.table === 'story_private' && l.op === 'update')?.payload, { author_bio: { author_job: 'Giữ' } }, 'còn lại')
+})
