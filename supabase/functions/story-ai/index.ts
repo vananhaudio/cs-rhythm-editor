@@ -198,21 +198,24 @@ Deno.serve(async (req) => {
         .in('status', ['telling', 'writing', 'user_review', 'submitted', 'pending_publish', 'published', 'unpublished'])
         .order('created_at', { ascending: false })
       if (error) return json({ error: error.message }, 500)
-      const userIds = [...new Set((stories || []).map(s => s.user_id).filter(Boolean))]
+      // Hội thoại, đôi nét chưa công khai và MÃ TÁC GIẢ của bài đã đăng nằm ở bảng đóng story_private → ghép lại cho Ban biên tập.
+      const { data: sealed } = await db.from('story_private').select('*')
+      const ownerMap = new Map((sealed || []).map(r => [r.story_id, r.owner_id]))
+      const ownerOf = (s: { id: string; user_id: string | null }) => s.user_id || ownerMap.get(s.id) || null
+      const userIds = [...new Set((stories || []).map(ownerOf).filter(Boolean))]
       const userMap: Record<string, string> = {}
       if (userIds.length > 0) {
         const { data: users } = await db.from('app_users').select('id,name').in('id', userIds)
         for (const u of users || []) if (u.name && !String(u.name).includes('@')) userMap[u.id] = u.name
       }
-      // Hội thoại của bài đã đăng nằm ở bảng đóng story_private → ghép lại cho Ban biên tập.
-      const { data: sealed } = await db.from('story_private').select('story_id,conversation,author_bio')
       const sealedMap = new Map((sealed || []).map(r => [r.story_id, r.conversation]))
       const bioMap = new Map((sealed || []).map(r => [r.story_id, r.author_bio]))
       const enriched = (stories || []).map(s => ({
         ...s,
         ...(bioMap.get(s.id) || {}),  // đôi nét chưa được công khai: chỉ Ban biên tập thấy
         conversation: s.conversation?.length ? s.conversation : (sealedMap.get(s.id) || []),
-        pen_name: s.pen_name || userMap[s.user_id] || '',
+        user_id: ownerOf(s),
+        pen_name: s.pen_name || userMap[ownerOf(s) ?? ''] || '',
       }))
       return json({ stories: enriched })
     }

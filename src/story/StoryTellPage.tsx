@@ -2,6 +2,7 @@
 // Document-first design. Mira = interviewer. Story = the product.
 // Sections: Header → Conversation → Story Raw → Composer → (future sections)
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
+import { mergeMyStories, type MyStoryRow } from './myStories'
 import { supabase } from '../supabase'
 import type { User } from '@supabase/supabase-js'
 import PublishPrep, { PUBLISH_PREP_CSS, type PublishPrefs } from './PublishPrep'
@@ -296,11 +297,15 @@ export default function StoryTellPage() {
   const fetchStoryList = useCallback(async () => {
     if (!user) return
     setLoadingList(true)
-    const { data } = await supabase.from('stories')
-      .select('id,title,status,updated_at,conversation')
-      .eq('user_id', user.id)
-      .order('updated_at', { ascending: false })
-    if (data) setStoryList(data as any)
+    // Bài đã đăng không còn mang mã tác giả trong bảng công khai → lấy bài của MÌNH qua RPC riêng rồi ghép.
+    const [{ data }, published] = await Promise.all([
+      supabase.from('stories')
+        .select('id,title,status,updated_at,conversation')
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false }),
+      supabase.rpc('my_published_stories'),
+    ])
+    if (data) setStoryList(mergeMyStories<ChatMsg>(data as MyStoryRow[], (published.data ?? []) as MyStoryRow[]))
     setLoadingList(false)
   }, [user])
   useEffect(() => {

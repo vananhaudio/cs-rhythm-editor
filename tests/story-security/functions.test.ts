@@ -125,3 +125,10 @@ Deno.test('0.1 sửa đôi nét: bỏ bản niêm của đúng trường đượ
   eq(r.status, 200, JSON.stringify(r.body))
   eq(state.log.find(l => l.table === 'story_private' && l.op === 'update')?.payload, { author_bio: { author_job: 'Giữ' } }, 'còn lại')
 })
+// ── Lát 3: riêng tư ──
+Deno.test('riêng tư list_all: Ban biên tập vẫn thấy người viết của bài đã đăng (mã nằm ở bảng đóng)', async () => {
+  reset({ ...published, user_id: null, pen_name: '' }); state.rows.story_private = [{ story_id: 's1', conversation: null, owner_id: 'u-owner' }]
+  state.rows.app_users.push({ id: 'u-x', role: 'student' })
+  const r = await call(storyAi, { action: 'list_all' }, 'tok-teacher')
+  eq([r.status, r.body.stories[0].user_id], [200, 'u-owner'], 'chủ bài')
+})

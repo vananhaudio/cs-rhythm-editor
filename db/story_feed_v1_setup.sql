@@ -8,6 +8,8 @@ set local lock_timeout = '3s';
 do $gate$
 declare h text; src text;
 begin
+  -- Sau bản vá riêng tư, chạy lại file này sẽ làm mất bộ lọc chặn (stories.user_id đã trống ở bài đăng) → cấm.
+  if to_regprocedure('public.story_owner_id(uuid)') is not null then raise exception 'STORY_FEED_GATE: đã có story_privacy_v1 — không chạy lại bản Lát 1.'; end if;
   select md5(prosrc), prosrc into h, src from pg_proc where oid = 'public.social_feed(timestamptz,text,integer)'::regprocedure;
   if h <> '91e32e8ba809cda3b28c6a8964d43efa' and position('story_feed_card' in src) = 0 then
     raise exception 'STORY_FEED_GATE: social_feed đã đổi so với bản dùng để viết migration (%). Dựng lại từ bản mới.', h; end if;
