@@ -40,9 +40,11 @@ import ProfileEditDialog from './profile/ProfileEditDialog'
 import { BandsAdminPage } from '../band/BandAdmin'
 import BroadcastPage from './broadcast/BroadcastPage'
 import BandManagePage from '../band/BandManage'
+import MeStories from './stories/MeStories'
 
 const TITLES: Record<SocialSection, string> = {
   home: 'Trang chủ · Thầy Văn Anh Guitar',
+  stories: '1001 Câu Chuyện · Thầy Văn Anh Guitar',
   friends: 'Bạn bè · Thầy Văn Anh Guitar',
   chat: 'Trò chuyện · Thầy Văn Anh Guitar',
   tools: 'Công cụ âm nhạc · Thầy Văn Anh Guitar',
@@ -275,6 +277,7 @@ function SignedInShell({ base, view, onSection, onOpenProfile, onOpenThread, onO
         onOpenFriends={() => onSection('friends')} onUnreadChanged={() => void chatUnread.refresh()} />}
       {view.kind === 'notices' && <Notices onUnreadChanged={() => void chatUnread.refresh()} onOpenThread={onOpenThread} onClose={() => onBack(HOME)} />}
       {section === 'tools' && <ToolsPage />}
+      {section === 'stories' && <MeStories />}
       {editor.element}
       {editingProfile && <ProfileEditDialog me={me} onClose={() => setEditingProfile(false)} onSaved={onChanged} />}
     </ClassSocialLayout>

@@ -9,8 +9,11 @@ import type { FeedState } from '../posts/useCommunityFeed'
 import { EmptyState } from '../ui'
 import type { PostSocial } from './PostCard'
 import FeedEntryCard from './FeedEntryCard'
+import StoryCard from '../stories/StoryCard'
+import { placeTodayCard, type StoryCardData } from '../stories/storyModel'
+import { isStoryEntry } from '../posts/postModel'
 
-export default function CommunityFeed({ state, onRetry, onLoadMore, social, empty, emptyAction }: {
+export default function CommunityFeed({ state, onRetry, onLoadMore, social, empty, emptyAction, todayStory }: {
   state: FeedState
   onRetry: () => void
   onLoadMore: () => void
@@ -19,6 +22,8 @@ export default function CommunityFeed({ state, onRetry, onLoadMore, social, empt
   empty?: { title: string; hint: string }
   /** Lối đi tiếp khi trống (vd. "Xem các lớp của tôi") */
   emptyAction?: ReactNode
+  /** "Câu chuyện hôm nay" — chỉ tab Dành cho bạn */
+  todayStory?: StoryCardData | null
 }) {
   return (
     <section className="cs-feed" aria-labelledby="cs-feed-title" aria-busy={state.status === 'loading'}>
@@ -53,7 +58,9 @@ export default function CommunityFeed({ state, onRetry, onLoadMore, social, empt
 
       {state.status === 'ready' && state.posts.length > 0 && (
         <div className="cs-post-list">
-          {state.posts.map(p => <FeedEntryCard key={p.id} entry={p} social={social} />)}
+          {placeTodayCard(state.posts, todayStory ?? null, p => isStoryEntry(p) ? p.id : null).map(slot => slot.type === 'today'
+            ? <StoryCard key="story-today" card={slot.card} variant="today" />
+            : <FeedEntryCard key={slot.entry.id} entry={slot.entry} social={social} />)}
           {state.moreError && <p className="cs-feed-more-error" role="alert">{state.moreError}</p>}
           {state.hasMore && (
             <button type="button" className="cs-btn cs-btn-ghost cs-feed-more" onClick={onLoadMore} disabled={state.loadingMore}>

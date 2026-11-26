@@ -2059,3 +2059,19 @@ button.cs-subs-title:hover { color: var(--cs-accent); }
 .cs-classrow-logo-text { font-weight: 800; letter-spacing: .01em; line-height: 1; }
 /* Danh sách Chat (InboxList): ô logo lớp cố định 48×48, bo góc đồng nhất với avatar nhóm, không co giãn */
 .cs-inbox-av .cs-classrow-logo { border-radius: 14px; flex: none; }
+
+/* ── 1001 Câu Chuyện: thẻ trên Feed + trang /me/stories (iOS Light, cùng token /me) ── */
+.cs-story-card { overflow: hidden; }
+.cs-root .cs-story-link { display: block; color: var(--cs-text); }
+.cs-story-cover { display: block; width: 100%; aspect-ratio: 3 / 2; object-fit: cover; background: var(--cs-hover); }
+.cs-story-body { padding: var(--cs-s3) var(--cs-s4) var(--cs-s4); }
+.cs-story-kicker { display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; color: var(--cs-warn); margin-bottom: 6px; }
+.cs-root .cs-story-title { font-size: 18px; font-weight: 750; margin: 0 0 6px; overflow-wrap: anywhere; }
+.cs-story-excerpt { margin: 0 0 10px; font-size: 14.5px; line-height: 1.55; color: var(--cs-muted); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.cs-story-meta { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--cs-faint); }
+.cs-story-by { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cs-story-more { flex: none; font-weight: 700; color: var(--cs-p-strong); }
+.cs-stories-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: var(--cs-s4); }
+.cs-root .cs-stories-head h1 { margin: 0 0 2px; }
+.cs-stories-sub { margin: 0; font-size: 14px; color: var(--cs-muted); }
+.cs-root .cs-stories-mag { display: block; text-align: center; padding: 12px; font-size: 14px; font-weight: 600; color: var(--cs-p-strong); }

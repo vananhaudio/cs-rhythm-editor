@@ -64,10 +64,10 @@ test("route /me/classes + /me/classes/<uuid>; id lạ không phải lớp; giữ
 });
 
 // ── Sidebar ──────────────────────────────────────────────────────────────────
-test("menu: Trang chủ là mục ĐẦU TIÊN; CỘNG ĐỒNG (Trang chủ · Bạn bè · Trò chuyện) → HỌC TẬP → CÔNG CỤ", () => {
+test("menu: Trang chủ là mục ĐẦU TIÊN; CỘNG ĐỒNG (Trang chủ · 1001 Câu Chuyện · Bạn bè · Trò chuyện) → HỌC TẬP → CÔNG CỤ", () => {
   assert.deepEqual(NAV_GROUPS.map(g => g.id), ["community", "learning", "tools"]);
-  assert.deepEqual(NAV_GROUPS[0].items.map(i => i.label), ["Trang chủ", "Bạn bè", "Trò chuyện", "Ban nhạc"]);
-  const band = NAV_GROUPS[0].items[3];
+  assert.deepEqual(NAV_GROUPS[0].items.map(i => i.label), ["Trang chủ", "1001 Câu Chuyện", "Bạn bè", "Trò chuyện", "Ban nhạc"]);
+  const band = NAV_GROUPS[0].items[4];
   assert.ok(band.kind === "destination" && band.href === "/teamlab" && !band.hint, "Ban nhạc → /teamlab, cùng tab, không mô tả");
   assert.equal(JSON.stringify(NAV_GROUPS).includes("Teamlab"), false, "không chữ Teamlab trên menu");
   const first = NAV_GROUPS[0].items[0];

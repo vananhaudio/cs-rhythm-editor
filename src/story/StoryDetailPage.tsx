@@ -3,6 +3,17 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
 import ReportButton, { REPORT_CSS } from './ReportButton'
+import { safeReturnPath, storyHref } from '../class-social/stories/storyModel'
+
+const BACK_LABELS: Record<string, string> = { '/me': 'Trang chủ', '/me/stories': '1001 Câu Chuyện', '/start': 'Về app' }
+
+/** Đọc ?return= (chỉ đường nội bộ /me) rồi trả địa chỉ về đúng /story/<slug> đã xuất bản; nhớ trong history.state để tải lại vẫn còn. */
+function readReturnPath(): '/me' | '/me/stories' | '/start' | null {
+  const q = new URLSearchParams(window.location.search).get('return')
+  const ret = safeReturnPath(q) ?? safeReturnPath((window.history.state as { storyReturn?: unknown } | null)?.storyReturn)
+  if (q !== null) window.history.replaceState({ ...(window.history.state ?? {}), storyReturn: ret }, '', window.location.pathname)
+  return ret as '/me' | '/me/stories' | '/start' | null
+}
 
 const TOPIC_LABELS: Record<string, string> = {
   'dam-bat-dau': 'Dám bắt đầu',
@@ -96,6 +107,9 @@ function parseInline(text: string): React.ReactNode[] {
 }
 
 export default function StoryDetailPage() {
+  const [returnTo] = useState(readReturnPath)
+  const backHref = returnTo ?? '/story'
+  const backLabel = returnTo ? BACK_LABELS[returnTo] : 'Tạp chí'
   const [story, setStory] = useState<StoryDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
@@ -158,7 +172,7 @@ export default function StoryDetailPage() {
     return (
       <div className="sd-root">
         <style>{CSS}</style>
-        <nav className="sd-nav"><div className="sd-nav-inner"><a href="/story" className="sd-back">← Tạp chí</a></div></nav>
+        <nav className="sd-nav"><div className="sd-nav-inner"><a href={backHref} className="sd-back">‹ {backLabel}</a></div></nav>
         <div className="sd-notfound">
           <p className="sd-nf-icon">📄</p>
           <h2>Không tìm thấy câu chuyện</h2>
@@ -176,8 +190,8 @@ export default function StoryDetailPage() {
       {/* Nav */}
       <nav className="sd-nav">
         <div className="sd-nav-inner">
-          <a href="/story" className="sd-back">← Tạp chí</a>
-          <a href="/story/write" className="sd-cta">Vào Phòng viết</a>
+          <a href={backHref} className="sd-back">‹ {backLabel}</a>
+          <a href="/story/write" className="sd-cta">Kể chuyện</a>
         </div>
       </nav>
 
@@ -225,7 +239,7 @@ export default function StoryDetailPage() {
 
         {/* Đôi nét về người kể — phần giới thiệu tác giả, chỉ hiện khi đã đồng ý công khai */}
         {story.consent_bio_publish && (story.author_bio || story.author_full_name) && (
-          <aside className="sd-author">
+          <aside className="sd-bio">
             <div className="sd-author-label">Đôi nét về người kể</div>
             <div className="sd-author-row">
               {story.author_portrait_url && (
@@ -282,7 +296,7 @@ export default function StoryDetailPage() {
             <h3 className="sd-related-title">Bài liên quan</h3>
             <div className="sd-related-list">
               {related.map(r => (
-                <a key={r.id} href={`/story/${r.slug || r.id}`} className="sd-related-item">
+                <a key={r.id} href={returnTo === '/me' || returnTo === '/me/stories' ? storyHref(r.slug || r.id, returnTo) : `/story/${r.slug || r.id}`} className="sd-related-item">
                   <span className="sd-related-item-title">{r.title}</span>
                   <span className="sd-related-item-author">{r.pen_name || 'Ẩn danh'}</span>
                 </a>
@@ -293,7 +307,7 @@ export default function StoryDetailPage() {
 
         {/* Back to magazine */}
         <div className="sd-back-cta">
-          <a href="/story" className="sd-back-link">← Về Tạp chí</a>
+          <a href={backHref} className="sd-back-link">‹ Về {returnTo ? backLabel : 'Tạp chí'}</a>
         </div>
       </article>
 
@@ -318,28 +332,30 @@ export default function StoryDetailPage() {
 const CSS = REPORT_CSS + `
 .sd-footer-report { margin-top: 10px; text-align: center; }
 /* ── Đôi nét về người kể ── */
-.sd-author { margin: 40px 0 8px; padding: 22px 0; border-top: 1px solid #E4DED4; border-bottom: 1px solid #E4DED4; }
-.sd-author-label { font-size: 12px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: #C9711E; margin-bottom: 14px; }
+.sd-bio { margin: 40px 0 8px; padding: 22px 0; border-top: 1px solid #E5E5EA; border-bottom: 1px solid #E5E5EA; }
+.sd-author-label { font-size: 12px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: #B45309; margin-bottom: 14px; }
 .sd-author-row { display: flex; gap: 16px; align-items: flex-start; }
 .sd-author-photo { width: 86px; height: 86px; border-radius: 50%; object-fit: cover; flex: none; }
 .sd-author-main { flex: 1; min-width: 0; }
-.sd-author-name { font-size: 17px; font-weight: 700; color: #211C32; }
-.sd-author-meta { font-size: 14px; color: #6B6478; margin-top: 3px; }
-.sd-author-bio { font-size: 15.5px; color: #4A4458; line-height: 1.7; margin-top: 10px; }
+.sd-author-name { font-size: 17px; font-weight: 700; color: #1C1C1E; }
+.sd-author-meta { font-size: 14px; color: #636366; margin-top: 3px; }
+.sd-author-bio { font-size: 15.5px; color: #3A3A3C; line-height: 1.7; margin-top: 10px; }
 @media (max-width: 520px) { .sd-author-row { flex-direction: column; } .sd-author-photo { width: 76px; height: 76px; } }
 .sd-root {
   min-height: 100dvh;
-  background: #F2EEE7;
-  color: #211C32;
-  font-family: 'Be Vietnam Pro', system-ui, sans-serif;
+  background: #FFFFFF;
+  color: #1C1C1E;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Be Vietnam Pro', system-ui, sans-serif;
+  color-scheme: light;
+  text-align: left;
   line-height: 1.7;
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
 }
 
 .sd-nav {
-  border-bottom: 1px solid #E4DED4;
-  background: rgba(242,238,231,0.9);
+  border-bottom: 1px solid #E5E5EA;
+  background: rgba(255,255,255,0.92);
   backdrop-filter: blur(10px);
   position: sticky; top: 0; z-index: 40;
   /* chừa tai thỏ / thanh trạng thái trên iPhone */
@@ -350,73 +366,73 @@ const CSS = REPORT_CSS + `
   display: flex; align-items: center; justify-content: space-between;
 }
 .sd-back {
-  text-decoration: none; color: #5A5470; font-size: 14px; font-weight: 500;
+  text-decoration: none; color: #5B21B6; font-size: 16px; font-weight: 500; padding: 8px 8px 8px 0;
 }
-.sd-back:hover { color: #4338CA; }
+.sd-back:hover { color: #5B21B6; }
 .sd-cta {
-  text-decoration: none; color: #4338CA; font-size: 13px; font-weight: 600;
-  padding: 6px 14px; border: 1px solid #D3CEE8; border-radius: 8px;
+  text-decoration: none; color: #5B21B6; font-size: 13px; font-weight: 600;
+  padding: 6px 14px; border: 1px solid #D1D1D6; border-radius: 8px;
 }
-.sd-cta:hover { background: #EEEBFB; }
+.sd-cta:hover { background: #F1EBFF; }
 
 .sd-article { max-width: 720px; margin: 0 auto; padding: 40px 20px 60px; }
 
 .sd-header { margin-bottom: 32px; }
 .sd-title {
   font-size: 32px; font-weight: 800; line-height: 1.2; letter-spacing: -0.5px;
-  color: #211C32; margin: 0 0 12px;
+  color: #1C1C1E; margin: 0 0 12px;
 }
-.sd-meta { font-size: 14px; color: #8A8499; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.sd-author { font-weight: 600; color: #5A5470; }
-.sd-sep { color: #C4BED4; }
+.sd-meta { font-size: 14px; color: #6C6C70; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.sd-author { font-weight: 600; color: #48484A; }
+.sd-sep { color: #C7C7CC; }
 
 .sd-photos { margin-bottom: 32px; display: flex; flex-direction: column; gap: 12px; }
 .sd-photo { width: 100%; border-radius: 12px; display: block; }
 
 .sd-content { text-align: left; }
-.sd-content p { margin: 0 0 1.2em; font-size: 17px; color: #211C32; line-height: 1.8; }
+.sd-content p { margin: 0 0 1.2em; font-size: 17px; color: #1C1C1E; line-height: 1.8; }
 .sd-content p:last-child { margin-bottom: 0; }
 .sd-content .sd-separator { height: 1.5em; }
-.sd-content .sd-hr { border: none; border-top: 1px solid #D3CEE8; margin: 2em 0; }
+.sd-content .sd-hr { border: none; border-top: 1px solid #D1D1D6; margin: 2em 0; }
 
-.sd-back-cta { text-align: center; padding: 24px 0 0; border-top: 1px solid #E4DED4; margin-top: 40px; }
+.sd-back-cta { text-align: center; padding: 24px 0 0; border-top: 1px solid #E5E5EA; margin-top: 40px; }
 .sd-back-link {
-  text-decoration: none; color: #5A5470; font-size: 15px; font-weight: 500;
+  text-decoration: none; color: #48484A; font-size: 15px; font-weight: 500;
 }
-.sd-back-link:hover { color: #4338CA; }
+.sd-back-link:hover { color: #5B21B6; }
 
 /* Taxonomy (categories + series) */
 .sd-taxonomy {
   margin-top: 32px; padding-top: 24px;
-  border-top: 1px solid #E4DED4;
+  border-top: 1px solid #E5E5EA;
   display: flex; flex-direction: column; gap: 16px;
 }
 .sd-tax-group {
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
 }
 .sd-tax-label {
-  font-size: 12px; font-weight: 600; color: #8A8499;
+  font-size: 12px; font-weight: 600; color: #6C6C70;
   text-transform: uppercase; letter-spacing: 0.5px;
 }
 .sd-tag {
   display: inline-block; text-decoration: none;
   font-size: 13px; font-weight: 500; padding: 4px 12px;
-  border-radius: 8px; background: #EEEBFB; color: #4338CA;
+  border-radius: 8px; background: #F1EBFF; color: #5B21B6;
   transition: background .12s;
 }
-.sd-tag:hover { background: #DBD6F5; }
+.sd-tag:hover { background: #E4D8FF; }
 .sd-tag-series {
-  background: #FDF2E9; color: #B7791F;
+  background: #FFF7ED; color: #B45309;
 }
-.sd-tag-series:hover { background: #FAE5D3; }
+.sd-tag-series:hover { background: #FFEDD5; }
 
 /* Related Stories */
 .sd-related {
   margin-top: 32px; padding-top: 24px;
-  border-top: 1px solid #E4DED4;
+  border-top: 1px solid #E5E5EA;
 }
 .sd-related-title {
-  font-size: 16px; font-weight: 700; color: #211C32; margin: 0 0 14px;
+  font-size: 16px; font-weight: 700; color: #1C1C1E; margin: 0 0 14px;
 }
 .sd-related-list {
   display: flex; flex-direction: column; gap: 8px;
@@ -424,35 +440,35 @@ const CSS = REPORT_CSS + `
 .sd-related-item {
   display: flex; justify-content: space-between; align-items: baseline;
   text-decoration: none; padding: 10px 14px; border-radius: 8px;
-  background: #FFFFFF; border: 1px solid #E4DED4;
+  background: #F2F2F7; border: 1px solid #F2F2F7;
   transition: border-color .12s, background .12s;
 }
 .sd-related-item:hover {
-  border-color: #C4BED4; background: #FAF9F7;
+  border-color: #C7C7CC; background: #E9E9EE;
 }
 .sd-related-item-title {
-  font-size: 14px; font-weight: 600; color: #211C32;
+  font-size: 14px; font-weight: 600; color: #1C1C1E;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 70%;
 }
 .sd-related-item-author {
-  font-size: 12px; color: #8A8499; flex-shrink: 0;
+  font-size: 12px; color: #6C6C70; flex-shrink: 0;
 }
 
-.sd-footer { padding: 32px 20px; background: #F2EEE7; }
+.sd-footer { padding: 32px 20px; background: #FFFFFF; }
 .sd-footer-inner { max-width: 720px; margin: 0 auto; text-align: center; }
 .sd-footer-links { display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap; margin-bottom: 10px; }
-.sd-footer-links a { text-decoration: none; color: #5A5470; font-size: 13px; font-weight: 500; }
-.sd-footer-links a:hover { color: #4338CA; }
-.sd-f-sep { color: #C4BED4; font-size: 11px; }
-.sd-footer-copy { font-size: 12px; color: #8A8499; }
+.sd-footer-links a { text-decoration: none; color: #48484A; font-size: 13px; font-weight: 500; }
+.sd-footer-links a:hover { color: #5B21B6; }
+.sd-f-sep { color: #C7C7CC; font-size: 11px; }
+.sd-footer-copy { font-size: 12px; color: #6C6C70; }
 
-.sd-loading { text-align: center; padding: 80px 20px; color: #8A8499; }
+.sd-loading { text-align: center; padding: 80px 20px; color: #6C6C70; }
 
 .sd-notfound { text-align: center; padding: 80px 20px; }
 .sd-nf-icon { font-size: 48px; margin: 0 0 12px; }
-.sd-notfound h2 { font-size: 20px; font-weight: 700; color: #211C32; margin: 0 0 8px; }
-.sd-notfound p { color: #5A5470; font-size: 15px; margin: 0 0 20px; }
-.sd-nf-link { text-decoration: none; color: #4338CA; font-weight: 600; font-size: 15px; }
+.sd-notfound h2 { font-size: 20px; font-weight: 700; color: #1C1C1E; margin: 0 0 8px; }
+.sd-notfound p { color: #48484A; font-size: 15px; margin: 0 0 20px; }
+.sd-nf-link { text-decoration: none; color: #5B21B6; font-weight: 600; font-size: 15px; }
 
 @media (max-width: 640px) {
   .sd-title { font-size: 26px; }

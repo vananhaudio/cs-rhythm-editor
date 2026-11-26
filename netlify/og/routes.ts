@@ -39,7 +39,7 @@ export const ROUTE_CLASSES: readonly RouteClass[] = [
     '/hbd', '/hbd-td1', '/jinglebell', '/ode', '/scarborough', '/welcome-td2', '/app-v2-preview', '/flow-lab'),
 
   ...pages('private', true,
-    '/me/bands', '/me/broadcast', '/me/chat', '/me/friends', '/me/mira-owner', '/me/notices', '/me/queue', '/me/t', '/me/tools',
+    '/me/stories', '/me/bands', '/me/broadcast', '/me/chat', '/me/friends', '/me/mira-owner', '/me/notices', '/me/queue', '/me/t', '/me/tools',
     '/admin', '/course', '/course-editor', '/editor', '/editorial', '/gp-editor', '/import', '/flow-migrate',
     '/students', '/student', '/delete-account',
     // Trang thử Rhythm Scroll — chỉ có ở `npm run dev` (import.meta.env.DEV), không vào bundle production.

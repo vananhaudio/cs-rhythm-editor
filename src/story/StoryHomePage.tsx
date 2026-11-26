@@ -115,12 +115,15 @@ function SectionHead({ icon, title, href }: { icon: string; title: string; href?
   )
 }
 
+const PAGE = 12
+
 // ── Component ──
 export default function StoryHomePage() {
   const [featured, setFeatured] = useState<Story[]>([])
   const [latest, setLatest] = useState<Story[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
+  const [shown, setShown] = useState(PAGE)
   // Học viên vào từ app (đã đăng nhập) cần lối quay lại cổng học; khách vãng lai thì không hiện.
   const [dangNhap, setDangNhap] = useState(false)
   useEffect(() => { supabase.auth.getSession().then(({ data }) => setDangNhap(!!data.session)) }, [])
@@ -134,11 +137,11 @@ export default function StoryHomePage() {
         .select('id, title, slug, pen_name, photos, published_at, topic, featured')
         .eq('status', 'published').eq('featured', true)
         .order('published_at', { ascending: false }).limit(5),
-      // Latest stories
+      // Mọi bài đã đăng, mới nhất trước — hiện dần bằng nút "Xem thêm" (trước đây chỉ 6 bài mới nhất, phần còn lại không có lối vào)
       supabase.from('stories')
         .select('id, title, slug, pen_name, photos, published_at, topic, featured')
         .eq('status', 'published')
-        .order('published_at', { ascending: false }).limit(8),
+        .order('published_at', { ascending: false }).limit(1000),
       // Categories (new table — graceful fallback if not exists)
       supabase.from('categories').select('id, name, slug').order('name'),
     ]).then(([featRes, latestRes, catRes]) => {
@@ -183,7 +186,7 @@ export default function StoryHomePage() {
           <div className="sh-nav-actions">
             {/* Đường về app luôn hiện — GUEST cũng phải thoát được (native không có nút back).
                 ?return= cho phép quay đúng ngữ cảnh đã mở story (Home hay Tôi). */}
-            <a href={(() => { try { const r = new URLSearchParams(window.location.search).get('return'); if (r && r.startsWith('/')) return r } catch { /**/ } return dangNhap ? '/me' : '/start' })()} className="sh-nav-back">← <span className="sh-nav-back-full">Về app</span><span className="sh-nav-back-short">App</span></a>
+            <a href={(() => { try { const r = new URLSearchParams(window.location.search).get('return'); if (r && /^\/(?![\/\\])/.test(r)) return r } catch { /**/ } return dangNhap ? '/me' : '/start' })()} className="sh-nav-back">← <span className="sh-nav-back-full">Về app</span><span className="sh-nav-back-short">App</span></a>
             <a href="/story/write" className="sh-nav-cta">Kể chuyện</a>
           </div>
         </div>
@@ -218,10 +221,15 @@ export default function StoryHomePage() {
         {/* 🔥 Latest */}
         <section className="sh-section">
           <div className="sh-section-inner">
-            <SectionHead icon="🔥" title="Mới xuất bản" />
+            <SectionHead icon="🔥" title="Câu chuyện đã xuất bản" />
             <div className="sh-story-grid">
-              {latestFiltered.slice(0, 6).map(s => <StoryCard key={s.id} story={s} />)}
+              {latestFiltered.slice(0, shown).map(s => <StoryCard key={s.id} story={s} />)}
             </div>
+            {latestFiltered.length > shown && (
+              <button type="button" className="sh-more-btn" onClick={() => setShown(n => n + PAGE)}>
+                Xem thêm ({latestFiltered.length - shown} câu chuyện)
+              </button>
+            )}
           </div>
         </section>
 
@@ -308,6 +316,7 @@ export default function StoryHomePage() {
 
 // ── Styles ──
 const CSS = `
+.sh-more-btn { display: block; margin: 22px auto 0; padding: 12px 22px; border-radius: 12px; border: 1px solid #D3CEE8; background: #fff; color: #4338CA; font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; }
 .sh-root {
   min-height: 100dvh;
   background: #F2EEE7;

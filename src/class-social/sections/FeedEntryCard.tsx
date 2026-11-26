@@ -1,11 +1,12 @@
 // Một mục trong dòng hoạt động (/me Feed, Tường): bài Social → PostCard; câu chuyện học tập → LearningThreadCard;
 // bài TeamLab đã xuất bản → PublicationCard. Mỗi thẻ có thanh tương tác (Thích · Bình luận) dùng chung — Feed Likes V1 / Comments V2.
 import { useEffect, useState } from 'react'
-import { isLessonClipEntry, isPublicationEntry, isThreadEntry, type FeedEntry } from '../posts/postModel'
+import { isLessonClipEntry, isPublicationEntry, isStoryEntry, isThreadEntry, type FeedEntry } from '../posts/postModel'
 import LearningThreadCard from '../../learning-thread/LearningThreadCard'
 import PostCard, { type PostSocial } from './PostCard'
 import PublicationCard from './PublicationCard'
 import LessonClipCard from './LessonClipCard'
+import StoryCard from '../stories/StoryCard'
 import LikeBar from '../likes/LikeBar'
 import TargetComments from './comments/TargetComments'
 import { ensureCommentCount, useCommentCount } from '../comments/commentCountStore'
@@ -25,6 +26,8 @@ function TargetActions({ kind, id, social, now }: { kind: CommentKind; id: strin
 }
 
 export default function FeedEntryCard({ entry, now, social }: { entry: FeedEntry; now?: Date; social?: PostSocial }) {
+  // 1001 Câu Chuyện: Thích/Bình luận chung của Feed sẽ nối ở Lát 3.
+  if (isStoryEntry(entry)) return <StoryCard card={entry.card} variant="feed" />
   // Ôn nhanh: nội dung của Thầy, không tác giả/UGC → KHÔNG có Thích/Bình luận/Báo cáo (feed_likes/feed_comments không có kind này).
   if (isLessonClipEntry(entry)) return <LessonClipCard entry={entry} now={now} />
   if (isPublicationEntry(entry)) return <PublicationCard entry={entry} now={now} footer={<TargetActions kind="teamlab_publication" id={entry.id} social={social} now={now} />} />

@@ -1,4 +1,5 @@
 // Domain bài đăng cộng đồng — hàm THUẦN (không đụng mạng/DOM) để test được.
+import { toStoryCard, type StoryCardData } from '../stories/storyModel'
 import { toThreadCard, type ThreadCard } from '../../learning-thread/feedModel'
 import { parseExternalMedia, MEDIA_ERROR_TEXT, type ExternalMedia, type MediaProvider } from '../media/parseExternalMedia'
 import { safeImageUrl } from '../media/safeImageUrl'
@@ -217,13 +218,16 @@ export type LessonClipEntry = {
   entry: 'lesson_clip'; id: string; createdAt: string
   classId: string; sessionNo: number; classCode: string; className: string; title: string; duration: string | null
 }
-export type FeedEntry = FeedPost | ThreadEntry | PublicationEntry | LessonClipEntry
+/** Câu chuyện đã xuất bản (1001 Câu Chuyện) — đọc thẳng public.stories, KHÔNG phải class_posts. id = story id. */
+export type StoryEntry = { entry: 'story'; id: string; createdAt: string; card: StoryCardData }
+export type FeedEntry = FeedPost | ThreadEntry | PublicationEntry | LessonClipEntry | StoryEntry
+export const isStoryEntry = (e: FeedEntry): e is StoryEntry => (e as StoryEntry).entry === 'story'
 export const isThreadEntry = (e: FeedEntry): e is ThreadEntry => (e as ThreadEntry).entry === 'learning_thread'
 export const isPublicationEntry = (e: FeedEntry): e is PublicationEntry => (e as PublicationEntry).entry === 'teamlab_publication'
 export const isLessonClipEntry = (e: FeedEntry): e is LessonClipEntry => (e as LessonClipEntry).entry === 'lesson_clip'
-export const isPostEntry = (e: FeedEntry): e is FeedPost => !isThreadEntry(e) && !isPublicationEntry(e) && !isLessonClipEntry(e)
-/** Khoá phân trang ổn định (khớp sort_key của server): 'p:<id>' | 't:<id>' | 'u:<id>' | 'c:<id>' */
-export const entryKey = (e: FeedEntry): string => (isThreadEntry(e) ? 't:' : isPublicationEntry(e) ? 'u:' : isLessonClipEntry(e) ? 'c:' : 'p:') + e.id
+export const isPostEntry = (e: FeedEntry): e is FeedPost => !isThreadEntry(e) && !isPublicationEntry(e) && !isLessonClipEntry(e) && !isStoryEntry(e)
+/** Khoá phân trang ổn định (khớp sort_key của server): 'p:<id>' | 't:<id>' | 'u:<id>' | 'c:<id>' | 's:<id>' */
+export const entryKey = (e: FeedEntry): string => (isThreadEntry(e) ? 't:' : isPublicationEntry(e) ? 'u:' : isLessonClipEntry(e) ? 'c:' : isStoryEntry(e) ? 's:' : 'p:') + e.id
 
 // Ảnh Team nằm ở bucket CÔNG KHAI teamlab-team-avatars (projects.*_path là khoá object). Chỉ dựng URL khi khoá đúng dạng
 // và thuộc đúng project — sai → null (không ảnh, không lỗi). Không mở thêm quyền storage.
@@ -290,6 +294,9 @@ export function toFeedEntries(rows: MixedRow[]): FeedEntry[] {
     } else if (r.kind === 'lesson_clip') {
       const c = toLessonClipEntry(r.post, r.sort_at, r.sort_key)
       if (c) out.push(c)
+    } else if (r.kind === 'story') {
+      const card = toStoryCard(r.post)
+      if (card) out.push({ entry: 'story', id: card.storyId, createdAt: r.sort_at, card })
     }
   }
   return out

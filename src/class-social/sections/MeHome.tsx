@@ -11,6 +11,7 @@ import { useFeedComments } from '../comments/useFeedComments'
 import { loadCommentsApi } from '../comments/lazyApi'
 import HomeComposer from './HomeComposer'
 import CommunityFeed from './CommunityFeed'
+import { useStoryToday } from '../stories/useStoryToday'
 import type { PostSocial } from './PostCard'
 import type { ImageKind } from '../profile/imageFile'
 import type { FriendRequests } from '../friends/useFriendRequests'
@@ -68,6 +69,7 @@ export default function MeHome({ me, identityRev = 0, onOpenProfile, requests, o
   const [scope, setScope] = useFeedScope()
   const myClassIds = useMemo(() => (classes?.mine ?? []).map(c => c.id), [classes?.mine])
   const { state, reload, loadMore } = useCommunityFeed(scope, myClassIds)
+  const todayStory = useStoryToday()
   const feedRef = useRef<HTMLDivElement>(null)
   const [modError, setModError] = useState<string | null>(null)
 
@@ -146,6 +148,7 @@ export default function MeHome({ me, identityRev = 0, onOpenProfile, requests, o
         {scope === 'my_classes' && classes && !classes.loaded
           ? <p className="cs-loading" role="status">Đang tải…</p>
           : <CommunityFeed state={state} onRetry={() => void reload()} onLoadMore={() => void loadMore()} social={social}
+          todayStory={scope === 'for_you' ? todayStory : null}
           empty={FEED_EMPTY[scope]}
           emptyAction={scope === 'friends' && onSeeAllRequests
               ? <button type="button" className="cs-btn cs-btn-ghost cs-btn-sm cs-empty-action" onClick={onSeeAllRequests}>Đến trang Bạn bè</button>
