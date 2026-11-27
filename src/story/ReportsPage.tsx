@@ -65,7 +65,9 @@ export default function ReportsPage() {
   const unpublish = async (r: Report) => {
     if (!r.story) return
     if (!confirm(`Gỡ câu chuyện "${r.story.title ?? ''}" khỏi Tạp chí?`)) return
-    await supabase.from('stories').update({ status: 'unpublished' }).eq('id', r.story.id)
+    // Gỡ bài đi qua máy chủ (kiểm vai Ban biên tập). Ghi thẳng vào bảng bị RLS chặn âm thầm.
+    const { data, error } = await supabase.functions.invoke('story-ai', { body: { action: 'admin_update_story', story_id: r.story.id, status: 'unpublished' } })
+    if (error || !data?.ok) { setMsg('Chưa gỡ được câu chuyện. Hãy thử lại.'); return }
     await mark(r, 'handled')
     setMsg('Đã gỡ câu chuyện khỏi Tạp chí.')
   }

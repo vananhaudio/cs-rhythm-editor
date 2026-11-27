@@ -37,3 +37,35 @@ hoàn thành → chuỗi đứng). Hành Trình cần nút Trả bài nhưng h�
 
 ## Hiệu chỉnh 30/10/2026 (phát hiện khi chạy preflight production)
 Preflight production báo `lsp_sync` md5 `85655a79…` ≠ bản V1 (`c85a6a52…`): production đã áp dụng `db/class_session_zero_intro.sql` (Buổi 0). Cổng md5 đã dừng migration đúng thiết kế. Migration + rollback + test nay dựa trên bản **Buổi 0** (md5 `85655a791d24a9a0997d94bcbe6687a3`); `class_learning_state` giữ md5 QUIZ `db9015ea…` (khớp production). Test DB 46 PASS gồm ca Buổi 0 + lớp `open`.
+
+## STAGE_OPEN_V1 — buổi mở đầu chặng (Owner chốt 25/11/2026)
+- Buổi số nhỏ nhất của mỗi chặng (`class_stages`; xếp chặng như `stageOf`: `stage_id`, không có thì khoảng `from_session..to_session`) **chỉ phụ thuộc Thầy mở cho lớp**, không phụ thuộc chặng trước. Các buổi sau trong chặng giữ cơ chế tiến độ.
+- "Mở" = Thầy bấm ở trang buổi (`class_lesson_set_hold(buổi, false)` → ghi `tva_private.class_stage_opening`). **Xuất bản mà chưa bấm mở thì học viên vẫn không đọc được**, dù không có dòng khoá.
+- Không áp: lớp `open`, lớp chưa có bài trả (chỉ đọc), buổi đầu của cả chương trình.
+- Gỡ dòng khoá bằng SQL KHÔNG đủ để mở một buổi mở đầu chặng — dùng nút của Thầy.
+- Tiến độ/hoàn thành chặng cũ không bị sửa. Migration `db/stage_open_v1_setup.sql` · hoàn tác `db/stage_open_v1_rollback.sql` (cần `lesson_hold_v2`).
+
+## STAGE_OPEN_SCOPE_V2 — phạm vi và lối vào chặng mới (25/11/2026)
+
+- Quy tắc mở đầu chặng **chỉ áp cho chương trình khai trong `tva_private.stage_open_program`** (đã duyệt: `SOLO01`). Khai `class_stages` không tự làm
+  một lớp có chặng độc lập về sư phạm: CB1/CB2 chia khối 4 buổi và giữ nguyên cơ chế tiến độ. Thêm chương trình mới phải được Thầy duyệt.
+  File: `db/stage_open_scope_v2_setup.sql` (+ `_rollback.sql`). Chạy lại `stage_open_v1_setup.sql` sẽ ghi đè phạm vi → chạy lại file V2 ngay sau đó.
+- Học viên: khi Thầy đã mở đầu chặng mới, buổi hiện tại chỉ xét từ chặng đó trở đi; mục lục bung chặng mới; đầu trang lớp có nút vào buổi mở đầu
+  (ẩn khi đã hoàn thành buổi đó). Chỉ trình bày — bài và tiến độ chặng cũ giữ nguyên, vẫn học tiếp được.
+
+## Điều kiện đọc ở server — PROGRESS_READ_GATE_V1 (Owner chốt 27/11/2026)
+
+Nguyên tắc sư phạm của chương trình khai trong `tva_private.stage_open_program` (SOLO01):
+
+1. Buổi đầu: đọc được khi có quyền giáo trình.
+2. Buổi mở đầu chặng (9, 17…): Thầy mở cho lớp, không phụ thuộc chặng trước.
+3. Buổi còn lại: đã đạt buổi trước **và** đạt điều kiện mở khoá của lớp. Học viên vào giữa khoá cũng vậy — không mở sẵn buổi lớp đã học.
+
+Điểm kiểm đọc nội dung: `tva_private.lesson_session_readable` (RLS giáo án, chia sẻ, tra cứu, thẻ clip). `lesson_session_released` vẫn là
+khoá cấp LỚP (không xét tiến độ) — dùng khi tạo tiến độ. Đường mới trả nội dung bài cho học viên **phải** dùng `lesson_session_readable`.
+File: `db/progress_read_gate_v1_{setup,policy,rollback}.sql` (policy chạy riêng, ngay sau setup).
+
+## Cấp quyền giáo trình — CLASS_ACCESS_SYNC_V1
+
+Lớp rời trạng thái nháp/huỷ/gộp (hoặc đổi nhóm thành viên) → cấp bù cho thành viên đang hoạt động, không ghi đè quyền đã thu hồi.
+Thầy thêm lại người đã rời lớp → bật lại quyền từng thu hồi; học viên tự vào lại thì không. File: `db/class_access_sync_v1_{setup,rollback}.sql`.

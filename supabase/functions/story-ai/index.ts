@@ -1,9 +1,12 @@
 // Edge Function: story-ai -- MVP 01: Story Interview
 // Mira = interview facilitator creating a work, NOT a chatbot.
 // Default behavior: listen + remember. Only respond when truly needed.
-// Actions: chat (tell) - write (draft) - revise (edit) - review (submit)
-// DEPLOY: Supabase Dashboard -> Edge Functions -> story-ai -> "Verify JWT" = ON
+// Actions: chat (tell) - write (draft) - revise (edit) - complete; + thao tác Ban biên tập (admin_*)
+// Xuất bản CHỈ do Ban biên tập (đã bỏ action 'review' tự xuất bản và 'fix_data' sửa dữ liệu một lần).
+// XÁC THỰC: hàm TỰ kiểm phiên đăng nhập (getUser) cho mọi action trừ ping; action Ban biên tập kiểm thêm vai teacher/admin.
+// Deploy: supabase functions deploy story-ai --no-verify-jwt (giữ đúng cấu hình đang chạy).
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { isEditor, publishStamp, safeNamePatch } from '../_shared/story/editorial.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -11,7 +14,6 @@ const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY')!
 
 const MODEL_CHAT = 'claude-haiku-4-5-20251001'
 const MODEL_WRITE = 'claude-haiku-4-5-20251001'
-const MODEL_REVIEW = 'claude-haiku-4-5-20251001'
 
 const MAX_MSG_LEN = 2000
 const MAX_STORY_MSGS = 80
@@ -128,17 +130,6 @@ RULES:
 Return ONLY this exact JSON, nothing else:
 {"title":"...","topic":"...","content":"..."}`
 
-const REVIEW_SYSTEM = `You are the editorial board for "1001 Stories with Guitar".
-
-Read the article below and evaluate against this checklist:
-1. True to project spirit? (real story, no ads/spam)
-2. No inappropriate content?
-3. No personally identifiable info of others (phone, address)?
-4. Spelling/formatting OK? (if not -> light edit, don't change voice)
-
-Return ONLY this exact JSON, nothing else:
-{"verdict":"ok"|"need_more"|"escalate","notes":"brief reason if need_more or escalate","content":"lightly edited article if ok"}`
-
 // ============================================================
 // HELPERS
 // ============================================================
@@ -149,6 +140,15 @@ async function getUser(req: Request) {
   const { data } = await db.auth.getUser(token)
   return data?.user ?? null
 }
+
+/** Thao tác Ban biên tập: CHỈ tài khoản teacher/admin. Vai đọc từ app_users bằng service role — không tin gì client gửi. */
+const ADMIN_ACTIONS = new Set([
+  'list_all', 'search_users', 'admin_publish', 'admin_update_story',
+  'admin_insert_story', 'admin_update_photo', 'admin_delete_story',
+])
+
+const BIO_FIELDS = ['author_full_name', 'author_age', 'author_hometown', 'author_living_in',
+  'author_job', 'author_bio', 'author_portrait_url']
 
 type Msg = { role: 'user' | 'mira'; text: string; at: string }
 
@@ -177,38 +177,62 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
   if (req.method !== 'POST') return json({ error: 'POST only' }, 405)
 
-  let body: { action?: string; storyId?: string; message?: string; instruction?: string; stuck?: boolean }
+  // deno-lint-ignore no-explicit-any
+  let body: { action?: string; storyId?: string; message?: string; instruction?: string; stuck?: boolean; [k: string]: any }
   try { body = await req.json() } catch { return json({ error: 'Invalid body' }, 400) }
 
   // Ping để kiểm tra deploy
   if (body.action === 'ping') return json({ ping: 'pong', ver: 'v3' })
 
-  // ── ADMIN: bypass auth for insert/management ──
-  const ADMIN_KEY = 'st-1001-adm-7x9k2'
-  if (body.admin_key === ADMIN_KEY) {
+  const user = await getUser(req)
+  if (!user) return json({ error: 'Login required' }, 401)
+
+  const action = body.action || 'chat'
+
+  // ── BAN BIÊN TẬP ──
+  if (ADMIN_ACTIONS.has(action)) {
+    if (!(await isEditor(db, user.id))) return json({ error: 'Chỉ Ban biên tập được dùng chức năng này' }, 403)
     if (body.action === 'list_all') {
       const { data: stories, error } = await db.from('stories')
         .select('id,title,content,pen_name,user_id,status,published_at,created_at,conversation,photos,featured,slug,author_full_name,author_age,author_hometown,author_living_in,author_job,author_bio,author_portrait_url,consent_bio_publish')
         .in('status', ['telling', 'writing', 'user_review', 'submitted', 'pending_publish', 'published', 'unpublished'])
         .order('created_at', { ascending: false })
       if (error) return json({ error: error.message }, 500)
-      const userIds = [...new Set((stories || []).map(s => s.user_id).filter(Boolean))]
+      // Hội thoại, đôi nét chưa công khai và MÃ TÁC GIẢ của bài đã đăng nằm ở bảng đóng story_private → ghép lại cho Ban biên tập.
+      const { data: sealed } = await db.from('story_private').select('*')
+      const ownerMap = new Map((sealed || []).map(r => [r.story_id, r.owner_id]))
+      const ownerOf = (s: { id: string; user_id: string | null }) => s.user_id || ownerMap.get(s.id) || null
+      const userIds = [...new Set((stories || []).map(ownerOf).filter(Boolean))]
       const userMap: Record<string, string> = {}
       if (userIds.length > 0) {
-        const { data: users } = await db.auth.admin.listUsers({ perPage: userIds.length })
-        if (users?.users) for (const u of users.users) userMap[u.id] = u.user_metadata?.name || u.email?.split('@')[0] || u.email || ''
+        const { data: users } = await db.from('app_users').select('id,name').in('id', userIds)
+        for (const u of users || []) if (u.name && !String(u.name).includes('@')) userMap[u.id] = u.name
       }
-      const enriched = (stories || []).map(s => ({ ...s, pen_name: s.pen_name || userMap[s.user_id] || '' }))
+      const sealedMap = new Map((sealed || []).map(r => [r.story_id, r.conversation]))
+      const bioMap = new Map((sealed || []).map(r => [r.story_id, r.author_bio]))
+      const enriched = (stories || []).map(s => ({
+        ...s,
+        ...(bioMap.get(s.id) || {}),  // đôi nét chưa được công khai: chỉ Ban biên tập thấy
+        conversation: s.conversation?.length ? s.conversation : (sealedMap.get(s.id) || []),
+        user_id: ownerOf(s),
+        pen_name: s.pen_name || userMap[ownerOf(s) ?? ''] || '',
+      }))
       return json({ stories: enriched })
     }
     if (body.action === 'search_users') {
       const q = (body.q || '').trim().toLowerCase()
       // Lấy tất cả users từ auth (có email/name) + app_users (có role)
-      const { data: authUsers } = await db.auth.admin.listUsers({ perPage: 500 })
+      const authUsers: any[] = []
+      for (let page = 1; page <= 20; page++) {
+        const { data, error } = await db.auth.admin.listUsers({ page, perPage: 500 })
+        if (error) return json({ error: error.message }, 500)
+        authUsers.push(...(data?.users || []))
+        if ((data?.users || []).length < 500) break
+      }
       const { data: appUsers } = await db.from('app_users').select('id,role')
       const roleMap: Record<string, string> = {}
       if (appUsers) for (const u of appUsers) roleMap[u.id] = u.role
-      const results = (authUsers?.users || [])
+      const results = authUsers
         .filter(u => {
           if (!q) return true
           const name = (u.user_metadata?.name || u.email?.split('@')[0] || '').toLowerCase()
@@ -227,19 +251,23 @@ Deno.serve(async (req) => {
     if (body.action === 'admin_publish') {
       const { story_id, category_ids } = body
       if (!story_id) return json({ error: 'Missing story_id' }, 400)
-      const { data: st } = await db.from('stories').select('id,title,content,status,story_number').eq('id', story_id).maybeSingle()
+      const { data: st } = await db.from('stories')
+        .select('id,title,content,status,story_number,slug,published_at,pen_name,author_name').eq('id', story_id).maybeSingle()
       if (!st) return json({ error: 'Story not found' }, 404)
-      const { data: maxRow } = await db.from('stories').select('story_number').not('story_number','is',null).order('story_number',{ascending:false}).limit(1).maybeSingle()
-      const nextNum = (maxRow?.story_number ?? 0) + 1
-      const slug = (st.title || 'story').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'') + '-' + String(nextNum)
-      const { error } = await db.from('stories').update({ status: 'published', story_number: nextNum, slug, published_at: new Date().toISOString() }).eq('id', story_id)
+      let nextNumber = 0
+      if (st.story_number == null) {
+        const { data: maxRow } = await db.from('stories').select('story_number').not('story_number','is',null).order('story_number',{ascending:false}).limit(1).maybeSingle()
+        nextNumber = (maxRow?.story_number ?? 0) + 1
+      }
+      const stamp = publishStamp(st, nextNumber, new Date().toISOString())
+      const { error } = await db.from('stories').update({ status: 'published', ...stamp, ...safeNamePatch(st) }).eq('id', story_id)
       if (error) return json({ error: error.message }, 500)
       // Gán chủ đề (categories) cho story
       if (category_ids && Array.isArray(category_ids) && category_ids.length > 0) {
         const rows = category_ids.map((cid: string) => ({ story_id, category_id: cid }))
         await db.from('story_categories').upsert(rows, { onConflict: 'story_id,category_id' }).select()
       }
-      return json({ ok: true, story_number: nextNum, slug })
+      return json({ ok: true, story_number: stamp.story_number, slug: stamp.slug })
     }
     if (body.action === 'admin_update_story') {
       const { story_id, title, content, category_ids } = body
@@ -263,7 +291,21 @@ Deno.serve(async (req) => {
       if (body.pen_name !== undefined) updates.pen_name = body.pen_name
       if (body.author_name !== undefined) updates.author_name = body.author_name
       if (body.featured !== undefined) updates.featured = !!body.featured
-      if (body.status !== undefined) updates.status = body.status
+      if (body.status !== undefined) {
+        if (!['published', 'unpublished'].includes(body.status)) return json({ error: 'Trạng thái không hợp lệ' }, 400)
+        updates.status = body.status
+      }
+
+      const bioKeys = Object.keys(updates).filter(k => BIO_FIELDS.includes(k))
+      if (bioKeys.length > 0) {
+        const { data: p } = await db.from('story_private').select('author_bio').eq('story_id', story_id).maybeSingle()
+        if (p?.author_bio) {
+          const rest = Object.fromEntries(Object.entries(p.author_bio).filter(([k]) => !bioKeys.includes(k)))
+          const { error: pErr } = await db.from('story_private')
+            .update({ author_bio: Object.keys(rest).length ? rest : null }).eq('story_id', story_id)
+          if (pErr) return json({ error: pErr.message }, 500)
+        }
+      }
 
       if (Object.keys(updates).length > 0) {
         const { error } = await db.from('stories').update(updates).eq('id', story_id)
@@ -346,38 +388,7 @@ Deno.serve(async (req) => {
       if (error) return json({ error: error.message }, 500)
       return json({ ok: true })
     }
-  }
-
-  const user = await getUser(req)
-  if (!user) return json({ error: 'Login required' }, 401)
-
-  const action = body.action || 'chat'
-
-  // ============ ACTION: list_all — ban biên tập (bypass RLS) ============
-  if (action === 'list_all') {
-    const { data: stories, error } = await db.from('stories')
-      .select('id,title,content,pen_name,user_id,status,published_at,created_at,conversation')
-      .in('status', ['telling', 'writing', 'user_review', 'submitted', 'pending_publish', 'published'])
-      .order('created_at', { ascending: false })
-    if (error) return json({ error: error.message }, 500)
-    
-    // Lấy tên user từ auth nếu pen_name trống
-    const userIds = [...new Set((stories || []).map(s => s.user_id).filter(Boolean))]
-    const userMap: Record<string, string> = {}
-    if (userIds.length > 0) {
-      const { data: users } = await db.auth.admin.listUsers({ perPage: userIds.length })
-      if (users?.users) {
-        for (const u of users.users) {
-          userMap[u.id] = u.user_metadata?.name || u.email?.split('@')[0] || u.email || ''
-        }
-      }
-    }
-    
-    const enriched = (stories || []).map(s => ({
-      ...s,
-      pen_name: s.pen_name || userMap[s.user_id] || '',
-    }))
-    return json({ stories: enriched })
+    return json({ error: 'Unknown action' }, 400)
   }
 
   // ============ ACTION: CHAT ============
@@ -387,14 +398,16 @@ Deno.serve(async (req) => {
     if (!message && !stuck) return json({ error: 'Missing content' }, 400)
     if (message.length > MAX_MSG_LEN) return json({ error: 'Message too long' }, 400)
 
-    let story: { id: string; user_id: string; status: string; conversation: Msg[] } | null = null
+    type ChatStory = { id: string; user_id: string; status: string; conversation: Msg[] }
+    let story: ChatStory | null = null
     if (body.storyId) {
       const { data } = await db.from('stories')
         .select('id,user_id,status,conversation').eq('id', body.storyId).maybeSingle()
-      story = data as typeof story
+      story = data as ChatStory | null
       if (!story) return json({ error: 'Story not found' }, 404)
       if (story.user_id !== user.id) return json({ error: 'Not your story' }, 403)
-      if (!['telling', 'collecting_photos'].includes(story.status)) {
+      // 'user_review' = đang xem bản thảo; bấm "kể thêm" thì quay lại kể tiếp.
+      if (!['telling', 'collecting_photos', 'user_review'].includes(story.status)) {
         return json({ error: 'Story already past telling phase' }, 400)
       }
     } else {
@@ -414,7 +427,7 @@ Deno.serve(async (req) => {
         .insert({ user_id: user.id, status: 'telling', conversation: [] })
         .select('id,user_id,status,conversation').single()
       if (error || !data) return json({ error: 'Could not create story' }, 500)
-      story = data as typeof story
+      story = data as ChatStory
     }
 
     const conv: Msg[] = Array.isArray(story!.conversation) ? story!.conversation : []
@@ -471,7 +484,9 @@ Deno.serve(async (req) => {
     }
 
     conv.push({ role: 'mira', text: reply, at: new Date().toISOString() })
-    await db.from('stories').update({ conversation: conv }).eq('id', story!.id)
+    await db.from('stories')
+      .update(story!.status === 'user_review' ? { conversation: conv, status: 'telling' } : { conversation: conv })
+      .eq('id', story!.id)
 
     return json({ reply, phase, storyId: story!.id })
   }
@@ -587,9 +602,12 @@ Deno.serve(async (req) => {
       .select('id,user_id,status').eq('id', body.storyId).maybeSingle()
     if (!story) return json({ error: 'Story not found' }, 404)
     if (story.user_id !== user.id) return json({ error: 'Not your story' }, 403)
+    // Chỉ khi bài còn trong tay người kể — không kéo bài đã gửi / đã đăng / đã gỡ về nháp.
+    if (!['telling', 'collecting_photos', 'writing', 'user_review'].includes(story.status)) {
+      return json({ error: 'Already past telling phase' }, 400)
+    }
 
-    await db.from('stories').update({ status: 'user_review' }).eq('id', story.id)
-
+    // Không đổi trạng thái ở đây: chưa có bản thảo. Chỉ 'write' mới đưa bài sang 'user_review'.
     const COMPLETE_SYSTEM = `You are Mira. Read the storyteller's complete story below. Evaluate if it has enough material for a draft.
 
 Criteria: clear narrative + specific details + emotional truth.
@@ -616,101 +634,6 @@ If not ready: reply gently, suggest what could be added.`
       console.error('complete error', e)
       return json({ ready: true, reply: 'Câu chuyện của bạn đã sẵn sàng để tạo bản thảo.' })
     }
-  }
-
-  // ============ ACTION: REVIEW ============
-  if (action === 'review') {
-    if (!body.storyId) return json({ error: 'Missing storyId' }, 400)
-
-    const { data: story } = await db.from('stories')
-      .select('id,user_id,status,title,content').eq('id', body.storyId).maybeSingle()
-    if (!story) return json({ error: 'Story not found' }, 404)
-    if (story.user_id !== user.id) return json({ error: 'Not your story' }, 403)
-    if (story.status !== 'submitted') {
-      return json({ error: 'Story not submitted' }, 400)
-    }
-
-    await db.from('stories').update({ status: 'pending_publish' }).eq('id', story.id)
-
-    try {
-      const rawReply = await callAnthropic(REVIEW_SYSTEM, [{
-        role: 'user',
-        content: `Title: ${story.title || ''}\n\nContent: ${story.content || ''}`,
-      }], MODEL_REVIEW, 1000)
-
-      let jsonStr = rawReply.trim()
-      const m = jsonStr.match(/\{[\s\S]*\}/)
-      if (m) jsonStr = m[0]
-      jsonStr = jsonStr.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim()
-      const parsed = JSON.parse(jsonStr)
-
-      const verdict = parsed.verdict || 'ok'
-      const notes = parsed.notes || ''
-
-      if (verdict === 'ok') {
-        const finalContent = parsed.content || story.content
-
-        const { data: maxRow } = await db.from('stories')
-          .select('story_number').not('story_number', 'is', null)
-          .order('story_number', { ascending: false }).limit(1).maybeSingle()
-        const nextNumber = (maxRow?.story_number ?? 0) + 1
-
-        const slug = (story.title || 'story')
-          .toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-          .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
-          + '-' + String(nextNumber)
-
-        await db.from('stories').update({
-          status: 'published',
-          content: finalContent,
-          story_number: nextNumber,
-          slug,
-          ai_review: { verdict, notes, at: new Date().toISOString() },
-          published_at: new Date().toISOString(),
-        }).eq('id', story.id)
-
-        return json({ verdict: 'ok', story_number: nextNumber, slug })
-      } else if (verdict === 'need_more') {
-        await db.from('stories').update({
-          status: 'user_review',
-          ai_review: { verdict, notes, at: new Date().toISOString() },
-        }).eq('id', story.id)
-        return json({ verdict: 'need_more', notes })
-      } else {
-        await db.from('stories').update({
-          ai_review: { verdict, notes, at: new Date().toISOString() },
-        }).eq('id', story.id)
-        return json({ verdict: 'escalate', notes })
-      }
-    } catch (e) {
-      console.error('review error', e)
-      return json({ error: 'Editorial review unavailable -- will retry' }, 500)
-    }
-  }
-
-  // ============ ACTION: fix_data — one-time data repair (encoding + expired photos) ============
-  if (action === 'fix_data') {
-    const results: string[] = []
-
-    // Fix pen_name encoding corruption
-    const penFixes: Record<string, string> = {
-      'cddfb454-49a9-41a5-8004-d37487ac321f': 'Kh\u00e1nh',
-      'ea611a49-fbf8-4313-810c-a51435b257ee': 'Ho\u00e0ng',
-      '1d0ffefc-100b-4163-8f19-d02d5768327d': 'Ph\u00fac',
-    }
-    for (const [id, name] of Object.entries(penFixes)) {
-      const { error } = await db.from('stories').update({ pen_name: name }).eq('id', id)
-      results.push(error ? `FAIL pen_name ${id}: ${error.message}` : `OK pen_name ${id} -> ${name}`)
-    }
-
-    // Clear expired Replicate photos -> placeholder appears
-    const { count, error: photoErr } = await db.from('stories')
-      .update({ photos: null })
-      .eq('status', 'published')
-      .not('photos', 'is', null)
-    results.push(photoErr ? `FAIL photos: ${photoErr.message}` : `OK photos cleared for ${count ?? 0} published stories`)
-
-    return json({ action: 'fix_data', results })
   }
 
   return json({ error: `Unknown action: ${action}` }, 400)

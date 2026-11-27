@@ -65,3 +65,17 @@ export async function answerCheckpoint(input: {
     return { ok: false, message: ltErrorText(e as Error) }
   }
 }
+
+/** LESSON_HOLD_V2: THẦY mở/khoá một buổi cho lớp. Server (class_lesson_set_hold) tự kiểm vai Thầy; người khác bị từ chối. */
+export async function setSessionHold(sessionId: string, held: boolean): Promise<Result<{ held: boolean }>> {
+  try {
+    const { data, error, status } = await (await db()).rpc('class_lesson_set_hold', { p_session: sessionId, p_hold: held })
+    if (error || !data || (data as { held?: unknown }).held !== held) {
+      if (import.meta.env?.DEV && error) console.warn('[class-learning] hold:', error.code, error.message)
+      return { ok: false, message: ltErrorText(error ? { ...error, status } : null) }
+    }
+    return { ok: true, value: { held } }
+  } catch (e) {
+    return { ok: false, message: ltErrorText(e as Error) }
+  }
+}

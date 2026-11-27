@@ -52,6 +52,8 @@ DECLARE
   self_managed text[] := ARRAY[
     -- App Update Manager V1 (db/app_update_v1_setup.sql): bảng ĐÓNG, chỉ RPC app_update_policy_* đọc/ghi.
     'app_update_policy', 'app_update_policy_log',
+    -- 1001 Câu chuyện (db/story_security_lat0_setup.sql): quyền hẹp riêng — áp policy rộng = mở lại lỗ hổng.
+    'story_chunks', 'story_private', 'story_categories', 'story_series', 'categories', 'series',
     'edu_groups', 'edu_group_members', 'edu_group_claim_tokens',
     -- Bản tin hôm nay (db/home_feed_v2.sql): anon/auth chỉ ĐỌC item published; teacher mới ghi.
     'home_feed_items',

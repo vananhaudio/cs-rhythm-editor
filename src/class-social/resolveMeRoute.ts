@@ -9,7 +9,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 // /me = TÔI + CỘNG ĐỒNG (một trang duy nhất); Bạn bè / Trò chuyện là mục con.
-export type SocialSection = 'home' | 'friends' | 'chat' | 'tools'
+export type SocialSection = 'home' | 'stories' | 'friends' | 'chat' | 'tools'
 
 export type MeRoute =
   | { kind: 'social'; section: SocialSection }
@@ -18,6 +18,7 @@ export type MeRoute =
 /** Path của từng mục. `home` là chính /me. */
 export const SECTION_PATHS: Record<SocialSection, string> = {
   home: '/me',
+  stories: '/me/stories',
   friends: '/me/friends',
   chat: '/me/chat',
   tools: '/me/tools',
@@ -304,7 +305,7 @@ export function canonicalView(view: MeView): MeView {
 
 /** Link sâu nên GIỮ qua bước đăng nhập (khách → đăng nhập tại chỗ → đúng trang). */
 export function keepsPathForGuest(view: MeView): boolean {
-  return view.kind === 'thread' || view.kind === 'class' || view.kind === 'classes' || view.kind === 'session'
+  return (view.kind === 'section' && view.section === 'stories') || view.kind === 'thread' || view.kind === 'class' || view.kind === 'classes' || view.kind === 'session'
     || view.kind === 'classSpace' || view.kind === 'classMembers'
     || view.kind === 'bands' || view.kind === 'bandAdmin' || view.kind === 'broadcast' || view.kind === 'miraOwner'
 }

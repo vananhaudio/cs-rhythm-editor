@@ -26,6 +26,10 @@ export type SessionState = {
   openedAt: string | null
   completedAt: string | null
   checkpoints: CheckpointState[]
+  /** LESSON_HOLD_V2: Thầy đang khoá buổi — người học không đọc được dù đã có tiến độ (server chặn; ở đây chỉ để nói đúng) */
+  held?: boolean
+  /** STAGE_OPEN_V1: buổi mở đầu một chặng — Thầy mở là cả lớp vào học, không phụ thuộc chặng trước (server quyết) */
+  stageStart?: boolean
   /** lịch thật của buổi (class_sessions.start_at) — chế độ giáo trình dùng để chọn buổi hiện tại */
   startAt: string | null
 }
@@ -86,6 +90,8 @@ export function toClassLearningState(v: unknown, classId: string): ClassLearning
       openedAt: str(s.opened_at),
       completedAt: str(s.completed_at),
       startAt: str(s.start_at),
+      held: s.held === true,
+      stageStart: s.stage_start === true,
       checkpoints: (Array.isArray(s.checkpoints) ? s.checkpoints : []).map(obj).filter(c => str(c.id)).map(c => ({
         id: c.id as string,
         title: typeof c.title === 'string' ? c.title : '',
@@ -157,30 +163,48 @@ export const sessionLabel = (s: Pick<SessionState, 'no' | 'title'>) => `Buổi $
 /** Buổi xem được: người học = đã mở (server); Thầy = mọi buổi (xem trước). */
 export function sessionPhase(s: SessionState, role: 'learner' | 'teacher', mode: LearnMode = 'checkpoint', policy: UnlockPolicy = 'sequential'): 'locked' | 'open' | 'done' {
   if (role === 'teacher' || mode === 'curriculum') return 'open'
+  if (s.held) return 'locked'
   // 'open': KHÔNG buổi nào bị khoá. Buổi chưa xuất bản vẫn 'open' để trang buổi báo "đang được cập nhật" (không giả lời nhắc trả bài).
   if (policy === 'open') return s.completedAt ? 'done' : 'open'
   if (!s.openedAt) return 'locked'
   return s.completedAt ? 'done' : 'open'
 }
 
-/** Buổi tự mở khi vào lớp: buổi đã mở mà chưa xong, số nhỏ nhất; xong hết → buổi đã mở cuối cùng. Thầy: buổi đã xuất bản đầu tiên. */
+/** STAGE_OPEN_V1: chặng mới nhất Thầy đã mở cho người học này (buổi mở đầu đọc được). Chỉ học viên lớp khoá tuần tự; server quyết stageStart. */
+export function openedStageStart(st: Extract<ClassLearningState, { enabled: true }>): SessionState | null {
+  if (st.mode !== 'checkpoint' || st.role !== 'learner' || st.unlockPolicy === 'open') return null
+  return [...st.sessions].reverse().find(s => s.stageStart && !s.held && !!s.openedAt) ?? null
+}
+
+/** Buổi tự mở khi vào lớp: buổi đã mở mà chưa xong, số nhỏ nhất; xong hết → buổi đã mở cuối cùng. Đã mở đầu chặng mới → chỉ xét từ
+ *  chặng đó trở đi (bài dở ở chặng cũ vẫn mở, tiến độ không đổi — chỉ không còn là nơi được dẫn vào). Thầy: buổi đã xuất bản đầu tiên. */
 export function currentSessionNo(st: Extract<ClassLearningState, { enabled: true }>, now: Date = new Date()): number | null {
   if (st.mode === 'curriculum' || (st.role === 'learner' && st.unlockPolicy === 'open')) {
     // Theo LỊCH thật: buổi đã xuất bản gần nhất đã tới NGÀY học (giờ Việt Nam — ngày có buổi là buổi hiện tại từ sáng);
     // chưa tới buổi nào → buổi xuất bản đầu tiên.
     const vnDay = (t: number) => new Date(t + 7 * 3_600_000).toISOString().slice(0, 10)
     const today = vnDay(now.getTime())
-    const pub = st.sessions.filter(s => s.published)
+    const pub = st.sessions.filter(s => s.published && !(st.role === 'learner' && s.held))
     const due = pub.filter(s => s.startAt && vnDay(new Date(s.startAt).getTime()) <= today)
     return due[due.length - 1]?.no ?? pub[0]?.no ?? st.sessions[0]?.no ?? null
   }
   if (st.role === 'teacher') return st.sessions.find(s => s.published)?.no ?? st.sessions[0]?.no ?? null
-  const open = st.sessions.filter(s => s.openedAt)
+  const from = openedStageStart(st)?.no ?? null
+  const open = st.sessions.filter(s => s.openedAt && (from === null || s.no >= from))
   return open.find(s => !s.completedAt)?.no ?? open[open.length - 1]?.no ?? null
+}
+
+/** Bài người học ĐANG HỌC DỞ ở chặng trước, khi Thầy đã mở chặng mới: buổi đã mở theo tiến độ, chưa xong, số nhỏ nhất, đứng
+ *  trước buổi mở đầu chặng mới nhất. Chỉ để giao diện chỉ đường (không đổi quyền, không đổi currentSessionNo). null = không có. */
+export function resumeSessionNo(st: Extract<ClassLearningState, { enabled: true }>): number | null {
+  const stage = openedStageStart(st)
+  if (!stage) return null
+  return st.sessions.find(s => s.no >= 1 && s.no < stage.no && s.published && !s.held && !!s.openedAt && !s.completedAt)?.no ?? null
 }
 
 /** Copy ngắn cho buổi khoá — không trừng phạt. */
 export function lockedHint(sessions: SessionState[], s: SessionState): string {
+  if (s.held) return 'Buổi này sẽ mở khi Thầy mở khoá'
   const prev = [...sessions].filter(x => x.no < s.no).sort((a, b) => b.no - a.no)[0]
   return prev ? `Bạn cần trả bài Buổi ${pad2(prev.no)} mới mở khoá được` : 'Buổi này sẽ mở khi bạn bắt đầu học'
 }
@@ -240,7 +264,7 @@ export function checkpointUi(t: CheckpointThread | null): CheckpointUi {
 /** Huy hiệu ngắn trên dòng buổi (khi thu gọn). */
 export function sessionBadge(s: SessionState, role: 'learner' | 'teacher', now: Date, paceDays: number, mode: LearnMode = 'checkpoint', policy: UnlockPolicy = 'sequential'): string {
   if (mode === 'curriculum') return ''   // chưa có tiến độ thật → dòng gọn, trạng thái trung tính
-  if (role === 'teacher') return s.published ? '' : 'Đang soạn'
+  if (role === 'teacher') return s.held ? '🔒 Đang khoá' : s.published ? '' : 'Đang soạn'
   const phase = sessionPhase(s, role, mode, policy)
   if (phase === 'locked') return '🔒'
   const pace = sessionPace(s, now, paceDays)

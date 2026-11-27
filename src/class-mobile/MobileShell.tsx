@@ -11,6 +11,7 @@ import MeHome from '../class-social/sections/MeHome'
 import Friends from '../class-social/sections/Friends'
 import Chat from '../class-social/sections/Chat'
 import ToolsPage from '../class-social/sections/ToolsPage'
+import MeStories from '../class-social/stories/MeStories'
 import ProfilePage from '../class-social/sections/ProfilePage'
 import ClassPage from '../class-social/classes/ClassPage'
 import ClassSessionPage from '../class-social/classes/ClassSessionPage'
@@ -166,6 +167,7 @@ export default function MobileShell({ base }: { base: ClassIdentity }) {
         const s: SocialSection = view.section
         if (s === 'friends') return <Friends requests={requests} onOpenProfile={openProfile} onMessage={openChatWith} />
         if (s === 'tools') return <ToolsPage />
+        if (s === 'stories') return <MeStories userId={me.userId} />
         if (s === 'chat') return chatPage({ kind: 'none' })
         return null
       }

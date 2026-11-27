@@ -59,7 +59,7 @@ export const SOLO01_STAGES: SoloStage[] = [
     no: 2,
     title: 'PHÁT TRIỂN SOLO GUITAR & BOLERO',
     goal: 'Từ Melody + Bass phát triển thành một bản Solo Guitar đầy đặn và có phong cách.',
-    works: ['Con đường xưa em đi', 'Giọt lệ đài trang'],
+    works: ['Con đường xưa em đi'],
     lessons: [
       { title: 'Melody & Kỹ thuật diễn tấu', points: ['Melody Con Đường Xưa em Đi.', 'Hammer-on, Pull-off, Vibrato, Slide, Bend.'] },
       { title: 'Bass', points: ['Root Note và Bass Note.', 'Chọn Bass dưới melody, hợp với hòa âm.'] },

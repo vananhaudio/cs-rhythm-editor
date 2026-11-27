@@ -1,6 +1,6 @@
 // Feed Likes V1 — mô hình THUẦN (không mạng/DOM). Một khoá (kind, id) cho cả ba nguồn Feed; id = id trong payload Feed:
-// post → class_posts.id · learning_thread → learning_threads.id · teamlab_publication → publication_id.
-export const LIKE_KINDS = ['post', 'learning_thread', 'teamlab_publication'] as const
+// post → class_posts.id · learning_thread → learning_threads.id · teamlab_publication → publication_id · story → stories.id.
+export const LIKE_KINDS = ['post', 'learning_thread', 'teamlab_publication', 'story'] as const
 export type LikeKind = (typeof LIKE_KINDS)[number]
 export type LikeState = { count: number; liked: boolean }
 export type LikeTarget = { kind: LikeKind; id: string }

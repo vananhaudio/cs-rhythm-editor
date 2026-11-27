@@ -3,7 +3,7 @@
 // Thứ tự = mô hình: trên CON NGƯỜI / CỘNG ĐỒNG → giữa LỚP HỌC (động, ClassNav) + HỌC TẬP → dưới CÔNG CỤ.
 // Cộng đồng = mục trong chính Social; Học tập / Công cụ = destination ra app hiện có.
 import type { LucideIcon } from 'lucide-react'
-import { BookMarked, BookOpen, Drum, GraduationCap, House, LayoutGrid, Library, MessageCircle, Users } from 'lucide-react'
+import { BookMarked, BookOpen, BookText, Drum, GraduationCap, House, LayoutGrid, Library, MessageCircle, Users } from 'lucide-react'
 import { LEARN_PATH, type SocialSection } from './resolveMeRoute'
 import { TOOLS } from './tools'
 
@@ -24,6 +24,7 @@ export const NAV_GROUPS: NavGroup[] = [
     title: 'Cộng đồng',
     items: [
       { kind: 'section', id: 'home', label: 'Trang chủ', icon: House },
+      { kind: 'section', id: 'stories', label: '1001 Câu Chuyện', icon: BookText },
       { kind: 'section', id: 'friends', label: 'Bạn bè', icon: Users },
       { kind: 'section', id: 'chat', label: 'Trò chuyện', icon: MessageCircle },
       // Ban nhạc = Teamlab (/teamlab, proxy Netlify) — mở cùng tab, tải trang đầy đủ như mọi destination

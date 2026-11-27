@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { bearer, isEditor, publishStamp, safeNamePatch } from '../_shared/story/editorial.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SRK = 'SUPABASE' + '_SERVICE_ROLE_' + 'KEY'
@@ -16,12 +17,6 @@ const cors = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-}
-
-function slugify(text: string): string {
-  return text.toLowerCase()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
 }
 
 // FLUX hiểu tiếng Việt rất kém (chỉ bắt được từ khoá lẻ) — dịch prompt tiếng Việt
@@ -82,9 +77,16 @@ async function generateFluxImage(prompt: string): Promise<string | null> {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
   try {
+    // XÁC THỰC trước mọi việc (kể cả tạo ảnh tốn phí): phiên đăng nhập thật + vai teacher/admin.
+    const reply = (b: unknown, status: number) => new Response(JSON.stringify(b), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
+    const db = createClient(SUPABASE_URL, SERVICE_KEY)
+    const token = bearer(req)
+    const user = token ? (await db.auth.getUser(token)).data?.user : null
+    if (!user) return reply({ error: 'Cần đăng nhập lại' }, 401)
+    if (!(await isEditor(db, user.id))) return reply({ error: 'Chỉ Ban biên tập được dùng chức năng này' }, 403)
+
     const body = await req.json()
     const { action, story_id, prompt, image_base64, use_existing_photo, photo_url } = body
-    const db = createClient(SUPABASE_URL, SERVICE_KEY)
 
     if (action === 'generate_image') {
       if (!prompt) return new Response(JSON.stringify({ error: 'Missing prompt' }), { status: 400, headers: { ...cors, 'Content-Type': 'application/json' } })
@@ -116,7 +118,7 @@ Deno.serve(async (req) => {
       const category_ids: string[] | undefined = body.category_ids
 
       const { data: story, error: fetchErr } = await db.from('stories')
-        .select('id, title, content, photos, pen_name, status')
+        .select('id, title, content, photos, pen_name, author_name, status, story_number, slug, published_at')
         .eq('id', story_id).single()
       if (fetchErr || !story) throw new Error('Story not found')
 
@@ -181,17 +183,17 @@ Deno.serve(async (req) => {
         }
       }
 
-      const baseSlug = slugify(story.title || 'cau-chuyen')
-      const { data: maxRow } = await db.from('stories')
-        .select('story_number').not('story_number', 'is', null)
-        .order('story_number', { ascending: false }).limit(1).maybeSingle()
-      const nextNumber = (maxRow?.story_number ?? 0) + 1
-      const slug = baseSlug + '-' + String(nextNumber)
-
-      const updateData: Record<string, unknown> = {
-        status: 'published', published_at: new Date().toISOString(),
-        story_number: nextNumber, slug,
+      // Bài đã từng đăng giữ nguyên số, đường dẫn, ngày đăng — link đã chia sẻ không hỏng.
+      let nextNumber = 0
+      if (story.story_number == null) {
+        const { data: maxRow } = await db.from('stories')
+          .select('story_number').not('story_number', 'is', null)
+          .order('story_number', { ascending: false }).limit(1).maybeSingle()
+        nextNumber = (maxRow?.story_number ?? 0) + 1
       }
+      const stamp = publishStamp(story, nextNumber, new Date().toISOString())
+
+      const updateData: Record<string, unknown> = { status: 'published', ...stamp, ...safeNamePatch(story) }
       if (photoUrl) updateData.photos = [{ url: photoUrl, caption: '' }]
 
       const { error: updateErr } = await db.from('stories').update(updateData).eq('id', story_id)
@@ -203,7 +205,7 @@ Deno.serve(async (req) => {
         await db.from('story_categories').upsert(rows, { onConflict: 'story_id,category_id' }).select()
       }
 
-      return new Response(JSON.stringify({ ok: true, story_number: nextNumber, slug, photo_url: photoUrl }), { headers: { ...cors, 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify({ ok: true, story_number: stamp.story_number, slug: stamp.slug, photo_url: photoUrl }), { headers: { ...cors, 'Content-Type': 'application/json' } })
     }
 
     return new Response(JSON.stringify({ error: `Unknown action: ${action}` }), { status: 400, headers: { ...cors, 'Content-Type': 'application/json' } })
