@@ -194,6 +194,14 @@ export function currentSessionNo(st: Extract<ClassLearningState, { enabled: true
   return open.find(s => !s.completedAt)?.no ?? open[open.length - 1]?.no ?? null
 }
 
+/** Bài người học ĐANG HỌC DỞ ở chặng trước, khi Thầy đã mở chặng mới: buổi đã mở theo tiến độ, chưa xong, số nhỏ nhất, đứng
+ *  trước buổi mở đầu chặng mới nhất. Chỉ để giao diện chỉ đường (không đổi quyền, không đổi currentSessionNo). null = không có. */
+export function resumeSessionNo(st: Extract<ClassLearningState, { enabled: true }>): number | null {
+  const stage = openedStageStart(st)
+  if (!stage) return null
+  return st.sessions.find(s => s.no >= 1 && s.no < stage.no && s.published && !s.held && !!s.openedAt && !s.completedAt)?.no ?? null
+}
+
 /** Copy ngắn cho buổi khoá — không trừng phạt. */
 export function lockedHint(sessions: SessionState[], s: SessionState): string {
   if (s.held) return 'Buổi này sẽ mở khi Thầy mở khoá'

@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { currentSessionNo, lockedHint, sessionBadge, sessionPhase, toClassLearningState } from '../../src/classLearning/progress'
+import { currentSessionNo, resumeSessionNo, lockedHint, sessionBadge, sessionPhase, toClassLearningState } from '../../src/classLearning/progress'
 import TeacherLockBar from '../../src/class-social/classes/TeacherLockBar'
 import NewStageEntry from '../../src/class-social/classes/NewStageEntry'
 import ClassMap from '../../src/class-social/classes/ClassMap'
@@ -97,14 +97,47 @@ test('chưa mở / lớp không thuộc quy tắc (không có cờ stage_start) 
 test('lối vào chặng mới: hiện khi đã mở và chưa xong buổi mở đầu; Thầy và trường hợp khác không thấy', () => {
   const html = (o?: Parameters<typeof lagging>[0]) => renderToStaticMarkup(<NewStageEntry state={lagging(o)} onOpenSession={() => {}} />)
   assert.match(html(), /Chặng 2 đã mở/); assert.match(html(), /Vào Buổi 09/); assert.match(html(), /Tiến độ chặng trước vẫn được giữ/)
-  for (const o of [{ opened: false }, { flag: false }, { done9: true }, { role: 'teacher' as const }]) assert.equal(html(o), '')
+  for (const o of [{ opened: false }, { flag: false }, { role: 'teacher' as const }]) assert.equal(html(o), '')
+})
+
+test('còn bài dở ở chặng trước → "Bài bạn đang học" đứng trước, là nút chính; xong buổi mở đầu vẫn còn lối về bài dở', () => {
+  const html = (o?: Parameters<typeof lagging>[0]) => renderToStaticMarkup(<NewStageEntry state={lagging(o)} onOpenSession={() => {}} />)
+  assert.equal(resumeSessionNo(lagging()), 4)
+  const h = html()
+  assert.ok(h.indexOf('Bài bạn đang học') >= 0 && h.indexOf('Bài bạn đang học') < h.indexOf('Chặng 2 đã mở'))
+  assert.match(h, /cs-btn-primary cs-btn-sm">Học tiếp Buổi 04/); assert.match(h, /cs-btn-ghost">Vào Buổi 09/)
+  assert.match(html({ done9: true }), /Học tiếp Buổi 04/); assert.doesNotMatch(html({ done9: true }), /Chặng 2 đã mở/)
+  for (const o of [{ opened: false }, { flag: false }, { role: 'teacher' as const }]) assert.equal(resumeSessionNo(lagging(o)), null)
+})
+
+test('đã học xong chặng cũ → chỉ có lối vào chặng mới (nút chính); xong luôn buổi mở đầu → ẩn', () => {
+  const clean = (done9: boolean) => { const st = lagging({ done9 }); st.sessions[1] = { ...st.sessions[1], completedAt: '2026-11-02T00:00:00Z' }; return st }
+  assert.equal(resumeSessionNo(clean(false)), null)
+  const h = renderToStaticMarkup(<NewStageEntry state={clean(false)} onOpenSession={() => {}} />)
+  assert.match(h, /cs-btn-sm cs-btn-primary">Vào Buổi 09/); assert.doesNotMatch(h, /Bài bạn đang học/)
+  assert.equal(renderToStaticMarkup(<NewStageEntry state={clean(true)} onOpenSession={() => {}} />), '')
 })
 
 test('mục lục bung chặng mới, gập chặng cũ', () => {
   const st = lagging()
   const html = renderToStaticMarkup(<ClassMap state={st} current={currentSessionNo(st)} onOpenSession={() => {}} onOpenThread={() => {}} />)
   assert.match(html, /id="buoi-09"/); assert.doesNotMatch(html, /id="buoi-04"/)
-  assert.match(readFileSync('src/class-social/classes/ClassMap.tsx', 'utf8'), /setOpen\(new Set\(\[currentKey\]\)\)/)
+  assert.match(readFileSync('src/class-social/classes/ClassMap.tsx', 'utf8'), /setOpen\(new Set\(wantedKey\.split\('\|'\)\)\)/)
+})
+
+test('còn bài dở → mục lục bung CẢ chặng đang học và chặng mới; dấu "đang học" ở bài dở', () => {
+  const st = lagging()
+  const html = renderToStaticMarkup(<ClassMap state={st} current={4} alsoOpen={currentSessionNo(st)} onOpenSession={() => {}} onOpenThread={() => {}} />)
+  assert.match(html, /id="buoi-04" aria-current="step"/); assert.match(html, /id="buoi-09"/); assert.doesNotMatch(html, /id="buoi-09" aria-current/)
+})
+
+test('PROGRESS_READ_GATE_V1: mọi đường trả nội dung đi qua điểm kiểm có tiến độ; phạm vi theo stage_open_program', () => {
+  const sql = readFileSync('db/progress_read_gate_v1_setup.sql', 'utf8').replace(/--.*$/gm, '')
+  assert.equal([...sql.matchAll(/lesson_session_readable\(s\.id\)/g)].length, 3)            // chia sẻ · tra cứu · thẻ clip
+  assert.match(sql, /not exists \(select 1 from tva_private\.stage_open_program/)
+  assert.match(sql, /lesson_session_released\(p_session\) and tva_private\.session_progress_ok\(p_session, auth\.uid\(\)\)/)
+  assert.doesNotMatch(sql, /insert into public\.learning_session_progress|alter policy/)
+  assert.match(readFileSync('db/progress_read_gate_v1_policy.sql', 'utf8'), /lesson_session_readable\(s\.id\)/)
 })
 
 test('phạm vi: chỉ chương trình được khai báo; mới duyệt SOLO01', () => {
