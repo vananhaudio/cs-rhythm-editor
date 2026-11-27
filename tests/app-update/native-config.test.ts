@@ -26,3 +26,10 @@ test('plugin AppUpdate đăng ký ở cả hai nền tảng, link kho gắn cứ
   assert.match(read('ios/App/App.xcodeproj/project.pbxproj'), /AppUpdatePlugin\.swift in Sources \*\/,/)
   assert.match(read('ios/App/AppUpdatePlugin.swift'), /appStoreId = "6776205968"/)
 })
+test('cờ bản thử: bản phát hành bị chặn nếu còn cờ hoặc bundle lọt mã thử', () => {
+  assert.match(read('src/app-update/native.ts'), /TVA-QA/)
+  const release = read('scripts/mobile-release.sh')
+  assert.match(release, /-z "\$\{VITE_APP_UPDATE_QA:-\}"/)
+  assert.match(release, /! grep -rq "TVA-QA" dist/)
+  assert.doesNotMatch(read('netlify.toml'), /VITE_APP_UPDATE_QA/)
+})
