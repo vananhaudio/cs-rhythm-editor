@@ -103,10 +103,12 @@ function SessionItem({ s, state, current, layout, open, onToggle, onOpenSession,
   )
 }
 
-export default function ClassMap({ state, current, onOpenSession, onOpenThread, layout = 'inline', selected = null, onSelect }: {
+export default function ClassMap({ state, current, alsoOpen = null, onOpenSession, onOpenThread, layout = 'inline', selected = null, onSelect }: {
   state: Ready
   /** buổi hiện tại (dấu chân nhẹ) — do currentSessionNo() quyết, KHÔNG cuộn tới */
   current: number | null
+  /** buổi thứ hai có chặng cũng phải bung (vd. buổi mở đầu chặng mới khi học viên còn bài dở ở chặng trước) */
+  alsoOpen?: number | null
   onOpenSession: (sessionNo: number, checkpointId?: string) => void
   onOpenThread: (threadId: string) => void
   layout?: MapLayout
@@ -116,16 +118,19 @@ export default function ClassMap({ state, current, onOpenSession, onOpenThread, 
 }) {
   const groups = useMemo(() => stageGroups(state.sessions), [state.sessions])
   const currentKey = (groups.find(g => g.sessions.some(s => s.no === current)) ?? groups[0])?.key
-  const [open, setOpen] = useState<Set<string>>(() => new Set(currentKey ? [currentKey] : []))
+  const alsoKey = groups.find(g => g.sessions.some(s => s.no === alsoOpen))?.key
+  const wanted = [currentKey, alsoKey].filter((k): k is string => !!k)
+  const wantedKey = wanted.join('|')
+  const [open, setOpen] = useState<Set<string>>(() => new Set(wanted))
   const [expanded, setExpanded] = useState<Set<number>>(() => new Set())
   // Buổi hiện tại chuyển chặng (vd. Thầy vừa mở chặng mới, trạng thái mới đến sau bản đệm) → bung đúng chặng đó, gập chặng cũ.
   // Chỉ chạy khi ĐỔI chặng, nên thao tác bung/gập của người dùng không bị ghi đè.
-  const shownKey = useRef(currentKey)
+  const shownKey = useRef(wantedKey)
   useEffect(() => {
-    if (shownKey.current === currentKey) return
-    shownKey.current = currentKey
-    if (currentKey) setOpen(new Set([currentKey]))
-  }, [currentKey])
+    if (shownKey.current === wantedKey) return
+    shownKey.current = wantedKey
+    if (wantedKey) setOpen(new Set(wantedKey.split('|')))
+  }, [wantedKey])
   const flip = <T,>(set: (f: (x: Set<T>) => Set<T>) => void, k: T) => set(cur => {
     const next = new Set(cur); if (next.has(k)) next.delete(k); else next.add(k); return next
   })

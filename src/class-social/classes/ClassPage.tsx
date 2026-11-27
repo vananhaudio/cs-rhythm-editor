@@ -10,7 +10,7 @@
 // Ngoại lệ duy nhất: Thầy mở đầu chặng mới → NewStageEntry (Owner 25/11). Quyền do server quyết; trang chỉ ĐỌC + trình bày.
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import '../../learning-thread/styles'
-import { currentSessionNo } from '../../classLearning/progress'
+import { currentSessionNo, resumeSessionNo } from '../../classLearning/progress'
 import { fetchLearningEntry, type LearningEntry } from './classesApi'
 import type { ClassCard } from './classModel'
 import ClassMap, { NoMapNote } from './ClassMap'
@@ -54,7 +54,9 @@ export default function ClassPage({ classId, isTeacher = false, onOpenThread, on
   useEffect(() => { if (c?.name) document.title = `${c.name} · Thầy Văn Anh Guitar` }, [c?.name])
   const serverNow = learn?.serverNow ?? null
   const now = useMemo(() => (serverNow ? new Date(serverNow) : new Date()), [serverNow])
-  const current = learn ? currentSessionNo(learn, now) : null
+  const entryNo = learn ? currentSessionNo(learn, now) : null
+  const resume = learn ? resumeSessionNo(learn) : null
+  const current = resume ?? entryNo   // còn bài dở ở chặng trước → dấu "đang học" nằm ở đó; chặng mới vẫn bung bên dưới
   const openSession = (no: number, checkpointId?: string) => {
     if (checkpointId) rememberCheckpointFocus(classId, no, checkpointId)
     onOpenSession(no)
@@ -105,7 +107,7 @@ export default function ClassPage({ classId, isTeacher = false, onOpenThread, on
         <section className="cs-classv2-sec cs-learnmap-main" aria-labelledby="cs-map-title">
           <h2 id="cs-map-title" className="cs-sr-only">Giáo trình</h2>
           {learn
-            ? <ClassMap state={mapState!} current={current} onOpenSession={openSession} onOpenThread={onOpenThread}
+            ? <ClassMap state={mapState!} current={current} alsoOpen={entryNo} onOpenSession={openSession} onOpenThread={onOpenThread}
                 layout={side ? 'side' : 'inline'} selected={selected} onSelect={setPicked} />
             : <NoMapNote entry={entry} isMember={member} />}
         </section>

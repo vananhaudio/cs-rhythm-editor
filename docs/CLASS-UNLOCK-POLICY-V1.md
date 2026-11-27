@@ -52,3 +52,20 @@ Preflight production báo `lsp_sync` md5 `85655a79…` ≠ bản V1 (`c85a6a52�
   File: `db/stage_open_scope_v2_setup.sql` (+ `_rollback.sql`). Chạy lại `stage_open_v1_setup.sql` sẽ ghi đè phạm vi → chạy lại file V2 ngay sau đó.
 - Học viên: khi Thầy đã mở đầu chặng mới, buổi hiện tại chỉ xét từ chặng đó trở đi; mục lục bung chặng mới; đầu trang lớp có nút vào buổi mở đầu
   (ẩn khi đã hoàn thành buổi đó). Chỉ trình bày — bài và tiến độ chặng cũ giữ nguyên, vẫn học tiếp được.
+
+## Điều kiện đọc ở server — PROGRESS_READ_GATE_V1 (Owner chốt 27/11/2026)
+
+Nguyên tắc sư phạm của chương trình khai trong `tva_private.stage_open_program` (SOLO01):
+
+1. Buổi đầu: đọc được khi có quyền giáo trình.
+2. Buổi mở đầu chặng (9, 17…): Thầy mở cho lớp, không phụ thuộc chặng trước.
+3. Buổi còn lại: đã đạt buổi trước **và** đạt điều kiện mở khoá của lớp. Học viên vào giữa khoá cũng vậy — không mở sẵn buổi lớp đã học.
+
+Điểm kiểm đọc nội dung: `tva_private.lesson_session_readable` (RLS giáo án, chia sẻ, tra cứu, thẻ clip). `lesson_session_released` vẫn là
+khoá cấp LỚP (không xét tiến độ) — dùng khi tạo tiến độ. Đường mới trả nội dung bài cho học viên **phải** dùng `lesson_session_readable`.
+File: `db/progress_read_gate_v1_{setup,policy,rollback}.sql` (policy chạy riêng, ngay sau setup).
+
+## Cấp quyền giáo trình — CLASS_ACCESS_SYNC_V1
+
+Lớp rời trạng thái nháp/huỷ/gộp (hoặc đổi nhóm thành viên) → cấp bù cho thành viên đang hoạt động, không ghi đè quyền đã thu hồi.
+Thầy thêm lại người đã rời lớp → bật lại quyền từng thu hồi; học viên tự vào lại thì không. File: `db/class_access_sync_v1_{setup,rollback}.sql`.
